@@ -17,6 +17,8 @@
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CAConstants.h"
 
+#define MAXHITS_INTUPLE 16
+
 class GPUCACell {
 public:
   using ptrAsInt = unsigned long long;
@@ -31,7 +33,7 @@ public:
   using Hits = TrackingRecHit2DSOAView;
   using hindex_type = Hits::hindex_type;
 
-  using TmpTuple = cms::cuda::VecArray<uint32_t, 9>;
+  using TmpTuple = cms::cuda::VecArray<uint32_t, 16>;//MAXHITS_INTUPLE>;
 
   using HitContainer = pixelTrack::HitContainer;
   using Quality = trackQuality::Quality;
@@ -259,7 +261,7 @@ public:
     // than a threshold
 
     tmpNtuplet.push_back_unsafe(theDoubletId);
-    assert(tmpNtuplet.size() <= 12);
+    assert(tmpNtuplet.size() <= MAXHITS_INTUPLE);
 
     bool last = true;
     for (int j = 0; j < outerNeighbors().size(); ++j) {
@@ -278,13 +280,13 @@ public:
             ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
 #endif
         {
-          hindex_type hits[6];
+          hindex_type hits[MAXHITS_INTUPLE];
           auto nh = 0U;
           for (auto c : tmpNtuplet) {
             hits[nh++] = cells[c].theInnerHitId;
           }
           hits[nh] = theOuterHitId;
-          auto it = foundNtuplets.bulkFill(apc, hits, tmpNtuplet.size() + 1);
+          auto it = foundNtuplets.bulkFill(apc, hits, uint32_t(tmpNtuplet.size() + 1));
           if (it >= 0) {  // if negative is overflow....
             for (auto c : tmpNtuplet)
               cells[c].addTrack(it, cellTracks);
@@ -294,7 +296,7 @@ public:
       }
     }
     tmpNtuplet.pop_back();
-    assert(tmpNtuplet.size() < 12);
+    assert(tmpNtuplet.size() < MAXHITS_INTUPLE);
   }
 
 private:

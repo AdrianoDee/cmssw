@@ -46,7 +46,7 @@ namespace Phase2Tracker {
     // empty vectors for the next event
     proc_work_registry_.clear();
     proc_work_digis_.clear();
-
+std::cout << "tracker digi prod" << std::endl;
     // Retrieve FEDRawData collection
     edm::Handle<FEDRawDataCollection> buffers;
     event.getByToken(token_, buffers);

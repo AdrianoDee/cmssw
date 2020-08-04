@@ -16,6 +16,7 @@
 #include "GPUCACell.h"
 
 // #define GPU_DEBUG 1
+// #define PHASE2DEBUG 1
 namespace gpuPixelDoublets {
 
   using CellNeighbors = CAConstants::CellNeighbors;
@@ -183,7 +184,7 @@ namespace gpuPixelDoublets {
       auto mer = hh.rGlobal(i);
 
       // all cuts: true if fails
-      float z0cut = upgrade ? 18.f : 12.f;      // cm
+      float z0cut = upgrade ? 24.f : 12.f;      // cm
 
       constexpr float hardPtCut = 0.5f;  // GeV
       constexpr float minRadius =

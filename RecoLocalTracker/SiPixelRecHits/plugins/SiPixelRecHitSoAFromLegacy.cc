@@ -28,6 +28,8 @@
 
 #include "RecoLocalTracker/SiPixelRecHits/plugins/gpuPixelRecHits.h"
 
+#define PHASE2DEBUG 1
+
 class SiPixelRecHitSoAFromLegacy : public edm::global::EDProducer<> {
 public:
   explicit SiPixelRecHitSoAFromLegacy(const edm::ParameterSet& iConfig);
@@ -259,13 +261,13 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
         SiPixelRecHit hit(lp, le, rqw, *genericDet, clusterRef[ih]);
 
         #ifdef PHASE2DEBUG
-        std::cout << "hit n." << hh << " - " << output->view()->xLocal(h)
-                  << " - " << output->view()->yLocal(h)
-                  << " - " << output->view()->xerrLocal(h)
-                  << " - " << output->view()->yerrLocal(h)
-                  << " - " << output->view()->detectorIndex(h)
-                  << " - " << hit.globalPosition().x() << " - " << hit.globalPosition().y() << " - " << hit.globalPosition().z() << " - "
-                  << std::endl;
+//        std::cout << "hit n." << hh << " - " << output->view()->xLocal(h)
+//                  << " - " << output->view()->yLocal(h)
+//                  << " - " << output->view()->xerrLocal(h)
+//                  << " - " << output->view()->yerrLocal(h)
+//                  << " - " << output->view()->detectorIndex(h)
+//                  << " - " << hit.globalPosition().x() << " - " << hit.globalPosition().y() << " - " << hit.globalPosition().z() << " - "
+//                  << std::endl;
         hh++;
         #endif
         recHitsOnDetUnit.push_back(hit);

@@ -2,7 +2,7 @@
 // Original Author: Felice Pantaleo, CERN
 //
 
-// #define NTUPLE_DEBUG
+// #define NTUPLE_DEBUG 1
 
 #include <cmath>
 #include <cstdint>
@@ -66,9 +66,9 @@ __global__ void kernel_checkOverflows(HitContainer const *foundNtuplets,
   }
 
   for (int idx = first, nt = foundNtuplets->nbins(); idx < nt; idx += gridDim.x * blockDim.x) {
-    if (foundNtuplets->size(idx) > 5)
+    if (foundNtuplets->size(idx) > 16)
       printf("ERROR %d, %d\n", idx, foundNtuplets->size(idx));
-    assert(foundNtuplets->size(idx) < 6);
+    assert(foundNtuplets->size(idx) < 17);
     for (auto ih = foundNtuplets->begin(idx); ih != foundNtuplets->end(idx); ++ih)
       assert(*ih < nHits);
   }
@@ -280,7 +280,7 @@ __global__ void kernel_find_ntuplets(GPUCACell::Hits const *__restrict__ hhp,
 
     auto pid = thisCell.theLayerPairId;
     // auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
-    auto doit = minHitsPerNtuplet > 3 ? pid < 20 : pid < 8 || pid > 12;
+    auto doit = true;//minHitsPerNtuplet > 3 ? pid < 24 || pid >= 33 : pid < 24 || pid >= 33;
     if (doit) {
       GPUCACell::TmpTuple stack;
       stack.reset();
@@ -314,9 +314,9 @@ __global__ void kernel_countMultiplicity(HitContainer const *__restrict__ foundN
     if (quality[it] == trackQuality::dup)
       continue;
     assert(quality[it] == trackQuality::bad);
-    if (nhits > 12)
+    if (nhits > 16)
       printf("wrong mult %d %d\n", it, nhits);
-    assert(nhits < 12);
+    assert(nhits < 16);
     tupleMultiplicity->countDirect(nhits);
   }
 }
@@ -327,14 +327,15 @@ __global__ void kernel_fillMultiplicity(HitContainer const *__restrict__ foundNt
   auto first = blockIdx.x * blockDim.x + threadIdx.x;
   for (int it = first, nt = foundNtuplets->nbins(); it < nt; it += gridDim.x * blockDim.x) {
     auto nhits = foundNtuplets->size(it);
+    printf("mult> %d\n",nhits);
     if (nhits < 3)
       continue;
     if (quality[it] == trackQuality::dup)
       continue;
     assert(quality[it] == trackQuality::bad);
-    if (nhits > 12)
+    if (nhits > 16)
       printf("wrong mult %d %d\n", it, nhits);
-    assert(nhits < 12);
+    assert(nhits < 16);
     tupleMultiplicity->fillDirect(nhits, it);
   }
 }
@@ -387,10 +388,11 @@ __global__ void kernel_classifyTracks(HitContainer const *__restrict__ tuples,
                     coeffs[2] * pt*pt +
                     coeffs[3] * pt +
                     coeffs[4] ) + coeffs[5];
+
     // cuts.chi2Scale * (cuts.chi2Coeff[0] + pt * (cuts.chi2Coeff[1] + pt * (cuts.chi2Coeff[2] + pt * cuts.chi2Coeff[3])));
 
     // above number were for Quads not normalized so for the time being just multiple by ndof for Quads  (triplets to be understood)
-    if (tracks->chi2(it) >= chi2Cut) {
+    if (tracks->chi2(it)/tuples->size(it) >= 2.6) {
 #ifdef NTUPLE_DEBUG
       printf("Bad fit %d size %d pt %f eta %f chi2 %f\n",
              it,

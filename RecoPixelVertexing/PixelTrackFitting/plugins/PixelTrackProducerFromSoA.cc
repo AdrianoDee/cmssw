@@ -36,6 +36,8 @@
 #include "storeTracks.h"
 #include "CUDADataFormats/Common/interface/HostProduct.h"
 
+// #define PHASE2DEBUG 1
+
 /**
  * This class creates "leagcy"  reco::Track
  * objects from the output of SoA CA.
@@ -157,10 +159,12 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
       break;  // this is a guard: maybe we need to move to nTracks...
     indToEdm.push_back(-1);
     auto q = quality[it];
+    #ifndef PHASE2DEBUG
     if (q == trackQuality::dup)
       continue;  // FIXME
     if (q == trackQuality::bad)
       continue;  // FIXME
+    #endif
     if (nHits < minNumberOfHits_)
       continue;
     indToEdm.back() = nt;
@@ -169,14 +173,16 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
     hits.resize(nHits);
     auto b = hitIndices.begin(it);
 
-    bool flip = (hitmap[*(b + 0)]->globalPosition().z()>2.5 && tsoa.eta(it) < -1.0);
-    flip = flip || (hitmap[*(b + 0)]->globalPosition().z()<-2.5 && tsoa.eta(it) > 1.0);
+    bool flip = (hitmap[*(b + 0)]->globalPosition().z()>4.0 && tsoa.eta(it) < -1.0);
+    flip = flip || (hitmap[*(b + 0)]->globalPosition().z()<-4.0 && tsoa.eta(it) > 1.0);
 
-    if(flip)
-      continue;
+    // if(flip)
+    //   continue;
 
 
-    // std::cout << ">pixelhits - ";
+    #ifdef PHASE2DEBUG
+    std::cout << "pixelhits - ";
+    #endif
     for (int iHit = 0; iHit < nHits; ++iHit)
     {
       hits[iHit] = hitmap[*(b + iHit)];
@@ -222,7 +228,8 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
               << tsoa.eta(it) << " - "
               << q << " - "
               << tsoa.zip(it) << " - "
-              << tsoa.tip(it) << std::endl;
+              << tsoa.tip(it) << " - "
+              << flip << std::endl;
     #endif
     // mind: this values are respect the beamspot!
 
