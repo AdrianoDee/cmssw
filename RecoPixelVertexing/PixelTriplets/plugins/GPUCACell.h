@@ -17,6 +17,7 @@
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CAConstants.h"
 
+#define PHASE2_TRIPLETS 1
 #define MAXHITS_INTUPLE 16
 
 class GPUCACell {
@@ -191,6 +192,32 @@ public:
     return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
   }
 
+  __device__ inline bool mixed(Hits const& hh, TmpTuple const& tmpNtuplet, GPUCACell* cells) const
+  {
+
+    constexpr uint32_t last_barrel_detIndex = 756;//1184;
+
+    bool oneBarrel = false, oneEndcap=false, swap=false;
+
+    for (auto c : tmpNtuplet) {
+      if(!swap)
+      {
+        oneBarrel = (hh.detectorIndex(cells[c].theInnerHitId) <=last_barrel_detIndex);
+        if(oneBarrel)
+        {
+          swap = true;
+          continue;
+        }
+      }else
+      {
+        oneEndcap = (hh.detectorIndex(cells[c].theOuterHitId) >last_barrel_detIndex);
+      }
+
+    }
+
+    return (oneBarrel && oneEndcap);
+
+  }
   __device__ inline bool hole0(Hits const& hh, GPUCACell const& innerCell) const {
     constexpr uint32_t max_ladder_bpx0 = 12;
     constexpr uint32_t first_ladder_bpx0 = 0;
@@ -278,6 +305,10 @@ public:
         // triplets accepted only pointing to the hole
         if (tmpNtuplet.size() >= 3 || (startAt0 && hole4(hh, cells[tmpNtuplet[0]])) ||
             ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
+#endif
+#ifdef PHASE2_TRIPLETS
+        // triplets accepted only pointing to the hole
+        if (tmpNtuplet.size() >= 3 || mixed(hh,tmpNtuplet,cells))   
 #endif
         {
           hindex_type hits[MAXHITS_INTUPLE];

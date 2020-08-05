@@ -327,7 +327,7 @@ __global__ void kernel_fillMultiplicity(HitContainer const *__restrict__ foundNt
   auto first = blockIdx.x * blockDim.x + threadIdx.x;
   for (int it = first, nt = foundNtuplets->nbins(); it < nt; it += gridDim.x * blockDim.x) {
     auto nhits = foundNtuplets->size(it);
-    printf("mult> %d\n",nhits);
+    // printf("mult> %d\n",nhits);
     if (nhits < 3)
       continue;
     if (quality[it] == trackQuality::dup)
