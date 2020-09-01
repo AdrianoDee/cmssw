@@ -35,12 +35,13 @@ namespace cAHitNtupletGenerator {
 
   struct QualityCuts {
     // chi2 cut = chi2Scale * (chi2Coeff[0] + pT/GeV * (chi2Coeff[1] + pT/GeV * (chi2Coeff[2] + pT/GeV * chi2Coeff[3])))
-    
-    float chi2Coeff[4];
+
+    float chi2Coeff[6];
     float chi2MaxPt;  // GeV
     float chi2Scale;
 
     struct region {
+      float chi2MaxPt;
       float maxTip;  // cm
       float minPt;   // GeV
       float maxZip;  // cm
@@ -48,6 +49,7 @@ namespace cAHitNtupletGenerator {
 
     region triplet;
     region quadruplet;
+    bool upgrade;
   };
 
   // params
@@ -118,7 +120,7 @@ namespace cAHitNtupletGenerator {
 
     // quality cuts
     QualityCuts cuts_{// polynomial coefficients for the pT-dependent chi2 cut
-                      {0.68177776, 0.74609577, -0.08035491, 0.00315399},
+                      {0.68177776, 0.74609577, -0.08035491, 0.00315399,0.0,0.0},
                       // max pT used to determine the chi2 cut
                       10.,
                       // chi2 scale factor: 30 for broken line fit, 45 for Riemann fit

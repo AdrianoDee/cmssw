@@ -19,6 +19,8 @@
 #include "gpuFishbone.h"
 #include "gpuPixelDoublets.h"
 
+#define MAXHITS_INTUPLE 24
+
 using HitsOnGPU = TrackingRecHit2DSOAView;
 using HitsOnCPU = TrackingRecHit2DCUDA;
 
@@ -66,9 +68,9 @@ __global__ void kernel_checkOverflows(HitContainer const *foundNtuplets,
   }
 
   for (int idx = first, nt = foundNtuplets->nbins(); idx < nt; idx += gridDim.x * blockDim.x) {
-    if (foundNtuplets->size(idx) > 16)
+    if (foundNtuplets->size(idx) > MAXHITS_INTUPLE)
       printf("ERROR %d, %d\n", idx, foundNtuplets->size(idx));
-    assert(foundNtuplets->size(idx) < 17);
+    assert(foundNtuplets->size(idx) < MAXHITS_INTUPLE);
     for (auto ih = foundNtuplets->begin(idx); ih != foundNtuplets->end(idx); ++ih)
       assert(*ih < nHits);
   }
@@ -279,8 +281,9 @@ __global__ void kernel_find_ntuplets(GPUCACell::Hits const *__restrict__ hhp,
       continue;  // cut by earlyFishbone
 
     auto pid = thisCell.theLayerPairId;
-    // auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
-    auto doit = true;//minHitsPerNtuplet > 3 ? pid < 24 || pid >= 33 : pid < 24 || pid >= 33;
+    auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
+    doit = pid < 40;
+    // auto doit = true;//minHitsPerNtuplet > 3 ? pid < 24 || pid >= 33 : pid < 24 || pid >= 33;
     if (doit) {
       GPUCACell::TmpTuple stack;
       stack.reset();
@@ -314,9 +317,9 @@ __global__ void kernel_countMultiplicity(HitContainer const *__restrict__ foundN
     if (quality[it] == trackQuality::dup)
       continue;
     assert(quality[it] == trackQuality::bad);
-    if (nhits > 16)
+    if (nhits > MAXHITS_INTUPLE)
       printf("wrong mult %d %d\n", it, nhits);
-    assert(nhits < 16);
+    assert(nhits < MAXHITS_INTUPLE);
     tupleMultiplicity->countDirect(nhits);
   }
 }
@@ -333,9 +336,9 @@ __global__ void kernel_fillMultiplicity(HitContainer const *__restrict__ foundNt
     if (quality[it] == trackQuality::dup)
       continue;
     assert(quality[it] == trackQuality::bad);
-    if (nhits > 16)
+    if (nhits > MAXHITS_INTUPLE)
       printf("wrong mult %d %d\n", it, nhits);
-    assert(nhits < 16);
+    assert(nhits < MAXHITS_INTUPLE);
     tupleMultiplicity->fillDirect(nhits, it);
   }
 }
@@ -371,6 +374,10 @@ __global__ void kernel_classifyTracks(HitContainer const *__restrict__ tuples,
 #endif
       continue;
     }
+    if (tracks->pt(it) == 0.0 && tracks->eta(it) == 0.0)
+    {
+      continue;
+    }
 
     // compute a pT-dependent chi2 cut
     // default parameters:
@@ -379,20 +386,40 @@ __global__ void kernel_classifyTracks(HitContainer const *__restrict__ tuples,
     //   - chi2Scale = 30 for broken line fit, 45 for Riemann fit
     //   - chiCoeffUpg = {-0.00070061  0.01830656 -0.15265497  0.40064594  0.31293925}
     // (see CAHitNtupletGeneratorGPU.cc)
-    float pt = std::min<float>(tracks->pt(it), 3.0);//cuts.chi2MaxPt);
 
-    float coeffs[6] = {-0.01012628,  0.12096351, -0.47456371,  0.62133991,  0.13131548,0.0};
-    float chi2Cut = 30.0 *
-                    (coeffs[0] * pt*pt*pt*pt +
-                    coeffs[1] * pt*pt*pt +
-                    coeffs[2] * pt*pt +
-                    coeffs[3] * pt +
-                    coeffs[4] ) + coeffs[5];
+    float chi2Cut = 30.0;
+    float pt = std::min<float>(tracks->pt(it), cuts.chi2MaxPt);
 
-    // cuts.chi2Scale * (cuts.chi2Coeff[0] + pt * (cuts.chi2Coeff[1] + pt * (cuts.chi2Coeff[2] + pt * cuts.chi2Coeff[3])));
+    if(cuts.upgrade)
+    {
+      float coeffs[6] = {-0.00026114,  0.00649631, -0.03731305,  0.03936967,  0.09792659, -2.0};
+      float coeffsTrips[6] = {0.00169671, -0.01867187,  0.07171551, -0.12454395,  0.11484901, -0.6};
+      if(nhits == 3)
+      {
+          chi2Cut =
+          30.0 *
+          (coeffsTrips[0] * pt*pt*pt*pt +
+          coeffsTrips[1] * pt*pt*pt +
+          coeffsTrips[2] * pt*pt +
+          coeffsTrips[3] * pt +
+          coeffsTrips[4] ) + coeffsTrips[5];
+      }
+    else
+    {
+      chi2Cut =
+      30.0 *
+      (coeffs[0] * pt*pt*pt*pt +
+      coeffs[1] * pt*pt*pt +
+      coeffs[2] * pt*pt +
+      coeffs[3] * pt +
+      coeffs[4] ) + coeffs[5];
+    }
+  }
+
+    //
 
     // above number were for Quads not normalized so for the time being just multiple by ndof for Quads  (triplets to be understood)
-    if (tracks->chi2(it)/tuples->size(it) >= 2.6) {
+    if (tracks->chi2(it)/tuples->size(it) >= chi2Cut) {
 #ifdef NTUPLE_DEBUG
       printf("Bad fit %d size %d pt %f eta %f chi2 %f\n",
              it,
@@ -412,10 +439,12 @@ __global__ void kernel_classifyTracks(HitContainer const *__restrict__ tuples,
     // (see CAHitNtupletGeneratorGPU.cc)
     auto const &region = (nhits > 3) ? cuts.quadruplet : cuts.triplet;
     bool isOk = (std::abs(tracks->tip(it)) < region.maxTip) and (tracks->pt(it) > region.minPt) and
-                (std::abs(tracks->zip(it)) < region.maxZip);
+                  (std::abs(tracks->zip(it)) < region.maxZip);
 
-    isOk = (std::abs(tracks->tip(it)) < 0.08) and (tracks->pt(it) > 0.5) and
-                (std::abs(tracks->zip(it)) < 11.0);
+                  if(tracks->pt(it)<0.2)
+                  printf("%.2f - %.2f \n",region.minPt,tracks->pt(it));
+    // isOk = (std::abs(tracks->tip(it)) < 0.08) and (tracks->pt(it) > 0.5) and
+    //             (std::abs(tracks->zip(it)) < 11.0);
 
     if (isOk)
       quality[it] = trackQuality::loose;

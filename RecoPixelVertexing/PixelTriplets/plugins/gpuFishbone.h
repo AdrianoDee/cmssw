@@ -1,3 +1,4 @@
+
 #ifndef RecoLocalTracker_SiPixelRecHits_plugins_gpuFishbone_h
 #define RecoLocalTracker_SiPixelRecHits_plugins_gpuFishbone_h
 

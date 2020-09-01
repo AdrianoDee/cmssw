@@ -130,6 +130,8 @@ namespace gpuPixelDoublets {
 
       uint8_t inner = layerPairs[2 * pairLayerId];
       uint8_t outer = layerPairs[2 * pairLayerId + 1];
+      if(outer <= inner)
+      printf("%d %d %d %d %d \n",j,innerLayerCumulativeSize[pairLayerId],pairLayerId,outer,inner);
       assert(outer > inner);
 
       auto hoff = Hist::histOff(outer);

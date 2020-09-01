@@ -38,10 +38,10 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoublets(HitsOnCPU const &hh, cudaStr
 
   // FIXME avoid magic numbers
   auto nActualPairs = m_params.isUpgrade_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
-  if (!m_params.includeJumpingForwardDoublets_)
-    nActualPairs = m_params.isUpgrade_ ? 45 : 15;
-  if (m_params.minHitsPerNtuplet_ > 3) {
-    nActualPairs = m_params.isUpgrade_ ? 45 : 13;
+  if (!m_params.includeJumpingForwardDoublets_ && ! m_params.isUpgrade_)
+    nActualPairs = 15;
+  if (m_params.minHitsPerNtuplet_ > 3 && ! m_params.isUpgrade_) {
+    nActualPairs = 13;
   }
 
   auto maxPairs = m_params.isUpgrade_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
@@ -100,6 +100,7 @@ void CAHitNtupletGeneratorKernelsCPU::launchKernels(HitsOnCPU const &hh, TkSoA *
         hh.view(), device_theCells_.get(), device_nCells_, device_isOuterHitOfCell_.get(), nhits, false);
   }
 
+
   kernel_find_ntuplets(hh.view(),
                        device_theCells_.get(),
                        device_nCells_,
@@ -108,18 +109,24 @@ void CAHitNtupletGeneratorKernelsCPU::launchKernels(HitsOnCPU const &hh, TkSoA *
                        device_hitTuple_apc_,
                        quality_d,
                        m_params.minHitsPerNtuplet_);
+  printf("kernel_find_ntuplets\n");
+
   if (m_params.doStats_)
     kernel_mark_used(hh.view(), device_theCells_.get(), device_nCells_);
 
   cms::cuda::finalizeBulk(device_hitTuple_apc_, tuples_d);
+  printf("finalizeBulk\n");
 
   // remove duplicates (tracks that share a doublet)
   kernel_earlyDuplicateRemover(device_theCells_.get(), device_nCells_, tuples_d, quality_d);
-
+  printf("kernel_earlyDuplicateRemover\n");
   kernel_countMultiplicity(tuples_d, quality_d, device_tupleMultiplicity_.get());
+  printf("kernel_countMultiplicity\n");
   cms::cuda::launchFinalize(device_tupleMultiplicity_.get(), device_tmws_, cudaStream);
+  printf("launchFinalize\n");
   kernel_fillMultiplicity(tuples_d, quality_d, device_tupleMultiplicity_.get());
-
+  printf("kernel_fillMultiplicity\n");
+  printf("%d \n",CAConstants::maxNumberOfTuples());
   if (nhits > 1 && m_params.lateFishbone_) {
     printf("latefishes\n");
     gpuPixelDoublets::fishbone(

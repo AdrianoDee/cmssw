@@ -19,25 +19,27 @@ namespace CAConstants {
 #ifdef GPU_SMALL_EVENTS
   constexpr uint32_t maxNumberOfTuples() { return 3 * 1024; }
 #else
-  constexpr uint32_t maxNumberOfTuples() { return 64 * 1024; }
+  //default
+  constexpr uint32_t maxNumberOfTuples() { return 512 * 1024; }
 #endif
 #else
-  constexpr uint32_t maxNumberOfTuples() { return 256 * 1024; }
+  constexpr uint32_t maxNumberOfTuples() { return 128 * 1024; }
 #endif
   constexpr uint32_t maxNumberOfQuadruplets() { return maxNumberOfTuples(); }
 #ifndef ONLY_PHICUT
 #ifndef GPU_SMALL_EVENTS
+  //default
   constexpr uint32_t maxNumberOfDoublets() { return 8 * 1024 * 1024; }
-  constexpr uint32_t maxCellsPerHit() { return 16 * 128; }
+  constexpr uint32_t maxCellsPerHit() { return 128 * 128; }
 #else
   constexpr uint32_t maxNumberOfDoublets() { return 128 * 1024; }
   constexpr uint32_t maxCellsPerHit() { return 128 / 2; }
 #endif
 #else
   constexpr uint32_t maxNumberOfDoublets() { return 8 * 1024 * 1024; }
-  constexpr uint32_t maxCellsPerHit() { return 32 * 128; }
+  constexpr uint32_t maxCellsPerHit() { return 16 * 128; }
 #endif
-  constexpr uint32_t maxNumOfActiveDoublets() { return maxNumberOfDoublets() / 8; }
+  constexpr uint32_t maxNumOfActiveDoublets() { return maxNumberOfDoublets() ; }
 
   constexpr uint32_t maxNumberOfLayerPairs() { return 70; }
   constexpr uint32_t maxNumberOfLayers() { return 28; }
@@ -45,24 +47,24 @@ namespace CAConstants {
 
   // types
   using hindex_type = uint16_t;  // FIXME from siPixelRecHitsHeterogeneousProduct
-  using tindex_type = uint16_t;  //  for tuples
+  using tindex_type = uint32_t;  //  for tuples
 
 #ifndef ONLY_PHICUT
-  using CellNeighbors = cms::cuda::VecArray<uint32_t, 36>;
-  using CellTracks = cms::cuda::VecArray<tindex_type, 48>;
+  using CellNeighbors = cms::cuda::VecArray<uint32_t, 128>;
+  using CellTracks = cms::cuda::VecArray<tindex_type, 256>;
 #else
   using CellNeighbors = cms::cuda::VecArray<uint32_t, 64>;
-  using CellTracks = cms::cuda::VecArray<tindex_type, 64>;
+  using CellTracks = cms::cuda::VecArray<tindex_type, 128>;
 #endif
 
   using CellNeighborsVector = cms::cuda::SimpleVector<CellNeighbors>;
   using CellTracksVector = cms::cuda::SimpleVector<CellTracks>;
 
   using OuterHitOfCell = cms::cuda::VecArray<uint32_t, maxCellsPerHit()>;
-  using TuplesContainer = cms::cuda::OneToManyAssoc<hindex_type, maxTuples(), 8 * maxTuples()>;
+  using TuplesContainer = cms::cuda::OneToManyAssoc<hindex_type, maxTuples(), 12 * maxTuples()>;
   using HitToTuple =
-      cms::cuda::OneToManyAssoc<tindex_type, pixelGPUConstants::maxNumberOfHits, 4 * maxTuples()>;  // 3.5 should be enough
-  using TupleMultiplicity = cms::cuda::OneToManyAssoc<tindex_type, 16, maxTuples()>;
+      cms::cuda::OneToManyAssoc<tindex_type, pixelGPUConstants::maxNumberOfHits, 12 * maxTuples()>;  // 3.5 should be enough
+  using TupleMultiplicity = cms::cuda::OneToManyAssoc<tindex_type, 24, maxTuples()>;
 
 }  // namespace CAConstants
 

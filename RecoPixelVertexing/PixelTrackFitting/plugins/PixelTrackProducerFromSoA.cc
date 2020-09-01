@@ -151,7 +151,7 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
   auto const &hitIndices = tsoa.hitIndices;
   auto maxTracks = tsoa.stride();
 
-  int32_t nt = 0;
+  int32_t nt = 0, nquad = 0;
 
   for (int32_t it = 0; it < maxTracks; ++it) {
     auto nHits = tsoa.nHits(it);
@@ -169,6 +169,12 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
       continue;
     indToEdm.back() = nt;
     ++nt;
+
+    if(nHits>3)
+    {++nquad;}
+
+    if(tsoa.pt(it)<0.2)
+    printf("%.2f \n",tsoa.pt(it));
 
     hits.resize(nHits);
     auto b = hitIndices.begin(it);
@@ -272,7 +278,7 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
     tracks.emplace_back(track.release(), hits);
   }
   std::cout << "processed " << nt << " good tuples " << tracks.size() << " out of " << indToEdm.size() << std::endl;
-
+  std::cout << "quads " << nquad << std::endl;
   // store tracks
   storeTracks(iEvent, tracks, *httopo);
   iEvent.put(std::move(indToEdmP));
