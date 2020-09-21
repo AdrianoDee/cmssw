@@ -63,7 +63,8 @@ __global__ void kernelFastFit(Tuples const *__restrict__ foundNtuplets,
     auto const *hitId = foundNtuplets->begin(tkid);
     for (unsigned int i = 0; i < hitsInFit; ++i) {
       auto hit = hitId[i];
-      // printf("Hit global: %f,%f,%f\n", hhp->xg_d[hit],hhp->yg_d[hit],hhp->zg_d[hit]);
+      // if(N==6)
+      // printf("%f %f %f ", hhp->xGlobal(hit), hhp->yGlobal(hit), hhp->zGlobal(hit));
       float ge[6];
       hhp->cpeParams()
           .detParams(hhp->detectorIndex(hit))
@@ -74,6 +75,9 @@ __global__ void kernelFastFit(Tuples const *__restrict__ foundNtuplets,
       hits_ge.col(i) << ge[0], ge[1], ge[2], ge[3], ge[4], ge[5];
     }
     Rfit::Fast_fit(hits, fast_fit);
+
+    // if(N==6)
+    // printf("%.2f %.2f %.2f %.2f ", fast_fit(0), fast_fit(1), fast_fit(2), fast_fit(3));
 
     // no NaN here....
     assert(fast_fit(0) == fast_fit(0));
@@ -138,6 +142,7 @@ __global__ void kernelLineFit(CAConstants::TupleMultiplicity const *__restrict__
   assert(circle_fit);
   assert(N <= nHits);
 
+
   // same as above...
 
   // look in bin for this hit multiplicity
@@ -164,6 +169,13 @@ __global__ void kernelLineFit(CAConstants::TupleMultiplicity const *__restrict__
     results->pt(tkid) = B / std::abs(circle_fit[local_idx].par(2));
     results->eta(tkid) = asinhf(line_fit.par(0));
     results->chi2(tkid) = (circle_fit[local_idx].chi2 + line_fit.chi2) / (2 * N - 5);
+
+
+    for(int j = 0; j<N; j++)
+    {
+      printf("%.2f %.2f %.2f ",hits.col(j)[0],hits.col(j)[1],hits.col(j)[2]);
+    }
+    printf("%.2f %.2f %.2f\n", results->pt(tkid), results->eta(tkid), results->chi2(tkid));
 
 #ifdef RIEMANN_DEBUG
     printf("kernelLineFit size %d for %d hits circle.par(0,1,2): %d %f,%f,%f\n",

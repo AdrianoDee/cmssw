@@ -184,7 +184,7 @@ LocalPoint RectangularPixelTopology::localPosition(const MeasurementPoint& mp) c
 
   float lpY = localY(mpy);
   float lpX = localX(mpx);
-
+  // std::cout << "legacy"<< mp.x() << " - " << mp.y() << " - " << lpX << " - " << lpY << std::endl;
   // Return it as a LocalPoint
   return LocalPoint(lpX, lpY);
 }
@@ -232,6 +232,10 @@ float RectangularPixelTopology::localX(const float mpx) const {
   }
 
   // The final position in local coordinates
+
+  // std::cout << "local x : " << binoffx << " - " << local_pitchx << " - "
+  //           << m_xoffset << " - " << fractionX << " - " << m_pitchx << std::endl;
+
   float lpX = float(binoffx * m_pitchx) + fractionX * local_pitchx + m_xoffset;
 
 #ifdef EDM_ML_DEBUG
@@ -265,16 +269,23 @@ float RectangularPixelTopology::localY(const float mpy) const {
 #endif
     }
   else {  // 415 is last big pixel, 416 and above do not exists!
+
+
     constexpr int bigYIndeces[]{0, 51, 52, 103, 104, 155, 156, 207, 208, 259, 260, 311, 312, 363, 364, 415, 416, 511};
     auto const j = std::lower_bound(std::begin(bigYIndeces), std::end(bigYIndeces), binoffy);
+
     if (*j == binoffy)
       local_pitchy *= 2;
     binoffy += (j - bigYIndeces);
+    std::cout << " - " << local_pitchy << " - " << binoffy << " - " << (j - bigYIndeces) << std::endl;
   }
 
   // The final position in local coordinates
-  float lpY = float(binoffy * m_pitchy) + fractionY * local_pitchy + m_yoffset;
 
+  // std::cout << "local y : " << binoffy << " - " << local_pitchy << " - "
+  //           << m_yoffset << " - " << fractionY << " - " << m_pitchy << std::endl;
+
+  float lpY = float(binoffy * m_pitchy) + fractionY * local_pitchy + m_yoffset;
 #ifdef EDM_ML_DEBUG
 
   if (lpY < m_yoffset || lpY > (-m_yoffset)) {

@@ -58,8 +58,13 @@ __global__ void kernelBLFastFit(Tuples const *__restrict__ foundNtuplets,
 
     // get it from the ntuple container (one to one to helix)
     auto tkid = *(tupleMultiplicity->begin(nHits) + tuple_idx);
+
+    if(tkid >= foundNtuplets->nbins())
+    printf("%d %d \n",foundNtuplets->size(tkid),tkid);
     assert(tkid < foundNtuplets->nbins());
 
+    if(foundNtuplets->size(tkid) != nHits)
+    printf("%d %d \n",foundNtuplets->size(tkid),nHits);
     assert(foundNtuplets->size(tkid) == nHits);
 
     Rfit::Map3xNd<N> hits(phits + local_idx);

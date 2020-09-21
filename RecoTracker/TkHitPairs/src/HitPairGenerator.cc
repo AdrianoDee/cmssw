@@ -10,6 +10,7 @@ const OrderedHitPairs& HitPairGenerator::run(const TrackingRegion& region,
   thePairs.reserve(localRA.upper());
   hitPairs(region, thePairs, ev, es);
   thePairs.shrink_to_fit();
+  std::cout<<"hitpairs : "<< thePairs.size()<<std::endl;
   return thePairs;
 }
 

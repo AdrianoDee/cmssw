@@ -320,6 +320,7 @@ LocalPoint PixelCPEGeneric::localPosition(DetParam const& theDetParam, ClusterPa
       the_eff_charge_cut_highX,
       the_size_cutX);  // cut for eff charge width &&&
 
+
   // apply the lorentz offset correction
   xPos = xPos + shiftX;
 
@@ -385,7 +386,7 @@ LocalPoint PixelCPEGeneric::localPosition(DetParam const& theDetParam, ClusterPa
 
   }  // if ( IrradiationBiasCorrection_ )
 
-  //cout<<" in PixelCPEGeneric:localPosition - pos = "<<xPos<<" "<<yPos<<endl; //dk
+  // std::cout<<" in PixelCPEGeneric:localPosition - pos = "<<xPos<<" "<<yPos<<endl; //dk
 
   //--- Now put the two together
   LocalPoint pos_in_local(xPos, yPos);
@@ -643,6 +644,5 @@ void PixelCPEGeneric::fillPSetDescription(edm::ParameterSetDescription& desc) {
   desc.add<bool>("TruncatePixelCharge", true);
   desc.add<bool>("IrradiationBiasCorrection", false);
   desc.add<bool>("DoCosmics", false);
-  desc.add<bool>("Upgrade", false);
   desc.add<bool>("SmallPitch", false);
 }

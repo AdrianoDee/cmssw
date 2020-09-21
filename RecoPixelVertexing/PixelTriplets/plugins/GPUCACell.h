@@ -17,6 +17,9 @@
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CAConstants.h"
 
+#define PHASE2_TRIPLETS 1
+#define MAXHITS_INTUPLE 24
+
 class GPUCACell {
 public:
   using ptrAsInt = unsigned long long;
@@ -31,7 +34,7 @@ public:
   using Hits = TrackingRecHit2DSOAView;
   using hindex_type = Hits::hindex_type;
 
-  using TmpTuple = cms::cuda::VecArray<uint32_t, 6>;
+  using TmpTuple = cms::cuda::VecArray<uint32_t, MAXHITS_INTUPLE>;
 
   using HitContainer = pixelTrack::HitContainer;
   using Quality = trackQuality::Quality;
@@ -121,6 +124,7 @@ public:
     auto ro = get_outer_r(hh);
     auto zo = get_outer_z(hh);
 
+    printf("dcaCutOuterTriplet %.2f \n",dcaCutOuterTriplet);
     auto r1 = otherCell.get_inner_r(hh);
     auto z1 = otherCell.get_inner_z(hh);
     auto isBarrel = otherCell.get_outer_detIndex(hh) < last_barrel_detIndex;
@@ -186,6 +190,61 @@ public:
       return false;
 
     return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
+  }
+
+  __device__ inline bool bbe(Hits const& hh, TmpTuple const& tmpNtuplet, GPUCACell* cells) const
+  {
+
+    constexpr uint32_t last_barrel_detIndex = 756;//1184;
+
+    bool b1 = (hh.detectorIndex(cells[tmpNtuplet[0]].theInnerHitId) <= last_barrel_detIndex);
+    bool b2 = (hh.detectorIndex(cells[tmpNtuplet[1]].theInnerHitId) <= last_barrel_detIndex);
+    bool b3 = (hh.detectorIndex(cells[tmpNtuplet[1]].theOuterHitId) >  last_barrel_detIndex);
+
+    return (b1 && b2 && b3);
+
+  }
+
+  __device__ inline bool bee(Hits const& hh, TmpTuple const& tmpNtuplet, GPUCACell* cells) const
+  {
+
+    constexpr uint32_t last_barrel_detIndex = 756;//1184;
+
+    bool b1 = (hh.detectorIndex(cells[tmpNtuplet[0]].theInnerHitId) <= last_barrel_detIndex);
+    bool b2 = (hh.detectorIndex(cells[tmpNtuplet[1]].theInnerHitId) >  last_barrel_detIndex);
+    bool b3 = (hh.detectorIndex(cells[tmpNtuplet[1]].theOuterHitId) >  last_barrel_detIndex);
+
+    return (b1 && b2 && b3);
+
+  }
+  __device__ inline bool triangle(Hits const& hh, TmpTuple const& tmpNtuplet, GPUCACell* cells,float cut) const
+  {
+
+    auto z0 = hh.zGlobal(cells[tmpNtuplet[0]].theInnerHitId);
+    auto r0 = hh.rGlobal(cells[tmpNtuplet[0]].theInnerHitId);
+
+    auto deltaz0 = (hh.zGlobal(cells[tmpNtuplet[0]].theOuterHitId) - z0);
+    auto deltaz1 = (hh.zGlobal(cells[tmpNtuplet[1]].theOuterHitId) - z0);
+
+    auto deltar0 = (hh.rGlobal(cells[tmpNtuplet[1]].theOuterHitId) - r0);
+    auto deltar1 = (hh.rGlobal(cells[tmpNtuplet[0]].theOuterHitId) - r0);
+
+    float area = deltaz0 * deltar0 - deltaz1 * deltar1;
+
+    return (abs(area / 2.0)<cut);
+  }
+
+  __device__ inline bool bbb(Hits const& hh, TmpTuple const& tmpNtuplet, GPUCACell* cells) const
+  {
+
+    constexpr uint32_t last_barrel_detIndex = 756;//1184;
+
+    bool b1 = (hh.detectorIndex(cells[tmpNtuplet[0]].theInnerHitId) <= last_barrel_detIndex);
+    bool b2 = (hh.detectorIndex(cells[tmpNtuplet[1]].theInnerHitId) <=  last_barrel_detIndex);
+    bool b3 = (hh.detectorIndex(cells[tmpNtuplet[1]].theOuterHitId) <=  last_barrel_detIndex);
+
+    return (b1 && b2 && b3);
+
   }
 
   __device__ inline bool hole0(Hits const& hh, GPUCACell const& innerCell) const {
@@ -258,7 +317,7 @@ public:
     // than a threshold
 
     tmpNtuplet.push_back_unsafe(theDoubletId);
-    assert(tmpNtuplet.size() <= 4);
+    assert(tmpNtuplet.size() <= MAXHITS_INTUPLE);
 
     bool last = true;
     for (int j = 0; j < outerNeighbors().size(); ++j) {
@@ -270,30 +329,53 @@ public:
           hh, cells, cellTracks, foundNtuplets, apc, quality, tmpNtuplet, minHitsPerNtuplet, startAt0);
     }
     if (last) {  // if long enough save...
+      //if (((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1 && minHitsPerNtuplet>3) || (minHitsPerNtuplet==3 && (unsigned int)(tmpNtuplet.size())==2)) {
       if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
 #ifdef ONLY_TRIPLETS_IN_HOLE
         // triplets accepted only pointing to the hole
         if (tmpNtuplet.size() >= 3 || (startAt0 && hole4(hh, cells[tmpNtuplet[0]])) ||
             ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
 #endif
+#ifdef PHASE2_TRIPLETS
+        // triplets accepted only pointing to the hole
+        bool good_triplet = false;
+        if (tmpNtuplet.size()==2)
         {
-          hindex_type hits[6];
+
+          // float slope = hh.rGlobal(cells[tmpNtuplet[1]].theOuterHitId) / hh.zGlobal(cells[tmpNtuplet[1]].theOuterHitId);
+          //
+          // // if((slope <= 1.0) && (slope >=0.2))
+          // // {
+          // //   good_triplet = bbe(hh,tmpNtuplet,cells) || bee(hh,tmpNtuplet,cells);
+          // // }
+          good_triplet = triangle(hh,tmpNtuplet,cells,0.05);//bbb(hh,tmpNtuplet,cells);
+        }
+        if (tmpNtuplet.size() >= 3 || good_triplet)
+#endif
+        {
+          hindex_type hits[MAXHITS_INTUPLE];
           auto nh = 0U;
           for (auto c : tmpNtuplet) {
             hits[nh++] = cells[c].theInnerHitId;
           }
           hits[nh] = theOuterHitId;
-          auto it = foundNtuplets.bulkFill(apc, hits, tmpNtuplet.size() + 1);
+          auto it = foundNtuplets.bulkFill(apc, hits, uint32_t(tmpNtuplet.size() + 1));
           if (it >= 0) {  // if negative is overflow....
             for (auto c : tmpNtuplet)
-              cells[c].addTrack(it, cellTracks);
+              {cells[c].addTrack(it, cellTracks);
+              if(cells[c].tracks().size()>250)
+              {printf("size = %d\n",cells[c].tracks().size());}}
             quality[it] = bad;  // initialize to bad
+          }
+          else
+          {
+            printf("Overflowing\n");
           }
         }
       }
     }
     tmpNtuplet.pop_back();
-    assert(tmpNtuplet.size() < 4);
+    assert(tmpNtuplet.size() < MAXHITS_INTUPLE);
   }
 
 private:

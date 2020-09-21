@@ -36,6 +36,7 @@ void CombinedHitPairGenerator::hitPairs(const TrackingRegion& region,
   }
 
   theLayerCache.clear();
-
-  LogDebug("CombinedHitPairGenerator") << " total number of pairs provided back CHPG : " << result.size();
+  std::cout << "CombinedHitPairGenerator" <<
+  // LogDebug("CombinedHitPairGenerator") << 
+  " total number of pairs provided back CHPG : " << result.size();
 }

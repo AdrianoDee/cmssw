@@ -27,7 +27,7 @@ namespace {
 
   cAHitNtupletGenerator::QualityCuts makeQualityCuts(edm::ParameterSet const& pset) {
     auto coeff = pset.getParameter<std::vector<double>>("chi2Coeff");
-    if (coeff.size() != 4) {
+    if (coeff.size() != 6) {
       throw edm::Exception(edm::errors::Configuration,
                            "CAHitNtupletGeneratorOnGPU.trackQualityCuts.chi2Coeff must have 4 elements");
     }
@@ -38,13 +38,19 @@ namespace {
                                               // chi2 scale factor: 30 for broken line fit, 45 for Riemann fit
                                               (float)pset.getParameter<double>("chi2Scale"),
                                               // regional cuts for triplets
-                                              {(float)pset.getParameter<double>("tripletMaxTip"),
+                                              {
+                                               (float)pset.getParameter<double>("tripletChi2MaxPt"),
+                                               (float)pset.getParameter<double>("tripletMaxTip"),
                                                (float)pset.getParameter<double>("tripletMinPt"),
                                                (float)pset.getParameter<double>("tripletMaxZip")},
                                               // regional cuts for quadruplets
-                                              {(float)pset.getParameter<double>("quadrupletMaxTip"),
+                                              {
+                                               (float)pset.getParameter<double>("chi2MaxPt"),
+                                               (float)pset.getParameter<double>("quadrupletMaxTip"),
                                                (float)pset.getParameter<double>("quadrupletMinPt"),
-                                               (float)pset.getParameter<double>("quadrupletMaxZip")}};
+                                               (float)pset.getParameter<double>("quadrupletMaxZip")},
+
+                                               (bool)pset.getParameter<bool>("upgrade")};
   }
 
 }  // namespace
@@ -71,6 +77,7 @@ CAHitNtupletGeneratorOnGPU::CAHitNtupletGeneratorOnGPU(const edm::ParameterSet& 
                cfg.getParameter<double>("hardCurvCut"),
                cfg.getParameter<double>("dcaCutInnerTriplet"),
                cfg.getParameter<double>("dcaCutOuterTriplet"),
+               cfg.getParameter<bool>("isUpgrade"),
                makeQualityCuts(cfg.getParameterSet("trackQualityCuts"))) {
 #ifdef DUMP_GPU_TK_TUPLES
   printf("TK: %s %s % %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
@@ -138,21 +145,24 @@ void CAHitNtupletGeneratorOnGPU::fillDescriptions(edm::ParameterSetDescription& 
   desc.add<bool>("doZ0Cut", true);
   desc.add<bool>("doPtCut", true);
   desc.add<bool>("useRiemannFit", false)->setComment("true for Riemann, false for BrokenLine");
+  desc.add<bool>("isUpgrade", false);
 
   edm::ParameterSetDescription trackQualityCuts;
-  trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
-  trackQualityCuts.add<std::vector<double>>("chi2Coeff", {0.68177776, 0.74609577, -0.08035491, 0.00315399})
+  trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut (ntuplets)");
+  trackQualityCuts.add<std::vector<double>>("chi2Coeff", {0.68177776, 0.74609577, -0.08035491, 0.00315399,0.0,0.0})
       ->setComment("Polynomial coefficients to derive the pT-dependent chi2 cut");
   trackQualityCuts.add<double>("chi2Scale", 30.)
       ->setComment(
           "Factor to multiply the pT-dependent chi2 cut (currently: 30 for the broken line fit, 45 for the Riemann "
           "fit)");
+  trackQualityCuts.add<double>("tripletChi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut (trips)");
   trackQualityCuts.add<double>("tripletMinPt", 0.5)->setComment("Min pT for triplets, in GeV");
   trackQualityCuts.add<double>("tripletMaxTip", 0.3)->setComment("Max |Tip| for triplets, in cm");
   trackQualityCuts.add<double>("tripletMaxZip", 12.)->setComment("Max |Zip| for triplets, in cm");
   trackQualityCuts.add<double>("quadrupletMinPt", 0.3)->setComment("Min pT for quadruplets, in GeV");
   trackQualityCuts.add<double>("quadrupletMaxTip", 0.5)->setComment("Max |Tip| for quadruplets, in cm");
   trackQualityCuts.add<double>("quadrupletMaxZip", 12.)->setComment("Max |Zip| for quadruplets, in cm");
+  trackQualityCuts.add<bool>("upgrade",false);
   desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)
       ->setComment(
           "Quality cuts based on the results of the track fit:\n  - apply a pT-dependent chi2 cut;\n  - apply \"region "
@@ -192,6 +202,7 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DC
   auto* soa = tracks.get();
   assert(soa);
 
+  std::cout << hits_d.view()->phiBinner().size()<<std::endl;
   CAHitNtupletGeneratorKernelsCPU kernels(m_params);
   kernels.counters_ = m_counters;
   kernels.allocateOnGPU(nullptr);
@@ -215,5 +226,7 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DC
 
   kernels.classifyTuples(hits_d, soa, nullptr);
 
+  // hits_d.view()->release();
+  std::cout << hits_d.view()->phiBinner().size()<<std::endl;
   return tracks;
 }

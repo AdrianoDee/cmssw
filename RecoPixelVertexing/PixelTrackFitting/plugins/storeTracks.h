@@ -66,6 +66,7 @@ void storeTracks(Ev& ev, const TWH& tracksWithHits, const TrackerTopology& ttopo
     (tracks->at(k)).setExtra(theTrackExtraRef);
   }
 
+  std::cout << "pixeltracks"<< nTracks << std::endl;
   ev.put(std::move(tracks));
 }
 

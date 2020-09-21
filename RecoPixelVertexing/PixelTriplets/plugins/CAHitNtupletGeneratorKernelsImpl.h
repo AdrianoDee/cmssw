@@ -2,7 +2,7 @@
 // Original Author: Felice Pantaleo, CERN
 //
 
-// #define NTUPLE_DEBUG
+// #define NTUPLE_DEBUG 1
 
 #include <cmath>
 #include <cstdint>
@@ -18,6 +18,8 @@
 #include "GPUCACell.h"
 #include "gpuFishbone.h"
 #include "gpuPixelDoublets.h"
+
+#define MAXHITS_INTUPLE 24
 
 using HitsOnGPU = TrackingRecHit2DSOAView;
 using HitsOnCPU = TrackingRecHit2DCUDA;
@@ -66,9 +68,9 @@ __global__ void kernel_checkOverflows(HitContainer const *foundNtuplets,
   }
 
   for (int idx = first, nt = foundNtuplets->nbins(); idx < nt; idx += gridDim.x * blockDim.x) {
-    if (foundNtuplets->size(idx) > 5)
+    if (foundNtuplets->size(idx) > MAXHITS_INTUPLE)
       printf("ERROR %d, %d\n", idx, foundNtuplets->size(idx));
-    assert(foundNtuplets->size(idx) < 6);
+    assert(foundNtuplets->size(idx) < MAXHITS_INTUPLE);
     for (auto ih = foundNtuplets->begin(idx); ih != foundNtuplets->end(idx); ++ih)
       assert(*ih < nHits);
   }
@@ -169,8 +171,8 @@ __global__ void kernel_fastDuplicateRemover(GPUCACell const *__restrict__ cells,
     uint16_t im = 60000;
 
     auto score = [&](auto it) {
-      return std::abs(tracks->tip(it));  // tip
-      // return tracks->chi2(it);  //chi2
+      // return std::abs(tracks->tip(it));  // tip
+      return tracks->chi2(it);  //chi2
     };
 
     // find min socre
@@ -221,8 +223,8 @@ __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
     int numberOfPossibleNeighbors = isOuterHitOfCell[innerHitId].size();
     auto vi = isOuterHitOfCell[innerHitId].data();
 
-    constexpr uint32_t last_bpix1_detIndex = 96;
-    constexpr uint32_t last_barrel_detIndex = 1184;
+    constexpr uint32_t last_bpix1_detIndex = 108;//96;
+    constexpr uint32_t last_barrel_detIndex = 756;//1184;
     auto ri = thisCell.get_inner_r(hh);
     auto zi = thisCell.get_inner_z(hh);
 
@@ -280,6 +282,8 @@ __global__ void kernel_find_ntuplets(GPUCACell::Hits const *__restrict__ hhp,
 
     auto pid = thisCell.theLayerPairId;
     auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
+    doit = pid < 40;
+    // auto doit = true;//minHitsPerNtuplet > 3 ? pid < 24 || pid >= 33 : pid < 24 || pid >= 33;
     if (doit) {
       GPUCACell::TmpTuple stack;
       stack.reset();
@@ -313,9 +317,9 @@ __global__ void kernel_countMultiplicity(HitContainer const *__restrict__ foundN
     if (quality[it] == trackQuality::dup)
       continue;
     assert(quality[it] == trackQuality::bad);
-    if (nhits > 5)
+    if (nhits > MAXHITS_INTUPLE)
       printf("wrong mult %d %d\n", it, nhits);
-    assert(nhits < 8);
+    assert(nhits < MAXHITS_INTUPLE);
     tupleMultiplicity->countDirect(nhits);
   }
 }
@@ -326,14 +330,15 @@ __global__ void kernel_fillMultiplicity(HitContainer const *__restrict__ foundNt
   auto first = blockIdx.x * blockDim.x + threadIdx.x;
   for (int it = first, nt = foundNtuplets->nbins(); it < nt; it += gridDim.x * blockDim.x) {
     auto nhits = foundNtuplets->size(it);
+    // printf("mult> %d\n",nhits);
     if (nhits < 3)
       continue;
     if (quality[it] == trackQuality::dup)
       continue;
     assert(quality[it] == trackQuality::bad);
-    if (nhits > 5)
+    if (nhits > MAXHITS_INTUPLE)
       printf("wrong mult %d %d\n", it, nhits);
-    assert(nhits < 8);
+    assert(nhits < MAXHITS_INTUPLE);
     tupleMultiplicity->fillDirect(nhits, it);
   }
 }
@@ -369,25 +374,59 @@ __global__ void kernel_classifyTracks(HitContainer const *__restrict__ tuples,
 #endif
       continue;
     }
+    if (tracks->pt(it) == 0.0 && tracks->eta(it) == 0.0)
+    {
+      continue;
+    }
 
     // compute a pT-dependent chi2 cut
     // default parameters:
     //   - chi2MaxPt = 10 GeV
     //   - chi2Coeff = { 0.68177776, 0.74609577, -0.08035491, 0.00315399 }
     //   - chi2Scale = 30 for broken line fit, 45 for Riemann fit
+    //   - chiCoeffUpg = {-0.00070061  0.01830656 -0.15265497  0.40064594  0.31293925}
     // (see CAHitNtupletGeneratorGPU.cc)
+
+    float chi2Cut = 30.0;
     float pt = std::min<float>(tracks->pt(it), cuts.chi2MaxPt);
-    float chi2Cut = cuts.chi2Scale *
-                    (cuts.chi2Coeff[0] + pt * (cuts.chi2Coeff[1] + pt * (cuts.chi2Coeff[2] + pt * cuts.chi2Coeff[3])));
+
+    if(cuts.upgrade)
+    {
+      float coeffs[6] = {-0.00026114,  0.00649631, -0.03731305,  0.03936967,  0.09792659, -2.0};
+      float coeffsTrips[6] = {0.00169671, -0.01867187,  0.07171551, -0.12454395,  0.11484901, -0.6};
+      if(nhits == 3)
+      {
+          chi2Cut =
+          30.0 *
+          (coeffsTrips[0] * pt*pt*pt*pt +
+          coeffsTrips[1] * pt*pt*pt +
+          coeffsTrips[2] * pt*pt +
+          coeffsTrips[3] * pt +
+          coeffsTrips[4] ) + coeffsTrips[5];
+      }
+    else
+    {
+      chi2Cut =
+      30.0 *
+      (coeffs[0] * pt*pt*pt*pt +
+      coeffs[1] * pt*pt*pt +
+      coeffs[2] * pt*pt +
+      coeffs[3] * pt +
+      coeffs[4] ) + coeffs[5];
+    }
+  }
+
+    //
+
     // above number were for Quads not normalized so for the time being just multiple by ndof for Quads  (triplets to be understood)
-    if (3.f * tracks->chi2(it) >= chi2Cut) {
+    if (tracks->chi2(it)/tuples->size(it) >= chi2Cut) {
 #ifdef NTUPLE_DEBUG
       printf("Bad fit %d size %d pt %f eta %f chi2 %f\n",
              it,
              tuples->size(it),
              tracks->pt(it),
              tracks->eta(it),
-             3.f * tracks->chi2(it));
+             tracks->chi2(it));
 #endif
       continue;
     }
@@ -396,10 +435,16 @@ __global__ void kernel_classifyTracks(HitContainer const *__restrict__ tuples,
     // default cuts:
     //   - for triplets:    |Tip| < 0.3 cm, pT > 0.5 GeV, |Zip| < 12.0 cm
     //   - for quadruplets: |Tip| < 0.5 cm, pT > 0.3 GeV, |Zip| < 12.0 cm
+    //   - for phase2:      |Tip| < 0.08 cm, pT > 0.5 GeV, |Zip| < 12.0 cm
     // (see CAHitNtupletGeneratorGPU.cc)
     auto const &region = (nhits > 3) ? cuts.quadruplet : cuts.triplet;
     bool isOk = (std::abs(tracks->tip(it)) < region.maxTip) and (tracks->pt(it) > region.minPt) and
-                (std::abs(tracks->zip(it)) < region.maxZip);
+                  (std::abs(tracks->zip(it)) < region.maxZip);
+
+                  if(tracks->pt(it)<0.2)
+                  printf("%.2f - %.2f \n",region.minPt,tracks->pt(it));
+    // isOk = (std::abs(tracks->tip(it)) < 0.08) and (tracks->pt(it) > 0.5) and
+    //             (std::abs(tracks->zip(it)) < 11.0);
 
     if (isOk)
       quality[it] = trackQuality::loose;

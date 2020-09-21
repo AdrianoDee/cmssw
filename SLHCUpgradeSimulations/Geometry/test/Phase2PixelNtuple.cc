@@ -3,6 +3,7 @@
 */
 
 // DataFormats
+
 #include "DataFormats/Common/interface/DetSetVector.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
@@ -171,7 +172,8 @@ private:
 
 Phase2PixelNtuple::Phase2PixelNtuple(edm::ParameterSet const& conf)
     : trackerHitAssociatorConfig_(conf, consumesCollector()),
-      pixelRecHits_token(consumes<edmNew::DetSetVector<SiPixelRecHit>>(edm::InputTag("siPixelRecHits"))),
+      // pixelRecHits_token(consumes<edmNew::DetSetVector<SiPixelRecHit>>(edm::InputTag("siPixelRecHits"))),
+      pixelRecHits_token(consumes<edmNew::DetSetVector<SiPixelRecHit>>(conf.getParameter<edm::InputTag>("siPixelRecHits"))),
       token_recoTracks(consumes<edm::View<reco::Track>>(conf.getParameter<edm::InputTag>("trackProducer"))),
       verbose_(conf.getUntrackedParameter<bool>("verbose", false)),
       picky_(conf.getUntrackedParameter<bool>("picky", false)),
@@ -865,12 +867,12 @@ std::pair<float, float> Phase2PixelNtuple::computeAnglesFromDetPosition(const Si
   float gv_dot_gvy = gv.x() * gvy.x() + gv.y() * gvy.y() + gv.z() * gvy.z();
   float gv_dot_gvz = gv.x() * gvz.x() + gv.y() * gvz.y() + gv.z() * gvz.z();
 
-  /* all the above is equivalent to  
+  /* all the above is equivalent to
       const Local3DPoint origin =   theDet->surface().toLocal(GlobalPoint(0,0,0)); // can be computed once...
       auto gvx = lp.x()-origin.x();
       auto gvy = lp.y()-origin.y();
       auto gvz = -origin.z();
-   *  normalization not required as only ratio used... 
+   *  normalization not required as only ratio used...
    */
 
   // calculate angles

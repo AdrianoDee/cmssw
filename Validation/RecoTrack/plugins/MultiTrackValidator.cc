@@ -1038,6 +1038,8 @@ void MultiTrackValidator::dqmAnalyze(const edm::Event& event,
 
       for (View<Track>::size_type i = 0; i < trackCollection.size(); ++i) {
         auto track = trackCollection.refAt(i);
+        //if(fabs(track->eta())>3.5)
+        //std::cout << track->eta() << " - ";
         rT++;
         if (trackFromSeedFitFailed(*track))
           ++seed_fit_failed;
@@ -1070,12 +1072,14 @@ void MultiTrackValidator::dqmAnalyze(const edm::Event& event,
               break;
             }
           }
-          LogTrace("TrackValidator") << "reco::Track #" << rT << " with pt=" << track->pt()
-                                     << " associated with quality:" << tp.begin()->second << "\n";
+          // LogTrace("TrackValidator")
+          // std::cout << "reco::Track #" << rT << " with pt=" << track->pt() << " with eta=" << track->eta()
+                                     // << " associated with quality:" << tp.begin()->second << "\n";
         } else {
-          LogTrace("TrackValidator") << "reco::Track #" << rT << " with pt=" << track->pt()
-                                     << " NOT associated to any TrackingParticle"
-                                     << "\n";
+          // LogTrace("TrackValidator")
+          // std::cout << "reco::Track #" << rT << " with pt=" << track->pt() << " with eta=" << track->eta()
+                                     // << " NOT associated to any TrackingParticle"
+                                     // << "\n";
         }
 
         // set MVA values for this track

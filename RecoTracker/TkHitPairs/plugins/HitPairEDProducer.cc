@@ -105,8 +105,10 @@ namespace {
 
         for (SeedingLayerSetsHits::SeedingLayerSet layerSet : regionLayers.layerPairs()) {
           auto doublets = generator_.doublets(region, iEvent, iSetup, layerSet, *hitCachePtr);
-          LogTrace("HitPairEDProducer") << " created " << doublets.size() << " doublets for layers "
-                                        << layerSet[0].index() << "," << layerSet[1].index();
+          // std::cout << "HitPairEDProducer"
+          LogTrace("HitPairEDProduc  er")
+          << " created " << doublets.size() << " doublets for layers "
+                                       << layerSet[0].index() << "," << layerSet[1].index() << std::endl;
           if (doublets.empty())
             continue;  // don't bother if no pairs from these layers
           nDoublets += doublets.size();
@@ -123,7 +125,7 @@ namespace {
           intermediateHitDoubletsProducer.fill(std::get<1>(hitCachePtr_filler_ihd), layerSet, std::move(doublets));
         }
       }
-
+      // std::cout << "hitpair producer " << nDoublets<< std::endl;
       seedingHitSetsProducer.put(iEvent);
       intermediateHitDoubletsProducer.put(iEvent);
     }

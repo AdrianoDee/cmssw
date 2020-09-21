@@ -184,6 +184,7 @@ namespace cms {
       return;  // clusterizer is invalid, bail out
     }
 
+    // std::cout << "legacy" << std::endl;
     int numberOfDetUnits = 0;
     int numberOfClusters = 0;
 
@@ -217,6 +218,7 @@ namespace cms {
 
     numberOfClusters = 0;
     for (auto DSViter = input.begin(); DSViter != input.end(); DSViter++) {
+
       numberOfDetUnits++;
       unsigned int detid = DSViter->detId();
       DetId detIdObject(detid);
@@ -239,7 +241,14 @@ namespace cms {
             edmNew::makeRefTo(inputhandle, clustIt);
         // Make a RecHit and add it to the DetSet
         // old : recHitsOnDetUnit.push_back( new SiPixelRecHit( lp, le, detIdObject, &*clustIt) );
+
         SiPixelRecHit hit(lp, le, rqw, *genericDet, cluster);
+
+        // std::cout << "hit n." << h << " - " << lp.x() << " - " << lp.y() << " - " << lp.z()
+        //           << " - " << le.xx() << " - " << le.xy() << " - " << le.yy()
+        //           << " - " << hit.globalPosition().x() << " - " << hit.globalPosition().y() << " - " << hit.globalPosition().z() << " - "
+        //           << std::endl;
+
         //
         // Now save it =================
         recHitsOnDetUnit.push_back(hit);
@@ -256,11 +265,11 @@ namespace cms {
     }  //    <-- End loop on DetUnits
 
     //    LogDebug ("SiPixelRecHitConverter")
-    //  std::cout << "SiPixelRecHitConverterVI "
-    //  << cpeName_ << " converted " << numberOfClusters
-    //  << " SiPixelClusters into SiPixelRecHits, in "
-    //  << numberOfDetUnits << " DetUnits." //;
-    //  << std::endl;
+     std::cout << "SiPixelRecHitConverter "
+     << cpeName_ << " converted " << numberOfClusters
+     << " SiPixelClusters into " << h << " SiPixelRecHits, in "
+     << numberOfDetUnits << " DetUnits." //;
+     << std::endl;
   }
 }  // end of namespace cms
 

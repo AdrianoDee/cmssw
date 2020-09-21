@@ -173,7 +173,18 @@ std::unique_ptr<reco::Track> PixelFitterByHelixProjections::run(const std::vecto
   Measurement1D cotTheta(valCotTheta, errValCot);
   Measurement1D tip(valTip, errValTip);
   Measurement1D zip(valZip, errValZip);
+  // if(fabs(valEta)>1.0)
+  // {
+  //   std::cout << valEta << ";";
+  //   for (int i = 0; i != nhits; ++i) {
+  //     auto const& recHit = hits[i];
+  //     std::cout << recHit->globalPosition().basicVector().x() << ";"
+  //               << recHit->globalPosition().basicVector().y() << ";"
+  //               << recHit->globalPosition().basicVector().z() << ";";
+  //   }
+  //   std::cout << std::endl;
 
+  // }
   ret.reset(builder.build(pt, phi, cotTheta, tip, zip, chi2, iCharge, hits, theField, region.origin()));
   return ret;
 }

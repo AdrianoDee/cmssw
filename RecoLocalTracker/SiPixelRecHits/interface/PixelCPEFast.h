@@ -72,6 +72,8 @@ private:
   float EdgeClusterErrorX_;
   float EdgeClusterErrorY_;
 
+  bool isUpgrade_;
+
   std::vector<float> xerr_barrel_l1_, yerr_barrel_l1_, xerr_barrel_ln_;
   std::vector<float> yerr_barrel_ln_, xerr_endcap_, yerr_endcap_;
   float xerr_barrel_l1_def_, yerr_barrel_l1_def_, xerr_barrel_ln_def_;
@@ -84,10 +86,12 @@ private:
   std::vector<pixelCPEforGPU::DetParams> m_detParamsGPU;
   // std::vector<pixelCPEforGPU::DetParams, cms::cuda::HostAllocator<pixelCPEforGPU::DetParams>> m_detParamsGPU;
   pixelCPEforGPU::CommonParams m_commonParamsGPU;
+
   pixelCPEforGPU::LayerGeometry m_layerGeometry;
   pixelCPEforGPU::AverageGeometry m_averageGeometry;
 
   pixelCPEforGPU::ParamsOnGPU cpuData_;
+  // pixelCPEforGPU::ParamsOnGPUPhase2 cpuDataPhase2_;
 
   struct GPUData {
     ~GPUData();
@@ -95,7 +99,16 @@ private:
     pixelCPEforGPU::ParamsOnGPU h_paramsOnGPU;
     pixelCPEforGPU::ParamsOnGPU *d_paramsOnGPU = nullptr;  // copy of the above on the Device
   };
+
+  // struct GPUDataPhase2 {
+  //   ~GPUDataPhase2();
+  //   // not needed if not used on CPU...
+  //   pixelCPEforGPU::ParamsOnGPUPhase2 h_paramsOnGPU;
+  //   pixelCPEforGPU::ParamsOnGPUPhase2 *d_paramsOnGPU = nullptr;  // copy of the above on the Device
+  // };
+
   cms::cuda::ESProduct<GPUData> gpuData_;
+  // cms::cuda::ESProduct<GPUDataPhase2> gpuDataPhase2_;
 
   void fillParamsForGpu();
 };

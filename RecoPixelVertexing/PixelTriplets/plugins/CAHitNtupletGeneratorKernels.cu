@@ -210,7 +210,7 @@ void CAHitNtupletGeneratorKernelsGPU::buildDoublets(HitsOnCPU const &hh, cudaStr
                                                                     m_params.doClusterCut_,
                                                                     m_params.doZ0Cut_,
                                                                     m_params.doPtCut_,
-                                                                    m_params.maxNumberOfDoublets_);
+                                                                    m_params.maxNumberOfDoublets_,m_params.isUpgrade_);
   cudaCheck(cudaGetLastError());
 
 #ifdef GPU_DEBUG

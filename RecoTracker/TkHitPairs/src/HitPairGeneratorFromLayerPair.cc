@@ -75,6 +75,7 @@ void HitPairGeneratorFromLayerPair::hitPairs(const TrackingRegion& region,
                                              const edm::EventSetup& iSetup,
                                              Layers layers) {
   auto const& ds = doublets(region, iEvent, iSetup, layers);
+  std::cout<<"hitpairs : "<< ds.size()<<std::endl;
   for (std::size_t i = 0; i != ds.size(); ++i) {
     result.push_back(OrderedHitPair(ds.hit(i, HitDoublets::inner), ds.hit(i, HitDoublets::outer)));
   }
@@ -116,8 +117,6 @@ void HitPairGeneratorFromLayerPair::doublets(const TrackingRegion& region,
   //  HitDoublets result(innerHitsMap,outerHitsMap); result.reserve(std::max(innerHitsMap.size(),outerHitsMap.size()));
   typedef RecHitsSortedInPhi::Hit Hit;
   InnerDeltaPhi deltaPhi(outerHitDetLayer, innerHitDetLayer, region, iSetup);
-
-  // std::cout << "layers " << theInnerLayer.detLayer()->seqNum()  << " " << outerLayer.detLayer()->seqNum() << std::endl;
 
   // constexpr float nSigmaRZ = std::sqrt(12.f);
   constexpr float nSigmaPhi = 3.f;
@@ -177,10 +176,15 @@ void HitPairGeneratorFromLayerPair::doublets(const TrackingRegion& region,
           edm::LogError("TooManyPairs") << "number of pairs exceed maximum, no pairs produced";
           return;
         }
+        // std::cout << "Doublet " << innerHitDetLayer.seqNum()  << " " << outerHitDetLayer.seqNum() << " "
+        //           << innerHitsMap.x[b+i] << " - " << innerHitsMap.y[b+i] << " - " << innerHitsMap.z[b+i]
+        //           << outerHitsMap.x[io]  <<  " - " << outerHitsMap.y[io]  <<  " - "<< outerHitsMap.z[io] << std::endl;
         result.add(b + i, io);
       }
     }
   }
-  LogDebug("HitPairGeneratorFromLayerPair") << " total number of pairs provided back: " << result.size();
+
+  LogDebug("HitPairGeneratorFromLayerPair") <<
+  " total number of pairs provided back: " << result.size();
   result.shrink_to_fit();
 }
