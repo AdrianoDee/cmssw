@@ -291,7 +291,7 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
   output->hitsLayerStart()[nLayers] = hitsModuleStart[4000];
 
   cms::cuda::fillManyFromVector(
-      output->phiBinner(), nullptr, nLayers, output->iphi(), output->hitsLayerStart(), numberOfHits, 256, nullptr);
+      output->phiBinner(), nLayers, output->iphi(), output->hitsLayerStart(), numberOfHits, 256, nullptr);
   #ifdef PHASE2DEBUG
   std::cout << "created " << hh << " HitSoa for " <<  numberOfClusters << " clusters in " << numberOfDetUnits << " Dets " << output->hitsLayerStart()[nLayers] << std::endl;
   #endif
