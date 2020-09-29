@@ -11,6 +11,8 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 
+// #define GPU_DEBUG 1
+
 namespace gpuPixelRecHits {
 
   __global__ void getHits(pixelCPEforGPU::ParamsOnGPU const* __restrict__ cpeParams,
@@ -32,11 +34,12 @@ namespace gpuPixelRecHits {
     auto const digis = *pdigis;  // the copy is intentional!
     auto const& clusters = *pclusters;
 
+
     // copy average geometry corrected by beamspot . FIXME (move it somewhere else???)
     if (0 == blockIdx.x) {
       auto& agc = hits.averageGeometry();
-      auto const& ag = cpeParams->averageGeometry();
-      for (int il = threadIdx.x, nl = TrackingRecHit2DSOAView::AverageGeometry::numberOfLaddersInBarrel; il < nl;
+      auto const& ag = cpeParams->averageGeometry(); //
+      for (int il = threadIdx.x, nl = cpeParams->commonParams().numberOfLaddersInBarrel; il < nl;
            il += blockDim.x) {
         agc.ladderZ[il] = ag.ladderZ[il] - bs->z;
         agc.ladderX[il] = ag.ladderX[il] - bs->x;
@@ -68,18 +71,18 @@ namespace gpuPixelRecHits {
       return;
 
 #ifdef GPU_DEBUG
-    if (threadIdx.x == 0) {
-      auto k = first;
-      while (digis.moduleInd(k) == InvId)
-        ++k;
-      assert(digis.moduleInd(k) == me);
-    }
+     if (threadIdx.x == 0) {
+       auto k = first;
+       while (digis.moduleInd(k) == InvId)
+         ++k;
+       assert(digis.moduleInd(k) == me);
+     }
 #endif
 
 #ifdef GPU_DEBUG
     if (me % 100 == 1)
       if (threadIdx.x == 0)
-        printf("hitbuilder: %d clusters in module %d. will write at %d\n", nclus, me, clusters.clusModuleStart(me));
+          printf("hitbuilder: %d clusters in module %d. will write at %d\n", nclus, me, clusters.clusModuleStart(me));
 #endif
 
     for (int startClus = 0, endClus = nclus; startClus < endClus; startClus += MaxHitsInIter) {
@@ -177,7 +180,15 @@ namespace gpuPixelRecHits {
         assert(h < clusters.clusModuleStart(me + 1));
 
         pixelCPEforGPU::position(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
-        pixelCPEforGPU::errorFromDB(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
+
+        if(!cpeParams->commonParams().isUpgrade)
+        {
+          pixelCPEforGPU::errorFromDB(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
+        }
+        else
+        {
+          pixelCPEforGPU::errorFromSize(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
+        }
 
         // store it
 
