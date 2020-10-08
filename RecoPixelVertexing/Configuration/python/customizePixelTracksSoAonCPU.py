@@ -11,7 +11,7 @@ def customizePixelTracksSoAonCPU(process) :
     convertToLegacy = True
   )
 
-  from RecoPixelVertexing.PixelTriplets.caHitNtupletCUDA_cfi import *
+  from RecoPixelVertexing.PixelTriplets.caHitNtupletCUDA_cfi import caHitNtupletCUDA
   process.pixelTrackSoA = caHitNtupletCUDA.clone(
     onGPU = False,
     pixelRecHitSrc = 'siPixelRecHitsPreSplitting'
@@ -30,6 +30,9 @@ def customizePixelTracksSoAonCPU(process) :
 
   from RecoPixelVertexing.PixelVertexFinding.pixelVertexFromSoA_cfi import *
   process.pixelVertices = pixelVertexFromSoA.clone()
+  
+  if 'caHitNtupletCUDA' in process.__dict__:
+	del process.caHitNtupletCUDA
 
   process.reconstruction_step += process.siPixelRecHitsPreSplitting + process.pixelTrackSoA + process.pixelVertexSoA
 
@@ -39,13 +42,13 @@ def customizePixelTracksSoAonCPU(process) :
 def customizePixelTracksForTriplets(process) :
  
   if 'caHitNtupletCUDA' in process.__dict__:
+ 	print(process.__dict__)
         process.caHitNtupletCUDA.includeJumpingForwardDoublets = True
         process.caHitNtupletCUDA.minHitsPerNtuplet = 3
-
-  if 'pixelTrackSoA' in process.__dict__:
-        process.pixelTrackSoA.includeJumpingForwardDoublets = True
+  elif 'pixelTrackSoA' in process.__dict__:
+	process.pixelTrackSoA.includeJumpingForwardDoublets = True
         process.pixelTrackSoA.minHitsPerNtuplet = 3
- 
+  
   return process
  
 
