@@ -40,11 +40,15 @@ namespace {
                                               // chi2 scale factor: 30 for broken line fit, 45 for Riemann fit
                                               (float)pset.getParameter<double>("chi2Scale"),
                                               // regional cuts for triplets
-                                              {(float)pset.getParameter<double>("tripletMaxTip"),
+                                              {
+                                               (float)pset.getParameter<double>("tripletChi2MaxPt"),
+                                               (float)pset.getParameter<double>("tripletMaxTip"),
                                                (float)pset.getParameter<double>("tripletMinPt"),
                                                (float)pset.getParameter<double>("tripletMaxZip")},
                                               // regional cuts for quadruplets
-                                              {(float)pset.getParameter<double>("quadrupletMaxTip"),
+                                              {
+                                               (float)pset.getParameter<double>("chi2MaxPt"),
+                                               (float)pset.getParameter<double>("quadrupletMaxTip"),
                                                (float)pset.getParameter<double>("quadrupletMinPt"),
                                                (float)pset.getParameter<double>("quadrupletMaxZip")}};
   }
@@ -73,6 +77,7 @@ CAHitNtupletGeneratorOnGPU::CAHitNtupletGeneratorOnGPU(const edm::ParameterSet& 
                cfg.getParameter<double>("hardCurvCut"),
                cfg.getParameter<double>("dcaCutInnerTriplet"),
                cfg.getParameter<double>("dcaCutOuterTriplet"),
+               cfg.getParameter<bool>("isUpgrade"),
                makeQualityCuts(cfg.getParameterSet("trackQualityCuts"))) {
 #ifdef DUMP_GPU_TK_TUPLES
   printf("TK: %s %s % %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
@@ -94,12 +99,8 @@ CAHitNtupletGeneratorOnGPU::CAHitNtupletGeneratorOnGPU(const edm::ParameterSet& 
 #endif
 
   if (m_params.onGPU_) {
-    // allocate pinned host memory only if CUDA is available
-    edm::Service<CUDAService> cs;
-    if (cs and cs->enabled()) {
-      cudaCheck(cudaMalloc(&m_counters, sizeof(Counters)));
-      cudaCheck(cudaMemset(m_counters, 0, sizeof(Counters)));
-    }
+    cudaCheck(cudaMalloc(&m_counters, sizeof(Counters)));
+    cudaCheck(cudaMemset(m_counters, 0, sizeof(Counters)));
   } else {
     m_counters = new Counters();
     memset(m_counters, 0, sizeof(Counters));
@@ -107,20 +108,17 @@ CAHitNtupletGeneratorOnGPU::CAHitNtupletGeneratorOnGPU(const edm::ParameterSet& 
 }
 
 CAHitNtupletGeneratorOnGPU::~CAHitNtupletGeneratorOnGPU() {
-  if (m_params.onGPU_) {
-    // print the gpu statistics and free pinned host memory only if CUDA is available
-    edm::Service<CUDAService> cs;
-    if (cs and cs->enabled()) {
-      if (m_params.doStats_) {
-        // crash on multi-gpu processes
-        CAHitNtupletGeneratorKernelsGPU::printCounters(m_counters);
-      }
-      cudaFree(m_counters);
-    }
-  } else {
-    if (m_params.doStats_) {
+  if (m_params.doStats_) {
+    // crash on multi-gpu processes
+    if (m_params.onGPU_) {
+      CAHitNtupletGeneratorKernelsGPU::printCounters(m_counters);
+    } else {
       CAHitNtupletGeneratorKernelsCPU::printCounters(m_counters);
     }
+  }
+  if (m_params.onGPU_) {
+    cudaFree(m_counters);
+  } else {
     delete m_counters;
   }
 }
@@ -147,21 +145,24 @@ void CAHitNtupletGeneratorOnGPU::fillDescriptions(edm::ParameterSetDescription& 
   desc.add<bool>("doZ0Cut", true);
   desc.add<bool>("doPtCut", true);
   desc.add<bool>("useRiemannFit", false)->setComment("true for Riemann, false for BrokenLine");
+  desc.add<bool>("isUpgrade", false);
 
   edm::ParameterSetDescription trackQualityCuts;
-  trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
+  trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut (ntuplets)");
   trackQualityCuts.add<std::vector<double>>("chi2Coeff", {0.68177776, 0.74609577, -0.08035491, 0.00315399})
       ->setComment("Polynomial coefficients to derive the pT-dependent chi2 cut");
   trackQualityCuts.add<double>("chi2Scale", 30.)
       ->setComment(
           "Factor to multiply the pT-dependent chi2 cut (currently: 30 for the broken line fit, 45 for the Riemann "
           "fit)");
+  trackQualityCuts.add<double>("tripletChi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut (trips)");
   trackQualityCuts.add<double>("tripletMinPt", 0.5)->setComment("Min pT for triplets, in GeV");
   trackQualityCuts.add<double>("tripletMaxTip", 0.3)->setComment("Max |Tip| for triplets, in cm");
   trackQualityCuts.add<double>("tripletMaxZip", 12.)->setComment("Max |Zip| for triplets, in cm");
   trackQualityCuts.add<double>("quadrupletMinPt", 0.3)->setComment("Min pT for quadruplets, in GeV");
   trackQualityCuts.add<double>("quadrupletMaxTip", 0.5)->setComment("Max |Tip| for quadruplets, in cm");
   trackQualityCuts.add<double>("quadrupletMaxZip", 12.)->setComment("Max |Zip| for quadruplets, in cm");
+  trackQualityCuts.add<bool>("upgrade",false);
   desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)
       ->setComment(
           "Quality cuts based on the results of the track fit:\n  - apply a pT-dependent chi2 cut;\n  - apply \"region "
@@ -177,15 +178,14 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuplesAsync(TrackingRecH
 
   CAHitNtupletGeneratorKernelsGPU kernels(m_params);
   kernels.counters_ = m_counters;
+  HelixFitOnGPU fitter(bfield, m_params.fit5as4_,m_params.isUpgrade_);
 
   kernels.allocateOnGPU(stream);
+  fitter.allocateOnGPU(&(soa->hitIndices), kernels.tupleMultiplicity(), soa);
 
   kernels.buildDoublets(hits_d, stream);
   kernels.launchKernels(hits_d, soa, stream);
   kernels.fillHitDetIndices(hits_d.view(), soa, stream);  // in principle needed only if Hits not "available"
-
-  HelixFitOnGPU fitter(bfield, m_params.fit5as4_);
-  fitter.allocateOnGPU(&(soa->hitIndices), kernels.tupleMultiplicity(), soa);
   if (m_params.useRiemannFit_) {
     fitter.launchRiemannKernels(hits_d.view(), hits_d.nHits(), CAConstants::maxNumberOfQuadruplets(), stream);
   } else {
@@ -202,6 +202,7 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DC
   auto* soa = tracks.get();
   assert(soa);
 
+  std::cout << hits_d.view()->phiBinner().size()<<std::endl;
   CAHitNtupletGeneratorKernelsCPU kernels(m_params);
   kernels.counters_ = m_counters;
   kernels.allocateOnGPU(nullptr);
@@ -214,7 +215,7 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DC
     return tracks;
 
   // now fit
-  HelixFitOnGPU fitter(bfield, m_params.fit5as4_);
+  HelixFitOnGPU fitter(bfield, m_params.fit5as4_,m_params.isUpgrade_);
   fitter.allocateOnGPU(&(soa->hitIndices), kernels.tupleMultiplicity(), soa);
 
   if (m_params.useRiemannFit_) {
@@ -225,5 +226,7 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DC
 
   kernels.classifyTuples(hits_d, soa, nullptr);
 
+  // hits_d.view()->release();
+  std::cout << hits_d.view()->phiBinner().size()<<std::endl;
   return tracks;
 }

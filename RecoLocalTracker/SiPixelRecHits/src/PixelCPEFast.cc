@@ -713,7 +713,4 @@ LocalError PixelCPEFast::localError(DetParam const& theDetParam, ClusterParam& t
   return LocalError(xerr_sq, 0, yerr_sq);
 }
 
-void PixelCPEFast::fillPSetDescription(edm::ParameterSetDescription& desc)
-{
-  PixelCPEBase::fillPSetDescription(desc);
-}
+void PixelCPEFast::fillPSetDescription(edm::ParameterSetDescription& desc){}

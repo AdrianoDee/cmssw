@@ -17,6 +17,9 @@
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CAConstants.h"
 
+#define PHASE2_TRIPLETS 1
+#define MAXHITS_INTUPLE 24
+
 class GPUCACell {
 public:
   using ptrAsInt = unsigned long long;
@@ -31,7 +34,7 @@ public:
   using Hits = TrackingRecHit2DSOAView;
   using hindex_type = Hits::hindex_type;
 
-  using TmpTuple = cms::cuda::VecArray<uint32_t, 6>;
+  using TmpTuple = cms::cuda::VecArray<uint32_t, MAXHITS_INTUPLE>;
 
   using HitContainer = pixelTrack::HitContainer;
   using Quality = trackQuality::Quality;
@@ -59,11 +62,13 @@ public:
     // link to default empty
     theOuterNeighbors = &cellNeighbors[0];
     theTracks = &cellTracks[0];
+
     assert(outerNeighbors().empty());
     assert(tracks().empty());
   }
 
   __device__ __forceinline__ int addOuterNeighbor(CellNeighbors::value_t t, CellNeighborsVector& cellNeighbors) {
+
     // use smart cache
     if (outerNeighbors().empty()) {
       auto i = cellNeighbors.extend();  // maybe waisted....
@@ -85,6 +90,7 @@ public:
   }
 
   __device__ __forceinline__ int addTrack(CellTracks::value_t t, CellTracksVector& cellTracks) {
+
     if (tracks().empty()) {
       auto i = cellTracks.extend();  // maybe waisted....
       if (i > 0) {
@@ -141,12 +147,13 @@ public:
                                   const float CAThetaCutBarrel,
                                   const float CAThetaCutForward,
                                   const float dcaCutInnerTriplet,
-                                  const float dcaCutOuterTriplet) const {
+                                  const float dcaCutOuterTriplet,
+                                  const bool upgrade) const {
     // detIndex of the layerStart for the Phase1 Pixel Detector:
     // [BPX1, BPX2, BPX3, BPX4,  FP1,  FP2,  FP3,  FN1,  FN2,  FN3, LAST_VALID]
     // [   0,   96,  320,  672, 1184, 1296, 1408, 1520, 1632, 1744,       1856]
-    constexpr uint32_t last_bpix1_detIndex = 96;
-    constexpr uint32_t last_barrel_detIndex = 1184;
+    uint32_t last_bpix1_detIndex = upgrade ? 108 : 96;
+    uint32_t last_barrel_detIndex = upgrade ? 756 : 1184;
     auto ri = get_inner_r(hh);
     auto zi = get_inner_z(hh);
 
@@ -220,6 +227,23 @@ public:
     return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
   }
 
+  __device__ inline bool triangle(Hits const& hh, TmpTuple const& tmpNtuplet, GPUCACell* cells,float cut) const
+  {
+
+    auto z0 = hh.zGlobal(cells[tmpNtuplet[0]].theInnerHitId);
+    auto r0 = hh.rGlobal(cells[tmpNtuplet[0]].theInnerHitId);
+
+    auto deltaz0 = (hh.zGlobal(cells[tmpNtuplet[0]].theOuterHitId) - z0);
+    auto deltaz1 = (hh.zGlobal(cells[tmpNtuplet[1]].theOuterHitId) - z0);
+
+    auto deltar0 = (hh.rGlobal(cells[tmpNtuplet[1]].theOuterHitId) - r0);
+    auto deltar1 = (hh.rGlobal(cells[tmpNtuplet[0]].theOuterHitId) - r0);
+
+    float area = deltaz0 * deltar0 - deltaz1 * deltar1;
+
+    return (abs(area / 2.0)<cut);
+  }
+
   __device__ inline bool hole0(Hits const& hh, GPUCACell const& innerCell) const {
     constexpr uint32_t max_ladder_bpx0 = 12;
     constexpr uint32_t first_ladder_bpx0 = 0;
@@ -290,7 +314,7 @@ public:
     // than a threshold
 
     tmpNtuplet.push_back_unsafe(theDoubletId);
-    assert(tmpNtuplet.size() <= 4);
+    assert(tmpNtuplet.size() <= MAXHITS_INTUPLE-1);
 
     bool last = true;
     for (int j = 0; j < outerNeighbors().size(); ++j) {
@@ -308,8 +332,12 @@ public:
         if (tmpNtuplet.size() >= 3 || (startAt0 && hole4(hh, cells[tmpNtuplet[0]])) ||
             ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
 #endif
+#ifdef PHASE2_TRIPLETS
+        bool good_triplet = (tmpNtuplet.size()==2) ? triangle(hh,tmpNtuplet,cells,0.05) : false;
+        if (tmpNtuplet.size() >= 3 || good_triplet)
+#endif
         {
-          hindex_type hits[6];
+          hindex_type hits[MAXHITS_INTUPLE];
           auto nh = 0U;
           for (auto c : tmpNtuplet) {
             hits[nh++] = cells[c].theInnerHitId;
@@ -325,7 +353,7 @@ public:
       }
     }
     tmpNtuplet.pop_back();
-    assert(tmpNtuplet.size() < 4);
+    assert(tmpNtuplet.size() < MAXHITS_INTUPLE);
   }
 
 private:

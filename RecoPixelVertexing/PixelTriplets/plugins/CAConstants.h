@@ -39,8 +39,8 @@ namespace CAConstants {
 #endif
   constexpr uint32_t maxNumOfActiveDoublets() { return maxNumberOfDoublets() / 8; }
 
-  constexpr uint32_t maxNumberOfLayerPairs() { return 20; }
-  constexpr uint32_t maxNumberOfLayers() { return 10; }
+  constexpr uint32_t maxNumberOfLayerPairs() { return 70; }
+  constexpr uint32_t maxNumberOfLayers() { return 28; }
   constexpr uint32_t maxTuples() { return maxNumberOfTuples(); }
 
   // types
@@ -62,7 +62,7 @@ namespace CAConstants {
   using TuplesContainer = cms::cuda::OneToManyAssoc<hindex_type, maxTuples(), 5 * maxTuples()>;
   using HitToTuple =
       cms::cuda::OneToManyAssoc<tindex_type, pixelGPUConstants::maxNumberOfHits, 4 * maxTuples()>;  // 3.5 should be enough
-  using TupleMultiplicity = cms::cuda::OneToManyAssoc<tindex_type, 8, maxTuples()>;
+  using TupleMultiplicity = cms::cuda::OneToManyAssoc<tindex_type, 16, maxTuples()>;
 
 }  // namespace CAConstants
 
