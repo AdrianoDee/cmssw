@@ -356,19 +356,21 @@ namespace gpuPixelDoublets {
           #else
             continue;
           #endif
-          nPhi[pairLayerId]++;
+
           // printf("two\n");
           if (doClusterCut && zsizeCut(oi))
             continue;
           if (doPtCut && ptcut(oi, idphi)) //ptCut = true;
           #ifdef GPU_DEBUG
+          nPhi[pairLayerId]++;
            ptCut = true;
           #else
             continue;
           #endif
-          nPt[pairLayerId]++;
+
 
           #ifdef GPU_DEBUG
+          nPt[pairLayerId]++;
           // printf("Doublet %d %d - inn %.2f %.2f %.2f - out %.2f %.2f %.2f - %d %d - %d %d %d %d \n",
           // inner,outer,
           // hh.xGlobal(i),hh.yGlobal(i),hh.zGlobal(i),
