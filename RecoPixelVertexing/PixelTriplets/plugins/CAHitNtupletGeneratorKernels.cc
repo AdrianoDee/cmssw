@@ -53,6 +53,10 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoublets(HitsOnCPU const &hh, cudaStr
   if (m_params.minHitsPerNtuplet_ > 3 && ! m_params.isUpgrade_) {
     nActualPairs = 13;
   }
+  if (m_params.minHitsPerNtuplet_ > 3 &&  m_params.isUpgrade_ && !m_params.includeJumpingForwardDoublets_){
+    nActualPairs = 31;
+  }
+
 
   auto maxPairs = m_params.isUpgrade_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
   assert(nActualPairs <= maxPairs);
@@ -67,7 +71,7 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoublets(HitsOnCPU const &hh, cudaStr
                                          m_params.doClusterCut_ && !m_params.isUpgrade_,
                                          m_params.doZ0Cut_,
                                          m_params.doPtCut_,
-                                         m_params.maxNumberOfDoublets_,m_params.isUpgrade_);
+                                         m_params.maxNumberOfDoublets_,m_params.isUpgrade_);//;,m_params.doRegion_,m_params.vtxs_);
 }
 
 template <>
@@ -141,7 +145,7 @@ void CAHitNtupletGeneratorKernelsCPU::launchKernels(HitsOnCPU const &hh, TkSoA *
   printf("kernel_fillMultiplicity\n");
   printf("%d \n",CAConstants::maxNumberOfTuples());
   if (nhits > 1 && m_params.lateFishbone_) {
-    printf("latefishes\n");
+    printf("latefishes\n \n");
     gpuPixelDoublets::fishbone(
         hh.view(), device_theCells_.get(), device_nCells_, device_isOuterHitOfCell_.get(), nhits, true);
   }

@@ -168,6 +168,14 @@ namespace pixelgpudetails {
     SiPixelRawToClusterGPUKernel& operator=(const SiPixelRawToClusterGPUKernel&) = delete;
     SiPixelRawToClusterGPUKernel& operator=(SiPixelRawToClusterGPUKernel&&) = delete;
 
+    void makeDigiClustersAsync(uint16_t const* __restrict__ i,
+                               uint16_t const* __restrict__ x,
+                               uint16_t const* __restrict__ y,
+                               uint16_t const* __restrict__ a,
+                               uint32_t const* __restrict__ p,
+                               const uint32_t nDigis,
+                               cudaStream_t stream);
+
     void makeClustersAsync(bool isRun2,
                            const SiPixelFedCablingMapGPU* cablingMap,
                            const unsigned char* modToUnp,
@@ -198,6 +206,10 @@ namespace pixelgpudetails {
 
   private:
     uint32_t nDigis = 0;
+
+    uint16_t *d_X, *d_Y, *d_A;
+    uint16_t *d_M;
+    uint32_t *d_P;
 
     // Data to be put in the event
     cms::cuda::host::unique_ptr<uint32_t[]> nModules_Clusters_h;

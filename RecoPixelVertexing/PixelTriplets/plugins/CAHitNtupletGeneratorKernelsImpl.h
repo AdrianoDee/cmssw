@@ -288,7 +288,7 @@ __global__ void kernel_find_ntuplets(GPUCACell::Hits const *__restrict__ hhp,
 
     auto pid = thisCell.theLayerPairId;
     auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
-    if(upgrade) doit = true; //pid < 40;
+    if(upgrade) doit = pid<=20;//= pid<=20; //true; //pid < 40;
 
     if (doit) {
       GPUCACell::TmpTuple stack;
