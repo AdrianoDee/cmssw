@@ -25,4 +25,13 @@ struct ZVertexSoA {
   __host__ __device__ void init() { nvFinal = 0; }
 };
 
+struct VertexRegion {
+
+  float vtxZ[10];
+  float vtxR;
+  float vtxZerr[10];
+  float vtxRerr;
+
+};
+
 #endif  // CUDADataFormatsVertexZVertexSoA.H

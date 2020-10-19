@@ -53,6 +53,10 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoublets(HitsOnCPU const &hh, cudaStr
   if (m_params.minHitsPerNtuplet_ > 3 && ! m_params.isUpgrade_) {
     nActualPairs = 13;
   }
+  if (m_params.minHitsPerNtuplet_ > 3 &&  m_params.isUpgrade_ && !m_params.includeJumpingForwardDoublets_){
+    nActualPairs = 31;
+  }
+
 
   auto maxPairs = m_params.isUpgrade_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
   assert(nActualPairs <= maxPairs);
@@ -67,7 +71,71 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoublets(HitsOnCPU const &hh, cudaStr
                                          m_params.doClusterCut_ && !m_params.isUpgrade_,
                                          m_params.doZ0Cut_,
                                          m_params.doPtCut_,
-                                         m_params.maxNumberOfDoublets_,m_params.isUpgrade_);
+                                         m_params.maxNumberOfDoublets_,m_params.isUpgrade_);//;,m_params.doRegion_,m_params.vtxs_);
+}
+
+template <>
+void CAHitNtupletGeneratorKernelsCPU::buildDoubletsRegional(HitsOnCPU const &hh, VertexRegion const &vv, cudaStream_t stream) {
+  auto nhits = hh.nHits();
+
+#ifdef NTUPLE_DEBUG
+  std::cout << "building Doublets out of " << nhits << " Hits" << std::endl;
+#endif
+
+  // in principle we can use "nhits" to heuristically dimension the workspace...
+  // overkill to use template here (std::make_unique would suffice)
+  // device_isOuterHitOfCell_ = Traits:: template make_unique<GPUCACell::OuterHitOfCell[]>(cs, std::max(1U,nhits), stream);
+  device_isOuterHitOfCell_.reset((GPUCACell::OuterHitOfCell *)malloc(std::max(1U, nhits) * sizeof(GPUCACell::OuterHitOfCell)));
+  assert(device_isOuterHitOfCell_.get());
+
+  cellStorage_.reset((unsigned char *)malloc(CAConstants::maxNumOfActiveDoublets() * sizeof(GPUCACell::CellNeighbors) +
+                                             CAConstants::maxNumOfActiveDoublets() * sizeof(GPUCACell::CellTracks)));
+  device_theCellNeighborsContainer_ = (GPUCACell::CellNeighbors *)cellStorage_.get();
+  device_theCellTracksContainer_ =
+      (GPUCACell::CellTracks *)(cellStorage_.get() +
+                                CAConstants::maxNumOfActiveDoublets() * sizeof(GPUCACell::CellNeighbors));
+
+  gpuPixelDoublets::initDoublets(device_isOuterHitOfCell_.get(),
+                                 nhits,
+                                 device_theCellNeighbors_.get(),
+                                 device_theCellNeighborsContainer_,
+                                 device_theCellTracks_.get(),
+                                 device_theCellTracksContainer_);
+
+
+
+
+  // device_theCells_ = Traits:: template make_unique<GPUCACell[]>(cs, m_params.maxNumberOfDoublets_, stream);
+  device_theCells_.reset((GPUCACell *)malloc(sizeof(GPUCACell) * m_params.maxNumberOfDoublets_));
+  if (0 == nhits)
+    return;  // protect against empty events
+
+  // FIXME avoid magic numbers
+  auto nActualPairs = m_params.isUpgrade_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
+  if (!m_params.includeJumpingForwardDoublets_ && ! m_params.isUpgrade_)
+    nActualPairs = 15;
+  if (m_params.minHitsPerNtuplet_ > 3 && ! m_params.isUpgrade_) {
+    nActualPairs = 13;
+  }
+  if (m_params.minHitsPerNtuplet_ > 3 &&  m_params.isUpgrade_ && !m_params.includeJumpingForwardDoublets_){
+    nActualPairs = 31;
+  }
+
+
+  auto maxPairs = m_params.isUpgrade_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
+  assert(nActualPairs <= maxPairs);
+  gpuPixelDoublets::getDoubletsFromHisto(device_theCells_.get(),
+                                         device_nCells_,
+                                         device_theCellNeighbors_.get(),
+                                         device_theCellTracks_.get(),
+                                         hh.view(),
+                                         device_isOuterHitOfCell_.get(),
+                                         nActualPairs,
+                                         m_params.idealConditions_,
+                                         m_params.doClusterCut_ && !m_params.isUpgrade_,
+                                         m_params.doZ0Cut_,
+                                         m_params.doPtCut_,
+                                         m_params.maxNumberOfDoublets_,m_params.isUpgrade_,vv);//;,m_params.doRegion_,m_params.vtxs_);
 }
 
 template <>
@@ -141,7 +209,7 @@ void CAHitNtupletGeneratorKernelsCPU::launchKernels(HitsOnCPU const &hh, TkSoA *
   printf("kernel_fillMultiplicity\n");
   printf("%d \n",CAConstants::maxNumberOfTuples());
   if (nhits > 1 && m_params.lateFishbone_) {
-    printf("latefishes\n");
+    printf("latefishes\n \n");
     gpuPixelDoublets::fishbone(
         hh.view(), device_theCells_.get(), device_nCells_, device_isOuterHitOfCell_.get(), nhits, true);
   }

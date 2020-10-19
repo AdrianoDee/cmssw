@@ -53,6 +53,53 @@ namespace {
                                                (float)pset.getParameter<double>("quadrupletMaxZip")}};
   }
 
+  // cAHitNtupletGenerator::VertexRegion makeRegionCuts(edm::ParameterSet const& pset) {
+  //
+  //   // edm::EDGetTokenT<reco::VertexCollection> tokenVertex_ = iC.consumes<reco::VertexCollection>(pset.getParameter<edm::InputTag>("inputVertices"));
+  //   // edm::Handle<reco::VertexCollection> vtxs;
+  //   // iEvent.getByToken(vtxToken_, vtxs);
+  //
+  //   // zVertices_
+  //   // rVertices_
+  //   // zVerticesError_
+  //   // rVerticesError_
+  //   auto zVertices = pset.getParameter<std::vector<double>>("zVertices");
+  //   auto zVerticesError = pset.getParameter<std::vector<double>>("zVerticesError");
+  //   auto r = pset.getParameter<std::vector<double>>("rVertices");
+  //   auto rErr = pset.getParameter<std::vector<double>>("rVerticesError");
+  //
+  //   // auto zV = pset.getParameter<std::vector<double>>("zVertices");
+  //   // auto rV = pset.getParameter<std::vector<double>>("rVertices");
+  //   // auto zVErr = pset.getParameter<std::vector<double>>("zVerticesError");
+  //
+  //   float vtxZ[10] = {0.0};
+  //   // float vtxR = 0.0;
+  //   float vtxZerr[10] = {9999.9};
+  //   // float vtxRerr = 9999.9;
+  //
+  //   if (zVerticesError.size()!=zVertices.size())
+  //   {
+  //     throw edm::Exception(edm::errors::Configuration,
+  //                          "CAHitNtupletGeneratorOnGPU.zVertices & zVerticesError must have the same lenght (<=10).");
+  //   }
+  //   if (zVertices.size() >= 10) {
+  //      edm::LogWarning("CAHitNtupletGeneratorOnGPU") << "You gave in input more than 10 vertices. Only the first 10 will be taken into account." << std::endl;
+  //   }
+  //   int c = std::min(10,int(zVertices.size()));
+  //
+  //   for (int i = 0; i < c; i++) {
+  //     vtxZ[i] = (float) zVertices[i];
+  //     vtxZerr[i] = (float) zVerticesError[i];
+  //   }
+  //
+  //   return cAHitNtupletGenerator::VertexRegion{
+  //                                               { vtxZ[0], vtxZ[1], vtxZ[2], vtxZ[3], vtxZ[4], vtxZ[5], vtxZ[6], vtxZ[7], vtxZ[8], vtxZ[9]} ,
+  //                                               (float) r[0],
+  //                                               { vtxZerr[0], vtxZerr[1], vtxZerr[2], vtxZerr[3], vtxZerr[4], vtxZerr[5], vtxZerr[6], vtxZerr[7], vtxZerr[8], vtxZerr[9]} ,
+  //                                               (float) rErr[0]
+  //                                             };
+  // }
+
 }  // namespace
 
 using namespace std;
@@ -78,7 +125,15 @@ CAHitNtupletGeneratorOnGPU::CAHitNtupletGeneratorOnGPU(const edm::ParameterSet& 
                cfg.getParameter<double>("dcaCutInnerTriplet"),
                cfg.getParameter<double>("dcaCutOuterTriplet"),
                cfg.getParameter<bool>("isUpgrade"),
-               makeQualityCuts(cfg.getParameterSet("trackQualityCuts"))) {
+               // cfg.getParameter<bool>("doRegion"),
+               // cfg.getParameter<std::vector<double>>("zVertices"),
+               // cfg.getParameter<std::vector<double>>("zVerticesError"),
+               // cfg.getParameter<std::vector<double>>("rVertices"),
+               // cfg.getParameter<std::vector<double>>("rVerticesError"),
+               makeQualityCuts(cfg.getParameterSet("trackQualityCuts")))
+               // makeRegionCuts(cfg,iC)
+               // cfg.getParameter<VertexRegion>("vertexRegion"))
+               {
 #ifdef DUMP_GPU_TK_TUPLES
   printf("TK: %s %s % %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
          "tid",
@@ -146,7 +201,11 @@ void CAHitNtupletGeneratorOnGPU::fillDescriptions(edm::ParameterSetDescription& 
   desc.add<bool>("doPtCut", true);
   desc.add<bool>("useRiemannFit", false)->setComment("true for Riemann, false for BrokenLine");
   desc.add<bool>("isUpgrade", false);
-
+  // desc.add<bool>("doRegion", false);
+  // desc.add<VertexRegion>("vertexRegion", {{0.0},0.0,{9999.9},9999.9})->setComment("Zs for vertices for region selection.");
+  // desc.add<std::vector<double>>("rVertices", {0.0})->setComment("Rs for vertices for region selection.");
+  // desc.add<std::vector<double>>("zVerticesError", {0.0})->setComment("Zerrs for vertices for region selection.");
+  // desc.add<edm::InputTag>("inputVertices", edm::InputTag(""))->setComment("Input vertices for region selection.");
   edm::ParameterSetDescription trackQualityCuts;
   trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut (ntuplets)");
   trackQualityCuts.add<std::vector<double>>("chi2Coeff", {0.68177776, 0.74609577, -0.08035491, 0.00315399})
@@ -167,6 +226,14 @@ void CAHitNtupletGeneratorOnGPU::fillDescriptions(edm::ParameterSetDescription& 
       ->setComment(
           "Quality cuts based on the results of the track fit:\n  - apply a pT-dependent chi2 cut;\n  - apply \"region "
           "cuts\" based on the fit results (pT, Tip, Zip).");
+  // edm::ParameterSetDescription vertexRegion;
+  // desc.add<edm::InputTag>("zVertices")->setComment("Z coordinates of vertices for region definition");
+  // desc.add<edm::InputTag>("zVerticesError")->setComment("Z coordinate errors of vertices for region definition");
+  // desc.add<edm::InputTag>("rVertices")->setComment("R coordinate (is BS) of vertices for region definition");
+  // desc.add<edm::InputTag>("rVerticesError")->setComment("R coordinate error (still BS) of vertices for region definition");
+  // desc.add<edm::ParameterSetDescription>("vertexRegion", vertexRegion)
+  //     ->setComment(
+  //         "Vertex region definition parameters.");
 }
 
 PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuplesAsync(TrackingRecHit2DCUDA const& hits_d,
@@ -196,7 +263,7 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuplesAsync(TrackingRecH
   return tracks;
 }
 
-PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DCPU const& hits_d, float bfield) const {
+PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DCPU const& hits_d, VertexRegion const& vtx, float bfield) const {
   PixelTrackHeterogeneous tracks(std::make_unique<pixelTrack::TrackSoA>());
 
   auto* soa = tracks.get();
@@ -207,7 +274,8 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DC
   kernels.counters_ = m_counters;
   kernels.allocateOnGPU(nullptr);
 
-  kernels.buildDoublets(hits_d, nullptr);
+  // kernels.buildDoublets(hits_d, nullptr);
+  kernels.buildDoubletsRegional(hits_d, vtx,nullptr);
   kernels.launchKernels(hits_d, soa, nullptr);
   kernels.fillHitDetIndices(hits_d.view(), soa, nullptr);  // in principle needed only if Hits not "available"
 

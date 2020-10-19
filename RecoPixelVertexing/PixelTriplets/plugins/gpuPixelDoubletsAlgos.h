@@ -12,6 +12,8 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/VecArray.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 
+#include "CAHitNtupletGeneratorKernels.h"
+
 #include "CAConstants.h"
 #include "GPUCACell.h"
 
@@ -36,11 +38,14 @@ namespace gpuPixelDoublets {
                                                     float const* __restrict__ minz,
                                                     float const* __restrict__ maxz,
                                                     float const* __restrict__ maxr,
+                                                    float const* __restrict__ maxz0,
                                                     bool ideal_cond,
                                                     bool doClusterCut,
                                                     bool doZ0Cut,
                                                     bool doPtCut,
-                                                    uint32_t maxNumOfDoublets, bool upgrade) {
+                                                    uint32_t maxNumOfDoublets, bool upgrade
+                                                    ,bool doRegion,VertexRegion vtxs
+                                                    ) {
     // ysize cuts (z in the barrel)  times 8
     // these are used if doClusterCut is true
     constexpr int minYsizeB1 = 36;
@@ -106,7 +111,7 @@ namespace gpuPixelDoublets {
     uint32_t pairLayerId = 0;  // cannot go backward
 
     #ifdef GPU_DEBUG
-    int nDoublets[50],nStart[50],nZ[50],nPhi[50],nz0[50],nPt[50];
+    int nDoublets[50],nStart[50],nZ[50],nPhi[50],nz0[50],nPt[50], nReg[50];
 
     for (size_t i = 0; i < 50; i++) {
       nDoublets[i]=0;
@@ -115,7 +120,18 @@ namespace gpuPixelDoublets {
       nPhi[i] = 0;
       nz0[i] = 0;
       nPt[i] = 0;
+      nReg[i] = 0;
     }
+
+    for (int i = 0; i < 5; i++)
+    {
+
+      printf("%.2f %.2f\n",vtxs.vtxZ[i],vtxs.vtxZerr[i]);
+
+    }
+
+    printf("%.2f %.2f\n",vtxs.vtxR,vtxs.vtxRerr);
+
     #endif
     for (auto j = idy; j < ntot; j += blockDim.y * gridDim.y) {
 
@@ -186,7 +202,10 @@ namespace gpuPixelDoublets {
       auto mer = hh.rGlobal(i);
 
       // all cuts: true if fails
-      float z0cut = upgrade ? 12.f : 12.f;      // cm
+      float z0cut = 12.f;//maxz0[pairLayerId];//upgrade ? 12.f : 12.f;      // cm
+
+      float bsUp = vtxs.vtxR + vtxs.vtxRerr *0.005f;
+      float bsDw  = vtxs.vtxR - vtxs.vtxRerr *0.005f;
 
       constexpr float hardPtCut = 0.5f;  // GeV
       constexpr float minRadius =
@@ -205,9 +224,35 @@ namespace gpuPixelDoublets {
         auto ro = hh.rGlobal(j);
         auto dr = ro - mer;
         auto ll = std::abs((mez * ro - mer * zo));
-
+        // printf("%f\n",z0Cut);
         return   dr > maxr[pairLayerId] || dr < 0 || ll > z0cut * dr;
       };
+
+      auto vtxCut = [&](int j,float z, float ze) {
+        auto zo = hh.zGlobal(j);
+        auto ro = hh.rGlobal(j);
+        auto dr = ro - mer;
+        auto ll = (mez * ro - mer * zo);
+        auto lll = std::abs(ll/dr - z);
+        // printf("%f\n",z0Cut);
+
+        return  lll > ze ;
+      };
+
+        // auto vtxCut = [&](int j,float z, float ze) {
+        //   auto zo = hh.zGlobal(j);
+        //   auto ro = hh.rGlobal(j);
+        //
+        //   auto ri_up = mer - bsUp;
+        //   auto ri_dw = mer - bsDw;
+        //   auto ro_up = ro - bsUp;
+        //   auto ro_dw = ro - bsDw;
+        //
+        //   auto q_up = (ri_up) - (mez * (ro_up-ri_up)) / (zo-mez);
+        //   auto q_dw = (ri_dw) - (mez * (ro_dw-ri_dw)) / (zo-mez);
+        //
+        //   return   (q_up > z+ze and q_up < z-ze) and (q_dw > z+ze and q_dw < z-ze);
+        // };
 
       auto zsizeCut = [&](int j) {
         auto onlyBarrel = outer < 4;
@@ -230,7 +275,7 @@ namespace gpuPixelDoublets {
 
       auto incr = [](auto& k) { return k = (k + 1) % Hist::nbins(); };
       // bool piWrap = std::abs(kh-kl) > Hist::nbins()/2;
-      
+
 #ifdef GPU_DEBUG
       int tot = 0;
       int nmin = 0;
@@ -265,35 +310,77 @@ namespace gpuPixelDoublets {
             continue;  //    invalid
 
           bool z0Cut = false, phicut = false, ptCut = false;
-          if (doZ0Cut && z0cutoff(oi)) //z0Cut = true;
+          if (doZ0Cut && z0cutoff(oi))
+          #ifdef GPU_DEBUG
+          z0Cut = true;
+          #else
             continue;
+          #endif
+
           #ifdef GPU_DEBUG
           nz0[pairLayerId]++;
           #endif
+
+          bool badRegion = false;
+          if (doRegion)
+          {
+            badRegion = true;
+            for (int i = 0; i < 2; i++)
+            {
+              if(vtxs.vtxZerr[i] >= 9999.0f)
+              {break;}
+              bool thisVertex = vtxCut(oi,vtxs.vtxZ[i],vtxs.vtxZerr[i]);
+              badRegion = badRegion and thisVertex; //when at least one is fals the doublelt is retained
+            }
+          }
+
+          bool regionCut = false;
+          if(badRegion)
+          #ifdef GPU_DEBUG
+          {
+           regionCut = true;
+          nReg[pairLayerId]++;
+          }
+          #else
+          continue;
+          #endif
+
           // printf("one\n");
           auto mop = hh.iphi(oi);
           // if(mep > halfpi_p )
           uint16_t idphi = std::min(std::abs(int16_t(mop - mep)), std::abs(int16_t(mep - mop)));
 
-          if (idphi > iphicut) //phicut = true;
+          if (idphi > iphicut)
+          #ifdef GPU_DEBUG
+          phicut = true;
+          #else
             continue;
-          // nPhi[pairLayerId]++;
+          #endif
+          nPhi[pairLayerId]++;
           // printf("two\n");
           if (doClusterCut && zsizeCut(oi))
             continue;
           if (doPtCut && ptcut(oi, idphi)) //ptCut = true;
+          #ifdef GPU_DEBUG
+           ptCut = true;
+          #else
             continue;
+          #endif
+          nPt[pairLayerId]++;
 
           #ifdef GPU_DEBUG
-          printf("Doublet %d %d - inn %.2f %.2f %.2f - out %.2f %.2f %.2f - %d %d - %d %d %d %d \n",
-          inner,outer,
-          hh.xGlobal(i),hh.yGlobal(i),hh.zGlobal(i),
-          hh.xGlobal(oi),hh.yGlobal(oi),hh.zGlobal(oi),
-          iphicut,idphi,
-          z0Cut,phicut,ptCut, (z0Cut && phicut && ptCut));
+          // printf("Doublet %d %d - inn %.2f %.2f %.2f - out %.2f %.2f %.2f - %d %d - %d %d %d %d \n",
+          // inner,outer,
+          // hh.xGlobal(i),hh.yGlobal(i),hh.zGlobal(i),
+          // hh.xGlobal(oi),hh.yGlobal(oi),hh.zGlobal(oi),
+          // iphicut,idphi,
+          // z0Cut,phicut,ptCut, (z0Cut && phicut && ptCut));
 
-          if(z0Cut || phicut || ptCut) continue;
-          nPt[pairLayerId]++;
+          if(z0Cut || phicut || ptCut || regionCut)
+          {
+            continue;
+          };
+
           #endif
           // printf("three\n");
           auto ind = atomicAdd(nCells, 1);
@@ -327,7 +414,7 @@ namespace gpuPixelDoublets {
           for (int i = 0; i < 50; i++) {
             if(i>int(nPairs))
             continue;
-            printf("pair %d %d %d %d %d %d %d %d %d \n", i, layerPairs[2 * i], layerPairs[2 * i + 1], nDoublets[i], nStart[i],nZ[i],nz0[i],nPhi[i],nPt[i]);
+            printf("pair %d %d %d %d %d %d %d %d %d %d\n", i, layerPairs[2 * i], layerPairs[2 * i + 1], nDoublets[i], nStart[i],nZ[i],nz0[i],nPhi[i],nPt[i],nReg[i]);
           }
     printf("gpuDoublets %d \n",*nCells);
     #endif

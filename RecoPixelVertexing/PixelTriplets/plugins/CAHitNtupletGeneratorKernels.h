@@ -2,6 +2,7 @@
 #define RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h
 
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
+#include "CUDADataFormats/Vertex/interface/ZVertexHeterogeneous.h"
 #include "GPUCACell.h"
 
 // #define DUMP_GPU_TK_TUPLES
@@ -32,6 +33,7 @@ namespace cAHitNtupletGenerator {
   using Quality = pixelTrack::Quality;
   using TkSoA = pixelTrack::TrackSoA;
   using HitContainer = pixelTrack::HitContainer;
+
 
   struct QualityCuts {
 
@@ -72,7 +74,9 @@ namespace cAHitNtupletGenerator {
            float dcaCutInnerTriplet,
            float dcaCutOuterTriplet,
            bool isUpgrade,
+           // bool doRegion,
            QualityCuts const& cuts)
+           // VertexRegion const& vtxs)
         : onGPU_(onGPU),
           minHitsPerNtuplet_(minHitsPerNtuplet),
           maxNumberOfDoublets_(maxNumberOfDoublets),
@@ -93,7 +97,10 @@ namespace cAHitNtupletGenerator {
           dcaCutInnerTriplet_(dcaCutInnerTriplet),
           dcaCutOuterTriplet_(dcaCutOuterTriplet),
           isUpgrade_(isUpgrade),
-          cuts_(cuts) {}
+          // doRegion_(doRegion),
+          cuts_(cuts)
+          // vtxs_(vtxs)
+          {}
 
     const bool onGPU_;
     const uint32_t minHitsPerNtuplet_;
@@ -115,6 +122,7 @@ namespace cAHitNtupletGenerator {
     const float dcaCutInnerTriplet_;
     const float dcaCutOuterTriplet_;
     const bool isUpgrade_;
+    // const bool doRegion_;
 
     // quality cuts
     QualityCuts cuts_{
@@ -137,6 +145,12 @@ namespace cAHitNtupletGenerator {
                           12.0  // |Zip| < 12.0 cm
                       }
                     };
+    // VertexRegion vtxs_{
+    //                  {0.0},
+    //                  0.0,
+    //                  {9999.9},
+    //                  9999.9
+    // };
 
   };  // Params
 
@@ -150,6 +164,7 @@ public:
   using QualityCuts = cAHitNtupletGenerator::QualityCuts;
   using Params = cAHitNtupletGenerator::Params;
   using Counters = cAHitNtupletGenerator::Counters;
+  // using VertexRegion = cAHitNtupletGenerator::VertexRegion;
 
   template <typename T>
   using unique_ptr = typename Traits::template unique_ptr<T>;
@@ -177,6 +192,7 @@ public:
   void fillHitDetIndices(HitsView const* hv, TkSoA* tuples_d, cudaStream_t cudaStream);
 
   void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
+  void buildDoubletsRegional(HitsOnCPU const& hh, VertexRegion const& vv,cudaStream_t stream);
   void allocateOnGPU(cudaStream_t stream);
   void cleanup(cudaStream_t cudaStream);
 
@@ -205,6 +221,8 @@ private:
   unique_ptr<cms::cuda::AtomicPairCounter::c_type[]> device_storage_;
   // params
   Params const& m_params;
+
+
 };
 
 using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernels<cms::cudacompat::GPUTraits>;
