@@ -17,7 +17,7 @@
 #include "CAConstants.h"
 #include "GPUCACell.h"
 
-// #define GPU_DEBUG 1
+//#define GPU_DEBUG 1
 
 namespace gpuPixelDoublets {
 
@@ -65,27 +65,28 @@ namespace gpuPixelDoublets {
     auto const& __restrict__ hist = hh.phiBinner();
     uint32_t const* __restrict__ offsets = hh.hitsLayerStart();
     assert(offsets);
+    auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };
 
-    #ifdef GPU_DEBUG
+/*/////////
     int totCounterBins = 0;
     for (int i =0;i<30;i++)
     {
       int layerCount = 0;
 
-      for (int j = 0; j < 128; j++)
+      for (int j = 0; j < 256; j++)
       {
-        int counter = j + i * 128;
+        int counter = j + i * 256;
 
         // printf("bin i %d - %d - begin %d - end %d \n",i,hist.bin(counter),*hist.begin(counter),*hist.end(icounter);
         layerCount = layerCount + hist.size(counter);
         totCounterBins = totCounterBins  + hist.size(counter);
       }
-      printf("layer %d with %d hits \n",i,layerCount);
+      printf("layer %d with %d hits %d \n",i,layerCount,layerSize(i));
 
     }
     printf("tot hits %d\n",totCounterBins);
-    #endif
-    auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };
+    
+*///////////////
 
     // nPairsMax to be optimized later (originally was 64).
     // If it should be much bigger, consider using a block-wide parallel prefix scan,
@@ -123,15 +124,6 @@ namespace gpuPixelDoublets {
       nReg[i] = 0;
     }
 
-    for (int i = 0; i < 5; i++)
-    {
-
-      printf("%.2f %.2f\n",vtxs.vtxZ[i],vtxs.vtxZerr[i]);
-
-    }
-
-    printf("%.2f %.2f\n",vtxs.vtxR,vtxs.vtxRerr);
-
     #endif
     for (auto j = idy; j < ntot; j += blockDim.y * gridDim.y) {
 
@@ -140,13 +132,14 @@ namespace gpuPixelDoublets {
         ;
       --pairLayerId;  // move to lower_bound ??
 
+
       assert(pairLayerId < nPairs);
       assert(j < innerLayerCumulativeSize[pairLayerId]);
       assert(0 == pairLayerId || j >= innerLayerCumulativeSize[pairLayerId - 1]);
 
       uint8_t inner = layerPairs[2 * pairLayerId];
       uint8_t outer = layerPairs[2 * pairLayerId + 1];
-      if(outer <= inner)
+
       // printf("%d %d %d %d %d \n",j,innerLayerCumulativeSize[pairLayerId],pairLayerId,outer,inner);
       assert(outer > inner);
 
@@ -174,7 +167,7 @@ namespace gpuPixelDoublets {
       nStart[pairLayerId]++;
       #endif
       auto mez = hh.zGlobal(i);
-
+//printf("not here\n");
       if (mez < minz[pairLayerId] || mez > maxz[pairLayerId])
       continue;
 
@@ -298,6 +291,7 @@ namespace gpuPixelDoublets {
 
         p += first;
         // if(p==e) e = e + 1;
+//printf("%d %d %d %d %d %d %d \n",kl,kh,inner,outer,hoff,*p,*e);
         for (; p < e; p += stride) {
 
           auto oi = __ldg(p);
@@ -308,7 +302,7 @@ namespace gpuPixelDoublets {
 
           if (mo > maxModules)
             continue;  //    invalid
-
+//printf("not here\n");
           bool z0Cut = false, phicut = false, ptCut = false;
           if (doZ0Cut && z0cutoff(oi))
           #ifdef GPU_DEBUG
@@ -390,13 +384,14 @@ namespace gpuPixelDoublets {
           nDoublets[pairLayerId]++;
           #endif
           if (ind >= maxNumOfDoublets) {
+  
             atomicSub(nCells, 1);
             break;
           }  // move to SimpleVector??
           // int layerPairId, int doubletId, int innerHitId, int outerHitId)
           cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, ind, i, oi);
           isOuterHitOfCell[oi].push_back(ind);
-          // printf("%d - %d - %d - %d - %d \n",i,oi,outer,ind,int(isOuterHitOfCell[oi].size()));
+          //printf("%d - %d - %d - %d - %d \n",i,oi,outer,ind,int(isOuterHitOfCell[oi].size()));
 #ifdef GPU_DEBUG
           if (isOuterHitOfCell[oi].full())
             ++tooMany;
@@ -412,13 +407,14 @@ namespace gpuPixelDoublets {
 #endif
 
     }  // loop in block...
+    
     #ifdef GPU_DEBUG
           for (int i = 0; i < 50; i++) {
             if(i>int(nPairs))
             continue;
             printf("pair %d %d %d %d %d %d %d %d %d %d\n", i, layerPairs[2 * i], layerPairs[2 * i + 1], nDoublets[i], nStart[i],nZ[i],nz0[i],nPhi[i],nPt[i],nReg[i]);
           }
-    printf("gpuDoublets %d \n",*nCells);
+    //printf("gpuDoublets %d \n",*nCells);
     #endif
   }
 

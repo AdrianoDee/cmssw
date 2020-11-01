@@ -11,7 +11,7 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 
-// #define GPU_DEBUG 1
+//#define GPU_DEBUG 1
 
 namespace gpuPixelRecHits {
 
@@ -33,8 +33,23 @@ namespace gpuPixelRecHits {
 
     auto const digis = *pdigis;  // the copy is intentional!
     auto const& clusters = *pclusters;
+    
+    uint16_t* d;
+    if( 0 == blockIdx.x and 0 == threadIdx.x)
+{
 
+/*
+for(auto i=0;i<200000;i++){
+auto x = digis.xx(i);//[i];
+auto y = digis.yy(i);
+  auto adc = digis.adc(i);
+  auto clus = digis.clus(i);
+  auto m = digis.moduleInd(i);
 
+	printf("digissss %d %d %d %d %d %d\n",m,i,x,y,adc,clus);
+}*/
+//printf("%d",d[20]);
+}
     // copy average geometry corrected by beamspot . FIXME (move it somewhere else???)
     if (0 == blockIdx.x) {
       auto& agc = hits.averageGeometry();
@@ -71,16 +86,16 @@ namespace gpuPixelRecHits {
       return;
 
 #ifdef GPU_DEBUG
-     if (threadIdx.x == 0) {
+    /* if (threadIdx.x == 0) {
        auto k = first;
        while (digis.moduleInd(k) == InvId)
          ++k;
        assert(digis.moduleInd(k) == me);
-     }
+     }*/
 #endif
 
 #ifdef GPU_DEBUG
-    if (me % 100 == 1)
+    //(if (me % 1 == 1)
       if (threadIdx.x == 0)
           printf("hitbuilder: %d clusters in module %d. will write at %d\n", nclus, me, clusters.clusModuleStart(me));
 #endif
@@ -133,6 +148,7 @@ namespace gpuPixelRecHits {
         atomicMax(&clusParams.maxRow[cl], x);
         atomicMin(&clusParams.minCol[cl], y);
         atomicMax(&clusParams.maxCol[cl], y);
+        //printf("clus digi > %d %d %d %d %d %d\n",cl,i,first,id,x,y);  
       }
 
       __syncthreads();
@@ -221,6 +237,8 @@ namespace gpuPixelRecHits {
 
         hits.rGlobal(h) = std::sqrt(xg * xg + yg * yg);
         hits.iphi(h) = unsafe_atan2s<7>(yg, xg);
+        
+	//printf("gpu hit %d %.2f %.2f %.2f %.2f %d \n",h,xg,yg,zg,std::sqrt(xg * xg + yg * yg),unsafe_atan2s<7>(yg, xg));
       }
       __syncthreads();
     }  // end loop on batches

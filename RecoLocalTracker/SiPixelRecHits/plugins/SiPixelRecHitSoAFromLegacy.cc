@@ -27,7 +27,6 @@
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEFast.h"
 
 #include "RecoLocalTracker/SiPixelRecHits/plugins/gpuPixelRecHits.h"
-
 //#define DEBUG 1
 
 class SiPixelRecHitSoAFromLegacy : public edm::global::EDProducer<> {
@@ -81,7 +80,7 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
   const TrackerGeometry* geom_ = nullptr;
   const PixelClusterParameterEstimator* cpe_ = nullptr;
 
-  std::cout << "SoA" << std::endl;
+  //std::cout << "SoA" << std::endl;
   edm::ESHandle<TrackerGeometry> geom;
   es.get<TrackerDigiGeometryRecord>().get(geom);
   geom_ = geom.product();
@@ -218,7 +217,9 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
     for (auto const& clust : *DSViter) {
       assert(clust.size() > 0);
       for (int i = 0, nd = clust.size(); i < nd; ++i) {
+ 
         auto px = clust.pixel(i);
+	/////// std::cout << "CLUSTERS CPU " << gind << " " << px.x << " " << px.y << " " << px.adc << " " << ic << std::endl;
         xx_.push_back(px.x);
         yy_.push_back(px.y);
         adc_.push_back(px.adc);
@@ -231,6 +232,7 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
         clusterRef.emplace_back(edmNew::makeRefTo(hclusters, &clust));
       ic++;
     }
+    ///// printf("cpu %d clusters in module %d\n", ic, gind); 
     assert(nclus == ic);
     assert(clus_.size() == ndigi);
     numberOfHits += nclus;
@@ -262,13 +264,13 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
         SiPixelRecHit hit(lp, le, rqw, *genericDet, clusterRef[ih]);
 
         #ifdef DEBUG
-//        std::cout << "hit n." << hh << " - " << output->view()->xLocal(h)
-//                  << " - " << output->view()->yLocal(h)
-//                  << " - " << output->view()->xerrLocal(h)
-//                  << " - " << output->view()->yerrLocal(h)
-//                  << " - " << output->view()->detectorIndex(h)
-//                  << " - " << hit.globalPosition().x() << " - " << hit.globalPosition().y() << " - " << hit.globalPosition().z() << " - "
-//                  << std::endl;
+        std::cout << "hit n." << hh << " - " << output->view()->xLocal(h)
+                  << " - " << output->view()->yLocal(h)
+                  << " - " << output->view()->xerrLocal(h)
+                  << " - " << output->view()->yerrLocal(h)
+                  << " - " << output->view()->detectorIndex(h)
+                  << " - " << hit.globalPosition().x() << " - " << hit.globalPosition().y() << " - " << hit.globalPosition().z() << " - "
+                  << std::endl;
         hh++;
         #endif
         recHitsOnDetUnit.push_back(hit);

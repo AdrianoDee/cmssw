@@ -38,6 +38,8 @@
 // local includes
 #include "SiPixelRawToClusterGPUKernel.h"
 
+#define GPU_DEBUG 1 
+
 namespace pixelgpudetails {
 
   // number of words for all the FEDs
@@ -479,21 +481,35 @@ namespace pixelgpudetails {
     assert(gpuClustering::MaxNumModules < max);  // easy to extend at least till 32*1024
     assert(1 == gridDim.x);
     assert(0 == blockIdx.x);
-
-    uint16_t maxH = max / 2;
+ 
+    uint16_t maxH = 2048;//max / 2;
     int first = threadIdx.x;
 
+//printf("MaxHitsInModule \n");
     // limit to MaxHitsInModule;
     for (int i = first, iend = gpuClustering::MaxNumModules; i < iend; i += blockDim.x) {
       moduleStart[i + 1] = std::min(gpuClustering::maxHitsInModule(), cluStart[i]);
+      printf("moduleStart %d %d\n", i+1, moduleStart[i+1]);
     }
 
-    __shared__ uint32_t ws[32];
-    cms::cuda::blockPrefixScan(moduleStart + 1, moduleStart + 1, maxH, ws);
-    cms::cuda::blockPrefixScan(moduleStart + maxH + 1, moduleStart + maxH + 1, gpuClustering::MaxNumModules - maxH, ws);
 
-    for (int i = first + maxH + 1, iend = gpuClustering::MaxNumModules + 1; i < iend; i += blockDim.x) {
-      moduleStart[i] += moduleStart[maxH];
+//printf("prefix %d\n",maxH);
+    __shared__ uint32_t ws[32];
+      cms::cuda::blockPrefixScan(moduleStart + 1, moduleStart + 1, 1024, ws);
+      cms::cuda::blockPrefixScan(moduleStart + 1024 + 1, moduleStart + 1024 + 1, 1024, ws);
+      cms::cuda::blockPrefixScan(moduleStart + 2048 + 1, moduleStart + 2048 + 1, 1024, ws);
+      cms::cuda::blockPrefixScan(moduleStart + 3072 + 1, moduleStart + 3072 + 1, gpuClustering::MaxNumModules - 3072, ws);
+
+    //cms::cuda::blockPrefixScan(moduleStart + 1, moduleStart + 1, gpuClustering::MaxNumModules, ws);
+
+    for (int i = first + 1025, iend = 2049; i < iend; i += blockDim.x) {
+      moduleStart[i] += moduleStart[1024];
+    }
+    for (int i = first + 2049, iend = 3073; i < iend; i += blockDim.x) {
+      moduleStart[i] += moduleStart[2048];
+    }
+    for (int i = first + 3073, iend = gpuClustering::MaxNumModules + 1; i < iend; i += blockDim.x) {
+      moduleStart[i] += moduleStart[3072];
     }
     __syncthreads();
 
@@ -510,9 +526,10 @@ namespace pixelgpudetails {
         assert(moduleStart[i] >= moduleStart[i - i]);
       // [BPX1, BPX2, BPX3, BPX4,  FP1,  FP2,  FP3,  FN1,  FN2,  FN3, LAST_VALID]
       // [   0,   96,  320,  672, 1184, 1296, 1408, 1520, 1632, 1744,       1856]
-      if (i == 96 || i == 1184 || i == 1744 || i == gpuClustering::MaxNumModules)
+    //  if (i == 96 || i == 1184 || i == 1744 || i == gpuClustering::MaxNumModules)
         printf("moduleStart %d %d\n", i, moduleStart[i]);
     }
+  
 #endif
 
     // avoid overflow
@@ -687,7 +704,8 @@ namespace pixelgpudetails {
       // synchronization/ExternalWork
 
       // MUST be ONE block
-      fillHitsModuleStart<<<1, 1024, 0, stream>>>(clusters_d.c_clusInModule(), clusters_d.clusModuleStart(),1024);
+    
+      fillHitsModuleStart<<<1, 1024, 0, stream>>>(clusters_d.c_clusInModule(), clusters_d.clusModuleStart(),2048);
 
       // last element holds the number of all clusters
       cudaCheck(cudaMemcpyAsync(&(nModules_Clusters_h[1]),
@@ -710,7 +728,8 @@ namespace pixelgpudetails {
                                                        const uint16_t* y,
                                                        const uint16_t* a,
                                                        const uint32_t* p,
-                                                       const uint32_t nDigis,
+						       const uint32_t* r,
+                                                       const uint32_t n,
                                                        cudaStream_t stream)
 
   // void SiPixelRawToClusterGPUKernel::makeDigiClustersAsync(
@@ -727,24 +746,26 @@ namespace pixelgpudetails {
     // cudaCheck(cudaMemsetAsync(d_P, 0, sizeof(uint32_t), stream));
     cudaDeviceSynchronize();
 
-
+    nDigis = n;
     //auto fedId_d = cms::cuda::make_device_unique<uint8_t[]>(wordCounter, stream);
     // cudaCheck(cudaMemcpyAsync(x_d.get(),x, sizeof(uint16_t)*nDigis, cudaMemcpyDefault, stream));
 
     using namespace gpuClustering;
 
-    digis_d = SiPixelDigisCUDA(nDigis,stream);
+    digis_d = SiPixelDigisCUDA(n,stream);
+    cudaCheck(cudaMemcpyAsync(digis_d.rawIdArr(),r, sizeof(uint32_t)*n, cudaMemcpyDefault, stream));
 
+    //cudaMemset(digis_d.rawIdArr(),99999, nDigis*sizeof(int));
     // digis_d.xx()[0] = x_d[0];
     printf("makeDigiClustersAsync %d\n",__LINE__);
     // printf("%d \n",digis_d.xx()[0]);
-    printf("stocazzo %d \n",x[0]);
+    
 
     // cudaCheck(cudaMemcpyAsync(digis_d.moduleInd(),id, sizeof(uint16_t)*nDigis, cudaMemcpyDefault, stream));
 
     // printf("%d\n",digis_d.moduleInd()[0]);
     // printf("%d\n",id[0]);
-    printf("copy %d\n",__LINE__);
+   
 
     // for (size_t i = 0; i < nDigis; i++)
     // {
@@ -766,14 +787,14 @@ namespace pixelgpudetails {
     //     &(nModules_Clusters_h[0]), clusters_d.moduleStart(), sizeof(uint32_t), cudaMemcpyDefault, stream)
 
 
-    clusters_d = SiPixelClustersCUDA(4096, stream);
+    clusters_d = SiPixelClustersCUDA(4000, stream);
 
     printf("clusters_d %d\n",__LINE__);
 
-    nModules_Clusters_h = cms::cuda::make_host_unique<uint32_t[]>(1, stream);
+    nModules_Clusters_h = cms::cuda::make_host_unique<uint32_t[]>(2, stream);
 
     int threadsPerBlock = 1024;
-    int blocks = (int(nDigis) + threadsPerBlock - 1) / threadsPerBlock; //(std::max(int(nDigis), int(gpuClustering::MaxNumModules)) + threadsPerBlock - 1) / threadsPerBlock;
+    int blocks = (int(n) + threadsPerBlock - 1) / threadsPerBlock; //(std::max(int(nDigis), int(gpuClustering::MaxNumModules)) + threadsPerBlock - 1) / threadsPerBlock;
 
       // fillDigis<<<blocks, threadsPerBlock, 0, stream>>>(x,y,a,p,id,
       //                                                   digis_d.xx(),
@@ -791,7 +812,7 @@ namespace pixelgpudetails {
                                                                       digis_d.adc(),
                                                                       digis_d.pdigi(),
                                                                       digis_d.moduleInd(),
-                                                                      nDigis,
+                                                                      n,
                                                                       clusters_d.moduleStart(),
                                                                       clusters_d.clusInModule(),
                                                                       clusters_d.clusModuleStart());
@@ -808,9 +829,9 @@ namespace pixelgpudetails {
 #endif
 
       countModules<<<blocks, threadsPerBlock, 0, stream>>>(
-          digis_d.c_moduleInd(), clusters_d.moduleStart(), digis_d.clus(), nDigis);
+          digis_d.c_moduleInd(), clusters_d.moduleStart(), digis_d.clus(), n);
       cudaCheck(cudaGetLastError());
-
+      //printf("clusters_d.nClusters() = %d \n",clusters_d.nClusters());
       // read the number of modules into a data member, used by getProduct())
       cudaCheck(cudaMemcpyAsync(
             &(nModules_Clusters_h[0]), clusters_d.moduleStart(), sizeof(uint32_t), cudaMemcpyDefault, stream));
@@ -827,15 +848,17 @@ namespace pixelgpudetails {
                                                        clusters_d.clusInModule(),
                                                        clusters_d.moduleId(),
                                                        digis_d.clus(),
-                                                       nDigis);
+                                                       n);
       cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG
       cudaDeviceSynchronize();
       cudaCheck(cudaGetLastError());
-#endif
+      std::cout << "CUDA fillHitsModuleStart kernel launch with " << 1 << " blocks of " << 2048 << " threads\n";
 
+#endif
+ //printf("clusters_d.nClusters() = %d \n",clusters_d.nClusters());
       // MUST be ONE block
-      fillHitsModuleStart<<<1, 2048, 0, stream>>>(clusters_d.c_clusInModule(), clusters_d.clusModuleStart(),2048);
+      fillHitsModuleStart<<<1, 1024, 0, stream>>>(clusters_d.c_clusInModule(), clusters_d.clusModuleStart(),1024);
 
       // last element holds the number of all clusters
       cudaCheck(cudaMemcpyAsync(&(nModules_Clusters_h[1]),
@@ -848,6 +871,7 @@ namespace pixelgpudetails {
       cudaDeviceSynchronize();
       cudaCheck(cudaGetLastError());
 #endif
+printf("clusters_d.nClusters() = %d \n",clusters_d.nClusters());
 
 }  // end clusterizer
 

@@ -21,7 +21,7 @@ namespace gpuCalibPixel {
 
   constexpr float    ElectronPerADCGain = 600;
   constexpr int8_t   Phase2ReadoutMode  = -1;
-  constexpr uint16_t Phase2DigiBaseline = 2000;
+  constexpr uint16_t Phase2DigiBaseline = 1000;
   constexpr uint8_t  Phase2KinkADC      = 8;
 
   __global__ void calibDigis(bool isRun2,
@@ -92,24 +92,23 @@ namespace gpuCalibPixel {
     // }
     // printf(">calibDigisPhase2 %d\n",__LINE__);
     for (int i = first; i < numElements; i += gridDim.x * blockDim.x) {
-      printf("%d\n",X[0]);
+
       // printf(">calibDigisPhase2 %d\n",__LINE__);
       if (InvId == M[i])
         continue;
-        printf(">calibDigisPhase2 %d\n",__LINE__);
+
         xx[i]       = X[i];
         yy[i]       = Y[i];
         adc[i]      = A[i];
         pdigi[i]    = P[i];
         id[i]       = M[i];
-
-        printf("calibDigisPhase2 %d %d %d %d %d %d\n",__LINE__,xx[i],yy[i],adc[i],pdigi[i],id[i]);
+      
 
       int mode = (Phase2ReadoutMode < -1 ? -1 : Phase2ReadoutMode);
-printf("calibDigisPhase2 %d\n",__LINE__);
+uint16_t oldadc = adc[i];
       if(mode < 0)
       {
-        printf("calibDigisPhase2 %d\n",__LINE__);
+
         adc[i] = std::max(100, int(adc[i] * ElectronPerADCGain));
       }
       else
@@ -122,18 +121,23 @@ printf("calibDigisPhase2 %d\n",__LINE__);
         {
           constexpr int8_t dspp = (Phase2ReadoutMode < 10 ? Phase2ReadoutMode : 10);
           constexpr int8_t ds   = int8_t(dspp <= 1 ? 1 : (dspp - 1) * (dspp - 1));
-printf("calibDigisPhase2 %d\n",__LINE__);
+
           adc[i] -= (Phase2KinkADC - 1);
           adc[i] *= ds;
           adc[i] += (Phase2KinkADC - 1);
-printf("calibDigisPhase2 %d\n",__LINE__);
+
           adc[i] = uint16_t((adc[i] - 0.5 * ds) * ElectronPerADCGain);
         }
-        printf("calibDigisPhase2 %d\n",__LINE__);
+
         adc[i] += int(Phase2DigiBaseline);
         adc[i] = std::max(uint16_t(100),adc[i]);
         }
-      }
+constexpr int8_t dspp = (Phase2ReadoutMode < 10 ? Phase2ReadoutMode : 10);
+          constexpr int8_t ds   = int8_t(dspp <= 1 ? 1 : (dspp - 1) * (dspp - 1)); 
+//   printf("gains %d %d %d %d %d %d\n",oldadc,adc[i],Phase2KinkADC,Phase2ReadoutMode,dspp,ds,ElectronPerADCGain);
+
+  //  printf("digissss %d %d %d %d %d %d\n",id[i],xx[i],yy[i],adc[i],pdigi[i],i);  
+    }
   }
   
 }  // namespace gpuCalibPixel

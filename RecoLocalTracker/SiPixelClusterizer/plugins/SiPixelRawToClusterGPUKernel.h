@@ -173,6 +173,7 @@ namespace pixelgpudetails {
                                uint16_t const* __restrict__ y,
                                uint16_t const* __restrict__ a,
                                uint32_t const* __restrict__ p,
+			       uint32_t const* __restrict__ r,
                                const uint32_t nDigis,
                                cudaStream_t stream);
 
@@ -192,6 +193,8 @@ namespace pixelgpudetails {
     std::pair<SiPixelDigisCUDA, SiPixelClustersCUDA> getResults() {
       digis_d.setNModulesDigis(nModules_Clusters_h[0], nDigis);
       clusters_d.setNClusters(nModules_Clusters_h[1]);
+      printf("\nnModules_Clusters_h[1] = %d", nModules_Clusters_h[1]);
+      printf("\nnModules_Clusters_h[0] = %d \n", nModules_Clusters_h[0]);
       // need to explicitly deallocate while the associated CUDA
       // stream is still alive
       //

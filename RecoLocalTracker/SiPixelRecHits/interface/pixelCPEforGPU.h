@@ -194,6 +194,8 @@ namespace pixelCPEforGPU {
                                  ClusParams& cp,
                                  uint32_t ic){//, bool upgrade = false) {
     //--- Upper Right corner of Lower Left pixel -- in measurement frame
+    
+   
     uint16_t llx = cp.minRow[ic] + 1;
     uint16_t lly = cp.minCol[ic] + 1;
 
@@ -202,7 +204,7 @@ namespace pixelCPEforGPU {
     uint16_t ury = cp.maxCol[ic];
 
     uint16_t llxl = llx,llyl = lly,urxl = urx,uryl = ury;
-
+    ////////////// printf("CPE> %d %d %d %d %d %d \n",ic,llx,lly,urx,ury,llxl);
     if(!comParams.isUpgrade) //only in Phase1
     {
       llxl = phase1PixelTopology::localX(llx);

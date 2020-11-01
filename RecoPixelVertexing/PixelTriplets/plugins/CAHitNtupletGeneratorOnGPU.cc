@@ -246,12 +246,14 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuplesAsync(TrackingRecH
   CAHitNtupletGeneratorKernelsGPU kernels(m_params);
   kernels.counters_ = m_counters;
   HelixFitOnGPU fitter(bfield, m_params.fit5as4_,m_params.isUpgrade_);
-
+ 
   kernels.allocateOnGPU(stream);
   fitter.allocateOnGPU(&(soa->hitIndices), kernels.tupleMultiplicity(), soa);
-
+  std::cout << "kernels.allocateOnGPU" << std::endl;  
   kernels.buildDoublets(hits_d, stream);
+  std::cout << "kernels.buildDoublets" << std::endl;
   kernels.launchKernels(hits_d, soa, stream);
+  std::cout << "kernels.launchKernels" << std::endl;
   kernels.fillHitDetIndices(hits_d.view(), soa, stream);  // in principle needed only if Hits not "available"
   if (m_params.useRiemannFit_) {
     fitter.launchRiemannKernels(hits_d.view(), hits_d.nHits(), CAConstants::maxNumberOfQuadruplets(), stream);
@@ -259,6 +261,7 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuplesAsync(TrackingRecH
     fitter.launchBrokenLineKernels(hits_d.view(), hits_d.nHits(), CAConstants::maxNumberOfQuadruplets(), stream);
   }
   kernels.classifyTuples(hits_d, soa, stream);
+  std::cout << "kernels.classifyTuples" << std::endl; 
 
   return tracks;
 }

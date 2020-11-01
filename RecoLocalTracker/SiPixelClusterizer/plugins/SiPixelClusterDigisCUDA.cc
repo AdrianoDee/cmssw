@@ -104,11 +104,12 @@ void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
   // std::vector<uint16_t> i, x, y, a;
   // std::vector<uint32_t> p;
 
-  auto x = cms::cuda::make_host_unique<uint16_t[]>(100000, ctx.stream());
-  auto y = cms::cuda::make_host_unique<uint16_t[]>(100000, ctx.stream());
-  auto a = cms::cuda::make_host_unique<uint16_t[]>(100000, ctx.stream());
-  auto i = cms::cuda::make_host_unique<uint16_t[]>(100000, ctx.stream());
-  auto p = cms::cuda::make_host_unique<uint32_t[]>(100000, ctx.stream());
+  auto x = cms::cuda::make_host_unique<uint16_t[]>(10000000, ctx.stream());
+  auto y = cms::cuda::make_host_unique<uint16_t[]>(10000000, ctx.stream());
+  auto a = cms::cuda::make_host_unique<uint16_t[]>(10000000, ctx.stream());
+  auto i = cms::cuda::make_host_unique<uint16_t[]>(10000000, ctx.stream());
+  auto p = cms::cuda::make_host_unique<uint32_t[]>(10000000, ctx.stream());
+  auto r = cms::cuda::make_host_unique<uint32_t[]>(10000000, ctx.stream());
 
   for (auto DSViter = input.begin(); DSViter != input.end(); DSViter++)
   {
@@ -123,10 +124,9 @@ void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
       a[nDigis] = uint16_t(px.adc());
       p[nDigis] = uint32_t(px.packedData());
       i[nDigis] = uint16_t(gind);
-
+      r[nDigis] = uint32_t(detid);
       nDigis++;
-      if(nDigis==2000)
-      {std::cout << gind << " - " << i[nDigis-1]<< std::endl;}
+  
     }
   }
 
@@ -142,7 +142,7 @@ void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
   // std::cout << "Filled Vectors "<< nDigis << std::endl;
 
   gpuAlgo_.makeDigiClustersAsync(
-                             i.get(),x.get(),y.get(),a.get(),p.get(),
+                             i.get(),x.get(),y.get(),a.get(),p.get(),r.get(),
                              nDigis,
                              ctx.stream());
 }

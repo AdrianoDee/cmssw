@@ -9,7 +9,7 @@
 // to obtain their global coordinate the beam spot position shall be added (eventually correcting for the beam angle as well)
 struct ZVertexSoA {
 
-  static constexpr uint32_t MAXTRACKS = 128 * 1024;
+  static constexpr uint32_t MAXTRACKS = 512 * 1024;
 
   static constexpr uint32_t MAXVTX = 1024;
 
