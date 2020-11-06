@@ -113,7 +113,7 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
       pocaPoint = Point(bs->position().x(),bs->position().y(),bs->position().z());
       vtx = GlobalPoint(vtx.x()-bs->position().x(),vtx.y()-bs->position().y(),vtx.z()-bs->position().z());
     }
-  
+
     // check the compatibility with a primary vertex
     bool keepTrack = false;
     if (((!foundVertices) || vertices->empty()) && useVertices_) {
@@ -138,6 +138,13 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
         }
       }
     }
+    
+    if(!useVertices_ && fallBackPOCA_)
+    {
+      if ((std::abs(proto.dz(pocaPoint)) < originHalfLength) && (std::abs(proto.dxy(pocaPoint)) < originRadius))
+        keepTrack = true;
+    }
+
     if (!keepTrack)
       continue;
 
