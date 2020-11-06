@@ -47,7 +47,11 @@ void SeedGeneratorFromProtoTracksEDProducer::fillDescriptions(edm::Configuration
   desc.add<bool>("useEventsWithNoVertex", true);
   desc.add<std::string>("TTRHBuilder", "TTRHBuilderWithoutAngle4PixelTriplets");
   desc.add<bool>("usePV", false);
+  desc.add<bool>("useVertices", true);
   desc.add<bool>("includeFourthHit", false);
+  desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
+  desc.add<bool>("beamSpotPOCA", false);
+  desc.add<bool>("fallBackPOCA", false);
 
   edm::ParameterSetDescription psd0;
   psd0.add<std::string>("ComponentName", std::string("SeedFromConsecutiveHitsCreator"));
@@ -71,10 +75,14 @@ SeedGeneratorFromProtoTracksEDProducer::SeedGeneratorFromProtoTracksEDProducer(c
       useEventsWithNoVertex(cfg.getParameter<bool>("useEventsWithNoVertex")),
       builderName(cfg.getParameter<std::string>("TTRHBuilder")),
       usePV_(cfg.getParameter<bool>("usePV")),
+      useVertices_(cfg.getParameter<bool>("useVertices")),
       includeFourthHit_(cfg.getParameter<bool>("includeFourthHit")),
+      beamSpotPOCA_(cfg.getParameter<bool>("beamSpotPOCA")),
+      fallBackPOCA_(cfg.getParameter<bool>("fallBackPOCA")),
       theInputCollectionTag(consumes<reco::TrackCollection>(cfg.getParameter<InputTag>("InputCollection"))),
-      theInputVertexCollectionTag(
-          consumes<reco::VertexCollection>(cfg.getParameter<InputTag>("InputVertexCollection"))) {
+      theInputVertexCollectionTag(consumes<reco::VertexCollection>(cfg.getParameter<InputTag>("InputVertexCollection"))),
+      theBeamSpotTag(consumes<reco::BeamSpot>(cfg.getParameter<edm::InputTag>("beamSpot")))
+      {
   produces<TrajectorySeedCollection>();
 }
 
@@ -84,6 +92,9 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
   ev.getByToken(theInputCollectionTag, trks);
 
   const TrackCollection& protos = *(trks.product());
+
+  edm::Handle<reco::BeamSpot> bs;
+  bool foundBS = ev.getByToken(theBeamSpotTag,bs);
 
   edm::Handle<reco::VertexCollection> vertices;
   bool foundVertices = ev.getByToken(theInputVertexCollectionTag, vertices);
@@ -96,25 +107,32 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
     const Track& proto = (*it);
     GlobalPoint vtx(proto.vertex().x(), proto.vertex().y(), proto.vertex().z());
 
+    Point pocaPoint(0.0,0.0,0.0);
+    if(beamSpotPOCA_ && foundBS)
+    {
+      pocaPoint = Point(bs->position().x(),bs->position().y(),bs->position().z());
+      vtx = GlobalPoint(vtx.x()-bs->position().x(),vtx.y()-bs->position().y(),vtx.z()-bs->position().z());
+    }
+  
     // check the compatibility with a primary vertex
     bool keepTrack = false;
-    if ((!foundVertices) || vertices->empty()) {
+    if (((!foundVertices) || vertices->empty()) && useVertices_) {
+      if (fallBackPOCA_)
+      {
+        if ((std::abs(proto.dz(pocaPoint)) < originHalfLength) && (std::abs(proto.dxy(pocaPoint)) < originRadius))
+          keepTrack = true;
+      }
       if (useEventsWithNoVertex)
         keepTrack = true;
     } else if (usePV_) {
-      GlobalPoint aPV(
-          vertices->begin()->position().x(), vertices->begin()->position().y(), vertices->begin()->position().z());
-      double distR2 = sqr(vtx.x() - aPV.x()) + sqr(vtx.y() - aPV.y());
-      double distZ = fabs(vtx.z() - aPV.z());
-      if (distR2 < sqr(originRadius) && distZ < originHalfLength) {
+
+      if ((std::abs(proto.dz(vertices->begin()->position())) < originHalfLength) && (std::abs(proto.dxy(vertices->begin()->position())) < originRadius))
         keepTrack = true;
-      }
+
     } else {
       for (reco::VertexCollection::const_iterator iv = vertices->begin(); iv != vertices->end(); ++iv) {
-        GlobalPoint aPV(iv->position().x(), iv->position().y(), iv->position().z());
-        double distR2 = sqr(vtx.x() - aPV.x()) + sqr(vtx.y() - aPV.y());
-        double distZ = fabs(vtx.z() - aPV.z());
-        if (distR2 < sqr(originRadius) && distZ < originHalfLength) {
+        if ((std::abs(proto.dz(iv->position())) < originHalfLength) && (std::abs(proto.dxy(iv->position())) < originRadius))
+        {
           keepTrack = true;
           break;
         }
@@ -146,12 +164,19 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
         edm::ParameterSet seedCreatorPSet = theConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet");
         SeedFromConsecutiveHitsCreator seedCreator(seedCreatorPSet);
         seedCreator.init(region, es, nullptr);
-        seedCreator.makeSeed(
-            *result,
-            SeedingHitSet(hits[0],
-                          hits[1],
-                          hits.size() > 2 ? hits[2] : SeedingHitSet::nullPtr(),
-                          (includeFourthHit_ && hits.size() > 3) ? hits[3] : SeedingHitSet::nullPtr()));
+
+        if(hits.size() <5)
+        {
+          seedCreator.makeSeed(
+              *result,
+              SeedingHitSet(hits[0],
+                            hits[1],
+                            hits.size() > 2 ? hits[2] : SeedingHitSet::nullPtr(),
+                            (includeFourthHit_ && hits.size() > 3) ? hits[3] : SeedingHitSet::nullPtr()));
+         }else
+         {
+           seedCreator.makeSeed(*result,hits);
+         }
       }
     }
   }
