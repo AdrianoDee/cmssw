@@ -26,7 +26,6 @@ private:
   const double originHalfLength;
   const double originRadius;
   const bool useProtoTrackKinematics;
-  const bool useEventsWithNoVertex;
   const std::string builderName;
   const bool usePV_;
   const bool useVertices_;

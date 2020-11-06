@@ -72,7 +72,6 @@ SeedGeneratorFromProtoTracksEDProducer::SeedGeneratorFromProtoTracksEDProducer(c
       originHalfLength(cfg.getParameter<double>("originHalfLength")),
       originRadius(cfg.getParameter<double>("originRadius")),
       useProtoTrackKinematics(cfg.getParameter<bool>("useProtoTrackKinematics")),
-      useEventsWithNoVertex(cfg.getParameter<bool>("useEventsWithNoVertex")),
       builderName(cfg.getParameter<std::string>("TTRHBuilder")),
       usePV_(cfg.getParameter<bool>("usePV")),
       useVertices_(cfg.getParameter<bool>("useVertices")),
@@ -138,12 +137,12 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
 
       }
     }
-    else if(fallBackPOCA_ && useEventsWithNoVertex)
+    else if(fallBackPOCA_)
     {
       if ((std::abs(proto.dz(pocaPoint)) < originHalfLength) && (std::abs(proto.dxy(pocaPoint)) < originRadius))
         keepTrack = true;
     }
-    else if(useEventsWithNoVertex)
+    else
     {
       keepTrack = true;
     }
