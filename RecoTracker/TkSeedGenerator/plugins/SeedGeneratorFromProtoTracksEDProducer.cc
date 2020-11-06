@@ -116,33 +116,36 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
 
     // check the compatibility with a primary vertex
     bool keepTrack = false;
-    if (((!foundVertices) || vertices->empty()) && useVertices_) {
-      if (fallBackPOCA_)
+
+    if(useVertices_)
+    {
+      if (((!foundVertices) || vertices->empty()))
       {
-        if ((std::abs(proto.dz(pocaPoint)) < originHalfLength) && (std::abs(proto.dxy(pocaPoint)) < originRadius))
-          keepTrack = true;
+          if (fallBackPOCA_ && (std::abs(proto.dz(pocaPoint)) < originHalfLength) && (std::abs(proto.dxy(pocaPoint)) < originRadius))
+            keepTrack = true;
       }
-      if (useEventsWithNoVertex)
-        keepTrack = true;
-    } else if (usePV_) {
-
-      if ((std::abs(proto.dz(vertices->begin()->position())) < originHalfLength) && (std::abs(proto.dxy(vertices->begin()->position())) < originRadius))
-        keepTrack = true;
-
-    } else {
-      for (reco::VertexCollection::const_iterator iv = vertices->begin(); iv != vertices->end(); ++iv) {
-        if ((std::abs(proto.dz(iv->position())) < originHalfLength) && (std::abs(proto.dxy(iv->position())) < originRadius))
+      else
+      {
+        auto lastVertex = (usePV_) ? 1 : vertices->size();
+        for (unsigned int i = 0; i < lastVertex; i++)
         {
-          keepTrack = true;
-          break;
+            if ((std::abs(proto.dz((*vertices)[i].position())) < originHalfLength) && (std::abs(proto.dxy((*vertices)[i].position())) < originRadius))
+            {
+              keepTrack = true;
+              break;
+            }
         }
+
       }
     }
-    
-    if(!useVertices_ && fallBackPOCA_)
+    else if(fallBackPOCA_ && useEventsWithNoVertex)
     {
       if ((std::abs(proto.dz(pocaPoint)) < originHalfLength) && (std::abs(proto.dxy(pocaPoint)) < originRadius))
         keepTrack = true;
+    }
+    else if(useEventsWithNoVertex)
+    {
+      keepTrack = true;
     }
 
     if (!keepTrack)
