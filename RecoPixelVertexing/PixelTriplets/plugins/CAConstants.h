@@ -30,7 +30,7 @@ namespace CAConstants {
 #ifndef GPU_SMALL_EVENTS
   //default
   constexpr uint32_t maxNumberOfDoublets() { return 8 * 1024 * 1024; }
-  constexpr uint32_t maxCellsPerHit() { return 128; }
+  constexpr uint32_t maxCellsPerHit() { return 128 * 8; }
 #else
   constexpr uint32_t maxNumberOfDoublets() { return 128 * 1024; }
   constexpr uint32_t maxCellsPerHit() { return 128 / 2; }

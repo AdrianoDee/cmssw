@@ -174,7 +174,7 @@ void CAHitNtupletGeneratorKernelsCPU::launchKernels(HitsOnCPU const &hh, TkSoA *
                  m_params.isUpgrade_);
 
   if (nhits > 1 && m_params.earlyFishbone_) {
-    printf("earlyfish\n");
+    
     gpuPixelDoublets::fishbone(
         hh.view(), device_theCells_.get(), device_nCells_, device_isOuterHitOfCell_.get(), nhits, false);
   }
@@ -189,27 +189,27 @@ void CAHitNtupletGeneratorKernelsCPU::launchKernels(HitsOnCPU const &hh, TkSoA *
                        quality_d,
                        m_params.minHitsPerNtuplet_,
                        m_params.isUpgrade_);
-  printf("kernel_find_ntuplets\n");
+ 
 
   if (m_params.doStats_)
     kernel_mark_used(hh.view(), device_theCells_.get(), device_nCells_);
 
   cms::cuda::finalizeBulk(device_hitTuple_apc_, tuples_d);
-  printf("finalizeBulk\n");
+
 
   // remove duplicates (tracks that share a doublet)
   kernel_earlyDuplicateRemover(device_theCells_.get(), device_nCells_, tuples_d, quality_d);
-  printf("kernel_earlyDuplicateRemover\n");
+
   kernel_countMultiplicity(tuples_d, quality_d, device_tupleMultiplicity_.get());
-  printf("kernel_countMultiplicity\n");
+
   cms::cuda::launchFinalize(device_tupleMultiplicity_.get(), cudaStream);
-  printf("launchFinalize\n");
+
 
   kernel_fillMultiplicity(tuples_d, quality_d, device_tupleMultiplicity_.get());
-  printf("kernel_fillMultiplicity\n");
-  printf("%d \n",CAConstants::maxNumberOfTuples());
+
+
   if (nhits > 1 && m_params.lateFishbone_) {
-    printf("latefishes\n \n");
+
     gpuPixelDoublets::fishbone(
         hh.view(), device_theCells_.get(), device_nCells_, device_isOuterHitOfCell_.get(), nhits, true);
   }
