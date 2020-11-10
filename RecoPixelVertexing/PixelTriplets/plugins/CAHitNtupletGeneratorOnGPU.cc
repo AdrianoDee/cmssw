@@ -271,8 +271,7 @@ PixelTrackHeterogeneous CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DC
 
   auto* soa = tracks.get();
   assert(soa);
-
-  std::cout << hits_d.view()->phiBinner().size()<<std::endl;
+ 
   CAHitNtupletGeneratorKernelsCPU kernels(m_params);
   kernels.counters_ = m_counters;
   kernels.allocateOnGPU(nullptr);

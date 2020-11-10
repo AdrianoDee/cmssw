@@ -77,7 +77,6 @@ void PixelVertexCoordinates::produce(edm::Event& iEvent, const edm::EventSetup& 
 
   auto vtxs = *(v.product());
 
-  std::cout << "PixelVertexCoordinates" << std::endl;
   if (vtxs.size() >= 10) {
        edm::LogWarning("PixelVertexCoordinates") << "You gave in input more than 10 vertices. Only the first 10 will be taken into account." << std::endl;
     }
