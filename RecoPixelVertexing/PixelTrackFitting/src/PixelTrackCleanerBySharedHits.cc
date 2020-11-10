@@ -27,10 +27,16 @@ void PixelTrackCleanerBySharedHits::cleanTracks(TracksWithTTRHs& trackHitPairs) 
   // sort (stabilize cleaning)
   uint16_t score[size];
   unsigned int ind[size];
+  uint16_t maxHits = 0;
+  for (auto i = 0U; i < size; ++i) {
+   if (trackHitPairs[i].second.size() > maxHits)	
+	maxHits = trackHitPairs[i].second.size();
+  }
   for (auto i = 0U; i < size; ++i) {
     ind[i] = i;
     score[i] = 32000 - std::min(32000, int(trackHitPairs[i].first->chi2() * 100.f));  // chi2: smaller is better
-    if (trackHitPairs[i].second.size() == 4)
+    
+    if (trackHitPairs[i].second.size() == maxHits)
       score[i] += 32001;  //  s4 always better than s3
   }
   std::sort(ind, ind + size, [&](unsigned int i, unsigned int j) { return score[i] > score[j]; });
@@ -96,6 +102,7 @@ void PixelTrackCleanerBySharedHits::cleanTracks(TracksWithTTRHs& trackHitPairs) 
       continue;
     auto const& recHits1 = trackHitPairs[iTrack1].second;
     auto s1 = recHits1.size();
+    
     for (auto j = i + 1; j < size; ++j) {
       auto iTrack2 = ind[j];
       auto track2 = trackHitPairs[iTrack2].first;
@@ -103,6 +110,7 @@ void PixelTrackCleanerBySharedHits::cleanTracks(TracksWithTTRHs& trackHitPairs) 
         continue;
       auto const& recHits2 = trackHitPairs[iTrack2].second;
       auto s2 = recHits2.size();
+       
       auto commonRecHits = 0U;
       auto f2 = 0U;
       for (auto iRecHit1 = 0U; iRecHit1 < s1; ++iRecHit1) {

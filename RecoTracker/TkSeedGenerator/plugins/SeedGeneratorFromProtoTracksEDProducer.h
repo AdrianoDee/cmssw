@@ -6,7 +6,6 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
-#include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 namespace edm {
   class Event;
@@ -20,21 +19,16 @@ public:
   void produce(edm::Event& ev, const edm::EventSetup& es) override;
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
-  using Point = reco::BeamSpot::Point;
 private:
   const edm::ParameterSet theConfig;
   const double originHalfLength;
   const double originRadius;
   const bool useProtoTrackKinematics;
+  const bool useEventsWithNoVertex;
   const std::string builderName;
   const bool usePV_;
-  const bool useVertices_;
   const bool includeFourthHit_;
-  const bool beamSpotPOCA_;
-  const bool fallBackPOCA_;
   const edm::EDGetTokenT<reco::TrackCollection> theInputCollectionTag;
   const edm::EDGetTokenT<reco::VertexCollection> theInputVertexCollectionTag;
-  const edm::EDGetTokenT<reco::BeamSpot> theBeamSpotTag;
-
 };
 #endif

@@ -17,7 +17,7 @@ public:
   {
     theSize = 0;
 
-    for (uint8_t i = theSize; i < SEEDMAXSIZE; i++) {
+    for (unsigned int i=0; i < SEEDMAXSIZE; i++) {
       theRecHits[i] = nullptr;
     }
 
@@ -32,7 +32,7 @@ public:
 
     theSize = 2;
 
-    for (uint8_t i = theSize; i < SEEDMAXSIZE; i++) {
+    for (unsigned int i = 2; i < SEEDMAXSIZE; i++) {
       theRecHits[i] = nullptr;
     }
 
@@ -47,7 +47,7 @@ public:
 
     theSize = 3;
 
-    for (uint8_t i = theSize; i < SEEDMAXSIZE; i++) {
+    for (unsigned int i = 3; i < SEEDMAXSIZE; i++) {
       theRecHits[i] = nullptr;
     }
 
@@ -61,32 +61,39 @@ public:
 
     theSize = 4;
 
-    for (uint8_t i = theSize; i < SEEDMAXSIZE; i++) {
+    for (unsigned int i = 4; i < SEEDMAXSIZE; i++) {
       theRecHits[i] = nullptr;
     }
   }
 
   SeedingHitSet(std::vector<ConstRecHitPointer> vHits) {
 
-    theSize =  uint8_t(vHits.size());
-    for (uint8_t i = 0; i < theSize; i++) {
+    theSize = (vHits.size());
+    for (unsigned int i = 0; i < theSize; i++) {
       theRecHits[i] = vHits[i];
     }
-    for (uint8_t i = theSize; i < SEEDMAXSIZE; i++) {
+    for (unsigned int i = theSize; i < SEEDMAXSIZE; i++) {
       theRecHits[i] = nullptr;
     }
   }
 
   ConstRecHitPointer const *data() const { return theRecHits; }
 
-  unsigned int size() const { return theSize; }
-
+ // unsigned int size() const { return theSize; }
+  //unsigned int size() const { return theRecHits[4] ? 5 :theRecHits[3] ? 4 : (theRecHits[2] ? 3 : (theRecHits[1] ? 2 : 0)); }
+  unsigned int size() const { 
+  for (unsigned int i = SEEDMAXSIZE-1; i >0; i--) {
+    if(theRecHits[i])
+      return i+1;
+	}
+  return 0;
+}
   ConstRecHitPointer get(unsigned int i) const { return theRecHits[i]; }
   ConstRecHitPointer operator[](unsigned int i) const { return theRecHits[i]; }
 
 private:
   ConstRecHitPointer theRecHits[SEEDMAXSIZE];
-  uint8_t theSize;
+  unsigned int theSize;
 
 };
 
