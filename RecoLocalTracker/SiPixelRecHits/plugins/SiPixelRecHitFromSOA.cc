@@ -125,15 +125,12 @@ void SiPixelRecHitFromSOA::produce(edm::Event& iEvent, edm::EventSetup const& es
     auto nhits = lc - fc;
 
     assert(lc > fc);
-    // std::cout << "in det " << gind << ": conv " << nhits << " hits from " << DSViter->size() << " legacy clusters"
-    //          <<' '<< fc <<','<<lc<<std::endl;
+    std::cout << "in det " << gind << ": conv " << nhits << " hits from " << DSViter->size() << " legacy clusters"
+              <<' '<< fc <<','<<lc<<std::endl;
     if (nhits > MaxHitsInModule)
       printf(
           "WARNING: too many clusters %d in Module %d. Only first %d Hits converted\n", nhits, gind, MaxHitsInModule);
     nhits = std::min(nhits, MaxHitsInModule);
-
-    //std::cout << "in det " << gind << "conv " << nhits << " hits from " << DSViter->size() << " legacy clusters"
-    //          <<' '<< lc <<','<<fc<<std::endl;
 
     if (0 == nhits)
       continue;

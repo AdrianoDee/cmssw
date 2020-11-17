@@ -9,7 +9,7 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 
 #include "gpuClusteringConstants.h"
-
+#define GPU_DEBUG 1
 namespace gpuClustering {
 
 #ifdef GPU_DEBUG
@@ -78,9 +78,9 @@ namespace gpuClustering {
     }
 
     //init hist  (ymax=416 < 512 : 9bits)
-    constexpr uint32_t maxPixInModule = 4000;
-    constexpr auto nbins = phase1PixelTopology::numColsInModule + 2;  //2+2;
-    using Hist = cms::cuda::HistoContainer<uint16_t, nbins, maxPixInModule, 9, uint16_t>;
+    constexpr uint32_t maxPixInModule = 8000;
+    constexpr auto nbins = 800;//phase1PixelTopology::numColsInModule + 2;  //2+2;
+    using Hist = cms::cuda::HistoContainer<uint16_t, nbins, maxPixInModule, 12, uint16_t>;
     __shared__ Hist hist;
     __shared__ typename Hist::Counter ws[32];
     for (auto j = threadIdx.x; j < Hist::totbins(); j += blockDim.x) {
@@ -295,7 +295,7 @@ namespace gpuClustering {
       }
 #endif
 #ifdef GPU_DEBUG
-      if (thisModuleId % 100 == 1)
+      if (thisModuleId % 1 == 1)
         printf("%d clusters in module %d\n", foundClusters, thisModuleId);
 #endif
     }

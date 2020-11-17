@@ -307,10 +307,10 @@ void PixelCPEBase::computeAnglesFromDetPosition(DetParam const& theDetParam, Clu
     auto alpha = HALF_PI - std::atan(cotalpha_);
     auto beta = HALF_PI - std::atan(cotbeta_);
     if (zneg) { beta -=PI; alpha -=PI;}
-    
+
     auto alpha_ = atan2( gv_dot_gvz, gv_dot_gvx );
     auto beta_  = atan2( gv_dot_gvz, gv_dot_gvy );
-    
+
     assert(std::abs(std::round(alpha*10000.f)-std::round(alpha_*10000.f))<2);
     assert(std::abs(std::round(beta*10000.f)-std::round(beta_*10000.f))<2);
     */
@@ -469,5 +469,5 @@ void PixelCPEBase::fillPSetDescription(edm::ParameterSetDescription& desc) {
   desc.add<bool>("useLAWidthFromDB", true);
   desc.add<double>("lAOffset", 0.0);
   desc.add<double>("lAWidthBPix", 0.0);
-  desc.add<double>("lAWidthFPix", 0.0);
+  desc.add<double>("lAWidthFPix", 0.0); 
 }

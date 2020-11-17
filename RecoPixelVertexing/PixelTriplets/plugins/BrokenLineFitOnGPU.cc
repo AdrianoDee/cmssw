@@ -36,7 +36,7 @@ void HelixFitOnGPU::launchBrokenLineKernelsOnCPU(HitsView const* hv, uint32_t hi
                    4,
                    offset);
 
-    if (fit5as4_) {
+    if (fit5as4_ && false) {
       // fit penta (only first 4)
       kernelBLFastFit<4>(
           tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), 5, offset);
@@ -51,10 +51,10 @@ void HelixFitOnGPU::launchBrokenLineKernelsOnCPU(HitsView const* hv, uint32_t hi
                      offset);
     } else {
       // fit penta (all 5)
-      kernelBLFastFit<5>(
+      kernelBLFastFit<4>(
           tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), 5, offset);
 
-      kernelBLFit<5>(tupleMultiplicity_d,
+      kernelBLFit<4>(tupleMultiplicity_d,
                      bField_,
                      outputSoa_d,
                      hitsGPU_.get(),
@@ -62,6 +62,95 @@ void HelixFitOnGPU::launchBrokenLineKernelsOnCPU(HitsView const* hv, uint32_t hi
                      fast_fit_resultsGPU_.get(),
                      5,
                      offset);
+
+       kernelBLFastFit<4>(
+           tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), 6, offset);
+
+       kernelBLFit<4>(tupleMultiplicity_d,
+                      bField_,
+                      outputSoa_d,
+                      hitsGPU_.get(),
+                      hits_geGPU_.get(),
+                      fast_fit_resultsGPU_.get(),
+                      6,
+                      offset);
+
+      kernelBLFastFit<4>(
+          tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), 7, offset);
+
+      kernelBLFit<4>(tupleMultiplicity_d,
+                     bField_,
+                     outputSoa_d,
+                     hitsGPU_.get(),
+                     hits_geGPU_.get(),
+                     fast_fit_resultsGPU_.get(),
+                     7,
+                     offset);
+
+/*
+       kernelBLFastFit<4>(
+           tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), 8, offset);
+
+       kernelBLFit<4>(tupleMultiplicity_d,
+                      bField_,
+                      outputSoa_d,
+                      hitsGPU_.get(),
+                      hits_geGPU_.get(),
+                      fast_fit_resultsGPU_.get(),
+                      8,
+                      offset);
+
+        kernelBLFastFit<4>(
+            tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), 10, offset);
+
+        kernelBLFit<4>(tupleMultiplicity_d,
+                       bField_,
+                       outputSoa_d,
+                       hitsGPU_.get(),
+                       hits_geGPU_.get(),
+                       fast_fit_resultsGPU_.get(),
+                       10,
+                       offset);
+
+         kernelBLFastFit<4>(
+             tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), 11, offset);
+
+         kernelBLFit<4>(tupleMultiplicity_d,
+                        bField_,
+                        outputSoa_d,
+                        hitsGPU_.get(),
+                        hits_geGPU_.get(),
+                        fast_fit_resultsGPU_.get(),
+                        11,
+                        offset);
+
+          kernelBLFastFit<4>(
+              tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), 12, offset);
+
+          kernelBLFit<4>(tupleMultiplicity_d,
+                         bField_,
+                         outputSoa_d,
+                         hitsGPU_.get(),
+                         hits_geGPU_.get(),
+                         fast_fit_resultsGPU_.get(),
+                         12,
+                         offset);
+*/
+          for (uint32_t i = 8; i < 16; i++) {
+
+            kernelBLFastFit<4>(
+                tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), i, offset);
+
+            kernelBLFit<4>(tupleMultiplicity_d,
+                           bField_,
+                           outputSoa_d,
+                           hitsGPU_.get(),
+                           hits_geGPU_.get(),
+                           fast_fit_resultsGPU_.get(),
+                           i,
+                           offset);
+          
+          }
     }
 
   }  // loop on concurrent fits
