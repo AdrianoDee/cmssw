@@ -48,6 +48,7 @@ void SeedGeneratorFromProtoTracksEDProducer::fillDescriptions(edm::Configuration
   desc.add<std::string>("TTRHBuilder", "TTRHBuilderWithoutAngle4PixelTriplets");
   desc.add<bool>("usePV", false);
   desc.add<bool>("includeFourthHit", false);
+  desc.add<bool>("doBuildingBlocks", false);
 
   edm::ParameterSetDescription psd0;
   psd0.add<std::string>("ComponentName", std::string("SeedFromConsecutiveHitsCreator"));
@@ -72,6 +73,7 @@ SeedGeneratorFromProtoTracksEDProducer::SeedGeneratorFromProtoTracksEDProducer(c
       builderName(cfg.getParameter<std::string>("TTRHBuilder")),
       usePV_(cfg.getParameter<bool>("usePV")),
       includeFourthHit_(cfg.getParameter<bool>("includeFourthHit")),
+      doBuildingBlocks_(cfg.getParameter<bool>("doBuildingBlocks")),
       theInputCollectionTag(consumes<reco::TrackCollection>(cfg.getParameter<InputTag>("InputCollection"))),
       theInputVertexCollectionTag(
           consumes<reco::VertexCollection>(cfg.getParameter<InputTag>("InputVertexCollection"))) {
@@ -157,11 +159,20 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
          }else
          {
            seedCreator.makeSeed(*result,hits);
-         }     
-      
-     
-    
-    
+           if(!doBuildingBlocks_)
+           {
+
+            for (size_t i = 0; i < hits.size()-2; i = i+3) {
+              seedCreator.makeSeed(*result,SeedingHitSet(hits[i],hits[i+1],hits[i+2],SeedingHitSet::nullPtr()));
+            }
+           }
+
+
+         }
+
+
+
+
       }
     }
   }

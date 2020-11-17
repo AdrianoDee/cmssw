@@ -28,6 +28,7 @@ private:
   const std::string builderName;
   const bool usePV_;
   const bool includeFourthHit_;
+  const bool doBuildingBlocks_;
   const edm::EDGetTokenT<reco::TrackCollection> theInputCollectionTag;
   const edm::EDGetTokenT<reco::VertexCollection> theInputVertexCollectionTag;
 };
