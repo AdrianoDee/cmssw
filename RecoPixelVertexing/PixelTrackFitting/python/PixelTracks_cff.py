@@ -98,5 +98,7 @@ _pixelTracksGPUTask = cms.Task(
 gpu.toReplaceWith(pixelTracksTask, _pixelTracksGPUTask)
 gpu.toReplaceWith(pixelTracks,_pixelTrackFromSoA)
 
+gpuTracks.toReplaceWith(pixelTracksTask, _pixelTracksGPUTask)
+gpuTracks.toReplaceWith(pixelTracks,_pixelTrackFromSoA)
 
 pixelTracksSequence = cms.Sequence(pixelTracksTask)

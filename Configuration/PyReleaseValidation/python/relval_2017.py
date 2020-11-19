@@ -5,7 +5,7 @@ from  Configuration.PyReleaseValidation.relval_steps import *
 # here only define the workflows as a combination of the steps defined above:
 workflows = Matrix()
 
-# each workflow defines a name and a list of steps to be done. 
+# each workflow defines a name and a list of steps to be done.
 # if no explicit name/label given for the workflow (first arg),
 # the name of step1 will be used
 
@@ -59,6 +59,7 @@ numWFIB = [10001.0,10002.0,10003.0,10004.0,10005.0,10006.0,10007.0,10008.0,10009
            11650.505,11650.506,
            11634.501,11634.502, # 11634.503,11634.504,
            11634.505,11634.506,
+           11634.702,11634.706,
            11634.511,11634.512, # 11634.513,11634.514,
            11634.521,11634.522, # 11634.523,11634.524,
            11634.24,11834.24,
