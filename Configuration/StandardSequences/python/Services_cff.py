@@ -13,4 +13,6 @@ def _addCUDAServices(process):
      process.load("HeterogeneousCore.CUDAServices.CUDAService_cfi")
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuTracks_cff import gpuTracks
 modifyConfigurationStandardSequencesServicesAddCUDAServices_ = gpu.makeProcessModifier(_addCUDAServices)
+modifyConfigurationStandardSequencesServicesAddCUDAServices_ = gpuTracks.makeProcessModifier(_addCUDAServices)

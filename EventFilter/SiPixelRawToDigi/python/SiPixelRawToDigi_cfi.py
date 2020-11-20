@@ -10,7 +10,22 @@ from Configuration.Eras.Modifier_phase1Pixel_cff import phase1Pixel
 phase1Pixel.toModify(siPixelDigis.cpu, UsePhase1=True)
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuTracks_cff import gpuTracks
+
 gpu.toModify(siPixelDigis,
+    cuda = cms.EDAlias(
+        siPixelDigiErrors = cms.VPSet(
+            cms.PSet(type = cms.string("DetIdedmEDCollection")),
+            cms.PSet(type = cms.string("SiPixelRawDataErroredmDetSetVector")),
+            cms.PSet(type = cms.string("PixelFEDChanneledmNewDetSetVector"))
+        ),
+        siPixelDigisClustersPreSplitting = cms.VPSet(
+            cms.PSet(type = cms.string("PixelDigiedmDetSetVector"))
+        )
+    )
+)
+
+gpuTracks.toModify(siPixelDigis,
     cuda = cms.EDAlias(
         siPixelDigiErrors = cms.VPSet(
             cms.PSet(type = cms.string("DetIdedmEDCollection")),

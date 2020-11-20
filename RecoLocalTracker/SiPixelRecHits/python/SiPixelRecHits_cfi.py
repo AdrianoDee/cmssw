@@ -17,6 +17,7 @@ siPixelRecHitsPreSplitting = SwitchProducerCUDA(
 
 
 
+from Configuration.ProcessModifiers.gpuTracks_cff import gpuTracks
 from Configuration.ProcessModifiers.gpu_cff import gpu
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitCUDA_cfi import siPixelRecHitCUDA as _siPixelRecHitCUDA
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromSOA_cfi import siPixelRecHitFromSOA as _siPixelRecHitFromSOA
@@ -24,7 +25,9 @@ from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromSOA_cfi import siPixelRecH
 gpu.toModify(siPixelRecHitsPreSplitting, 
     cuda = _siPixelRecHitFromSOA.clone()
 )
-
+gpuTracks.toModify(siPixelRecHitsPreSplitting,
+    cuda = _siPixelRecHitFromSOA.clone()
+)
 
 siPixelRecHitsPreSplittingTask = cms.Task(siPixelRecHitsPreSplitting)
 
@@ -38,7 +41,7 @@ siPixelRecHitsPreSplittingTaskCUDA = cms.Task(
     siPixelRecHitsLegacyPreSplitting,
 )
 
-from Configuration.ProcessModifiers.gpu_cff import gpu
 _siPixelRecHitsPreSplittingTask_gpu = siPixelRecHitsPreSplittingTask.copy()
 _siPixelRecHitsPreSplittingTask_gpu.add(siPixelRecHitsPreSplittingTaskCUDA)
 gpu.toReplaceWith(siPixelRecHitsPreSplittingTask, _siPixelRecHitsPreSplittingTask_gpu)
+gpuTracks.toReplaceWith(siPixelRecHitsPreSplittingTask, _siPixelRecHitsPreSplittingTask_gpu)

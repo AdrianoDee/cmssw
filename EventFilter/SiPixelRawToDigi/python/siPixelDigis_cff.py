@@ -25,6 +25,8 @@ siPixelDigisTaskCUDA = cms.Task(
 )
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuTracks_cff import gpuTracks
 _siPixelDigisTask_gpu = siPixelDigisTask.copy()
 _siPixelDigisTask_gpu.add(siPixelDigisTaskCUDA)
 gpu.toReplaceWith(siPixelDigisTask, _siPixelDigisTask_gpu)
+gpuTracks.toReplaceWith(siPixelDigisTask, _siPixelDigisTask_gpu)

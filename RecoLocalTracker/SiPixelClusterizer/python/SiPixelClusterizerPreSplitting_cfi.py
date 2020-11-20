@@ -8,7 +8,7 @@ siPixelClustersPreSplitting = SwitchProducerCUDA(
 )
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
-from Configuration.ProcessModifiers.gpu_cff import gpuTracks
+from Configuration.ProcessModifiers.gpuTracks_cff import gpuTracks
 gpu.toModify(siPixelClustersPreSplitting,
     cuda = cms.EDAlias(
         siPixelDigisClustersPreSplitting = cms.VPSet(

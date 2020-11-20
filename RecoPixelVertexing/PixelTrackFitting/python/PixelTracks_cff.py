@@ -86,6 +86,7 @@ ntupleFit.toReplaceWith(pixelTracksTask, _pixelTracksTask_ntupleFit)
 
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuTracks_cff import gpuTracks
 from RecoPixelVertexing.PixelTriplets.caHitNtupletCUDA_cfi import caHitNtupletCUDA
 from RecoPixelVertexing.PixelTrackFitting.pixelTrackSoA_cfi import pixelTrackSoA
 from RecoPixelVertexing.PixelTrackFitting.pixelTrackProducerFromSoA_cfi import pixelTrackProducerFromSoA as _pixelTrackFromSoA

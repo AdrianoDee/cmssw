@@ -674,13 +674,14 @@ tracksValidationTruth = cms.Task(
 
 #gpu tp ???
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuTracks_cff import gpuTracks
 tpClusterProducerPreSplittingCUDA = cms.Task(
   tpClusterProducerCUDAPreSplitting
 )
 _tracksValidationTruth_gpu = tracksValidationTruth.copy()
 _tracksValidationTruth_gpu.add(tpClusterProducerPreSplittingCUDA)
 gpu.toReplaceWith(tracksValidationTruth,_tracksValidationTruth_gpu)
-
+gpuTracks.toReplaceWith(tracksValidationTruth,_tracksValidationTruth_gpu)
 fastSim.toModify(tracksValidationTruth, lambda x: x.remove(tpClusterProducer))
 
 tracksPreValidation = cms.Task(
