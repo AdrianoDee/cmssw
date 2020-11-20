@@ -21,6 +21,8 @@ siPixelClustersPreSplittingTaskCUDA = cms.Task(
 )
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuTracks_cff import gpuTracks
 _siPixelClustersPreSplittingTask_gpu = siPixelClustersPreSplittingTask.copy()
 _siPixelClustersPreSplittingTask_gpu.add(siPixelClustersPreSplittingTaskCUDA)
 gpu.toReplaceWith(siPixelClustersPreSplittingTask, _siPixelClustersPreSplittingTask_gpu)
+gpuTracks.toReplaceWith(siPixelClustersPreSplittingTask, _siPixelClustersPreSplittingTask_gpu)
