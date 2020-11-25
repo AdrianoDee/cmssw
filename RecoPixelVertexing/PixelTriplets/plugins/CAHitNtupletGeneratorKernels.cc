@@ -135,7 +135,7 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoubletsRegional(HitsOnCPU const &hh,
                                          m_params.doClusterCut_ && !m_params.isUpgrade_,
                                          m_params.doZ0Cut_,
                                          m_params.doPtCut_,
-                                         m_params.maxNumberOfDoublets_,m_params.isUpgrade_,vv);//;,m_params.doRegion_,m_params.vtxs_);
+                                         m_params.maxNumberOfDoublets_,m_params.isUpgrade_,vv,m_params.doRegion_);//,m_params.vtxs_);
 }
 
 template <>

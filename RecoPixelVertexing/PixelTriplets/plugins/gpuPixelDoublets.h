@@ -251,8 +251,8 @@ namespace gpuPixelDoublets {
                                 bool doZ0Cut,
                                 bool doPtCut,
                                 uint32_t maxNumOfDoublets, bool upgrade,
-                                VertexRegion vtxs
-                                // ,bool region, CAHitNtupletGeneratorKernelsGPU::VertexRegion vtxs
+                                VertexRegion vtxs,
+                                bool region//, CAHitNtupletGeneratorKernelsGPU::VertexRegion vtxs
                                 ) {
     auto const& __restrict__ hh = *hhp;
     if(!upgrade)
@@ -275,7 +275,7 @@ namespace gpuPixelDoublets {
                         doZ0Cut,
                         doPtCut,
                         maxNumOfDoublets,upgrade,
-                        true,vtxs
+                        region,vtxs
                         );
      }else
      {
@@ -297,7 +297,7 @@ namespace gpuPixelDoublets {
                          doZ0Cut,
                          doPtCut,
                          maxNumOfDoublets,upgrade,
-                         true,vtxs
+                         region,vtxs
                          );
      }
   }

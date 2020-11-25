@@ -74,7 +74,7 @@ namespace cAHitNtupletGenerator {
            float dcaCutInnerTriplet,
            float dcaCutOuterTriplet,
            bool isUpgrade,
-           // bool doRegion,
+           bool doRegion,
            QualityCuts const& cuts)
            // VertexRegion const& vtxs)
         : onGPU_(onGPU),
@@ -97,7 +97,7 @@ namespace cAHitNtupletGenerator {
           dcaCutInnerTriplet_(dcaCutInnerTriplet),
           dcaCutOuterTriplet_(dcaCutOuterTriplet),
           isUpgrade_(isUpgrade),
-          // doRegion_(doRegion),
+          doRegion_(doRegion),
           cuts_(cuts)
           // vtxs_(vtxs)
           {}
@@ -122,7 +122,7 @@ namespace cAHitNtupletGenerator {
     const float dcaCutInnerTriplet_;
     const float dcaCutOuterTriplet_;
     const bool isUpgrade_;
-    // const bool doRegion_;
+    const bool doRegion_;
 
     // quality cuts
     QualityCuts cuts_{

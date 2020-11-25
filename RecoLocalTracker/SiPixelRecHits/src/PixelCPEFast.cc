@@ -360,7 +360,11 @@ void PixelCPEFast::fillParamsForGpu() {
   // add half_module and tollerance
   // constexpr float module_length = 6.7f;
   // std::cout << "numberOfLaddersInBarrel" << std::endl;
-  float module_length = isUpgrade_ ? 4.345 : 6.7f;
+  float hm = 0.0f;
+  if(isUpgrade_)
+   hm = 4.345f;
+
+  float module_length = isUpgrade_ ? hm : 6.7f;
   constexpr float module_tolerance = 0.2f;
 
   for (int il = 0, nl = numberOfLaddersInBarrel; il < nl; ++il) {
@@ -391,12 +395,11 @@ void PixelCPEFast::fillParamsForGpu() {
       aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
     }
 
-  }
-
   // correct for outer ring being closer
-  aveGeom.endCapZ[0] -= 1.5f;
-  aveGeom.endCapZ[1] += 1.5f;
+     aveGeom.endCapZ[0] -= 1.5f;
+     aveGeom.endCapZ[1] += 1.5f;
 
+  }
   // std::cout << "endcap" << std::endl;
   // for (int jl=0, nl=numberOfLaddersInBarrel; jl<nl; ++jl) {
   //   std::cout << jl<<':'<<aveGeom.ladderR[jl] << '/'<< std::sqrt(aveGeom.ladderX[jl]*aveGeom.ladderX[jl]+aveGeom.ladderY[jl]*aveGeom.ladderY[jl])
@@ -417,8 +420,7 @@ void PixelCPEFast::fillParamsForGpu() {
 
     memcpy(m_layerGeometry.layerStart, phase2PixelTopology::layerStart, sizeof(phase2PixelTopology::layerStart));
     memcpy(m_layerGeometry.layer, phase2PixelTopology::layer.data(), phase2PixelTopology::layer.size());
-    m_layerGeometry.maxModuleStride = phase2PixelTopology::maxModuleStride;
-    ;
+    m_layerGeometry.maxModuleStride = phase2PixelTopology::maxModuleStride; 
 
   }
 

@@ -125,7 +125,7 @@ CAHitNtupletGeneratorOnGPU::CAHitNtupletGeneratorOnGPU(const edm::ParameterSet& 
                cfg.getParameter<double>("dcaCutInnerTriplet"),
                cfg.getParameter<double>("dcaCutOuterTriplet"),
                cfg.getParameter<bool>("isUpgrade"),
-               // cfg.getParameter<bool>("doRegion"),
+               cfg.getParameter<bool>("doRegion"),
                // cfg.getParameter<std::vector<double>>("zVertices"),
                // cfg.getParameter<std::vector<double>>("zVerticesError"),
                // cfg.getParameter<std::vector<double>>("rVertices"),
@@ -201,7 +201,7 @@ void CAHitNtupletGeneratorOnGPU::fillDescriptions(edm::ParameterSetDescription& 
   desc.add<bool>("doPtCut", true);
   desc.add<bool>("useRiemannFit", false)->setComment("true for Riemann, false for BrokenLine");
   desc.add<bool>("isUpgrade", false);
-  // desc.add<bool>("doRegion", false);
+  desc.add<bool>("doRegion", false);
   // desc.add<VertexRegion>("vertexRegion", {{0.0},0.0,{9999.9},9999.9})->setComment("Zs for vertices for region selection.");
   // desc.add<std::vector<double>>("rVertices", {0.0})->setComment("Rs for vertices for region selection.");
   // desc.add<std::vector<double>>("zVerticesError", {0.0})->setComment("Zerrs for vertices for region selection.");
