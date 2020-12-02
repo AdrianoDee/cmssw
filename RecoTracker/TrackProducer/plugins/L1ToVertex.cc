@@ -96,6 +96,12 @@ void L1ToVertex::produce(edm::StreamID, edm::Event& ev, const edm::EventSetup& e
   ev.getByToken(tBeamSpot_, bsHandle);
   const auto &bsh = *bsHandle;
 
+  reco::Vertex::Error errVtx;
+    errVtx(0, 0) = bsh.BeamWidthX() * 2.0;
+    errVtx(1, 1) = bsh.BeamWidthY() * 2.0;
+    errVtx(2, 2) = bsh.sigmaZ() * 2.0;
+  reco::Vertex vv(reco::Vertex::Point(bsh.x0(), bsh.y0(), bsh.z0()), errVtx,1.0,1,10);
+  result->emplace_back(vv); 
   for (auto const& l1 : vertex) {
 
     // math::XYZTLorentzVectorD p4;

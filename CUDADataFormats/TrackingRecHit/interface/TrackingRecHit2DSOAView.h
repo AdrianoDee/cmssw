@@ -85,6 +85,9 @@ private:
   int16_t* m_xsize;
   int16_t* m_ysize;
   uint16_t* m_detInd;
+  
+  //used mask
+  uint8_t* m_mask;
 
   // supporting objects
   AverageGeometry* m_averageGeometry;  // owned (corrected for beam spot: not sure where to host it otherwise)

@@ -176,8 +176,8 @@ __global__ void kernel_fastDuplicateRemover(GPUCACell const *__restrict__ cells,
     uint32_t im = 6000000;
 
     auto score = [&](auto it) {
-      return std::abs(tracks->tip(it));  // tip
-      // return tracks->chi2(it);  //chi2
+      //return std::abs(tracks->tip(it));  // tip
+      return tracks->chi2(it);  //chi2
     };
 
     // find min socre
@@ -288,7 +288,7 @@ __global__ void kernel_find_ntuplets(GPUCACell::Hits const *__restrict__ hhp,
 
     auto pid = thisCell.theLayerPairId;
     auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
-    if(upgrade) doit = pid<=20;//= pid<=20; //true; //pid < 40;
+    if(upgrade) doit = true;//= pid<=20; //true; //pid < 40;
 
     if (doit) {
       GPUCACell::TmpTuple stack;
@@ -398,7 +398,13 @@ __global__ void kernel_classifyTracks(HitContainer const *__restrict__ tuples,
     }
     else
     {
-  	chi2Cut=2.5;
+	chi2Cut = 3.2f;
+       if(tuples->size(it)>5) chi2Cut= 3.0f;
+       if(tuples->size(it)==3) chi2Cut=5.0f;
+       if(tuples->size(it)==4) chi2Cut=2.5f;
+       if(tuples->size(it)==5) chi2Cut=5.4f;
+
+
     }
 
     // above number were for Quads not normalized so for the time being just multiple by ndof for Quads  (triplets to be understood)
@@ -526,11 +532,12 @@ __global__ void kernel_tripletCleaner(TrackingRecHit2DSOAView const *__restrict_
     float mc = 10000.f;
     uint32_t im = 6000000;
     uint32_t maxNh = 0;
-
+    uint32_t minNh = 100;
     // find maxNh
     for (auto it = hitToTuple.begin(idx); it != hitToTuple.end(idx); ++it) {
       uint32_t nh = foundNtuplets.size(*it);
       maxNh = std::max(nh, maxNh);
+      minNh = std::min(nh, minNh);
     }
     // kill all tracks shorter than maxHn (only triplets???)
     for (auto it = hitToTuple.begin(idx); it != hitToTuple.end(idx); ++it) {
@@ -539,17 +546,26 @@ __global__ void kernel_tripletCleaner(TrackingRecHit2DSOAView const *__restrict_
         quality[*it] = dup;
     }
 
-    if (maxNh > 3)
+    if (maxNh > 3 and minNh <6)
       continue;
     // if (idx>=l1end) continue;  // only for layer 1
     // for triplets choose best tip!
+    if (maxNh==3)
+    {
     for (auto ip = hitToTuple.begin(idx); ip != hitToTuple.end(idx); ++ip) {
       auto const it = *ip;
       if (quality[it] != bad && std::abs(tracks.tip(it)) < mc) {
         mc = std::abs(tracks.tip(it));
         im = it;
       }
-    }
+    }}else{
+    for (auto ip = hitToTuple.begin(idx); ip != hitToTuple.end(idx); ++ip) {
+      auto const it = *ip;
+      if (quality[it] != bad && std::abs(tracks.chi2(it)) < mc) {
+        mc = std::abs(tracks.chi2(it));
+        im = it;
+      }
+    }}
     // mark duplicates
     for (auto ip = hitToTuple.begin(idx); ip != hitToTuple.end(idx); ++ip) {
       auto const it = *ip;

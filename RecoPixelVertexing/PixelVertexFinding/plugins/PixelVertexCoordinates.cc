@@ -77,24 +77,24 @@ void PixelVertexCoordinates::produce(edm::Event& iEvent, const edm::EventSetup& 
 
   auto vtxs = *(v.product());
 
-  if (vtxs.size() >= 10) {
+  if (vtxs.size() >= 100) {
        edm::LogWarning("PixelVertexCoordinates") << "You gave in input more than 10 vertices. Only the first 10 will be taken into account." << std::endl;
     }
 
-  int m = std::min(10,int(vtxs.size()));
+  int m = std::min(100,int(vtxs.size()));
 
   // float vZ[10],vZErr[10];
   // float vR,vRErr;
 
   VV->vtxR = std::sqrt(vtxs[0].x()*vtxs[0].x()+vtxs[0].y()*vtxs[0].y()); //this comes always from beamspot
   VV->vtxRerr = std::sqrt(vtxs[0].xError()*vtxs[0].xError()+vtxs[0].yError()*vtxs[0].yError());
-
+  
   for (int i = 0; i < m; i++) {
     VV->vtxZ[i] = vtxs[i].z();
     VV->vtxZerr[i] = vtxs[i].zError();
   }
-
-  for (int i = m; i < 10; i++) {
+  
+  for (int i = m; i < 100; i++) {
     VV->vtxZ[i] = 0.0;
     VV->vtxZerr[i] = 100000.;
   }

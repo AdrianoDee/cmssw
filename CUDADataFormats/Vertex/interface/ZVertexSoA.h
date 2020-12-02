@@ -27,9 +27,9 @@ struct ZVertexSoA {
 
 struct VertexRegion {
 
-  float vtxZ[10];
+  float vtxZ[100];
   float vtxR;
-  float vtxZerr[10];
+  float vtxZerr[100];
   float vtxRerr;
 
 };

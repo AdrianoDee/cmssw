@@ -323,11 +323,14 @@ namespace gpuPixelDoublets {
             {
               if(vtxs.vtxZerr[i] >= 9999.0f)
               {break;}
-              bool thisVertex = vtxCut(oi,vtxs.vtxZ[i],vtxs.vtxZerr[i]);
-              badRegion = badRegion and thisVertex; //when at least one is fals the doublelt is retained
-            }
+              bool thisVertex = vtxCut(oi,vtxs.vtxZ[i],vtxs.vtxZerr[i]); 
+              if(!thisVertex)
+	      {badRegion=false; break;}
+	      //printf("%d %.4f %d \n",i,vtxs.vtxZerr[i],thisVertex);
+		}
           }
-
+//if(!badRegion) printf("%d %.4f\n",i,vtxs.vtxZerr[i]);
+//	badRegion=false;
           bool regionCut = false;
           if(badRegion)
           #ifdef GPU_DEBUG

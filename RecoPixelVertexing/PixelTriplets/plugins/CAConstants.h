@@ -39,7 +39,7 @@ namespace CAConstants {
   constexpr uint32_t maxNumberOfDoublets() { return 512 * 1024; }
   constexpr uint32_t maxCellsPerHit() { return 16 * 128; }
 #endif
-  constexpr uint32_t maxNumOfActiveDoublets() { return maxNumberOfDoublets() / 128;} 
+  constexpr uint32_t maxNumOfActiveDoublets() { return maxNumberOfDoublets() / 32;} 
 
 
   constexpr uint32_t maxNumberOfLayerPairs() { return 70; }
@@ -51,8 +51,8 @@ namespace CAConstants {
   using tindex_type = uint32_t;  //  for tuples
 
 #ifndef ONLY_PHICUT
-  using CellNeighbors = cms::cuda::VecArray<uint32_t, 24>;
-  using CellTracks = cms::cuda::VecArray<tindex_type, 48>;
+  using CellNeighbors = cms::cuda::VecArray<uint32_t, 64>;
+  using CellTracks = cms::cuda::VecArray<tindex_type, 128>;
 #else
   using CellNeighbors = cms::cuda::VecArray<uint32_t, 64>;
   using CellTracks = cms::cuda::VecArray<tindex_type, 128>;

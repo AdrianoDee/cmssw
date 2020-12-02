@@ -65,6 +65,8 @@ private:
   int32_t const minNumberOfHits_;
 
   edm::EDGetTokenT<ClusterTPAssociation> tpMap_;
+  int const keepBad_;
+  int const keepDup_;
 };
 
 PixelTrackProducerFromSoA::PixelTrackProducerFromSoA(const edm::ParameterSet &iConfig)
@@ -73,7 +75,9 @@ PixelTrackProducerFromSoA::PixelTrackProducerFromSoA(const edm::ParameterSet &iC
       cpuHits_(consumes<SiPixelRecHitCollectionNew>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
       hmsToken_(consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
       minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
-      tpMap_(consumes<ClusterTPAssociation>(iConfig.getParameter<edm::InputTag>("tpMap"))) {
+      tpMap_(consumes<ClusterTPAssociation>(iConfig.getParameter<edm::InputTag>("tpMap"))), 
+      keepBad_(iConfig.getParameter<int>("keepBad")),
+      keepDup_(iConfig.getParameter<int>("keepDup")){
   produces<reco::TrackCollection>();
   produces<TrackingRecHitCollection>();
   produces<reco::TrackExtraCollection>();
@@ -87,8 +91,10 @@ void PixelTrackProducerFromSoA::fillDescriptions(edm::ConfigurationDescriptions 
   desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsLegacyPreSplitting"));
   desc.add<edm::InputTag>("tpMap", edm::InputTag("tpClusterProducerPreSplitting"));
   desc.add<int>("minNumberOfHits", 0);
-
-
+  
+  desc.add<int>("keepBad", 999);
+  desc.add<int>("keepDup", 999);
+ 
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -166,9 +172,9 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
     {++nquadsoriginal;}
 
     #ifndef TUNINGCUTS
-    if (q == trackQuality::dup)
+    if (nHits<keepDup_ and q == trackQuality::dup)
       continue;  // FIXME
-    if (q == trackQuality::bad)
+    if (nHits<keepBad_ and q == trackQuality::bad)
       continue;  // FIXME
     #endif
     if (nHits < minNumberOfHits_)
@@ -283,10 +289,25 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
     int ndof = 2 * hits.size() - 5;
     chi2 = chi2 * ndof;  // FIXME
     GlobalPoint vv = gp.position();
+    if(q == trackQuality::dup or q == trackQuality::bad)
+{
+	vv = bs;
+
+}	
     math::XYZPoint pos(vv.x(), vv.y(), vv.z());
     GlobalVector pp = gp.momentum();
+    if(q == trackQuality::dup or q == trackQuality::bad)
+    {
+	
+        pp = GlobalVector(0.9,0.9,0.9);
+    }
     math::XYZVector mom(pp.x(), pp.y(), pp.z());
-
+    
+    if(nHits>3)
+    {
+	if(q == trackQuality::dup or q == trackQuality::bad)
+		chi2=10000000;
+    }
     auto track = std::make_unique<reco::Track>(chi2, ndof, pos, mom, gp.charge(), CurvilinearTrajectoryError(mo));
     // filter???
     tracks.emplace_back(track.release(), hits);

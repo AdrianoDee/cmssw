@@ -53,7 +53,7 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoublets(HitsOnCPU const &hh, cudaStr
   if (m_params.minHitsPerNtuplet_ > 3 && ! m_params.isUpgrade_) {
     nActualPairs = 13;
   }
-  if (m_params.minHitsPerNtuplet_ > 3 &&  m_params.isUpgrade_ && !m_params.includeJumpingForwardDoublets_){
+  if (m_params.minHitsPerNtuplet_ > 3 &&  m_params.isUpgrade_){
     nActualPairs = 31;
   }
 
@@ -111,16 +111,13 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoubletsRegional(HitsOnCPU const &hh,
     return;  // protect against empty events
 
   // FIXME avoid magic numbers
-  auto nActualPairs = m_params.isUpgrade_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
+  auto nActualPairs = m_params.isUpgrade_ ? 31 : gpuPixelDoublets::nPairs;
   if (!m_params.includeJumpingForwardDoublets_ && ! m_params.isUpgrade_)
     nActualPairs = 15;
   if (m_params.minHitsPerNtuplet_ > 3 && ! m_params.isUpgrade_) {
     nActualPairs = 13;
   }
-  if (m_params.minHitsPerNtuplet_ > 3 &&  m_params.isUpgrade_ && !m_params.includeJumpingForwardDoublets_){
-    nActualPairs = 31;
-  }
-
+  
 
   auto maxPairs = m_params.isUpgrade_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
   assert(nActualPairs <= maxPairs);

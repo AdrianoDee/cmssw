@@ -122,12 +122,15 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
     }
     if (!keepTrack)
       continue;
-
+    bool isInvalid = false;
     if (useProtoTrackKinematics) {
       SeedFromProtoTrack seedFromProtoTrack(proto, es);
       if (seedFromProtoTrack.isValid())
         (*result).push_back(seedFromProtoTrack.trajectorySeed());
-    } else {
+      else
+	isInvalid = true;
+    }
+    if(!useProtoTrackKinematics or isInvalid){
       edm::ESHandle<TransientTrackingRecHitBuilder> ttrhbESH;
       es.get<TransientRecHitRecord>().get(builderName, ttrhbESH);
       std::vector<Hit> hits;
