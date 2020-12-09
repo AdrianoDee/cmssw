@@ -10,6 +10,7 @@
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "FWCore/Utilities/interface/thread_safety_macros.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include <atomic>
 #include <mutex>
 
@@ -981,10 +982,16 @@ namespace pat {
     void setTime(float aTime, float aTimeError = 0) { setDTimeAssociatedPV(aTime - vertexRef()->t(), aTimeError); }
 
   private:
-    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m, uint16_t packed, int i, int j) const {
-      m(i, j) = covarianceParameterization().unpack(
-          packed, covarianceSchema_, i, j, pt(), eta(), numberOfHits(), numberOfPixelHits());
+
+    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m,uint16_t packed, int i, int j) const
+    {
+      if(hasTrackDetails()){
+        m(i, j) = covarianceParameterization().unpack(packed, covarianceSchema_, i, j, pt(), eta(), numberOfHits(),numberOfPixelHits());
+      } else {
+        m(i, j) = covarianceParameterization().unpack(0,522, i, j, pt(),eta(), 8 ,3);
+     }
     }
+
     uint16_t packCovarianceElement(const reco::TrackBase::CovarianceMatrix &m, int i, int j) const {
       return covarianceParameterization().pack(
           m(i, j), covarianceSchema_, i, j, pt(), eta(), numberOfHits(), numberOfPixelHits());
@@ -1075,17 +1082,18 @@ namespace pat {
     static std::once_flag covariance_load_flag;
     const CovarianceParameterization &covarianceParameterization() const {
       if (!hasTrackDetails())
-        throw edm::Exception(edm::errors::InvalidReference,
-                             "Trying to access covariance matrix for a "
-                             "PackedCandidate for which it's not available. "
-                             "Check hasTrackDetails() before!\n");
+
+        edm::LogWarning("CovarianceParameterization") <<
+                             "Trying to access covariance matrix for a " <<
+                             "PackedCandidate for which it's not directly available. " <<
+                             "Loading it from a LUT." << std::endl;
       std::call_once(
           covariance_load_flag, [](int v) { covarianceParameterization_.load(v); }, covarianceVersion_);
-    if (covarianceParameterization_.loadedVersion() != covarianceVersion_) {
-         throw edm::Exception(edm::errors::UnimplementedFeature)
-             << "Attempting to load multiple covariance version in same process. "
-                "This is not supported.";
-      } 
+      if (covarianceParameterization_.loadedVersion() != covarianceVersion_) {
+        throw edm::Exception(edm::errors::UnimplementedFeature)
+            << "Attempting to load multiple covariance version in same process. "
+               "This is not supported.";
+      }
       return covarianceParameterization_;
     }
 
