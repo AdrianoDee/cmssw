@@ -983,12 +983,12 @@ namespace pat {
 
   private:
 
-    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m,uint16_t packed, int i, int j) const
+    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m,uint16_t packed, int i, int j,int n = 8, int np = 3, int s = 552) const
     {
       if(hasTrackDetails()){
         m(i, j) = covarianceParameterization().unpack(packed, covarianceSchema_, i, j, pt(), eta(), numberOfHits(),numberOfPixelHits());
       } else {
-        m(i, j) = covarianceParameterization().unpack(0,522, i, j, pt(),eta(), 8 ,3);
+        m(i, j) = covarianceParameterization().unpack(0,s, i, j, pt(),eta(), n ,np);
      }
     }
 
