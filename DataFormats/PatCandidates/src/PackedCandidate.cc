@@ -89,7 +89,7 @@ void pat::PackedCandidate::packCovariance(const reco::TrackBase::CovarianceMatri
     unpackCovariance();
 }
 
-void pat::PackedCandidate::unpackCovariance() const {
+void pat::PackedCandidate::unpackCovariance(int n, int np, int schema) const {
   const CovarianceParameterization &p = covarianceParameterization();
   if (p.isValid()) {
     auto m = std::make_unique<reco::TrackBase::CovarianceMatrix>();
@@ -97,14 +97,14 @@ void pat::PackedCandidate::unpackCovariance() const {
       for (int j = 0; j < 5; j++) {
         (*m)(i, j) = 0;
       }
-    unpackCovarianceElement(*m, packedCovariance_.dptdpt, 0, 0);
-    unpackCovarianceElement(*m, packedCovariance_.detadeta, 1, 1);
-    unpackCovarianceElement(*m, packedCovariance_.dphidphi, 2, 2);
-    unpackCovarianceElement(*m, packedCovariance_.dxydxy, 3, 3);
-    unpackCovarianceElement(*m, packedCovariance_.dzdz, 4, 4);
-    unpackCovarianceElement(*m, packedCovariance_.dxydz, 3, 4);
-    unpackCovarianceElement(*m, packedCovariance_.dlambdadz, 1, 4);
-    unpackCovarianceElement(*m, packedCovariance_.dphidxy, 2, 3);
+    unpackCovarianceElement(*m, packedCovariance_.dptdpt, 0, 0, n, np, schema);
+    unpackCovarianceElement(*m, packedCovariance_.detadeta, 1, 1, n, np, schema);
+    unpackCovarianceElement(*m, packedCovariance_.dphidphi, 2, 2, n, np, schema);
+    unpackCovarianceElement(*m, packedCovariance_.dxydxy, 3, 3, n, np, schema);
+    unpackCovarianceElement(*m, packedCovariance_.dzdz, 4, 4, n, np, schema);
+    unpackCovarianceElement(*m, packedCovariance_.dxydz, 3, 4, n, np, schema);
+    unpackCovarianceElement(*m, packedCovariance_.dlambdadz, 1, 4, n, np, schema);
+    unpackCovarianceElement(*m, packedCovariance_.dphidxy, 2, 3, n, np, schema);
     reco::TrackBase::CovarianceMatrix *expected = nullptr;
     if (m_.compare_exchange_strong(expected, m.get())) {
       m.release();
@@ -161,10 +161,10 @@ float pat::PackedCandidate::dz(const Point &p) const {
          ((vertex_.load()->X() - p.X()) * std::cos(phi) + (vertex_.load()->Y() - p.Y()) * std::sin(phi)) * pzpt;
 }
 
-void pat::PackedCandidate::unpackTrk() const {
+void pat::PackedCandidate::unpackTrk(int n, int np, int schema) const {
   maybeUnpackBoth();
   math::RhoEtaPhiVector p3(ptTrk(), etaAtVtx(), phiAtVtx());
-  maybeUnpackCovariance();
+  maybeUnpackCovariance(n,np,schema);
   int numberOfStripLayers = stripLayersWithMeasurement(), numberOfPixelLayers = pixelLayersWithMeasurement();
   int numberOfPixelHits = this->numberOfPixelHits();
   int numberOfHits = this->numberOfHits();
