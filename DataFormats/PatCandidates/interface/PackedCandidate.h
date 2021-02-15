@@ -10,6 +10,7 @@
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "FWCore/Utilities/interface/thread_safety_macros.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include <atomic>
 #include <mutex>
 
@@ -769,9 +770,9 @@ namespace pat {
 
     /// Return reference to a pseudo track made with candidate kinematics,
     /// parameterized error for eta,phi,pt and full IP covariance
-    virtual const reco::Track &pseudoTrack() const {
+    virtual const reco::Track &pseudoTrack(int n = 8, int np = 3, int schema = 522) const {
       if (!track_)
-        unpackTrk();
+        unpackTrk(n, np, schema);
       return *track_;
     }
 
@@ -981,10 +982,16 @@ namespace pat {
     void setTime(float aTime, float aTimeError = 0) { setDTimeAssociatedPV(aTime - vertexRef()->t(), aTimeError); }
 
   private:
-    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m, uint16_t packed, int i, int j) const {
-      m(i, j) = covarianceParameterization().unpack(
-          packed, covarianceSchema_, i, j, pt(), eta(), numberOfHits(), numberOfPixelHits());
+
+    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m,uint16_t packed, int i, int j,int n = 8, int np = 3, int s = 522) const
+    {
+      if(hasTrackDetails()){
+        m(i, j) = covarianceParameterization().unpack(packed, covarianceSchema_, i, j, pt(), eta(), numberOfHits(),numberOfPixelHits());
+      } else {
+        m(i, j) = covarianceParameterization().unpack(0,s, i, j, pt(),eta(), n ,np);
+     }
     }
+
     uint16_t packCovarianceElement(const reco::TrackBase::CovarianceMatrix &m, int i, int j) const {
       return covarianceParameterization().pack(
           m(i, j), covarianceSchema_, i, j, pt(), eta(), numberOfHits(), numberOfPixelHits());
@@ -1004,7 +1011,7 @@ namespace pat {
     void packVtx(bool unpackAfterwards = true);
     void unpackVtx() const;
     void packCovariance(const reco::TrackBase::CovarianceMatrix &m, bool unpackAfterwards = true);
-    void unpackCovariance() const;
+    void unpackCovariance(int n = 8, int np = 3, int schema = 522) const;
     void maybeUnpackBoth() const {
       if (!p4c_)
         unpack();
@@ -1015,9 +1022,9 @@ namespace pat {
       if (!track_)
         unpackTrk();
     }
-    void maybeUnpackCovariance() const {
+    void maybeUnpackCovariance(int n = 8, int np = 3, int schema = 522) const {
       if (!m_)
-        unpackCovariance();
+        unpackCovariance(n,np,schema);
     }
     void packBoth() {
       pack(false);
@@ -1029,7 +1036,7 @@ namespace pat {
       unpackVtx();
     }  // do it this way, so that we don't loose precision on the angles before
     // computing dxy,dz
-    void unpackTrk() const;
+    void unpackTrk(int n = 8, int np = 3, int schema = 522) const;
 
     uint8_t packedPuppiweight_;
     int8_t packedPuppiweightNoLepDiff_;  // storing the DIFFERENCE of (all - "no
@@ -1075,10 +1082,11 @@ namespace pat {
     static std::once_flag covariance_load_flag;
     const CovarianceParameterization &covarianceParameterization() const {
       if (!hasTrackDetails())
-        throw edm::Exception(edm::errors::InvalidReference,
-                             "Trying to access covariance matrix for a "
-                             "PackedCandidate for which it's not available. "
-                             "Check hasTrackDetails() before!\n");
+
+        edm::LogWarning("CovarianceParameterization") <<
+                             "Trying to access covariance matrix for a " <<
+                             "PackedCandidate for which it's not directly available. " <<
+                             "Loading it from a LUT." << std::endl;
       std::call_once(
           covariance_load_flag, [](int v) { covarianceParameterization_.load(v); }, covarianceVersion_);
       if (covarianceParameterization_.loadedVersion() != covarianceVersion_) {
