@@ -770,7 +770,7 @@ namespace pat {
 
     /// Return reference to a pseudo track made with candidate kinematics,
     /// parameterized error for eta,phi,pt and full IP covariance
-    virtual const reco::Track &pseudoTrack(int n = 8, int np = 3, int schema = 522) const {
+    virtual const reco::Track &pseudoTrack(int n = 8, int np = 3, int schema = 523) const {
       if (!track_)
         unpackTrk(n, np, schema);
       return *track_;
@@ -983,7 +983,7 @@ namespace pat {
 
   private:
 
-    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m,uint16_t packed, int i, int j,int n = 8, int np = 3, int s = 522) const
+    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m,uint16_t packed, int i, int j,int n = 8, int np = 3, int s = 523) const
     {
       if(hasTrackDetails()){
         m(i, j) = covarianceParameterization().unpack(packed, covarianceSchema_, i, j, pt(), eta(), numberOfHits(),numberOfPixelHits());
@@ -1011,7 +1011,7 @@ namespace pat {
     void packVtx(bool unpackAfterwards = true);
     void unpackVtx() const;
     void packCovariance(const reco::TrackBase::CovarianceMatrix &m, bool unpackAfterwards = true);
-    void unpackCovariance(int n = 8, int np = 3, int schema = 522) const;
+    void unpackCovariance(int n = 8, int np = 3, int schema = 523) const;
     void maybeUnpackBoth() const {
       if (!p4c_)
         unpack();
@@ -1022,7 +1022,7 @@ namespace pat {
       if (!track_)
         unpackTrk();
     }
-    void maybeUnpackCovariance(int n = 8, int np = 3, int schema = 522) const {
+    void maybeUnpackCovariance(int n = 8, int np = 3, int schema = 523) const {
       if (!m_)
         unpackCovariance(n,np,schema);
     }
@@ -1036,7 +1036,7 @@ namespace pat {
       unpackVtx();
     }  // do it this way, so that we don't loose precision on the angles before
     // computing dxy,dz
-    void unpackTrk(int n = 8, int np = 3, int schema = 522) const;
+    void unpackTrk(int n = 8, int np = 3, int schema = 523) const;
 
     uint8_t packedPuppiweight_;
     int8_t packedPuppiweightNoLepDiff_;  // storing the DIFFERENCE of (all - "no
