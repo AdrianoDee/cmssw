@@ -770,10 +770,18 @@ namespace pat {
 
     /// Return reference to a pseudo track made with candidate kinematics,
     /// parameterized error for eta,phi,pt and full IP covariance
-    virtual const reco::Track &pseudoTrack(int n = 8, int np = 3, int schema = 522) const {
+    virtual const reco::Track &pseudoTrack() const {
       if (!track_)
-        unpackTrk(n, np, schema);
+        unpackTrk();
       return *track_;
+    }
+
+    virtual const reco::Track *fallBackTrack(int n = 8, int np = 3, int schema = 532) const {
+      if (useLut()) {
+        maybeUnpackTrack(n,np,schema);
+        return track_.load();
+      } else
+        return nullptr;
     }
 
     /// return a pointer to the track if present. otherwise, return a null pointer
@@ -981,13 +989,29 @@ namespace pat {
     /// set time measurement
     void setTime(float aTime, float aTimeError = 0) { setDTimeAssociatedPV(aTime - vertexRef()->t(), aTimeError); }
 
+    bool useLut() const
+    {
+      std::call_once(useLut_load_flag, [](bool v) { useLut_ = v; }, false);
+      return useLut_;
+    }
+
+    void setLut () const
+    {
+        edm::LogWarning("Look Up Table Forcing") <<
+                             "You are forcing ALL the Packed Candidates to use a Look Up Table to estimate " <<
+                             "the track covariance matrix. This includes those which originally had no track assigned" << std::endl;
+                             
+        std::call_once(useLut_load_flag, [](bool v) { useLut_ = v; }, true);
+        std::call_once(covariance_load_flag, [](int v) { covarianceParameterization_.load(v); }, 1);
+    }
+
   private:
 
-    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m,uint16_t packed, int i, int j,int n = 8, int np = 3, int s = 522) const
+    void unpackCovarianceElement(reco::TrackBase::CovarianceMatrix &m,uint16_t packed, int i, int j,int n = 8, int np = 3, int s = 532) const
     {
       if(hasTrackDetails()){
         m(i, j) = covarianceParameterization().unpack(packed, covarianceSchema_, i, j, pt(), eta(), numberOfHits(),numberOfPixelHits());
-      } else {
+      } else if(useLut()){
         m(i, j) = covarianceParameterization().unpack(0,s, i, j, pt(),eta(), n ,np);
      }
     }
@@ -1011,18 +1035,19 @@ namespace pat {
     void packVtx(bool unpackAfterwards = true);
     void unpackVtx() const;
     void packCovariance(const reco::TrackBase::CovarianceMatrix &m, bool unpackAfterwards = true);
-    void unpackCovariance(int n = 8, int np = 3, int schema = 522) const;
+    void unpackCovariance(int n = 8, int np = 3, int schema = 532) const;
     void maybeUnpackBoth() const {
       if (!p4c_)
         unpack();
       if (!vertex_)
         unpackVtx();
     }
-    void maybeUnpackTrack() const {
+    void maybeUnpackTrack(int n = 8, int np = 3, int schema = 532) const {
       if (!track_)
-        unpackTrk();
+        unpackTrk(n,np,schema);
     }
-    void maybeUnpackCovariance(int n = 8, int np = 3, int schema = 522) const {
+
+    void maybeUnpackCovariance(int n = 8, int np = 3, int schema = 532) const {
       if (!m_)
         unpackCovariance(n,np,schema);
     }
@@ -1036,7 +1061,7 @@ namespace pat {
       unpackVtx();
     }  // do it this way, so that we don't loose precision on the angles before
     // computing dxy,dz
-    void unpackTrk(int n = 8, int np = 3, int schema = 522) const;
+    void unpackTrk(int n = 8, int np = 3, int schema = 532) const;
 
     uint8_t packedPuppiweight_;
     int8_t packedPuppiweightNoLepDiff_;  // storing the DIFFERENCE of (all - "no
@@ -1077,23 +1102,31 @@ namespace pat {
     uint16_t covarianceVersion_;
     uint16_t covarianceSchema_;
     CMS_THREAD_SAFE static CovarianceParameterization covarianceParameterization_;
+    CMS_THREAD_SAFE static bool useLut_;
     // static std::atomic<CovarianceParameterization*>
     // covarianceParameterization_;
     static std::once_flag covariance_load_flag;
-    const CovarianceParameterization &covarianceParameterization() const {
-      if (!hasTrackDetails())
+    static std::once_flag useLut_load_flag;
 
-        edm::LogWarning("CovarianceParameterization") <<
-                             "Trying to access covariance matrix for a " <<
-                             "PackedCandidate for which it's not directly available. " <<
-                             "Loading it from a LUT." << std::endl;
+  protected:
+
+    const CovarianceParameterization &covarianceParameterization() const {
+      if (!hasTrackDetails() and !useLut_)
+      {
+          throw edm::Exception(edm::errors::InvalidReference,
+                           "Trying to access covariance matrix for a "
+                           "PackedCandidate for which it's not available. "
+                           "Check hasTrackDetails() before or use setLut() "
+                           "to extrapolate the convariance from a LUT! \n");
+      }
       std::call_once(
           covariance_load_flag, [](int v) { covarianceParameterization_.load(v); }, covarianceVersion_);
-      if (covarianceParameterization_.loadedVersion() != covarianceVersion_) {
+      if (covarianceParameterization_.loadedVersion() != covarianceVersion_ && !useLut_) {
         throw edm::Exception(edm::errors::UnimplementedFeature)
             << "Attempting to load multiple covariance version in same process. "
                "This is not supported.";
       }
+
       return covarianceParameterization_;
     }
 

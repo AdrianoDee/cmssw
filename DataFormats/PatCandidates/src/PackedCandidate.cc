@@ -9,6 +9,8 @@ using namespace logintpack;
 
 CovarianceParameterization pat::PackedCandidate::covarianceParameterization_;
 std::once_flag pat::PackedCandidate::covariance_load_flag;
+bool pat::PackedCandidate::useLut_;
+std::once_flag pat::PackedCandidate::useLut_load_flag;
 
 void pat::PackedCandidate::pack(bool unpackAfterwards) {
   float unpackedPt = std::min<float>(p4_.load()->Pt(), MiniFloatConverter::max());
