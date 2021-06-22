@@ -15,7 +15,7 @@ namespace gpuClustering {
 #endif
   constexpr uint32_t maxHitsInModule() { return 1024; }
 
-  constexpr uint16_t maxNumModules = 2000;
+  constexpr uint16_t maxNumModules = 4000;
   constexpr int32_t maxNumClustersPerModules = maxHitsInModule();
   constexpr uint16_t invalidModuleId = std::numeric_limits<uint16_t>::max() - 1;
   static_assert(invalidModuleId > maxNumModules);  // invalidModuleId must be > maxNumModules

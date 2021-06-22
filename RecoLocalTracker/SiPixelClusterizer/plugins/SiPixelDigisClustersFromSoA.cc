@@ -38,6 +38,8 @@ private:
   edm::EDPutTokenT<SiPixelClusterCollectionNew> clusterPutToken_;
 
   const SiPixelClusterThresholds clusterThresholds_;  // Cluster threshold in electrons
+
+  const bool isUpgrade_;
 };
 
 SiPixelDigisClustersFromSoA::SiPixelDigisClustersFromSoA(const edm::ParameterSet& iConfig)
@@ -46,13 +48,15 @@ SiPixelDigisClustersFromSoA::SiPixelDigisClustersFromSoA(const edm::ParameterSet
       digiPutToken_(produces<edm::DetSetVector<PixelDigi>>()),
       clusterPutToken_(produces<SiPixelClusterCollectionNew>()),
       clusterThresholds_{iConfig.getParameter<int>("clusterThreshold_layer1"),
-                         iConfig.getParameter<int>("clusterThreshold_otherLayers")} {}
+                         iConfig.getParameter<int>("clusterThreshold_otherLayers")},
+      isUpgrade_(iConfig.getParameter<bool>("Upgrade")) {}
 
 void SiPixelDigisClustersFromSoA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelDigisSoA"));
   desc.add<int>("clusterThreshold_layer1", kSiPixelClusterThresholdsDefaultPhase1.layer1);
   desc.add<int>("clusterThreshold_otherLayers", kSiPixelClusterThresholdsDefaultPhase1.otherLayers);
+  desc.add<bool>("Upgrade", false);
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -90,7 +94,7 @@ void SiPixelDigisClustersFromSoA::produce(edm::StreamID, edm::Event& iEvent, con
     for (int32_t ic = 0; ic < nclus + 1; ++ic) {
       auto const& acluster = aclusters[ic];
       // in any case we cannot  go out of sync with gpu...
-      if (acluster.charge < clusterThreshold)
+      if (acluster.charge < clusterThreshold and !isUpgrade_)
         edm::LogWarning("SiPixelDigisClustersFromSoA") << "cluster below charge Threshold "
                                                        << "Layer/DetId/clusId " << layer << '/' << detId << '/' << ic
                                                        << " size/charge " << acluster.isize << '/' << acluster.charge;

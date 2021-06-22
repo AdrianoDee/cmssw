@@ -22,6 +22,10 @@ namespace pixelCPEforGPU {
     float theThicknessE;
     float thePitchX;
     float thePitchY;
+
+    bool isUpgrade;
+    uint16_t maxModuleStride;
+    uint8_t numberOfLaddersInBarrel;
   };
 
   struct DetParams {
@@ -37,6 +41,13 @@ namespace pixelCPEforGPU {
     float chargeWidthY;
     uint16_t pixmx;  // max pix charge
 
+    uint16_t nRowsRoc; //we don't need 2^16 columns, is worth to use 15 + 1 for sign
+    uint16_t nColsRoc;
+    uint16_t nRows;
+    uint16_t nCols;
+
+    uint32_t numPixsInModule;
+
     float x0, y0, z0;  // the vertex in the local coord of the detector
 
     float sx[3], sy[3];  // the errors...
@@ -49,6 +60,7 @@ namespace pixelCPEforGPU {
   struct LayerGeometry {
     uint32_t layerStart[phase1PixelTopology::numberOfLayers + 1];
     uint8_t layer[phase1PixelTopology::layerIndexSize];
+    uint16_t maxModuleStride;
   };
 
   struct ParamsOnGPU {
