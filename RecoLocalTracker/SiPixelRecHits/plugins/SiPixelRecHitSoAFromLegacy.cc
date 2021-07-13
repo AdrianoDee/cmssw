@@ -46,6 +46,7 @@ private:
   const edm::EDPutTokenT<TrackingRecHit2DCPU> tokenHit_;
   const edm::EDPutTokenT<HMSstorage> tokenModuleStart_;
   const bool convert2Legacy_;
+  const bool isUpgrade_;
 };
 
 SiPixelRecHitSoAFromLegacy::SiPixelRecHitSoAFromLegacy(const edm::ParameterSet& iConfig)
@@ -55,7 +56,8 @@ SiPixelRecHitSoAFromLegacy::SiPixelRecHitSoAFromLegacy(const edm::ParameterSet& 
       clusterToken_{consumes<SiPixelClusterCollectionNew>(iConfig.getParameter<edm::InputTag>("src"))},
       tokenHit_{produces<TrackingRecHit2DCPU>()},
       tokenModuleStart_{produces<HMSstorage>()},
-      convert2Legacy_(iConfig.getParameter<bool>("convertToLegacy")) {
+      convert2Legacy_(iConfig.getParameter<bool>("convertToLegacy")),
+      isUpgrade_(iConfig.getParameter<bool>("Upgrade")) {
   if (convert2Legacy_)
     produces<SiPixelRecHitCollectionNew>();
 }
@@ -67,6 +69,7 @@ void SiPixelRecHitSoAFromLegacy::fillDescriptions(edm::ConfigurationDescriptions
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplitting"));
   desc.add<std::string>("CPE", "PixelCPEFast");
   desc.add<bool>("convertToLegacy", false);
+  desc.add<bool>("Upgrade", false);
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -84,6 +87,7 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
   bsHost.x = bs.x0();
   bsHost.y = bs.y0();
   bsHost.z = bs.z0();
+  //std::cout << __LINE__ << std::endl;
 
   edm::Handle<SiPixelClusterCollectionNew> hclusters;
   iEvent.getByToken(clusterToken_, hclusters);
@@ -100,7 +104,7 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
 
   // legacy output
   auto legacyOutput = std::make_unique<SiPixelRecHitCollectionNew>();
-
+  //std::cout << __LINE__ << std::endl;
   // storage
   std::vector<uint16_t> xx;
   std::vector<uint16_t> yy;
@@ -119,7 +123,7 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
   assert(0 == clusInModule_[gpuClustering::maxNumModules]);
   uint32_t moduleId_;
   moduleStart_[1] = 0;  // we run sequentially....
-
+//std::cout << __LINE__ << std::endl;
   SiPixelClustersCUDA::DeviceConstView clusterView{
       moduleStart_.data(), clusInModule_.data(), &moduleId_, hitsModuleStart};
 
@@ -149,7 +153,7 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
       iEvent.put(std::move(legacyOutput));
     return;
   }
-
+//std::cout << __LINE__ << std::endl;
   if (convert2Legacy_)
     legacyOutput->reserve(gpuClustering::maxNumModules, numberOfClusters);
 
@@ -178,7 +182,7 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
     if (nclus > maxHitsInModule)
       printf(
           "WARNING: too many clusters %d in Module %d. Only first %d Hits converted\n", nclus, gind, maxHitsInModule);
-
+//std::cout << __LINE__ << std::endl;
     // fill digis
     xx.clear();
     yy.clear();
@@ -205,14 +209,18 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
         clusterRef.emplace_back(edmNew::makeRefTo(hclusters, &clust));
       ic++;
     }
+//std::cout << __LINE__ << std::endl;
     assert(nclus == ic);
     assert(clus.size() == ndigi);
     numberOfHits += nclus;
     // filled creates view
+    //std::cout << __LINE__ << std::endl;
     SiPixelDigisCUDA::DeviceConstView digiView{xx.data(), yy.data(), adc.data(), moduleInd.data(), clus.data()};
     assert(digiView.adc(0) != 0);
     // we run on blockId.x==0
+    //std::cout << __LINE__ << std::endl;
     gpuPixelRecHits::getHits(&cpeView, &bsHost, &digiView, ndigi, &clusterView, output->view());
+   //std::cout << __LINE__ << std::endl;
     for (auto h = fc; h < lc; ++h)
       if (h - fc < maxHitsInModule)
         assert(gind == output->view()->detectorIndex(h));
@@ -234,11 +242,17 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
     }
   }
   assert(numberOfHits == numberOfClusters);
-
+//std::cout << __LINE__ << std::endl;
   // fill data structure to support CA
-  for (auto i = 0U; i < phase1PixelTopology::numberOfLayers + 1; ++i) {
+  auto nLayers = isUpgrade_ ? phase2PixelTopology::numberOfLayers : phase1PixelTopology::numberOfLayers;
+//std::cout << __LINE__ << std::endl;
+
+  for (auto i = 0U; i < nLayers + 1; ++i) {
+std::cout << i << " - " << cpeView.layerGeometry().layerStart[i] << " - " << hitsModuleStart[cpeView.layerGeometry().layerStart[i]] << std::endl;
+
     output->hitsLayerStart()[i] = hitsModuleStart[cpeView.layerGeometry().layerStart[i]];
   }
+//std::cout << __LINE__ << std::endl;
   cms::cuda::fillManyFromVector(output->phiBinner(),
                                 phase1PixelTopology::numberOfLayers,
                                 output->iphi(),
@@ -246,8 +260,9 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
                                 numberOfHits,
                                 256,
                                 output->phiBinnerStorage());
-
-  LogDebug("SiPixelRecHitSoAFromLegacy") << "created HitSoa for " << numberOfClusters << " clusters in "
+//std::cout << __LINE__ << std::endl;
+  //LogDebug("SiPixelRecHitSoAFromLegacy")
+  std::cout << "SiPixelRecHitSoAFromLegacy" << "created HitSoa for " << numberOfClusters << " clusters in "
                                          << numberOfDetUnits << " Dets";
   iEvent.put(std::move(output));
   if (convert2Legacy_)

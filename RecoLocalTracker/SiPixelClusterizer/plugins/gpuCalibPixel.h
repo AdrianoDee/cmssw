@@ -18,6 +18,11 @@ namespace gpuCalibPixel {
   constexpr float VCaltoElectronOffset = -60;      // L2-4: -60 +- 130
   constexpr float VCaltoElectronOffset_L1 = -670;  // L1:   -670 +- 220
 
+  constexpr float    ElectronPerADCGain = 600;
+  constexpr int8_t   Phase2ReadoutMode  = 3;
+  constexpr uint16_t Phase2DigiBaseline = 1500;
+  constexpr uint8_t  Phase2KinkADC      = 8;
+
   __global__ void calibDigis(bool isRun2,
                              uint16_t* id,
                              uint16_t const* __restrict__ x,
@@ -63,6 +68,52 @@ namespace gpuCalibPixel {
       }
     }
   }
+
+
+  __global__ void calibDigisUpgrade(uint16_t* xx,
+                                    uint16_t* yy,
+                                    uint16_t* adc,
+                                    uint32_t* pdigi,
+                                    uint16_t* id,
+                                    int numElements,
+                                    uint32_t* __restrict__ moduleStart,        // just to zero first
+                                    uint32_t* __restrict__ nClustersInModule,  // just to zero them
+                                    uint32_t* __restrict__ clusModuleStart) {
+    int first = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (0 == first)
+      clusModuleStart[0] = moduleStart[0] = 0;
+    for (int i = first; i < gpuClustering::maxNumModules; i += gridDim.x * blockDim.x) {
+      nClustersInModule[i] = 0;
+    }
+
+    for (int i = first; i < numElements; i += gridDim.x * blockDim.x) {
+      if (invalidModuleId == id[i])
+        continue;
+      int mode = (Phase2ReadoutMode < -1 ? -1 : Phase2ReadoutMode);
+
+      if (mode < 0)
+        adc[i] = int(adc[i] * ElectronPerADCGain);
+      else {
+        if (adc[i] < Phase2KinkADC)
+          adc[i] = int((adc[i] - 0.5) * ElectronPerADCGain);
+        else {
+          constexpr int8_t dspp = (Phase2ReadoutMode < 10 ? Phase2ReadoutMode : 10);
+          constexpr int8_t ds = int8_t(dspp <= 1 ? 1 : (dspp - 1) * (dspp - 1));
+
+          adc[i] -= (Phase2KinkADC - 1);
+          adc[i] *= ds;
+          adc[i] += (Phase2KinkADC - 1);
+
+          adc[i] = uint16_t((adc[i] + 0.5 * ds) * ElectronPerADCGain);
+        }
+
+        adc[i] += int(Phase2DigiBaseline);
+      }
+    }
+  }
+
+
 }  // namespace gpuCalibPixel
 
 #endif  // RecoLocalTracker_SiPixelClusterizer_plugins_gpuCalibPixel_h

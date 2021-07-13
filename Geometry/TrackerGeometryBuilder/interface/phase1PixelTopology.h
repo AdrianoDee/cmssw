@@ -1,10 +1,49 @@
-#ifndef Geometry_TrackerGeometryBuilder_phase1PixelTopology_h
-#define Geometry_TrackerGeometryBuilder_phase1PixelTopology_h
+#ifndef Geometry_TrackerGeometryBuilder_pixelTopology_h
+#define Geometry_TrackerGeometryBuilder_pixelTopology_h
 
 #include <cstdint>
 #include <array>
 
+namespace pixelTopology
+ {
+   template <class Function, std::size_t... Indices>
+   constexpr auto map_to_array_helper(Function f, std::index_sequence<Indices...>)
+       -> std::array<typename std::result_of<Function(std::size_t)>::type, sizeof...(Indices)> {
+     return {{f(Indices)...}};
+   }
+
+   template <int N, class Function>
+   constexpr auto map_to_array(Function f) -> std::array<typename std::result_of<Function(std::size_t)>::type, N> {
+     return map_to_array_helper(f, std::make_index_sequence<N>{});
+   }
+
+   struct AverageGeometry {
+     // static constexpr auto numberOfLaddersInBarrel = 150;
+     float ladderZ[150];
+     float ladderX[150];
+     float ladderY[150];
+     float ladderR[150];
+     float ladderMinZ[150];
+     float ladderMaxZ[150];
+     float endCapZ[2];  // just for pos and neg Layer1
+   };
+
+   constexpr inline uint16_t localY(uint16_t py, uint16_t n) {
+     auto roc = py / n;
+     auto shift = 2 * roc;
+     auto yInRoc = py - n * roc;
+     if (yInRoc > 0)
+       shift += 1;
+     return py + shift;
+   }
+
+ }
+
 namespace phase1PixelTopology {
+
+  constexpr uint16_t numberOfModulesInBarrel = 1184;
+  constexpr uint16_t numberOfModulesInLadder = 8;
+  constexpr uint16_t numberOfLaddersInBarrel = numberOfModulesInBarrel / numberOfModulesInLadder;
 
   constexpr uint16_t numRowsInRoc = 80;
   constexpr uint16_t numColsInRoc = 52;
@@ -47,21 +86,8 @@ namespace phase1PixelTopology {
       "E-3"  // negative endcap
   };
 
-  constexpr uint32_t numberOfModulesInBarrel = 1184;
-  constexpr uint32_t numberOfLaddersInBarrel = numberOfModulesInBarrel / 8;
 
-  template <class Function, std::size_t... Indices>
-  constexpr auto map_to_array_helper(Function f, std::index_sequence<Indices...>)
-      -> std::array<typename std::result_of<Function(std::size_t)>::type, sizeof...(Indices)> {
-    return {{f(Indices)...}};
-  }
-
-  template <int N, class Function>
-  constexpr auto map_to_array(Function f) -> std::array<typename std::result_of<Function(std::size_t)>::type, N> {
-    return map_to_array_helper(f, std::make_index_sequence<N>{});
-  }
-
-  constexpr uint32_t findMaxModuleStride() {
+  constexpr uint16_t findMaxModuleStride() {
     bool go = true;
     int n = 2;
     while (go) {
@@ -78,7 +104,7 @@ namespace phase1PixelTopology {
     return n / 2;
   }
 
-  constexpr uint32_t maxModuleStride = findMaxModuleStride();
+  constexpr uint16_t maxModuleStride = findMaxModuleStride();
 
   constexpr uint8_t findLayer(uint32_t detId) {
     for (uint8_t i = 0; i < std::size(layerStart); ++i)
@@ -95,14 +121,14 @@ namespace phase1PixelTopology {
     return std::size(layerStart);
   }
 
-  constexpr uint32_t layerIndexSize = numberOfModules / maxModuleStride;
-  constexpr std::array<uint8_t, layerIndexSize> layer = map_to_array<layerIndexSize>(findLayerFromCompact);
+  constexpr uint16_t layerIndexSize = numberOfModules / maxModuleStride;
+  constexpr std::array<uint8_t, layerIndexSize> layer = pixelTopology::map_to_array<layerIndexSize>(findLayerFromCompact);
 
   constexpr bool validateLayerIndex() {
     bool res = true;
     for (auto i = 0U; i < numberOfModules; ++i) {
       auto j = i / maxModuleStride;
-      res &= (layer[j] < 10);
+      res &= (layer[j] < numberOfLayers);
       res &= (i >= layerStart[layer[j]]);
       res &= (i < layerStart[layer[j] + 1]);
     }
@@ -157,18 +183,67 @@ namespace phase1PixelTopology {
     return py + shift;
   }
 
-  //FIXME move it elsewhere?
-  struct AverageGeometry {
-    static constexpr auto numberOfLaddersInBarrel = phase1PixelTopology::numberOfLaddersInBarrel;
-    float ladderZ[numberOfLaddersInBarrel];
-    float ladderX[numberOfLaddersInBarrel];
-    float ladderY[numberOfLaddersInBarrel];
-    float ladderR[numberOfLaddersInBarrel];
-    float ladderMinZ[numberOfLaddersInBarrel];
-    float ladderMaxZ[numberOfLaddersInBarrel];
-    float endCapZ[2];  // just for pos and neg Layer1
-  };
-
 }  // namespace phase1PixelTopology
+
+namespace phase2PixelTopology
+{
+
+    constexpr uint32_t numberOfModulesInLadder = 9;
+    constexpr uint32_t numberOfModulesInBarrel = 756;
+    constexpr uint32_t numberOfLaddersInBarrel = numberOfModulesInBarrel / numberOfModulesInLadder;
+
+    constexpr uint32_t numberOfModules = 3892;
+    constexpr uint8_t numberOfLayers = 28;
+
+    constexpr uint32_t layerStart[numberOfLayers + 1] = {0,108, 324, 504, 756, 864, 972,
+                                                         1080, 1188, 1296, 1404, 1512, 1620, 1796, 1972,
+                                                         2148, 2324, 2432, 2540, 2648, 2756, 2864, 2972,
+                                                         3080, 3188, 3364, 3540, 3716, numberOfModules};
+
+
+    constexpr uint16_t findMaxModuleStride() {
+      bool go = true;
+      int n = 2;
+      while (go) {
+        for (uint8_t i = 1; i < numberOfLayers + 1; ++i) {
+          if (layerStart[i] % n != 0) {
+            go = false;
+            break;
+          }
+        }
+        if (!go)
+          break;
+        n *= 2;
+      }
+      return n / 2;
+    }
+
+    constexpr uint16_t maxModuleStride = findMaxModuleStride();
+
+    constexpr uint8_t findLayerFromCompact(uint32_t detId) {
+      detId *= maxModuleStride;
+      for (uint8_t i = 0; i < numberOfLayers + 1; ++i)
+        if (detId < layerStart[i + 1])
+          return i;
+      return numberOfLayers + 1;
+    }
+
+    constexpr uint16_t layerIndexSize = numberOfModules / maxModuleStride;
+    constexpr std::array<uint8_t, layerIndexSize> layer = pixelTopology::map_to_array<layerIndexSize>(findLayerFromCompact);
+
+    constexpr bool validateLayerIndex() {
+      bool res = true;
+      for (auto i = 0U; i < numberOfModules; ++i) {
+        auto j = i / maxModuleStride;
+        res &= (layer[j] < numberOfLayers);
+        res &= (i >= layerStart[layer[j]]);
+        res &= (i < layerStart[layer[j] + 1]);
+      }
+      return res;
+    }
+
+    static_assert(validateLayerIndex(), "phase2 layer from detIndex algo is buggy");
+
+} //phase2 pixel topology
 
 #endif  // Geometry_TrackerGeometryBuilder_phase1PixelTopology_h
