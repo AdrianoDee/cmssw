@@ -46,6 +46,7 @@ private:
   const edm::EDPutTokenT<TrackingRecHit2DCPU> tokenHit_;
   const edm::EDPutTokenT<HMSstorage> tokenModuleStart_;
   const bool convert2Legacy_;
+  const bool isUpgrade_;
 };
 
 SiPixelRecHitSoAFromLegacy::SiPixelRecHitSoAFromLegacy(const edm::ParameterSet& iConfig)
@@ -55,7 +56,8 @@ SiPixelRecHitSoAFromLegacy::SiPixelRecHitSoAFromLegacy(const edm::ParameterSet& 
       clusterToken_{consumes<SiPixelClusterCollectionNew>(iConfig.getParameter<edm::InputTag>("src"))},
       tokenHit_{produces<TrackingRecHit2DCPU>()},
       tokenModuleStart_{produces<HMSstorage>()},
-      convert2Legacy_(iConfig.getParameter<bool>("convertToLegacy")) {
+      convert2Legacy_(iConfig.getParameter<bool>("convertToLegacy")),
+      isUpgrade_(iConfig.getParameter<bool>("Upgrade")) {
   if (convert2Legacy_)
     produces<SiPixelRecHitCollectionNew>();
 }
@@ -67,6 +69,7 @@ void SiPixelRecHitSoAFromLegacy::fillDescriptions(edm::ConfigurationDescriptions
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplitting"));
   desc.add<std::string>("CPE", "PixelCPEFast");
   desc.add<bool>("convertToLegacy", false);
+  desc.add<bool>("Upgrade", false);
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -236,7 +239,9 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
   assert(numberOfHits == numberOfClusters);
 
   // fill data structure to support CA
-  for (auto i = 0U; i < phase1PixelTopology::numberOfLayers + 1; ++i) {
+  auto nLayers = isUpgrade_ ? phase2PixelTopology::numberOfLayers : phase1PixelTopology::numberOfLayers;
+
+  for (auto i = 0U; i < nLayers + 1; ++i) {
     output->hitsLayerStart()[i] = hitsModuleStart[cpeView.layerGeometry().layerStart[i]];
   }
   cms::cuda::fillManyFromVector(output->phiBinner(),
@@ -247,7 +252,8 @@ void SiPixelRecHitSoAFromLegacy::produce(edm::StreamID streamID, edm::Event& iEv
                                 256,
                                 output->phiBinnerStorage());
 
-  LogDebug("SiPixelRecHitSoAFromLegacy") << "created HitSoa for " << numberOfClusters << " clusters in "
+  //LogDebug("SiPixelRecHitSoAFromLegacy")
+  std::cout << "SiPixelRecHitSoAFromLegacy" << "created HitSoa for " << numberOfClusters << " clusters in "
                                          << numberOfDetUnits << " Dets";
   iEvent.put(std::move(output));
   if (convert2Legacy_)
