@@ -146,12 +146,20 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
         edm::ParameterSet seedCreatorPSet = theConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet");
         SeedFromConsecutiveHitsCreator seedCreator(seedCreatorPSet);
         seedCreator.init(region, es, nullptr);
-        seedCreator.makeSeed(
-            *result,
-            SeedingHitSet(hits[0],
-                          hits[1],
-                          hits.size() > 2 ? hits[2] : SeedingHitSet::nullPtr(),
-                          (includeFourthHit_ && hits.size() > 3) ? hits[3] : SeedingHitSet::nullPtr()));
+        if(includeFourthHit_==false) // for backward compatbility
+        {
+          seedCreator.makeSeed(*result,hits);
+        }
+        else 
+        {
+          seedCreator.makeSeed(
+              *result,
+              SeedingHitSet(hits[0],
+                            hits[1],
+                            hits.size() > 2 ? hits[2] : SeedingHitSet::nullPtr(),
+                            (includeFourthHit_ && hits.size() > 3) ? hits[3] : SeedingHitSet::nullPtr()));
+        }
+
       }
     }
   }

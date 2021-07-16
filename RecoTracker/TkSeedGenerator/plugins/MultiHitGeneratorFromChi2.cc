@@ -1,4 +1,5 @@
 #include "RecoTracker/TkSeedGenerator/plugins/MultiHitGeneratorFromChi2.h"
+#include "RecoTracker/TkSeedingLayers/interface/SeedingHitSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 
 #include "RecoPixelVertexing/PixelTriplets/interface/ThirdHitPredictionFromCircle.h"
