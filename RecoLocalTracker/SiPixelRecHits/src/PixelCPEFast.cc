@@ -400,11 +400,6 @@ void PixelCPEFast::fillParamsForGpu() {
       memcpy(layerGeometry_.layerStart, phase2PixelTopology::layerStart, sizeof(phase2PixelTopology::layerStart));
       memcpy(layerGeometry_.layer, phase2PixelTopology::layer.data(), phase2PixelTopology::layer.size());
       layerGeometry_.maxModuleStride = phase2PixelTopology::maxModuleStride;
-      std::cout << "SIZES " << phase2PixelTopology::layerStart[1] << std::endl;
-      std::cout << layerGeometry_.layerStart[1] << std::endl;
-      std::cout << sizeof(phase2PixelTopology::layerStart) << std::endl;
-      std::cout << sizeof(phase1PixelTopology::layerStart) << std::endl;
-      std::cout << " -  " << std::endl;
     }
   }
 }

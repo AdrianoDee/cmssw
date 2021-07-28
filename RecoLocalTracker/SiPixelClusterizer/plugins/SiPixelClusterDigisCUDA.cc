@@ -88,20 +88,6 @@ void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
 
   uint32_t nDigis = 0;
 
-  std::cout << "Looping for digis" << std::endl;
-  // for (auto DSViter = input.begin(); DSViter != input.end(); DSViter++)
-  // {
-  //   nDigis += uint32_t(DSViter->size()); //Is there a smareter way?
-  // }
-  //
-  // SiPixelDigisCUDA digis_h(nDigis,nullptr);
-  //
-  // std::std::vector<int> v;
-  // std::cout << "Filling SoA "<< nDigis << std::endl;
-  // nDigis = 0;
-  // std::vector<uint16_t> i, x, y, a;
-  // std::vector<uint32_t> p;
-
   auto x = cms::cuda::make_host_unique<uint16_t[]>(10000000, ctx.stream());
   auto y = cms::cuda::make_host_unique<uint16_t[]>(10000000, ctx.stream());
   auto a = cms::cuda::make_host_unique<uint16_t[]>(10000000, ctx.stream());
