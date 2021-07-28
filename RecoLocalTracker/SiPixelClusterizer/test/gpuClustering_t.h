@@ -305,8 +305,15 @@ int main(void) {
     h_moduleStart[0] = nModules;
     countModules(h_id.get(), h_moduleStart.get(), h_clus.get(), n);
     memset(h_clusInModule.get(), 0, maxNumModules * sizeof(uint32_t));
-    findClus(
-        h_id.get(), h_x.get(), h_y.get(), h_moduleStart.get(), h_clusInModule.get(), h_moduleId.get(), h_clus.get(), n, false);
+    findClus(h_id.get(),
+             h_x.get(),
+             h_y.get(),
+             h_moduleStart.get(),
+             h_clusInModule.get(),
+             h_moduleId.get(),
+             h_clus.get(),
+             n,
+             false);
 
     nModules = h_moduleStart[0];
     auto nclus = h_clusInModule.get();

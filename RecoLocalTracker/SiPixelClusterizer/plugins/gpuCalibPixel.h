@@ -18,10 +18,10 @@ namespace gpuCalibPixel {
   constexpr float VCaltoElectronOffset = -60;      // L2-4: -60 +- 130
   constexpr float VCaltoElectronOffset_L1 = -670;  // L1:   -670 +- 220
 
-  constexpr float    ElectronPerADCGain = 600;
-  constexpr int8_t   Phase2ReadoutMode  = 3;
+  constexpr float ElectronPerADCGain = 600;
+  constexpr int8_t Phase2ReadoutMode = 3;
   constexpr uint16_t Phase2DigiBaseline = 1500;
-  constexpr uint8_t  Phase2KinkADC      = 8;
+  constexpr uint8_t Phase2KinkADC = 8;
 
   __global__ void calibDigis(bool isRun2,
                              uint16_t* id,
@@ -69,7 +69,6 @@ namespace gpuCalibPixel {
     }
   }
 
-
   __global__ void calibDigisUpgrade(uint16_t* xx,
                                     uint16_t* yy,
                                     uint16_t* adc,
@@ -112,7 +111,6 @@ namespace gpuCalibPixel {
       }
     }
   }
-
 
 }  // namespace gpuCalibPixel
 

@@ -90,7 +90,8 @@ void PixelCPEFast::fillParamsForGpu() {
   commonParamsGPU_.thePitchX = m_DetParams[0].thePitchX;
   commonParamsGPU_.thePitchY = m_DetParams[0].thePitchY;
 
-  commonParamsGPU_.numberOfLaddersInBarrel = isUpgrade_ ? phase2PixelTopology::numberOfLaddersInBarrel : phase1PixelTopology::numberOfLaddersInBarrel;
+  commonParamsGPU_.numberOfLaddersInBarrel =
+      isUpgrade_ ? phase2PixelTopology::numberOfLaddersInBarrel : phase1PixelTopology::numberOfLaddersInBarrel;
   commonParamsGPU_.isUpgrade = isUpgrade_;
 
   LogDebug("PixelCPEFast") << "pitch & thickness " << commonParamsGPU_.thePitchX << ' ' << commonParamsGPU_.thePitchY
@@ -113,23 +114,21 @@ void PixelCPEFast::fillParamsForGpu() {
     auto& g = detParamsGPU_[i];
 
     if (!isUpgrade_) {
+      g.nRowsRoc = phase1PixelTopology::numRowsInRoc;
+      g.nColsRoc = phase1PixelTopology::numColsInRoc;
+      g.nRows = phase1PixelTopology::numRowsInModule;
+      g.nCols = phase1PixelTopology::numColsInModule;
 
-        g.nRowsRoc = phase1PixelTopology::numRowsInRoc;
-        g.nColsRoc = phase1PixelTopology::numColsInRoc;
-        g.nRows = phase1PixelTopology::numRowsInModule;
-        g.nCols = phase1PixelTopology::numColsInModule;
+      g.numPixsInModule = g.nRows * g.nCols;
 
-        g.numPixsInModule = g.nRows * g.nCols;
+    } else {
+      g.nRowsRoc = p.theDet->specificTopology().rowsperroc();
+      g.nColsRoc = p.theDet->specificTopology().colsperroc();
+      g.nRows = p.theDet->specificTopology().rocsX() * g.nRowsRoc;
+      g.nCols = p.theDet->specificTopology().rocsY() * g.nColsRoc;
 
-      } else
-      {
-        g.nRowsRoc = p.theDet->specificTopology().rowsperroc();
-        g.nColsRoc = p.theDet->specificTopology().colsperroc();
-        g.nRows = p.theDet->specificTopology().rocsX() * g.nRowsRoc;
-        g.nCols = p.theDet->specificTopology().rocsY() * g.nColsRoc;
-
-        g.numPixsInModule = g.nRows * g.nCols;
-      }
+      g.numPixsInModule = g.nRows * g.nCols;
+    }
 
     assert(p.theDet->index() == int(i));
     assert(commonParamsGPU_.thePitchY == p.thePitchY);
@@ -230,11 +229,11 @@ void PixelCPEFast::fillParamsForGpu() {
     }
   }
   int numberOfModulesInLadder = isUpgrade_ ? int(phase2PixelTopology::numberOfModulesInLadder)
-                                            : int(phase1PixelTopology::numberOfModulesInLadder);
+                                           : int(phase1PixelTopology::numberOfModulesInLadder);
   int numberOfModulesInBarrel = isUpgrade_ ? int(phase2PixelTopology::numberOfModulesInBarrel)
-                                          : int(phase1PixelTopology::numberOfModulesInBarrel);
+                                           : int(phase1PixelTopology::numberOfModulesInBarrel);
   int numberOfLaddersInBarrel = isUpgrade_ ? int(phase2PixelTopology::numberOfLaddersInBarrel)
-                                          : int(phase1PixelTopology::numberOfLaddersInBarrel);
+                                           : int(phase1PixelTopology::numberOfLaddersInBarrel);
 
   int firstEndcapPos = 4, firstEndcapNeg = isUpgrade_ ? 16 : 7;
   float ladderFactor = 1.f / float(numberOfModulesInLadder);
@@ -265,65 +264,62 @@ void PixelCPEFast::fillParamsForGpu() {
 
   // compute "max z" for first layer in endcap (should we restrict to the outermost ring?)
   if (!isUpgrade_) {
-     for (auto im = phase1PixelTopology::layerStart[firstEndcapPos];
-          im < phase1PixelTopology::layerStart[firstEndcapPos + 1];
-          ++im) {
-       auto const& g = detParamsGPU_[im];
-       aveGeom.endCapZ[0] = std::max(aveGeom.endCapZ[0], g.frame.z());
-     }
-     for (auto im = phase1PixelTopology::layerStart[firstEndcapNeg];
-          im < phase1PixelTopology::layerStart[firstEndcapNeg + 1];
-          ++im) {
-       auto const& g = detParamsGPU_[im];
-       aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
-     }
-     // correct for outer ring being closer
-     aveGeom.endCapZ[0] -= 1.5f;
-     aveGeom.endCapZ[1] += 1.5f;
-   } else {
-     for (auto im = phase2PixelTopology::layerStart[firstEndcapPos];
-          im < phase2PixelTopology::layerStart[firstEndcapPos + 1];
-          ++im) {
-       auto const& g = detParamsGPU_[im];
-       aveGeom.endCapZ[0] = std::max(aveGeom.endCapZ[0], g.frame.z());
-     }
-     for (auto im = phase2PixelTopology::layerStart[firstEndcapNeg];
-          im < phase2PixelTopology::layerStart[firstEndcapNeg + 1];
-          ++im) {
-       auto const& g = detParamsGPU_[im];
-       aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
-     }
-
+    for (auto im = phase1PixelTopology::layerStart[firstEndcapPos];
+         im < phase1PixelTopology::layerStart[firstEndcapPos + 1];
+         ++im) {
+      auto const& g = detParamsGPU_[im];
+      aveGeom.endCapZ[0] = std::max(aveGeom.endCapZ[0], g.frame.z());
+    }
+    for (auto im = phase1PixelTopology::layerStart[firstEndcapNeg];
+         im < phase1PixelTopology::layerStart[firstEndcapNeg + 1];
+         ++im) {
+      auto const& g = detParamsGPU_[im];
+      aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
+    }
+    // correct for outer ring being closer
+    aveGeom.endCapZ[0] -= 1.5f;
+    aveGeom.endCapZ[1] += 1.5f;
+  } else {
+    for (auto im = phase2PixelTopology::layerStart[firstEndcapPos];
+         im < phase2PixelTopology::layerStart[firstEndcapPos + 1];
+         ++im) {
+      auto const& g = detParamsGPU_[im];
+      aveGeom.endCapZ[0] = std::max(aveGeom.endCapZ[0], g.frame.z());
+    }
+    for (auto im = phase2PixelTopology::layerStart[firstEndcapNeg];
+         im < phase2PixelTopology::layerStart[firstEndcapNeg + 1];
+         ++im) {
+      auto const& g = detParamsGPU_[im];
+      aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
+    }
 
 #ifdef EDM_ML_DEBUG
-  for (int jl = 0, nl = phase1PixelTopology::numberOfLaddersInBarrel; jl < nl; ++jl) {
-    LogDebug("PixelCPEFast") << jl << ':' << aveGeom.ladderR[jl] << '/'
-                             << std::sqrt(aveGeom.ladderX[jl] * aveGeom.ladderX[jl] +
-                                          aveGeom.ladderY[jl] * aveGeom.ladderY[jl])
-                             << ',' << aveGeom.ladderZ[jl] << ',' << aveGeom.ladderMinZ[jl] << ','
-                             << aveGeom.ladderMaxZ[jl] << '\n';
-  }
-  LogDebug("PixelCPEFast") << aveGeom.endCapZ[0] << ' ' << aveGeom.endCapZ[1];
+    for (int jl = 0, nl = phase1PixelTopology::numberOfLaddersInBarrel; jl < nl; ++jl) {
+      LogDebug("PixelCPEFast") << jl << ':' << aveGeom.ladderR[jl] << '/'
+                               << std::sqrt(aveGeom.ladderX[jl] * aveGeom.ladderX[jl] +
+                                            aveGeom.ladderY[jl] * aveGeom.ladderY[jl])
+                               << ',' << aveGeom.ladderZ[jl] << ',' << aveGeom.ladderMinZ[jl] << ','
+                               << aveGeom.ladderMaxZ[jl] << '\n';
+    }
+    LogDebug("PixelCPEFast") << aveGeom.endCapZ[0] << ' ' << aveGeom.endCapZ[1];
 #endif  // EDM_ML_DEBUG
 
-  // fill Layer and ladders geometry
-  if (!isUpgrade_) {
-     memcpy(layerGeometry_.layerStart, phase1PixelTopology::layerStart, sizeof(phase1PixelTopology::layerStart));
-     memcpy(layerGeometry_.layer, phase1PixelTopology::layer.data(), phase1PixelTopology::layer.size());
-     layerGeometry_.maxModuleStride = phase1PixelTopology::maxModuleStride;
-   } else {
-     
-    
-     memcpy(layerGeometry_.layerStart, phase2PixelTopology::layerStart, sizeof(phase2PixelTopology::layerStart));
-     memcpy(layerGeometry_.layer, phase2PixelTopology::layer.data(), phase2PixelTopology::layer.size());
-     layerGeometry_.maxModuleStride = phase2PixelTopology::maxModuleStride;
-     std::cout << "SIZES " << phase2PixelTopology::layerStart[1] << std::endl;
-     std::cout << layerGeometry_.layerStart[1] << std::endl; 
-     std::cout << sizeof(phase2PixelTopology::layerStart) << std::endl;
-     std::cout << sizeof(phase1PixelTopology::layerStart) << std::endl;
-     std::cout <<  " -  " << std::endl;
+    // fill Layer and ladders geometry
+    if (!isUpgrade_) {
+      memcpy(layerGeometry_.layerStart, phase1PixelTopology::layerStart, sizeof(phase1PixelTopology::layerStart));
+      memcpy(layerGeometry_.layer, phase1PixelTopology::layer.data(), phase1PixelTopology::layer.size());
+      layerGeometry_.maxModuleStride = phase1PixelTopology::maxModuleStride;
+    } else {
+      memcpy(layerGeometry_.layerStart, phase2PixelTopology::layerStart, sizeof(phase2PixelTopology::layerStart));
+      memcpy(layerGeometry_.layer, phase2PixelTopology::layer.data(), phase2PixelTopology::layer.size());
+      layerGeometry_.maxModuleStride = phase2PixelTopology::maxModuleStride;
+      std::cout << "SIZES " << phase2PixelTopology::layerStart[1] << std::endl;
+      std::cout << layerGeometry_.layerStart[1] << std::endl;
+      std::cout << sizeof(phase2PixelTopology::layerStart) << std::endl;
+      std::cout << sizeof(phase1PixelTopology::layerStart) << std::endl;
+      std::cout << " -  " << std::endl;
+    }
   }
- }
 }
 
 PixelCPEFast::GPUData::~GPUData() {
@@ -336,7 +332,7 @@ PixelCPEFast::GPUData::~GPUData() {
   }
 }
 
-void PixelCPEFast::errorFromTemplates(DetParam const& theDetParam     ,
+void PixelCPEFast::errorFromTemplates(DetParam const& theDetParam,
                                       ClusterParamGeneric& theClusterParam,
                                       float qclus) const {
   float locBz = theDetParam.bz;

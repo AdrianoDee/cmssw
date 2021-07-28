@@ -42,7 +42,8 @@ namespace gpuClustering {
                            uint32_t* __restrict__ nClustersInModule,  // output: number of clusters found in each module
                            uint32_t* __restrict__ moduleId,           // output: module id of each module
                            int32_t* __restrict__ clusterId,           // output: cluster id of each pixel
-                           int numElements, bool isUpgrade) {
+                           int numElements,
+                           bool isUpgrade) {
     __shared__ int msize;
 
     auto firstModule = blockIdx.x;
@@ -76,10 +77,10 @@ namespace gpuClustering {
 
       //init hist  (ymax=416 < 512 : 9bits) - 10 bits are needed for phase II
       constexpr uint32_t maxPixInModule = 8000;
-      constexpr auto nbins = 1000; //phase1PixelTopology::numColsInModule + 2;
+      constexpr auto nbins = 1000;  //phase1PixelTopology::numColsInModule + 2;
       // constexpr auto nbinsPhase2 = phase1PixelTopology::numColsInModule + 2;  //2+2;
 
-      using Hist = cms::cuda::HistoContainer<uint16_t, nbins, maxPixInModule, 10, uint16_t>; 
+      using Hist = cms::cuda::HistoContainer<uint16_t, nbins, maxPixInModule, 10, uint16_t>;
       __shared__ Hist hist;
       __shared__ typename Hist::Counter ws[32];
       for (auto j = threadIdx.x; j < Hist::totbins(); j += blockDim.x) {

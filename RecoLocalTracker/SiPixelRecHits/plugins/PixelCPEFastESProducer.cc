@@ -93,8 +93,8 @@ void PixelCPEFastESProducer::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<std::string>("ComponentName", "PixelCPEFast");
   desc.add<edm::ESInputTag>("MagneticFieldRecord", edm::ESInputTag());
 
-  desc.add<bool>("Upgrade",false);
-  
+  desc.add<bool>("Upgrade", false);
+
   descriptions.add("PixelCPEFastESProducer", desc);
 }
 

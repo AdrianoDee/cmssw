@@ -36,8 +36,6 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
-
-
   void acquire(const edm::Event& iEvent,
                const edm::EventSetup& iSetup,
                edm::WaitingTaskWithArenaHolder waitingTaskHolder) override;
@@ -55,19 +53,14 @@ private:
   PixelDataFormatter::Errors errors_;
 
   const SiPixelClusterThresholds clusterThresholds_;
-
 };
 
 SiPixelClusterDigisCUDA::SiPixelClusterDigisCUDA(const edm::ParameterSet& iConfig)
-    :
-      pixelDigiToken_(consumes<edm::DetSetVector<PixelDigi>>(iConfig.getParameter<edm::InputTag>("InputLabel"))),
+    : pixelDigiToken_(consumes<edm::DetSetVector<PixelDigi>>(iConfig.getParameter<edm::InputTag>("InputLabel"))),
       digiPutToken_(produces<cms::cuda::Product<SiPixelDigisCUDA>>()),
       clusterPutToken_(produces<cms::cuda::Product<SiPixelClustersCUDA>>()),
       clusterThresholds_{iConfig.getParameter<int32_t>("clusterThreshold_layer1"),
-                         iConfig.getParameter<int32_t>("clusterThreshold_otherLayers")}
-{
-
-}
+                         iConfig.getParameter<int32_t>("clusterThreshold_otherLayers")} {}
 
 void SiPixelClusterDigisCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
@@ -77,13 +70,12 @@ void SiPixelClusterDigisCUDA::fillDescriptions(edm::ConfigurationDescriptions& d
   descriptions.addWithDefaultLabel(desc);
 }
 
-
 void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
                                       const edm::EventSetup& iSetup,
                                       edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
   cms::cuda::ScopedContextAcquire ctx{iEvent.streamID(), std::move(waitingTaskHolder), ctxState_};
 
-  std::cout << "SiPixelClusterDigisCUDA"<< std::endl;
+  std::cout << "SiPixelClusterDigisCUDA" << std::endl;
 
   edm::Handle<edm::DetSetVector<PixelDigi>> digis;
   iEvent.getByToken(pixelDigiToken_, digis);
@@ -96,7 +88,7 @@ void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
 
   uint32_t nDigis = 0;
 
-  std::cout << "Looping for digis"<< std::endl;
+  std::cout << "Looping for digis" << std::endl;
   // for (auto DSViter = input.begin(); DSViter != input.end(); DSViter++)
   // {
   //   nDigis += uint32_t(DSViter->size()); //Is there a smareter way?
@@ -117,15 +109,12 @@ void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
   auto p = cms::cuda::make_host_unique<uint32_t[]>(10000000, ctx.stream());
   auto r = cms::cuda::make_host_unique<uint32_t[]>(10000000, ctx.stream());
 
-  for (auto DSViter = input.begin(); DSViter != input.end(); DSViter++)
-  {
-
+  for (auto DSViter = input.begin(); DSViter != input.end(); DSViter++) {
     unsigned int detid = DSViter->detId();
     DetId detIdObject(detid);
     const GeomDetUnit* genericDet = geom_->idToDetUnit(detIdObject);
     auto const gind = genericDet->index();
-    for (auto const& px : *DSViter)
-    {
+    for (auto const& px : *DSViter) {
       x[nDigis] = uint16_t(px.row());
       y[nDigis] = uint16_t(px.column());
       a[nDigis] = uint16_t(px.adc());
@@ -135,7 +124,7 @@ void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
       nDigis++;
     }
   }
- 
+
   // auto d_X  = cms::cuda::make_device_unique<uint16_t[]>(nDigis, ctx.stream());
   //
   // auto cpu_input = cms::cuda::make_host_noncached_unique<uint16_t>(nDigis);
@@ -148,11 +137,7 @@ void SiPixelClusterDigisCUDA::acquire(const edm::Event& iEvent,
   // std::cout << "Filled Vectors "<< nDigis << std::endl;
 
   gpuAlgo_.makeDigiClustersAsync(
-                             clusterThresholds_,
-                             i.get(),x.get(),y.get(),a.get(),p.get(),r.get(),
-                             nDigis,
-                             ctx.stream());
-
+      clusterThresholds_, i.get(), x.get(), y.get(), a.get(), p.get(), r.get(), nDigis, ctx.stream());
 }
 
 void SiPixelClusterDigisCUDA::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -162,7 +147,6 @@ void SiPixelClusterDigisCUDA::produce(edm::Event& iEvent, const edm::EventSetup&
 
   ctx.emplace(iEvent, digiPutToken_, std::move(tmp.first));
   ctx.emplace(iEvent, clusterPutToken_, std::move(tmp.second));
-
 }
 
 // define as framework plugin
