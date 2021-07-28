@@ -16,14 +16,16 @@ namespace pixelTopology {
     return map_to_array_helper(f, std::make_index_sequence<N>{});
   }
 
+  static constexpr auto maxNumberOfLadders = 90;
+
   struct AverageGeometry {
-    // static constexpr auto numberOfLaddersInBarrel = 150;
-    float ladderZ[150];
-    float ladderX[150];
-    float ladderY[150];
-    float ladderR[150];
-    float ladderMinZ[150];
-    float ladderMaxZ[150];
+    //
+    float ladderZ[maxNumberOfLadders];
+    float ladderX[maxNumberOfLadders];
+    float ladderY[maxNumberOfLadders];
+    float ladderR[maxNumberOfLadders];
+    float ladderMinZ[maxNumberOfLadders];
+    float ladderMaxZ[maxNumberOfLadders];
     float endCapZ[2];  // just for pos and neg Layer1
   };
 
@@ -194,7 +196,7 @@ namespace phase2PixelTopology {
   constexpr uint8_t numberOfLayers = 28;
 
   constexpr uint32_t layerStart[numberOfLayers + 1] = {
-      0,    108,  324,  504,  756,  864,  972,  1080, 1188, 1296, 1404, 1512, 1620, 1796,           1972,
+      0,    108,  324,  504,  756,  864,  972,  1080, 1188, 1296, 1404, 1512, 1620, 1796, 1972,
       2148, 2324, 2432, 2540, 2648, 2756, 2864, 2972, 3080, 3188, 3364, 3540, 3716, numberOfModules};
 
   constexpr uint16_t findMaxModuleStride() {
@@ -243,4 +245,4 @@ namespace phase2PixelTopology {
 
 }  // namespace phase2PixelTopology
 
-#endif  // Geometry_TrackerGeometryBuilder_phase1PixelTopology_h
+#endif  // Geometry_TrackerGeometryBuilder_pixelTopology_h
