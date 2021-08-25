@@ -20,8 +20,9 @@ namespace {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
 
     assert(0 == hitsModuleStart[0]);
+    uint8_t m = cpeParams->commonParams().isUpgrade ? 29 : 11;
 
-    if (i < 11) {
+    if (i < m) {
       hitsLayerStart[i] = hitsModuleStart[cpeParams->layerGeometry().layerStart[i]];
 #ifdef GPU_DEBUG
       printf("LayerStart %d %d: %d\n", i, cpeParams->layerGeometry().layerStart[i], hitsLayerStart[i]);
@@ -62,7 +63,7 @@ namespace pixelgpudetails {
       cudaCheck(cudaGetLastError());
 
       cms::cuda::fillManyFromVector(
-          hits_d.phiBinner(), 10, hits_d.iphi(), hits_d.hitsLayerStart(), nHits, 256, hits_d.phiBinnerStorage(), stream);
+          hits_d.phiBinner(), 28, hits_d.iphi(), hits_d.hitsLayerStart(), nHits, 256, hits_d.phiBinnerStorage(), stream);
       cudaCheck(cudaGetLastError());
 
 #ifdef GPU_DEBUG
