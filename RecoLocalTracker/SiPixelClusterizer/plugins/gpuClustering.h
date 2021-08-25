@@ -76,6 +76,7 @@ namespace gpuClustering {
       }
 
 
+
       //init hist  (ymax=416 < 512 : 9bits)
       //6000 max pixels required for HI operations with no measurable impact on pp performance
       constexpr uint32_t maxPixInModule = 6000;

@@ -52,7 +52,8 @@ SiPixelDigisClustersFromSoA::SiPixelDigisClustersFromSoA(const edm::ParameterSet
                          iConfig.getParameter<int>("clusterThreshold_otherLayers")},
       produceDigis_(iConfig.getParameter<bool>("produceDigis")),
       storeDigis_(iConfig.getParameter<bool>("produceDigis") & iConfig.getParameter<bool>("storeDigis")),
-      isUpgrade_(iConfig.getParameter<bool>("Upgrade"))  {
+      isUpgrade_(iConfig.getParameter<bool>("Upgrade")) {
+
   if (produceDigis_)
     digiPutToken_ = produces<edm::DetSetVector<PixelDigi>>();
 }
