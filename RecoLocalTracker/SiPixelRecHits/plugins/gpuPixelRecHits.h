@@ -37,8 +37,7 @@ namespace gpuPixelRecHits {
     if (0 == blockIdx.x) {
       auto& agc = hits.averageGeometry();
       auto const& ag = cpeParams->averageGeometry();
-      for (int il = threadIdx.x, nl = TrackingRecHit2DSOAView::AverageGeometry::numberOfLaddersInBarrel; il < nl;
-           il += blockDim.x) {
+      for (int il = threadIdx.x, nl = cpeParams->commonParams().numberOfLaddersInBarrel; il < nl; il += blockDim.x) {
         agc.ladderZ[il] = ag.ladderZ[il] - bs->z;
         agc.ladderX[il] = ag.ladderX[il] - bs->x;
         agc.ladderY[il] = ag.ladderY[il] - bs->y;
@@ -171,8 +170,10 @@ namespace gpuPixelRecHits {
         assert(h < clusters.clusModuleStart(me + 1));
 
         pixelCPEforGPU::position(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
-        pixelCPEforGPU::errorFromDB(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
-
+        if (!cpeParams->commonParams().isUpgrade)
+          pixelCPEforGPU::errorFromDB(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
+        else
+          pixelCPEforGPU::errorFromSize(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
         // store it
         hits.setChargeAndStatus(h, clusParams.charge[ic], clusParams.status[ic]);
         hits.detectorIndex(h) = me;

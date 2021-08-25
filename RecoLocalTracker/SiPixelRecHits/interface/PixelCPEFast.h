@@ -48,6 +48,8 @@ private:
   pixelCPEforGPU::AverageGeometry averageGeometry_;
   pixelCPEforGPU::ParamsOnGPU cpuData_;
 
+  bool isUpgrade_;
+
   struct GPUData {
     ~GPUData();
     // not needed if not used on CPU...
