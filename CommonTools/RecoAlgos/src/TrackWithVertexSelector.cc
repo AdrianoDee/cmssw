@@ -12,6 +12,7 @@ TrackWithVertexSelector::TrackWithVertexSelector(const edm::ParameterSet &iConfi
     : numberOfValidHits_(iConfig.getParameter<uint32_t>("numberOfValidHits")),
       numberOfValidPixelHits_(iConfig.getParameter<uint32_t>("numberOfValidPixelHits")),
       numberOfLostHits_(iConfig.getParameter<uint32_t>("numberOfLostHits")),
+      maxOfValidPixelHits_(iConfig.getParameter<uint32_t>("maxOfValidPixelHits")),
       normalizedChi2_(iConfig.getParameter<double>("normalizedChi2")),
       ptMin_(iConfig.getParameter<double>("ptMin")),
       ptMax_(iConfig.getParameter<double>("ptMax")),
@@ -50,6 +51,7 @@ bool TrackWithVertexSelector::testTrack(const reco::Track &t) const {
   using std::abs;
   if ((t.numberOfValidHits() >= numberOfValidHits_) &&
       (static_cast<unsigned int>(t.hitPattern().numberOfValidPixelHits()) >= numberOfValidPixelHits_) &&
+      (static_cast<unsigned int>(t.hitPattern().numberOfValidPixelHits()) <= maxOfValidPixelHits_) &&
       (t.numberOfLostHits() <= numberOfLostHits_) && (t.normalizedChi2() <= normalizedChi2_) &&
       (t.ptError() / t.pt() * std::max(1., t.normalizedChi2()) <= ptErrorCut_) &&
       (t.quality(t.qualityByName(quality_))) && (t.pt() >= ptMin_) && (t.pt() <= ptMax_) && (abs(t.eta()) <= etaMax_) &&

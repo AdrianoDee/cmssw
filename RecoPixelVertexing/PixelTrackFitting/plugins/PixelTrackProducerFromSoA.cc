@@ -22,6 +22,8 @@
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
+#include "SimTracker/TrackerHitAssociation/interface/ClusterTPAssociation.h"
+
 #include "TrackingTools/AnalyticalJacobians/interface/JacobianLocalToCurvilinear.h"
 #include "TrackingTools/TrajectoryParametrization/interface/GlobalTrajectoryParameters.h"
 #include "TrackingTools/TrajectoryParametrization/interface/CurvilinearTrajectoryError.h"
@@ -34,9 +36,11 @@
 #include "storeTracks.h"
 #include "CUDADataFormats/Common/interface/HostProduct.h"
 
+// #define TUNINGCUTS 1
+
 /**
  * This class creates "leagcy"  reco::Track
- * objects from the output of SoA CA. 
+ * objects from the output of SoA CA.
  */
 class PixelTrackProducerFromSoA : public edm::global::EDProducer<> {
 public:
@@ -59,6 +63,10 @@ private:
   edm::EDGetTokenT<HMSstorage> hmsToken_;
 
   int32_t const minNumberOfHits_;
+
+  edm::EDGetTokenT<ClusterTPAssociation> tpMap_;
+  int const keepBad_;
+  int const keepDup_;
 };
 
 PixelTrackProducerFromSoA::PixelTrackProducerFromSoA(const edm::ParameterSet &iConfig)
@@ -66,7 +74,10 @@ PixelTrackProducerFromSoA::PixelTrackProducerFromSoA(const edm::ParameterSet &iC
       tokenTrack_(consumes<PixelTrackHeterogeneous>(iConfig.getParameter<edm::InputTag>("trackSrc"))),
       cpuHits_(consumes<SiPixelRecHitCollectionNew>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
       hmsToken_(consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
-      minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")) {
+      minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
+      tpMap_(consumes<ClusterTPAssociation>(iConfig.getParameter<edm::InputTag>("tpMap"))), 
+      keepBad_(iConfig.getParameter<int>("keepBad")),
+      keepDup_(iConfig.getParameter<int>("keepDup")){
   produces<reco::TrackCollection>();
   produces<TrackingRecHitCollection>();
   produces<reco::TrackExtraCollection>();
@@ -78,8 +89,12 @@ void PixelTrackProducerFromSoA::fillDescriptions(edm::ConfigurationDescriptions 
   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
   desc.add<edm::InputTag>("trackSrc", edm::InputTag("pixelTrackSoA"));
   desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsLegacyPreSplitting"));
+  desc.add<edm::InputTag>("tpMap", edm::InputTag("tpClusterProducerPreSplitting"));
   desc.add<int>("minNumberOfHits", 0);
-
+  
+  desc.add<int>("keepBad", 999);
+  desc.add<int>("keepDup", 999);
+ 
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -87,6 +102,9 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
                                         edm::Event &iEvent,
                                         const edm::EventSetup &iSetup) const {
   // std::cout << "Converting gpu helix in reco tracks" << std::endl;
+
+  edm::Handle<ClusterTPAssociation> tpClust;
+  iEvent.getByToken(tpMap_,tpClust);
 
   auto indToEdmP = std::make_unique<IndToEdm>();
   auto &indToEdm = *indToEdmP;
@@ -139,7 +157,9 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
   auto const &hitIndices = tsoa.hitIndices;
   auto maxTracks = tsoa.stride();
 
-  int32_t nt = 0;
+  int32_t nt = 0, nquad = 0, nquadsoriginal = 0;
+  bool check = true;
+  int32_t nnn = 0, nnn1 = 0, nnn2 = 0, nnn3 = 0;
 
   for (int32_t it = 0; it < maxTracks; ++it) {
     auto nHits = tsoa.nHits(it);
@@ -147,18 +167,96 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
       break;  // this is a guard: maybe we need to move to nTracks...
     indToEdm.push_back(-1);
     auto q = quality[it];
-    if (q != trackQuality::loose)
+
+    if(nHits>3)
+    {++nquadsoriginal;}
+
+    #ifndef TUNINGCUTS
+    if (nHits<keepDup_ and q == trackQuality::dup)
       continue;  // FIXME
+    if (nHits<keepBad_ and q == trackQuality::bad)
+      continue;  // FIXME
+    #endif
     if (nHits < minNumberOfHits_)
       continue;
     indToEdm.back() = nt;
     ++nt;
 
+    if(fabs(tsoa.eta(it)) < 0.9 and fabs(tsoa.eta(it)) > 0.0)
+    {
+      nnn++;
+      if (q == trackQuality::dup) nnn1++;
+      if (q == trackQuality::bad) nnn2++;
+      if (q == trackQuality::loose) nnn3++;
+    }
+
+    if(nHits>3)
+    {++nquad;}
+
     hits.resize(nHits);
     auto b = hitIndices.begin(it);
+    // if(flip)
+    //   continue;
+
+
+    #ifdef TUNINGCUTS
+    std::cout << "pixelhits - ";
+    #endif
     for (int iHit = 0; iHit < nHits; ++iHit)
+    {
       hits[iHit] = hitmap[*(b + iHit)];
 
+      #ifdef TUNINGCUTS
+      auto clust = dynamic_cast<const SiPixelRecHit*>((hits[iHit]))->cluster();
+      auto particle = tpClust->equal_range(dynamic_cast<const SiPixelRecHit*>((hits[iHit]))->firstClusterRef()).first;
+
+      auto moduleId = hits[iHit]->geographicalId().rawId();
+      std::cout << hits[iHit]->globalPosition().x() << " - "
+                << hits[iHit]->globalPosition().y() << " - "
+                << hits[iHit]->globalPosition().z() << " - "
+                << (particle->second).key() << " - "
+                << (*particle->second).pdgId() << " - "
+                << clust->sizeY() << " - "
+                << clust->sizeX() << " - "
+                << moduleId << " - ";
+      #endif
+
+    }
+
+    #ifdef TUNINGCUTS
+    int diff = 13 - nHits;
+
+    for (int i = 0; i < diff; i++)
+    {
+      std::cout << "-999.9 - "
+                << "-999.9 - "
+                << "-999.9 - ";
+
+      std::cout << "-999.9 - "
+                << "-999.9 - ";
+
+      std::cout << "-999.9 - "
+                << "-999.9 - "
+                << "-999.9 - ";
+    }
+
+
+    std::cout << nHits << " - "
+              << tsoa.chi2(it) << " - "
+              << tsoa.pt(it) << " - "
+              << tsoa.eta(it) << " - "
+              << q << " - "
+              << tsoa.zip(it) << " - "
+              << tsoa.tip(it) << " - "
+              << 999 << std::endl;
+    #endif
+
+    #ifdef TUNINGCUTS
+    if (q == trackQuality::dup)
+      continue;  // FIXME
+    if (q == trackQuality::bad)
+      continue;  // FIXME
+    #endif
     // mind: this values are respect the beamspot!
 
     float chi2 = tsoa.chi2(it);
@@ -191,16 +289,32 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
     int ndof = 2 * hits.size() - 5;
     chi2 = chi2 * ndof;  // FIXME
     GlobalPoint vv = gp.position();
+    if(q == trackQuality::dup or q == trackQuality::bad)
+{
+	vv = bs;
+
+}	
     math::XYZPoint pos(vv.x(), vv.y(), vv.z());
     GlobalVector pp = gp.momentum();
+    if(q == trackQuality::dup or q == trackQuality::bad)
+    {
+	
+        pp = GlobalVector(0.9,0.9,0.9);
+    }
     math::XYZVector mom(pp.x(), pp.y(), pp.z());
-
+    
+    if(nHits>3)
+    {
+	if(q == trackQuality::dup or q == trackQuality::bad)
+		chi2=10000000;
+    }
     auto track = std::make_unique<reco::Track>(chi2, ndof, pos, mom, gp.charge(), CurvilinearTrajectoryError(mo));
     // filter???
     tracks.emplace_back(track.release(), hits);
   }
-  // std::cout << "processed " << nt << " good tuples " << tracks.size() << "out of " << indToEdm.size() << std::endl;
-
+  //std::cout << "CHECKS : " << nnn << " dup " << nnn1 << " bad " << nnn2 << " good " << nnn3 << std::endl;
+  //std::cout << "processed " << nt << " good tuples " << tracks.size() << " out of " << indToEdm.size() << std::endl;
+  //std::cout << "quads " << nquad << " - " << nquadsoriginal << std::endl;
   // store tracks
   storeTracks(iEvent, tracks, *httopo);
   iEvent.put(std::move(indToEdmP));

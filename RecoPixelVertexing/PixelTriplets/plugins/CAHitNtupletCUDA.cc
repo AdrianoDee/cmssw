@@ -22,8 +22,13 @@
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DCUDA.h"
 
+#include "RecoPixelVertexing/PixelTriplets/plugins/CAHitNtupletGeneratorKernels.h"
+
 class CAHitNtupletCUDA : public edm::global::EDProducer<> {
 public:
+
+  // using VertexRegion = cAHitNtupletGenerator::VertexRegion;
+
   explicit CAHitNtupletCUDA(const edm::ParameterSet& iConfig);
   ~CAHitNtupletCUDA() override = default;
 
@@ -33,17 +38,20 @@ private:
   void produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 
   bool m_OnGPU;
+  bool m_Upgrade;
 
   edm::EDGetTokenT<cms::cuda::Product<TrackingRecHit2DGPU>> tokenHitGPU_;
   edm::EDPutTokenT<cms::cuda::Product<PixelTrackHeterogeneous>> tokenTrackGPU_;
   edm::EDGetTokenT<TrackingRecHit2DCPU> tokenHitCPU_;
   edm::EDPutTokenT<PixelTrackHeterogeneous> tokenTrackCPU_;
 
+  edm::EDGetTokenT<VertexRegion> vertexTokenCPU_;
+
   CAHitNtupletGeneratorOnGPU gpuAlgo_;
 };
 
 CAHitNtupletCUDA::CAHitNtupletCUDA(const edm::ParameterSet& iConfig)
-    : m_OnGPU(iConfig.getParameter<bool>("onGPU")), gpuAlgo_(iConfig, consumesCollector()) {
+    : m_OnGPU(iConfig.getParameter<bool>("onGPU")),gpuAlgo_(iConfig, consumesCollector()) {
   if (m_OnGPU) {
     tokenHitGPU_ =
         consumes<cms::cuda::Product<TrackingRecHit2DGPU>>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
@@ -52,6 +60,8 @@ CAHitNtupletCUDA::CAHitNtupletCUDA(const edm::ParameterSet& iConfig)
     tokenHitCPU_ = consumes<TrackingRecHit2DCPU>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
     tokenTrackCPU_ = produces<PixelTrackHeterogeneous>();
   }
+
+  vertexTokenCPU_ = consumes<VertexRegion>(iConfig.getParameter<edm::InputTag>("vertexRegion"));
 }
 
 void CAHitNtupletCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -59,6 +69,7 @@ void CAHitNtupletCUDA::fillDescriptions(edm::ConfigurationDescriptions& descript
 
   desc.add<bool>("onGPU", true);
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsCUDAPreSplitting"));
+  desc.add<edm::InputTag>("vertexRegion", edm::InputTag("pixelVertexCoordinates"));
 
   CAHitNtupletGeneratorOnGPU::fillDescriptions(desc);
   auto label = "caHitNtupletCUDA";
@@ -78,7 +89,8 @@ void CAHitNtupletCUDA::produce(edm::StreamID streamID, edm::Event& iEvent, const
     ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits, bf, ctx.stream()));
   } else {
     auto const& hits = iEvent.get(tokenHitCPU_);
-    iEvent.emplace(tokenTrackCPU_, gpuAlgo_.makeTuples(hits, bf));
+    auto const& vtxs = iEvent.get(vertexTokenCPU_);
+    iEvent.emplace(tokenTrackCPU_, gpuAlgo_.makeTuples(hits, vtxs, bf));
   }
 }
 

@@ -69,6 +69,7 @@ std::unique_ptr<PixelClusterParameterEstimator> PixelCPEFastESProducer::produce(
     //} else {
     //std::cout<<" pass an empty GenError pointer"<<std::endl;
   }
+
   return std::make_unique<PixelCPEFast>(pset_,
                                         &iRecord.get(magfieldToken_),
                                         iRecord.get(pDDToken_),
@@ -78,7 +79,7 @@ std::unique_ptr<PixelClusterParameterEstimator> PixelCPEFastESProducer::produce(
                                         lorentzAngleWidthProduct);
 }
 
-void PixelCPEFastESProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+  void PixelCPEFastESProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   // PixelCPEFastESProducer
   edm::ParameterSetDescription desc;
   desc.add<bool>("DoLorentz", false);
@@ -96,6 +97,7 @@ void PixelCPEFastESProducer::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<std::string>("ComponentName", "PixelCPEFast");
   desc.add<double>("lAWidthBPix", 0);
   desc.add<bool>("Alpha2Order", true);
+  desc.add<bool>("Upgrade",false);
   descriptions.add("PixelCPEFastESProducer", desc);
 }
 

@@ -2,6 +2,7 @@
 #define RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h
 
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
+#include "CUDADataFormats/Vertex/interface/ZVertexHeterogeneous.h"
 #include "GPUCACell.h"
 
 // #define DUMP_GPU_TK_TUPLES
@@ -33,13 +34,15 @@ namespace cAHitNtupletGenerator {
   using TkSoA = pixelTrack::TrackSoA;
   using HitContainer = pixelTrack::HitContainer;
 
+
   struct QualityCuts {
-    // chi2 cut = chi2Scale * (chi2Coeff[0] + pT/GeV * (chi2Coeff[1] + pT/GeV * (chi2Coeff[2] + pT/GeV * chi2Coeff[3])))
+
     float chi2Coeff[4];
     float chi2MaxPt;  // GeV
     float chi2Scale;
 
     struct region {
+      float chi2MaxPt;
       float maxTip;  // cm
       float minPt;   // GeV
       float maxZip;  // cm
@@ -70,7 +73,10 @@ namespace cAHitNtupletGenerator {
            float hardCurvCut,
            float dcaCutInnerTriplet,
            float dcaCutOuterTriplet,
+           bool isUpgrade,
+           bool doRegion,
            QualityCuts const& cuts)
+           // VertexRegion const& vtxs)
         : onGPU_(onGPU),
           minHitsPerNtuplet_(minHitsPerNtuplet),
           maxNumberOfDoublets_(maxNumberOfDoublets),
@@ -90,7 +96,11 @@ namespace cAHitNtupletGenerator {
           hardCurvCut_(hardCurvCut),
           dcaCutInnerTriplet_(dcaCutInnerTriplet),
           dcaCutOuterTriplet_(dcaCutOuterTriplet),
-          cuts_(cuts) {}
+          isUpgrade_(isUpgrade),
+          doRegion_(doRegion),
+          cuts_(cuts)
+          // vtxs_(vtxs)
+          {}
 
     const bool onGPU_;
     const uint32_t minHitsPerNtuplet_;
@@ -111,9 +121,12 @@ namespace cAHitNtupletGenerator {
     const float hardCurvCut_;
     const float dcaCutInnerTriplet_;
     const float dcaCutOuterTriplet_;
+    const bool isUpgrade_;
+    const bool doRegion_;
 
     // quality cuts
-    QualityCuts cuts_{// polynomial coefficients for the pT-dependent chi2 cut
+    QualityCuts cuts_{
+		                  // polynomial coefficients for the pT-dependent chi2 cut
                       {0.68177776, 0.74609577, -0.08035491, 0.00315399},
                       // max pT used to determine the chi2 cut
                       10.,
@@ -130,7 +143,14 @@ namespace cAHitNtupletGenerator {
                           0.5,  // |Tip| < 0.5 cm
                           0.3,  // pT > 0.3 GeV
                           12.0  // |Zip| < 12.0 cm
-                      }};
+                      }
+                    };
+    // VertexRegion vtxs_{
+    //                  {0.0},
+    //                  0.0,
+    //                  {9999.9},
+    //                  9999.9
+    // };
 
   };  // Params
 
@@ -144,6 +164,7 @@ public:
   using QualityCuts = cAHitNtupletGenerator::QualityCuts;
   using Params = cAHitNtupletGenerator::Params;
   using Counters = cAHitNtupletGenerator::Counters;
+  // using VertexRegion = cAHitNtupletGenerator::VertexRegion;
 
   template <typename T>
   using unique_ptr = typename Traits::template unique_ptr<T>;
@@ -171,6 +192,7 @@ public:
   void fillHitDetIndices(HitsView const* hv, TkSoA* tuples_d, cudaStream_t cudaStream);
 
   void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
+  void buildDoubletsRegional(HitsOnCPU const& hh, VertexRegion const& vv,cudaStream_t stream);
   void allocateOnGPU(cudaStream_t stream);
   void cleanup(cudaStream_t cudaStream);
 
@@ -199,6 +221,8 @@ private:
   unique_ptr<cms::cuda::AtomicPairCounter::c_type[]> device_storage_;
   // params
   Params const& m_params;
+
+
 };
 
 using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernels<cms::cudacompat::GPUTraits>;

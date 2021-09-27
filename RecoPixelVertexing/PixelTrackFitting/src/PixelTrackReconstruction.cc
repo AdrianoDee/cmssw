@@ -56,13 +56,16 @@ void PixelTrackReconstruction::run(TracksWithTTRHs& tracks, edm::Event& ev, cons
   }
 
   std::vector<const TrackingRecHit*> hits;
-  hits.reserve(4);
+  hits.reserve(24);
   for (const auto& regionHitSets : hitSets) {
     const TrackingRegion& region = regionHitSets.region();
-
+    
+    
     for (const SeedingHitSet& tuplet : regionHitSets) {
       /// FIXME at some point we need to migrate the fitter...
+      //std::cout << "pre - ";
       auto nHits = tuplet.size();
+      //std::cout << " n-hits " << nHits;
       hits.resize(nHits);
       for (unsigned int iHit = 0; iHit < nHits; ++iHit)
         hits[iHit] = tuplet[iHit];
@@ -77,9 +80,10 @@ void PixelTrackReconstruction::run(TracksWithTTRHs& tracks, edm::Event& ev, cons
           continue;
         }
       }
-
+      //std::cout << " fitted" << std::endl;
       // add tracks
       tracks.emplace_back(track.release(), tuplet);
+//std::cout << "emplaced" << std::endl;
     }
   }
 
@@ -93,4 +97,5 @@ void PixelTrackReconstruction::run(TracksWithTTRHs& tracks, edm::Event& ev, cons
     else
       tracks = PixelTrackCleanerWrapper(&cleaner).clean(tracks);
   }
+
 }

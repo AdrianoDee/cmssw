@@ -49,6 +49,21 @@ void HelixFitOnGPU::launchBrokenLineKernelsOnCPU(HitsView const* hv, uint32_t hi
                      fast_fit_resultsGPU_.get(),
                      5,
                      offset);
+
+for (uint32_t i = 6; i < 12; i++) {
+
+            kernelBLFastFit<4>(
+                tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), i, offset);
+
+            kernelBLFit<4>(tupleMultiplicity_d,
+                           bField_,
+                           outputSoa_d,
+                           hitsGPU_.get(),
+                           hits_geGPU_.get(),
+                           fast_fit_resultsGPU_.get(),
+                           i,
+                           offset);
+}
     } else {
       // fit penta (all 5)
       kernelBLFastFit<5>(
@@ -62,6 +77,22 @@ void HelixFitOnGPU::launchBrokenLineKernelsOnCPU(HitsView const* hv, uint32_t hi
                      fast_fit_resultsGPU_.get(),
                      5,
                      offset);
+
+          for (uint32_t i = 6; i < 12; i++) {
+
+            kernelBLFastFit<5>(
+                tuples_d, tupleMultiplicity_d, hv, hitsGPU_.get(), hits_geGPU_.get(), fast_fit_resultsGPU_.get(), i, offset);
+
+            kernelBLFit<5>(tupleMultiplicity_d,
+                           bField_,
+                           outputSoa_d,
+                           hitsGPU_.get(),
+                           hits_geGPU_.get(),
+                           fast_fit_resultsGPU_.get(),
+                           i,
+                           offset);
+          
+          }
     }
 
   }  // loop on concurrent fits

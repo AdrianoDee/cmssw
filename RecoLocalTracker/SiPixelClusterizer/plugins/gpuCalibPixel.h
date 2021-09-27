@@ -19,6 +19,11 @@ namespace gpuCalibPixel {
   constexpr float VCaltoElectronOffset = -60;      // L2-4: -60 +- 130
   constexpr float VCaltoElectronOffset_L1 = -670;  // L1:   -670 +- 220
 
+  constexpr float    ElectronPerADCGain = 600;
+  constexpr int8_t   Phase2ReadoutMode  = -1;
+  constexpr uint16_t Phase2DigiBaseline = 1000;
+  constexpr uint8_t  Phase2KinkADC      = 8;
+
   __global__ void calibDigis(bool isRun2,
                              uint16_t* id,
                              uint16_t const* __restrict__ x,
@@ -64,6 +69,77 @@ namespace gpuCalibPixel {
       }
     }
   }
+
+  __global__ void calibDigisPhase2(
+                             const uint16_t *X, const uint16_t *Y,
+                             const uint16_t *A, const uint32_t *P,
+                             const uint16_t *M,
+                             uint16_t *xx, uint16_t *yy,
+                             uint16_t *adc, uint32_t *pdigi,
+                             uint16_t *id,
+                             int numElements,
+                             uint32_t* __restrict__ moduleStart,        // just to zero first
+                             uint32_t* __restrict__ nClustersInModule,  // just to zero them
+                             uint32_t* __restrict__ clusModuleStart     // just to zero first
+  ) {
+    int first = blockDim.x * blockIdx.x + threadIdx.x;
+
+    // zero for next kernels...
+    // if (0 == first)
+    //   clusModuleStart[0] = moduleStart[0] = 0;
+    // for (int i = first; i < gpuClustering::MaxNumModules; i += gridDim.x * blockDim.x) {
+    //   nClustersInModule[i] = 0;
+    // }
+    // printf(">calibDigisPhase2 %d\n",__LINE__);
+    for (int i = first; i < numElements; i += gridDim.x * blockDim.x) {
+
+      // printf(">calibDigisPhase2 %d\n",__LINE__);
+      if (InvId == M[i])
+        continue;
+
+        xx[i]       = X[i];
+        yy[i]       = Y[i];
+        adc[i]      = A[i];
+        pdigi[i]    = P[i];
+        id[i]       = M[i];
+      
+
+      int mode = (Phase2ReadoutMode < -1 ? -1 : Phase2ReadoutMode);
+uint16_t oldadc = adc[i];
+      if(mode < 0)
+      {
+
+        adc[i] = std::max(100, int(adc[i] * ElectronPerADCGain));
+      }
+      else
+      {
+        if (adc[i] < Phase2KinkADC)
+        {
+          adc[i] = int((adc[i] - 0.5) * ElectronPerADCGain);
+        }
+        else
+        {
+          constexpr int8_t dspp = (Phase2ReadoutMode < 10 ? Phase2ReadoutMode : 10);
+          constexpr int8_t ds   = int8_t(dspp <= 1 ? 1 : (dspp - 1) * (dspp - 1));
+
+          adc[i] -= (Phase2KinkADC - 1);
+          adc[i] *= ds;
+          adc[i] += (Phase2KinkADC - 1);
+
+          adc[i] = uint16_t((adc[i] - 0.5 * ds) * ElectronPerADCGain);
+        }
+
+        adc[i] += int(Phase2DigiBaseline);
+        adc[i] = std::max(uint16_t(100),adc[i]);
+        }
+constexpr int8_t dspp = (Phase2ReadoutMode < 10 ? Phase2ReadoutMode : 10);
+          constexpr int8_t ds   = int8_t(dspp <= 1 ? 1 : (dspp - 1) * (dspp - 1)); 
+//   printf("gains %d %d %d %d %d %d\n",oldadc,adc[i],Phase2KinkADC,Phase2ReadoutMode,dspp,ds,ElectronPerADCGain);
+
+  //  printf("digissss %d %d %d %d %d %d\n",id[i],xx[i],yy[i],adc[i],pdigi[i],i);  
+    }
+  }
+  
 }  // namespace gpuCalibPixel
 
 #endif  // RecoLocalTracker_SiPixelClusterizer_plugins_gpuCalibPixel_h

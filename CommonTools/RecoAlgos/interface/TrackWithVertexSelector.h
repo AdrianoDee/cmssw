@@ -45,6 +45,7 @@ private:
   uint32_t numberOfValidHits_;
   uint32_t numberOfValidPixelHits_;
   uint32_t numberOfLostHits_;
+  uint32_t maxOfValidPixelHits_;
   double normalizedChi2_;
   double ptMin_, ptMax_, etaMin_, etaMax_;
   double dzMax_, d0Max_;

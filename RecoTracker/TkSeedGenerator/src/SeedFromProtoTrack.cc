@@ -63,10 +63,11 @@ void SeedFromProtoTrack::init(const reco::Track& proto, const edm::EventSetup& e
       propagator->propagate(fts, tracker->idToDet(lastHit.geographicalId())->surface());
 
   if (!outerState.isValid()) {
-    const Surface& surface = tracker->idToDet(lastHit.geographicalId())->surface();
+    /*const Surface& surface = tracker->idToDet(lastHit.geographicalId())->surface();
     edm::LogError("SeedFromProtoTrack") << " was trying to create a seed from:\n"
                                         << fts << "\n propagating to: " << std::hex << lastHit.geographicalId().rawId()
                                         << std::dec << ' ' << surface.position();
+    */
     theValid = false;
     return;
   }

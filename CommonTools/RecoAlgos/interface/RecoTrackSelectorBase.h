@@ -29,6 +29,7 @@ public:
         minPixelHit_(cfg.getParameter<int>("minPixelHit")),
         minLayer_(cfg.getParameter<int>("minLayer")),
         min3DLayer_(cfg.getParameter<int>("min3DLayer")),
+	minPixelLayer_(cfg.getParameter<int>("minPixelLayer")),	
         usePV_(false),
         invertRapidityCut_(cfg.getParameter<bool>("invertRapidityCut")) {
     const auto minPhi = cfg.getParameter<double>("minPhi");
@@ -126,6 +127,7 @@ public:
     return ((algo_ok & quality_ok) && t.hitPattern().numberOfValidHits() >= minHit_ &&
             t.hitPattern().numberOfValidPixelHits() >= minPixelHit_ &&
             t.hitPattern().trackerLayersWithMeasurement() >= minLayer_ &&
+            t.hitPattern().pixelLayersWithMeasurement() >= minPixelLayer_ &&
             t.hitPattern().pixelLayersWithMeasurement() + t.hitPattern().numberOfValidStripLayersWithMonoAndStereo() >=
                 min3DLayer_ &&
             fabs(t.pt()) >= ptMin_ && etaOk(t) && dphi >= -rangePhi_ && dphi <= rangePhi_ &&
@@ -145,6 +147,7 @@ private:
   int minPixelHit_;
   int minLayer_;
   int min3DLayer_;
+  int minPixelLayer_;
   bool usePV_;
   bool invertRapidityCut_;
 

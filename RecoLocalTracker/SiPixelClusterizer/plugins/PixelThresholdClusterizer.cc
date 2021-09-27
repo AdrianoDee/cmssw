@@ -328,7 +328,10 @@ int PixelThresholdClusterizer::calibrate(int adc, int col, int row) {
       }
       electrons += int(thePhase2DigiBaseline);
     }
+const int dualslopeparam = (thePhase2ReadoutMode < 10 ? thePhase2ReadoutMode : 10);
+        const int dualslope = int(dualslopeparam <= 1 ? 1. : pow(2, dualslopeparam - 1));
 
+//std::cout << adc << " - " << electrons << " - " << thePhase2KinkADC << " - " << thePhase2ReadoutMode << " - " << dualslopeparam << " - " << dualslope << " - " << gain << std::endl;
     return electrons;
   }
 

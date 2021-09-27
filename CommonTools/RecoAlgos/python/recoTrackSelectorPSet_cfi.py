@@ -16,6 +16,7 @@ recoTrackSelectorPSet = cms.PSet(
     algorithmMaskContains = cms.vstring(),
     minLayer = cms.int32(3),
     min3DLayer = cms.int32(0),
+    minPixelLayer = cms.int32(2),
     minHit = cms.int32(0),
     minPixelHit = cms.int32(0),
     beamSpot = cms.InputTag("offlineBeamSpot"),

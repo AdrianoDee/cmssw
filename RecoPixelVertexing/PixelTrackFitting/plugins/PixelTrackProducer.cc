@@ -44,9 +44,12 @@ void PixelTrackProducer::produce(edm::Event& ev, const edm::EventSetup& es) {
 
   TracksWithTTRHs tracks;
   theReconstruction.run(tracks, ev, es);
+//std::cout << "recoed" << std::endl;
   edm::ESHandle<TrackerTopology> httopo;
   es.get<TrackerTopologyRcd>().get(httopo);
-
+//std::cout << "before storing" << std::endl;
   // store tracks
   storeTracks(ev, tracks, *httopo);
+//std::cout << "agter" << std::endl;
+
 }

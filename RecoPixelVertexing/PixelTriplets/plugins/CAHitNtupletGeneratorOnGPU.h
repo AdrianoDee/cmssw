@@ -13,6 +13,9 @@
 #include "CAHitNtupletGeneratorKernels.h"
 #include "HelixFitOnGPU.h"
 
+#include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
+
 // FIXME  (split header???)
 #include "GPUCACell.h"
 
@@ -35,6 +38,7 @@ public:
 
   using QualityCuts = cAHitNtupletGenerator::QualityCuts;
   using Params = cAHitNtupletGenerator::Params;
+  // using VertexRegion = cAHitNtupletGenerator::VertexRegion;
   using Counters = cAHitNtupletGenerator::Counters;
 
 public:
@@ -49,10 +53,11 @@ public:
 
   PixelTrackHeterogeneous makeTuplesAsync(TrackingRecHit2DGPU const& hits_d, float bfield, cudaStream_t stream) const;
 
-  PixelTrackHeterogeneous makeTuples(TrackingRecHit2DCPU const& hits_d, float bfield) const;
+  PixelTrackHeterogeneous makeTuples(TrackingRecHit2DCPU const& hits_d, VertexRegion const& vtxs, float bfield) const;
 
 private:
   void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream) const;
+  void buildDoubletsRegional(HitsOnCPU const& hh, VertexRegion const& vtxs, cudaStream_t stream) const;
 
   void hitNtuplets(HitsOnCPU const& hh, const edm::EventSetup& es, bool useRiemannFit, cudaStream_t cudaStream);
 
@@ -61,6 +66,9 @@ private:
   Params m_params;
 
   Counters* m_counters = nullptr;
+
+  // edm::EDGetTokenT<std::vector<double>> zVer tices_, rVertices_, zVerticesError_, rVerticesError_;
+
 };
 
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorOnGPU_h
