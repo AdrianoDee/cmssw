@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h"
-#include "Geometry/TrackerGeometryBuilder/interface/phase1PixelTopology.h"
+#include "Geometry/TrackerGeometryBuilder/interface/pixelTopology.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 
@@ -29,7 +29,7 @@ namespace gpuClustering {
         --j;
       if (j < 0 or id[j] != id[i]) {
         // boundary...
-        auto loc = atomicInc(moduleStart, maxNumModules);
+        auto loc = atomicInc(moduleStart, gpuClustering::maxNumModules);
         moduleStart[loc + 1] = i;
       }
     }
@@ -42,7 +42,8 @@ namespace gpuClustering {
                            uint32_t* __restrict__ nClustersInModule,  // output: number of clusters found in each module
                            uint32_t* __restrict__ moduleId,           // output: module id of each module
                            int32_t* __restrict__ clusterId,           // output: cluster id of each pixel
-                           int numElements) {
+                           int numElements,
+                           bool isUpgrade) {
     __shared__ int msize;
 
     auto firstModule = blockIdx.x;
@@ -74,11 +75,14 @@ namespace gpuClustering {
         }
       }
 
+
+
       //init hist  (ymax=416 < 512 : 9bits)
       //6000 max pixels required for HI operations with no measurable impact on pp performance
       constexpr uint32_t maxPixInModule = 6000;
       constexpr auto nbins = phase1PixelTopology::numColsInModule + 2;  //2+2;
       using Hist = cms::cuda::HistoContainer<uint16_t, nbins, maxPixInModule, 9, uint16_t>;
+
       __shared__ Hist hist;
       __shared__ typename Hist::Counter ws[32];
       for (auto j = threadIdx.x; j < Hist::totbins(); j += blockDim.x) {
