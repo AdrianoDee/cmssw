@@ -23,7 +23,7 @@ public:
   using PhiBinner =
       cms::cuda::HistoContainer<int16_t, 256, -1, 8 * sizeof(int16_t), hindex_type, 28>;  //28 for phase2 geometry
 
-  using AverageGeometry = phase1PixelTopology::AverageGeometry;
+  using AverageGeometry = pixelTopology::AverageGeometry;
 
   template <typename>
   friend class TrackingRecHit2DHeterogeneous;

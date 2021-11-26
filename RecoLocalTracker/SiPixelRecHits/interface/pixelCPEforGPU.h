@@ -60,7 +60,7 @@ namespace pixelCPEforGPU {
     Frame frame;
   };
 
-  using phase1PixelTopology::AverageGeometry;
+  using pixelTopology::AverageGeometry;
 
   struct LayerGeometry {
     uint32_t layerStart[phase1PixelTopology::numberOfLayers + 1];
