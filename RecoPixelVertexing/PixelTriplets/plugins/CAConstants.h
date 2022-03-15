@@ -23,8 +23,8 @@ namespace caConstants {
   constexpr uint32_t maxNumberOfDoublets = 2 * 1024 * 1024;
   constexpr uint32_t maxCellsPerHit = 8 * 128;
 #else  // ONLY_PHICUT
-  constexpr uint32_t maxCellNeighbors = 256;
-  constexpr uint32_t maxCellTracks = 256;//48;
+  constexpr uint32_t maxCellNeighbors = 64;
+  constexpr uint32_t maxCellTracks = 64;//48;
 #ifdef GPU_SMALL_EVENTS
   // kept for testing and debugging
   constexpr uint32_t maxNumberOfTuples = 3 * 1024;
@@ -34,11 +34,11 @@ namespace caConstants {
   // tested on MC events with 55-75 pileup events
   // and extended for Heavy Ions operations (24k -> 32k tuples, 128 -> 256 cells)
   constexpr uint32_t maxNumberOfTuples = 128 * 1024;
-  constexpr uint32_t maxNumberOfDoublets = 16 * 512 * 1024;
-  constexpr uint32_t maxCellsPerHit = 8 * 256;
+  constexpr uint32_t maxNumberOfDoublets = 32 * 512 * 1024;
+  constexpr uint32_t maxCellsPerHit = 4 * 256;
 #endif  // GPU_SMALL_EVENTS
 #endif  // ONLY_PHICUT
-  constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 16;
+  constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 128;
   constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
 
   constexpr uint32_t maxNumberOfLayerPairs = 60;
