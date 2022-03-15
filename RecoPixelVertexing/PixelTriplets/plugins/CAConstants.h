@@ -23,8 +23,8 @@ namespace caConstants {
   constexpr uint32_t maxNumberOfDoublets = 2 * 1024 * 1024;
   constexpr uint32_t maxCellsPerHit = 8 * 128;
 #else  // ONLY_PHICUT
-  constexpr uint32_t maxCellNeighbors = 36;
-  constexpr uint32_t maxCellTracks = 48;
+  constexpr uint32_t maxCellNeighbors = 256;
+  constexpr uint32_t maxCellTracks = 256;//48;
 #ifdef GPU_SMALL_EVENTS
   // kept for testing and debugging
   constexpr uint32_t maxNumberOfTuples = 3 * 1024;
@@ -33,18 +33,23 @@ namespace caConstants {
 #else   // GPU_SMALL_EVENTS
   // tested on MC events with 55-75 pileup events
   // and extended for Heavy Ions operations (24k -> 32k tuples, 128 -> 256 cells)
-  constexpr uint32_t maxNumberOfTuples = 32 * 1024;
-  constexpr uint32_t maxNumberOfDoublets = 512 * 1024;
-  constexpr uint32_t maxCellsPerHit = 256;
+  constexpr uint32_t maxNumberOfTuples = 128 * 1024;
+  constexpr uint32_t maxNumberOfDoublets = 16 * 512 * 1024;
+  constexpr uint32_t maxCellsPerHit = 8 * 256;
 #endif  // GPU_SMALL_EVENTS
 #endif  // ONLY_PHICUT
-  constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 8;
+  constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 16;
   constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
 
-  constexpr uint32_t maxNumberOfLayerPairs = 20;
-  constexpr uint32_t maxNumberOfLayers = 10;
+  constexpr uint32_t maxNumberOfLayerPairs = 60;
+  constexpr uint32_t maxNumberOfLayers = 28;
   constexpr uint32_t maxTuples = maxNumberOfTuples;
-  constexpr int32_t maxHitsOnTrack = 10;
+  constexpr int32_t maxHitsOnTrack = 18;
+  constexpr uint32_t avgHitsPerTrack = 12;// 4 for Phase1 was enough
+  constexpr uint32_t avgTracksPerHit = 12;// 5 for Phase1 was enough
+
+  constexpr uint32_t maxDepth = 6;
+  constexpr uint32_t maxDepthPhase2 = 12;
 
   // Modules constants
   constexpr uint32_t max_ladder_bpx0 = 12;
@@ -64,9 +69,47 @@ namespace caConstants {
   constexpr uint32_t last_bpix1_detIndex = 96;
   constexpr uint32_t last_barrel_detIndex = 1184;
 
+  constexpr uint32_t last_bpix1_detIndexPhase2 = 108;
+  constexpr uint32_t last_barrel_detIndexPhase2= 504;
+
   // types
   using hindex_type = uint32_t;  // FIXME from siPixelRecHitsHeterogeneousProduct
-  using tindex_type = uint16_t;  // for tuples
+  using tindex_type = uint32_t;  // for tuples
+  using cindex_type = uint32_t;  // for cells
+
+   struct trackerConstantPhase2 {
+
+    static constexpr uint32_t maxCellNeighbors = 256;
+    static constexpr uint32_t maxCellTracks = 128;
+    static constexpr uint32_t maxHitsOnTrack = 18;
+    static constexpr uint32_t avgHitsPerTrack = 12;
+    static constexpr uint32_t maxCellsPerHit = 8 * 256;
+    static constexpr uint32_t avgTracksPerHit = 12;
+    static constexpr uint32_t maxNumberOfTuples = 128 * 1024;
+    static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
+    static constexpr uint32_t maxNumberOfDoublets = 16 * 512 * 1024;
+    static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 16;
+    static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
+    static constexpr uint32_t maxDepth = 12;
+
+  };
+
+   struct trackerConstantPhase1
+   {
+      static constexpr uint32_t maxCellNeighbors = 64;
+      static constexpr uint32_t maxCellTracks = 48;
+      static constexpr uint32_t maxHitsOnTrack = 10;
+      static constexpr uint32_t avgHitsPerTrack = 4;
+      static constexpr uint32_t maxCellsPerHit = 256;
+      static constexpr uint32_t avgTracksPerHit = 5;
+      static constexpr uint32_t maxNumberOfTuples = 32 * 1024;
+      static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
+      static constexpr uint32_t maxNumberOfDoublets = 512 * 1024;
+      static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 8;
+      static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
+      static constexpr uint32_t maxDepth = 6;
+
+  };
 
   using CellNeighbors = cms::cuda::VecArray<uint32_t, maxCellNeighbors>;
   using CellTracks = cms::cuda::VecArray<tindex_type, maxCellTracks>;

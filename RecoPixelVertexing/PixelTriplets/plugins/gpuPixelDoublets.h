@@ -12,6 +12,11 @@ namespace gpuPixelDoublets {
   constexpr int nPairs = nPairsForTriplets + 4;                // include forward "jumping" layer pairs
   static_assert(nPairs <= caConstants::maxNumberOfLayerPairs);
 
+  constexpr int nPairsContigousPhase2 = 23;                            // doublets only from contigous layers
+  constexpr int nPairsWithJumpingPhase2 = nPairsContigousPhase2 + 6;  // include barrel "jumping" layer pairs
+  constexpr int nPairsWithJumpingForwardsPhase2 = nPairsWithJumpingPhase2 + 14;  // include forward "jumping" layer pairs
+  constexpr int nPairsPhase2 = nPairsWithJumpingForwardsPhase2 + 8;  // include far forward layer pairs
+  static_assert(nPairsPhase2 <= caConstants::maxNumberOfLayerPairs);
   // start constants
   // clang-format off
 
@@ -24,6 +29,27 @@ namespace gpuPixelDoublets {
       0, 5, 0, 8,                    // Jumping Forward (BPIX1,FPIX2)
       4, 6, 7, 9                     // Jumping Forward (19)
   };
+
+  CONSTANT_VAR const uint8_t layerPairsPhase2[2 * nPairsPhase2] = {
+
+     0, 1, 0, 4, 0, 16, //BPIX1 (3)
+     1, 2, 1, 4, 1, 16, //BPIX2 (6)
+     2, 3, 2, 4, 2, 16, //BPIX3 & Forward (9)
+
+     4 ,5 ,5 ,6 ,6 ,7 ,7 ,8 ,8 ,9 ,9 ,10,10,11, //POS (16)
+     16,17,17,18,18,19,19,20,20,21,21,22,22,23, //NEG (23)
+
+     0, 2, 0, 5, 0, 17, // BPIX1 Jump (26)
+     1, 3, 1, 5, 1, 17, // BPIX2 Jump (29)
+
+     4, 6, 5, 7, 6, 8, 7, 9, 8, 10,9 ,11,10,12, //POS Jump (36)
+     16,18,17,19,18,20,19,21,20,22,21,23,22,24, //NEG Jump (43)
+
+     11,12,12,13,13,14,14,15, //Late POS (47)
+     23,24,24,25,25,26,26,27, //Late NEG (51)
+
+
+ };
 
   constexpr int16_t phi0p05 = 522;  // round(521.52189...) = phi2short(0.05);
   constexpr int16_t phi0p06 = 626;  // round(625.82270...) = phi2short(0.06);
@@ -50,12 +76,43 @@ namespace gpuPixelDoublets {
                                              phi0p05};
   //   phi0p07, phi0p07, phi0p06,phi0p06, phi0p06,phi0p06};  // relaxed cuts
 
+  CONSTANT_VAR const int16_t phicutsPhase2[nPairsPhase2]{
+                      phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
+                      phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
+                      phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
+                      phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
+                      phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
+                      phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
+                      phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
+                      phi0p07,phi0p07};
+
   CONSTANT_VAR float const minz[nPairs] = {
       -20., 0., -30., -22., 10., -30., -70., -70., -22., 15., -30, -70., -70., -20., -22., 0, -30., -70., -70.};
   CONSTANT_VAR float const maxz[nPairs] = {
       20., 30., 0., 22., 30., -10., 70., 70., 22., 30., -15., 70., 70., 20., 22., 30., 0., 70., 70.};
   CONSTANT_VAR float const maxr[nPairs] = {
       20., 9., 9., 20., 7., 7., 5., 5., 20., 6., 6., 5., 5., 20., 20., 9., 9., 9., 9.};
+
+  CONSTANT_VAR float const minzPhase2[nPairsPhase2] = {
+      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
+      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
+      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
+      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
+      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999., -9999.};
+
+
+  CONSTANT_VAR float const maxzPhase2[nPairsPhase2] = {
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999., 9999.};
+  CONSTANT_VAR float const maxrPhase2[nPairsPhase2] = {
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
+    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999., 9999.};
 
   // end constants
   // clang-format on
@@ -106,25 +163,46 @@ namespace gpuPixelDoublets {
                                 bool doClusterCut,
                                 bool doZ0Cut,
                                 bool doPtCut,
+                                bool isPhase2,
                                 uint32_t maxNumOfDoublets) {
     auto const& __restrict__ hh = *hhp;
-    doubletsFromHisto(layerPairs,
-                      nActualPairs,
-                      cells,
-                      nCells,
-                      cellNeighbors,
-                      cellTracks,
-                      hh,
-                      isOuterHitOfCell,
-                      phicuts,
-                      minz,
-                      maxz,
-                      maxr,
-                      ideal_cond,
-                      doClusterCut,
-                      doZ0Cut,
-                      doPtCut,
-                      maxNumOfDoublets);
+    if(isPhase2)
+      doubletsFromHisto<true>(layerPairsPhase2,
+                        nActualPairs,
+                        cells,
+                        nCells,
+                        cellNeighbors,
+                        cellTracks,
+                        hh,
+                        isOuterHitOfCell,
+                        phicuts,
+                        minzPhase2,
+                        maxzPhase2,
+                        maxrPhase2,
+                        ideal_cond,
+                        doClusterCut && false,
+                        doZ0Cut,
+                        doPtCut,
+                        maxNumOfDoublets);
+    else
+      doubletsFromHisto<false>(layerPairs,
+                        nActualPairs,
+                        cells,
+                        nCells,
+                        cellNeighbors,
+                        cellTracks,
+                        hh,
+                        isOuterHitOfCell,
+                        phicuts,
+                        minz,
+                        maxz,
+                        maxr,
+                        ideal_cond,
+                        doClusterCut,
+                        doZ0Cut,
+                        doPtCut,
+                        maxNumOfDoublets);
+
   }
 
 }  // namespace gpuPixelDoublets

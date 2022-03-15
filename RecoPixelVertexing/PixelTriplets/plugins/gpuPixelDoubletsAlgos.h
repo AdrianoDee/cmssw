@@ -15,6 +15,8 @@
 #include "CAConstants.h"
 #include "GPUCACell.h"
 
+#define GPU_DEBUG 1
+#define NTUPLE_DEBUG 1
 namespace gpuPixelDoublets {
 
   using CellNeighbors = caConstants::CellNeighbors;
@@ -22,6 +24,7 @@ namespace gpuPixelDoublets {
   using CellNeighborsVector = caConstants::CellNeighborsVector;
   using CellTracksVector = caConstants::CellTracksVector;
 
+  template <bool isPhase2>
   __device__ __forceinline__ void doubletsFromHisto(uint8_t const* __restrict__ layerPairs,
                                                     uint32_t nPairs,
                                                     GPUCACell* cells,
@@ -80,6 +83,21 @@ namespace gpuPixelDoublets {
     auto stride = blockDim.x;
 
     uint32_t pairLayerId = 0;  // cannot go backward
+
+    #ifdef DOUBLET_DEBUG
+         int nDoublets[60],nZ[60],nPhi[60],nz0[60],nPt[60],nClus[60];
+
+         for (size_t i = 0; i < 60; i++) {
+           nDoublets[i]=0;
+           nZ[i] = 0;
+           nPhi[i] = 0;
+           nz0[i] = 0;
+           nPt[i] = 0;
+           nClus[i] = 0;
+         }
+
+    #endif
+
     for (auto j = idy; j < ntot; j += blockDim.y * gridDim.y) {
       while (j >= innerLayerCumulativeSize[pairLayerId++])
         ;
@@ -120,7 +138,7 @@ namespace gpuPixelDoublets {
         continue;
 
       int16_t mes = -1;  // make compiler happy
-      if (doClusterCut) {
+      if (doClusterCut && !isPhase2) {
         // if ideal treat inner ladder as outer
         if (inner == 0)
           assert(mi < 96);
@@ -140,8 +158,8 @@ namespace gpuPixelDoublets {
       auto mer = hh.rGlobal(i);
 
       // all cuts: true if fails
-      constexpr float z0cut = 12.f;      // cm
-      constexpr float hardPtCut = 0.5f;  // GeV
+      constexpr float z0cut = 40.f;//12.f;      // cm
+      constexpr float hardPtCut = 0.1f; //0.5f;  // GeV
       // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
       constexpr float minRadius = hardPtCut * 87.78f;
       constexpr float minRadius2T4 = 4.f * minRadius * minRadius;
@@ -185,6 +203,8 @@ namespace gpuPixelDoublets {
       int tooMany = 0;
 #endif
 
+
+
       auto khh = kh;
       incr(khh);
       for (auto kk = kl; kk != khh; incr(kk)) {
@@ -196,6 +216,11 @@ namespace gpuPixelDoublets {
         auto const* __restrict__ e = phiBinner.end(kk + hoff);
         p += first;
         for (; p < e; p += stride) {
+
+          #ifdef DOUBLET_DEBUG
+          nDoublets[pairLayerId]++;
+          #endif
+
           auto oi = __ldg(p);
           assert(oi >= offsets[outer]);
           assert(oi < offsets[outer + 1]);
@@ -203,18 +228,28 @@ namespace gpuPixelDoublets {
           if (mo > gpuClustering::maxNumModules)
             continue;  //    invalid
 
-          if (doZ0Cut && z0cutoff(oi))
+          if (doZ0Cut && z0cutoff(oi) && !isPhase2)
             continue;
-
+          #ifdef DOUBLET_DEBUG
+          nz0[pairLayerId]++;
+          #endif
           auto mop = hh.iphi(oi);
           uint16_t idphi = std::min(std::abs(int16_t(mop - mep)), std::abs(int16_t(mep - mop)));
           if (idphi > iphicut)
             continue;
-
-          if (doClusterCut && zsizeCut(oi))
+          #ifdef DOUBLET_DEBUG
+           nPhi[pairLayerId]++;
+          #endif
+          if (doClusterCut && zsizeCut(oi) && !isPhase2)
             continue;
+          #ifdef DOUBLET_DEBUG
+           nClus[pairLayerId]++;
+           #endif
           if (doPtCut && ptcut(oi, idphi))
             continue;
+          #ifdef DOUBLET_DEBUG
+           nPt[pairLayerId]++;
+           #endif
 
           auto ind = atomicAdd(nCells, 1);
           if (ind >= maxNumOfDoublets) {
@@ -231,11 +266,21 @@ namespace gpuPixelDoublets {
 #endif
         }
       }
+     //printf("gpuDoublets %d \n",*nCells);
+//      #endif
 #ifdef GPU_DEBUG
       if (tooMany > 0)
         printf("OuterHitOfCell full for %d in layer %d/%d, %d,%d %d\n", i, inner, outer, nmin, tot, tooMany);
 #endif
     }  // loop in block...
+
+    #ifdef DOUBLET_DEBUG
+         for (int i = 0; i < 60; i++) {
+           if(i>int(nPairs))
+           continue;
+           printf("pair %d %d %d %d %d %d %d %d %d %.2f %.2f \n", i, layerPairs[2 * i], layerPairs[2 * i + 1], nDoublets[i] ,nZ[i],nz0[i],nPhi[i],nPt[i],nClus[i],minz[pairLayerId],maxz[pairLayerId]);
+         }
+    #endif
   }
 
 }  // namespace gpuPixelDoublets

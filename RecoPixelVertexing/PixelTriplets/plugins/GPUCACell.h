@@ -21,7 +21,7 @@ class GPUCACell {
 public:
   using PtrAsInt = unsigned long long;
 
-  static constexpr auto maxCellsPerHit = caConstants::maxCellsPerHit;
+  static constexpr auto maxCellsPerHit = caConstants:: maxCellsPerHit;
   using OuterHitOfCellContainer = caConstants::OuterHitOfCellContainer;
   using OuterHitOfCell = caConstants::OuterHitOfCell;
   using CellNeighbors = caConstants::CellNeighbors;
@@ -32,7 +32,7 @@ public:
   using Hits = TrackingRecHit2DSOAView;
   using hindex_type = Hits::hindex_type;
 
-  using TmpTuple = cms::cuda::VecArray<uint32_t, 6>;
+  using TmpTuple = cms::cuda::VecArray<uint32_t, caConstants::maxDepth>;
 
   using HitContainer = pixelTrack::HitContainer;
   using Quality = pixelTrack::Quality;
@@ -65,7 +65,8 @@ public:
     assert(tracks().empty());
   }
 
-  __device__ __forceinline__ int addOuterNeighbor(CellNeighbors::value_t t, CellNeighborsVector& cellNeighbors) {
+
+  __device__ __forceinline__ int addOuterNeighbor(caConstants::cindex_type t, CellNeighborsVector& cellNeighbors) {
     // use smart cache
     if (outerNeighbors().empty()) {
       auto i = cellNeighbors.extend();  // maybe wasted....
@@ -87,7 +88,7 @@ public:
     return outerNeighbors().push_back(t);
   }
 
-  __device__ __forceinline__ int addTrack(CellTracks::value_t t, CellTracksVector& cellTracks) {
+  __device__ __forceinline__ int addTrack(caConstants::tindex_type t, CellTracksVector& cellTracks) {
     if (tracks().empty()) {
       auto i = cellTracks.extend();  // maybe wasted....
       if (i > 0) {
@@ -287,9 +288,10 @@ public:
     // the ntuplets is then saved if the number of hits it contains is greater
     // than a threshold
 
+
     auto doubletId = this - cells;
     tmpNtuplet.push_back_unsafe(doubletId);
-    assert(tmpNtuplet.size() <= 4);
+    assert(tmpNtuplet.size() <= 16); //TODO make a constant
 
     bool last = true;
     for (unsigned int otherCell : outerNeighbors()) {
@@ -307,7 +309,7 @@ public:
             ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
 #endif
         {
-          hindex_type hits[8];
+          hindex_type hits[14+2];
           auto nh = 0U;
           constexpr int maxFB = 2;  // for the time being let's limit this
           int nfb = 0;
@@ -330,7 +332,7 @@ public:
       }
     }
     tmpNtuplet.pop_back();
-    assert(tmpNtuplet.size() < 4);
+    assert(tmpNtuplet.size() < 20);
   }
 
   // Cell status management
@@ -362,6 +364,8 @@ private:
   hindex_type theFishboneId;
 };
 
+
+
 template <>
 __device__ inline void GPUCACell::find_ntuplets<0>(Hits const& hh,
                                                    GPUCACell* __restrict__ cells,
@@ -379,5 +383,4 @@ __device__ inline void GPUCACell::find_ntuplets<0>(Hits const& hh,
   abort();
 #endif
 }
-
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_GPUCACell_h
