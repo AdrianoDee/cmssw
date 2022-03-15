@@ -15,6 +15,7 @@
 
 #include "GPUCACell.h"
 
+#define GPU_DEBUG 1
 namespace edm {
   class Event;
   class EventSetup;

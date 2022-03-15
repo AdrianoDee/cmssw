@@ -34,20 +34,36 @@ void CAHitNtupletGeneratorKernelsGPU::launchKernels(HitsOnCPU const &hh, TkSoA *
   dim3 blks(1, numberOfBlocks, 1);
   dim3 thrs(stride, blockSize, 1);
 
-  kernel_connect<<<blks, thrs, 0, cudaStream>>>(
-      device_hitTuple_apc_,
-      device_hitToTuple_apc_,  // needed only to be reset, ready for next kernel
-      hh.view(),
-      device_theCells_.get(),
-      device_nCells_,
-      device_theCellNeighbors_.get(),
-      isOuterHitOfCell_,
-      params_.hardCurvCut_,
-      params_.ptmin_,
-      params_.CAThetaCutBarrel_,
-      params_.CAThetaCutForward_,
-      params_.dcaCutInnerTriplet_,
-      params_.dcaCutOuterTriplet_);
+  if(params_.isPhase2_)
+    kernel_connect<true><<<blks, thrs, 0, cudaStream>>>(
+        device_hitTuple_apc_,
+        device_hitToTuple_apc_,  // needed only to be reset, ready for next kernel
+        hh.view(),
+        device_theCells_.get(),
+        device_nCells_,
+        device_theCellNeighbors_.get(),
+        isOuterHitOfCell_,
+        params_.hardCurvCut_,
+        params_.ptmin_,
+        params_.CAThetaCutBarrel_,
+        params_.CAThetaCutForward_,
+        params_.dcaCutInnerTriplet_,
+        params_.dcaCutOuterTriplet_);
+  else
+    kernel_connect<false><<<blks, thrs, 0, cudaStream>>>(
+        device_hitTuple_apc_,
+        device_hitToTuple_apc_,  // needed only to be reset, ready for next kernel
+        hh.view(),
+        device_theCells_.get(),
+        device_nCells_,
+        device_theCellNeighbors_.get(),
+        isOuterHitOfCell_,
+        params_.hardCurvCut_,
+        params_.ptmin_,
+        params_.CAThetaCutBarrel_,
+        params_.CAThetaCutForward_,
+        params_.dcaCutInnerTriplet_,
+        params_.dcaCutOuterTriplet_);
   cudaCheck(cudaGetLastError());
 
   // do not run the fishbone if there are hits only in BPIX1
@@ -65,14 +81,24 @@ void CAHitNtupletGeneratorKernelsGPU::launchKernels(HitsOnCPU const &hh, TkSoA *
 
   blockSize = 64;
   numberOfBlocks = (3 * params_.maxNumberOfDoublets_ / 4 + blockSize - 1) / blockSize;
-  kernel_find_ntuplets<<<numberOfBlocks, blockSize, 0, cudaStream>>>(hh.view(),
-                                                                     device_theCells_.get(),
-                                                                     device_nCells_,
-                                                                     device_theCellTracks_.get(),
-                                                                     tuples_d,
-                                                                     device_hitTuple_apc_,
-                                                                     quality_d,
-                                                                     params_.minHitsPerNtuplet_);
+  if(params_.isPhase2_)
+    kernel_find_ntuplets<true><<<numberOfBlocks, blockSize, 0, cudaStream>>>(hh.view(),
+                                                                       device_theCells_.get(),
+                                                                       device_nCells_,
+                                                                       device_theCellTracks_.get(),
+                                                                       tuples_d,
+                                                                       device_hitTuple_apc_,
+                                                                       quality_d,
+                                                                       params_.minHitsPerNtuplet_);
+  else
+    kernel_find_ntuplets<false><<<numberOfBlocks, blockSize, 0, cudaStream>>>(hh.view(),
+                                                                       device_theCells_.get(),
+                                                                       device_nCells_,
+                                                                       device_theCellTracks_.get(),
+                                                                       tuples_d,
+                                                                       device_hitTuple_apc_,
+                                                                       quality_d,
+                                                                       params_.minHitsPerNtuplet_);
   cudaCheck(cudaGetLastError());
 
   if (params_.doStats_)
@@ -184,17 +210,18 @@ void CAHitNtupletGeneratorKernelsGPU::buildDoublets(HitsOnCPU const &hh, cudaStr
     return;  // protect against empty events
 
   // take all layer pairs into account
-  auto nActualPairs = gpuPixelDoublets::nPairs;
+  auto nActualPairs = params_.isPhase2_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
   if (not params_.includeJumpingForwardDoublets_) {
     // exclude forward "jumping" layer pairs
-    nActualPairs = gpuPixelDoublets::nPairsForTriplets;
+    nActualPairs = params_.isPhase2_ ? gpuPixelDoublets::nPairsWithJumpingPhase2 : gpuPixelDoublets::nPairsForTriplets;
   }
   if (params_.minHitsPerNtuplet_ > 3) {
     // for quadruplets, exclude all "jumping" layer pairs
-    nActualPairs = gpuPixelDoublets::nPairsForQuadruplets;
+    nActualPairs = params_.isPhase2_ ? nActualPairs : gpuPixelDoublets::nPairsForQuadruplets;
   }
 
-  assert(nActualPairs <= gpuPixelDoublets::nPairs);
+  nActualPairs = params_.isPhase2_ ? gpuPixelDoublets::nPairsPhase2 : nActualPairs;
+  assert(nActualPairs <= gpuPixelDoublets::nPairsPhase2);
   int stride = 4;
   int threadsPerBlock = gpuPixelDoublets::getDoubletsFromHistoMaxBlockSize / stride;
   int blocks = (4 * nhits + threadsPerBlock - 1) / threadsPerBlock;
@@ -211,6 +238,7 @@ void CAHitNtupletGeneratorKernelsGPU::buildDoublets(HitsOnCPU const &hh, cudaStr
                                                                     params_.doClusterCut_,
                                                                     params_.doZ0Cut_,
                                                                     params_.doPtCut_,
+                                                                    params_.isPhase2_,
                                                                     params_.maxNumberOfDoublets_);
   cudaCheck(cudaGetLastError());
 
@@ -232,7 +260,10 @@ void CAHitNtupletGeneratorKernelsGPU::classifyTuples(HitsOnCPU const &hh, TkSoA 
 
   // classify tracks based on kinematics
   auto numberOfBlocks = nQuadrupletBlocks(blockSize);
-  kernel_classifyTracks<<<numberOfBlocks, blockSize, 0, cudaStream>>>(tuples_d, tracks_d, params_.cuts_, quality_d);
+  if(params_.isPhase2_)
+    kernel_classifyTracks<true><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tuples_d, tracks_d, params_.cuts_, quality_d);
+  else
+    kernel_classifyTracks<false><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tuples_d, tracks_d, params_.cuts_, quality_d);
   cudaCheck(cudaGetLastError());
 
   if (params_.lateFishbone_) {

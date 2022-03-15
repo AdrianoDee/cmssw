@@ -1,7 +1,7 @@
 #ifndef OrderedHitTriplet_H
 #define OrderedHitTriplet_H
 
-/** \class OrderedHitTriplet 
+/** \class OrderedHitTriplet
  * Associate 3 RecHits into hit triplet of InnerHit,MiddleHit,OuterHit
  */
 
@@ -14,7 +14,7 @@ public:
   typedef SeedingHitSet::ConstRecHitPointer OuterRecHit;
   typedef SeedingHitSet::ConstRecHitPointer MiddleRecHit;
 
-  OrderedHitTriplet(const InnerRecHit& ih, const MiddleRecHit& mh, const OuterRecHit& oh) : SeedingHitSet(ih, mh, oh) {}
+  OrderedHitTriplet(const InnerRecHit& ih, const MiddleRecHit& mh, const OuterRecHit& oh) : SeedingHitSet({ih, mh, oh}) {}
 
   InnerRecHit inner() const { return get(0); }
   MiddleRecHit middle() const { return get(1); }

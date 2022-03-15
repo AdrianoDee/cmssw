@@ -67,7 +67,7 @@ __global__ void kernel_BLFastFit(Tuples const *__restrict__ foundNtuplets,
     }
     // get it from the ntuple container (one to one to helix)
     auto tkid = *(tupleMultiplicity->begin(nHitsL) + tuple_idx);
-    assert(tkid < foundNtuplets->nOnes());
+    assert(int(tkid) < foundNtuplets->nOnes());
 
     ptkids[local_idx] = tkid;
 

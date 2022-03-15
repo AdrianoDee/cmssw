@@ -17,22 +17,23 @@
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CAConstants.h"
 
-class GPUCACell {
+template <typename TrackerTraits>
+class GPUCACellT {
 public:
   using PtrAsInt = unsigned long long;
 
-  static constexpr auto maxCellsPerHit = caConstants::maxCellsPerHit;
-  using OuterHitOfCellContainer = caConstants::OuterHitOfCellContainer;
-  using OuterHitOfCell = caConstants::OuterHitOfCell;
-  using CellNeighbors = caConstants::CellNeighbors;
-  using CellTracks = caConstants::CellTracks;
-  using CellNeighborsVector = caConstants::CellNeighborsVector;
-  using CellTracksVector = caConstants::CellTracksVector;
+  static constexpr auto maxCellsPerHit = TrackerTraits::maxCellsPerHit;
+  using OuterHitOfCellContainer = caConstants::OuterHitOfCellContainerT<TrackerTraits>;
+  using OuterHitOfCell = caConstants::OuterHitOfCellT<TrackerTraits>;
+  using CellNeighbors = caConstants::CellNeighborsT<TrackerTraits>;
+  using CellTracks = caConstants::CellTracksT<TrackerTraits>;
+  using CellNeighborsVector = caConstants::CellNeighborsVectorT<TrackerTraits>;
+  using CellTracksVector = caConstants::CellTracksVectorT<TrackerTraits>;
 
   using Hits = TrackingRecHit2DSOAView;
   using hindex_type = Hits::hindex_type;
 
-  using TmpTuple = cms::cuda::VecArray<uint32_t, 6>;
+  using TmpTuple = cms::cuda::VecArray<uint32_t, TrackerTraits::maxDepth>;
 
   using HitContainer = pixelTrack::HitContainer;
   using Quality = pixelTrack::Quality;
@@ -40,7 +41,7 @@ public:
 
   enum class StatusBit : uint16_t { kUsed = 1, kInTrack = 2, kKilled = 1 << 15 };
 
-  GPUCACell() = default;
+  GPUCACellT() = default;
 
   __device__ __forceinline__ void init(CellNeighborsVector& cellNeighbors,
                                        CellTracksVector& cellTracks,
@@ -65,7 +66,8 @@ public:
     assert(tracks().empty());
   }
 
-  __device__ __forceinline__ int addOuterNeighbor(CellNeighbors::value_t t, CellNeighborsVector& cellNeighbors) {
+
+  __device__ __forceinline__ int addOuterNeighbor(caConstants::cindex_type t, CellNeighborsVector& cellNeighbors) {
     // use smart cache
     if (outerNeighbors().empty()) {
       auto i = cellNeighbors.extend();  // maybe wasted....
@@ -87,7 +89,7 @@ public:
     return outerNeighbors().push_back(t);
   }
 
-  __device__ __forceinline__ int addTrack(CellTracks::value_t t, CellTracksVector& cellTracks) {
+  __device__ __forceinline__ int addTrack(caConstants::tindex_type t, CellTracksVector& cellTracks) {
     if (tracks().empty()) {
       auto i = cellTracks.extend();  // maybe wasted....
       if (i > 0) {
@@ -138,7 +140,7 @@ public:
   }
 
   __device__ bool check_alignment(Hits const& hh,
-                                  GPUCACell const& otherCell,
+                                  GPUCACellT const& otherCell,
                                   const float ptmin,
                                   const float hardCurvCut,
                                   const float caThetaCutBarrel,
@@ -185,7 +187,7 @@ public:
   }
 
   __device__ inline bool dcaCut(Hits const& hh,
-                                GPUCACell const& otherCell,
+                                GPUCACellT const& otherCell,
                                 const float region_origin_radius_plus_tolerance,
                                 const float maxCurv) const {
     auto x1 = otherCell.inner_x(hh);
@@ -221,7 +223,7 @@ public:
     return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
   }
 
-  __device__ inline bool hole0(Hits const& hh, GPUCACell const& innerCell) const {
+  __device__ inline bool hole0(Hits const& hh, GPUCACellT const& innerCell) const {
     using caConstants::first_ladder_bpx0;
     using caConstants::max_ladder_bpx0;
     using caConstants::module_length_bpx0;
@@ -244,7 +246,7 @@ public:
     return gap;
   }
 
-  __device__ inline bool hole4(Hits const& hh, GPUCACell const& innerCell) const {
+  __device__ inline bool hole4(Hits const& hh, GPUCACellT const& innerCell) const {
     using caConstants::first_ladder_bpx4;
     using caConstants::max_ladder_bpx4;
     using caConstants::module_length_bpx4;
@@ -273,7 +275,7 @@ public:
   // the visit of the graph based on the neighborhood connections between cells.
   template <int DEPTH>
   __device__ inline void find_ntuplets(Hits const& hh,
-                                       GPUCACell* __restrict__ cells,
+                                       GPUCACellT* __restrict__ cells,
                                        CellTracksVector& cellTracks,
                                        HitContainer& foundNtuplets,
                                        cms::cuda::AtomicPairCounter& apc,
@@ -287,9 +289,19 @@ public:
     // the ntuplets is then saved if the number of hits it contains is greater
     // than a threshold
 
+    if constexpr(DEPTH==0)
+    {
+      printf("ERROR: GPUCACellT::find_ntuplets reached full depth!\n");
+      #ifdef __CUDA_ARCH__
+        __trap();
+      #else
+        abort();
+      #endif
+    }
+
     auto doubletId = this - cells;
     tmpNtuplet.push_back_unsafe(doubletId);
-    assert(tmpNtuplet.size() <= 4);
+    assert(tmpNtuplet.size() <= 16); //TODO make a constant
 
     bool last = true;
     for (unsigned int otherCell : outerNeighbors()) {
@@ -307,7 +319,7 @@ public:
             ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
 #endif
         {
-          hindex_type hits[8];
+          hindex_type hits[DEPTH+2];
           auto nh = 0U;
           constexpr int maxFB = 2;  // for the time being let's limit this
           int nfb = 0;
@@ -330,7 +342,7 @@ public:
       }
     }
     tmpNtuplet.pop_back();
-    assert(tmpNtuplet.size() < 4);
+    assert(tmpNtuplet.size() < 20);
   }
 
   // Cell status management
@@ -362,22 +374,7 @@ private:
   hindex_type theFishboneId;
 };
 
-template <>
-__device__ inline void GPUCACell::find_ntuplets<0>(Hits const& hh,
-                                                   GPUCACell* __restrict__ cells,
-                                                   CellTracksVector& cellTracks,
-                                                   HitContainer& foundNtuplets,
-                                                   cms::cuda::AtomicPairCounter& apc,
-                                                   Quality* __restrict__ quality,
-                                                   TmpTuple& tmpNtuplet,
-                                                   const unsigned int minHitsPerNtuplet,
-                                                   bool startAt0) const {
-  printf("ERROR: GPUCACell::find_ntuplets reached full depth!\n");
-#ifdef __CUDA_ARCH__
-  __trap();
-#else
-  abort();
-#endif
-}
+using GPUCACell = GPUCACellT<caConstants::trackerConstantPhase1>;
+using GPUCACellPhase2 = GPUCACellT<caConstants::trackerConstantPhase2>;
 
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_GPUCACell_h

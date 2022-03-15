@@ -52,17 +52,20 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoublets(HitsOnCPU const &hh, cudaStr
     return;  // protect against empty events
 
   // take all layer pairs into account
-  auto nActualPairs = gpuPixelDoublets::nPairs;
+  auto nActualPairs = params_.isPhase2_ ? gpuPixelDoublets::nPairsPhase2 : gpuPixelDoublets::nPairs;
   if (not params_.includeJumpingForwardDoublets_) {
     // exclude forward "jumping" layer pairs
-    nActualPairs = gpuPixelDoublets::nPairsForTriplets;
+    nActualPairs = params_.isPhase2_ ? gpuPixelDoublets::nPairsWithJumpingPhase2 : gpuPixelDoublets::nPairsForTriplets;
   }
   if (params_.minHitsPerNtuplet_ > 3) {
     // for quadruplets, exclude all "jumping" layer pairs
-    nActualPairs = gpuPixelDoublets::nPairsForQuadruplets;
+    nActualPairs = params_.isPhase2_ ? nActualPairs : gpuPixelDoublets::nPairsForQuadruplets;
   }
 
-  assert(nActualPairs <= gpuPixelDoublets::nPairs);
+  nActualPairs = params_.isPhase2_ ? gpuPixelDoublets::nPairsPhase2 : nActualPairs;
+  assert(nActualPairs <= gpuPixelDoublets::nPairsPhase2);
+
+  std::cout << "nParis phase2 : " << nActualPairs<<std::endl;
   gpuPixelDoublets::getDoubletsFromHisto(device_theCells_.get(),
                                          device_nCells_,
                                          device_theCellNeighbors_.get(),
@@ -74,6 +77,7 @@ void CAHitNtupletGeneratorKernelsCPU::buildDoublets(HitsOnCPU const &hh, cudaStr
                                          params_.doClusterCut_,
                                          params_.doZ0Cut_,
                                          params_.doPtCut_,
+                                         params_.isPhase2_,
                                          params_.maxNumberOfDoublets_);
 }
 
@@ -97,32 +101,57 @@ void CAHitNtupletGeneratorKernelsCPU::launchKernels(HitsOnCPU const &hh, TkSoA *
   // applying conbinatoric cleaning such as fishbone at this stage is too expensive
   //
 
-  kernel_connect(device_hitTuple_apc_,
-                 device_hitToTuple_apc_,  // needed only to be reset, ready for next kernel
-                 hh.view(),
-                 device_theCells_.get(),
-                 device_nCells_,
-                 device_theCellNeighbors_.get(),
-                 isOuterHitOfCell_,
-                 params_.hardCurvCut_,
-                 params_.ptmin_,
-                 params_.CAThetaCutBarrel_,
-                 params_.CAThetaCutForward_,
-                 params_.dcaCutInnerTriplet_,
-                 params_.dcaCutOuterTriplet_);
+  if(params_.isPhase2_)
+    kernel_connect<true>(device_hitTuple_apc_,
+                   device_hitToTuple_apc_,  // needed only to be reset, ready for next kernel
+                   hh.view(),
+                   device_theCells_.get(),
+                   device_nCells_,
+                   device_theCellNeighbors_.get(),
+                   isOuterHitOfCell_,
+                   params_.hardCurvCut_,
+                   params_.ptmin_,
+                   params_.CAThetaCutBarrel_,
+                   params_.CAThetaCutForward_,
+                   params_.dcaCutInnerTriplet_,
+                   params_.dcaCutOuterTriplet_);
+  else
+    kernel_connect<false>(device_hitTuple_apc_,
+                   device_hitToTuple_apc_,  // needed only to be reset, ready for next kernel
+                   hh.view(),
+                   device_theCells_.get(),
+                   device_nCells_,
+                   device_theCellNeighbors_.get(),
+                   isOuterHitOfCell_,
+                   params_.hardCurvCut_,
+                   params_.ptmin_,
+                   params_.CAThetaCutBarrel_,
+                   params_.CAThetaCutForward_,
+                   params_.dcaCutInnerTriplet_,
+                   params_.dcaCutOuterTriplet_);
 
   if (nhits > 1 && params_.earlyFishbone_) {
     gpuPixelDoublets::fishbone(hh.view(), device_theCells_.get(), device_nCells_, isOuterHitOfCell_, nhits, false);
   }
 
-  kernel_find_ntuplets(hh.view(),
-                       device_theCells_.get(),
-                       device_nCells_,
-                       device_theCellTracks_.get(),
-                       tuples_d,
-                       device_hitTuple_apc_,
-                       quality_d,
-                       params_.minHitsPerNtuplet_);
+  if(params_.isPhase2_)
+    kernel_find_ntuplets<true>(hh.view(),
+                         device_theCells_.get(),
+                         device_nCells_,
+                         device_theCellTracks_.get(),
+                         tuples_d,
+                         device_hitTuple_apc_,
+                         quality_d,
+                         params_.minHitsPerNtuplet_);
+  else
+    kernel_find_ntuplets<false>(hh.view(),
+                         device_theCells_.get(),
+                         device_nCells_,
+                         device_theCellTracks_.get(),
+                         tuples_d,
+                         device_hitTuple_apc_,
+                         quality_d,
+                         params_.minHitsPerNtuplet_);
   if (params_.doStats_)
     kernel_mark_used(device_theCells_.get(), device_nCells_);
 
@@ -151,8 +180,10 @@ void CAHitNtupletGeneratorKernelsCPU::classifyTuples(HitsOnCPU const &hh, TkSoA 
   auto *quality_d = tracks_d->qualityData();
 
   // classify tracks based on kinematics
-  kernel_classifyTracks(tuples_d, tracks_d, params_.cuts_, quality_d);
-
+  if(params_.isPhase2_)
+    kernel_classifyTracks<true>(tuples_d, tracks_d, params_.cuts_, quality_d);
+  else
+    kernel_classifyTracks<false>(tuples_d, tracks_d, params_.cuts_, quality_d);
   if (params_.lateFishbone_) {
     // apply fishbone cleaning to good tracks
     kernel_fishboneCleaner(device_theCells_.get(), device_nCells_, quality_d);
