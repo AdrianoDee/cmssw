@@ -26,11 +26,11 @@ namespace cAHitNtupletGenerator {
     unsigned long long nZeroTrackCells;
   };
 
-  using HitsView = TrackingRecHit2DSOAView;
-  using HitsOnGPU = TrackingRecHit2DSOAView;
+  // using HitsView = TrackingRecHit2DSOAView;
+  // using HitsOnGPU = TrackingRecHit2DSOAView;
 
-  using HitToTuple = caConstants::HitToTuple;
-  using TupleMultiplicity = caConstants::TupleMultiplicity;
+  // using HitToTuple = pixelTopology::HitToTuple;
+  // using TupleMultiplicity = pixelTopology::TupleMultiplicity;
 
   using Quality = pixelTrack::Quality;
   using TkSoA = pixelTrack::TrackSoA;
@@ -71,6 +71,7 @@ namespace cAHitNtupletGenerator {
            bool doSharedHitCut,
            bool dupPassThrough,
            bool useSimpleTripletCleaner,
+           bool isPhase2,
            float ptmin,
            float CAThetaCutBarrel,
            float CAThetaCutForward,
@@ -96,6 +97,7 @@ namespace cAHitNtupletGenerator {
           doSharedHitCut_(doSharedHitCut),
           dupPassThrough_(dupPassThrough),
           useSimpleTripletCleaner_(useSimpleTripletCleaner),
+          isPhase2_(isPhase2),
           ptmin_(ptmin),
           CAThetaCutBarrel_(CAThetaCutBarrel),
           CAThetaCutForward_(CAThetaCutForward),
@@ -121,6 +123,7 @@ namespace cAHitNtupletGenerator {
     const bool doSharedHitCut_;
     const bool dupPassThrough_;
     const bool useSimpleTripletCleaner_;
+    const bool isPhase2_;
     const float ptmin_;
     const float CAThetaCutBarrel_;
     const float CAThetaCutForward_;
@@ -152,11 +155,11 @@ namespace cAHitNtupletGenerator {
 
 }  // namespace cAHitNtupletGenerator
 
-template <typename TTraits>
-class CAHitNtupletGeneratorKernels {
+template <typename TTraits, typename TTTraits>
+class CAHitNtupletGeneratorKernelsBaseT {
 public:
   using Traits = TTraits;
-
+  using TrackerTraits = TTTraits;
   using QualityCuts = cAHitNtupletGenerator::QualityCuts;
   using Params = cAHitNtupletGenerator::Params;
   using Counters = cAHitNtupletGenerator::Counters;
@@ -164,20 +167,27 @@ public:
   template <typename T>
   using unique_ptr = typename Traits::template unique_ptr<T>;
 
-  using HitsView = TrackingRecHit2DSOAView;
-  using HitsOnGPU = TrackingRecHit2DSOAView;
-  using HitsOnCPU = TrackingRecHit2DHeterogeneous<Traits>;
+  using HitsView = TrackingRecHit2DSOAViewT<TrackerTraits>;
+  using HitsOnCPU = TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>;
 
-  using HitToTuple = caConstants::HitToTuple;
-  using TupleMultiplicity = caConstants::TupleMultiplicity;
+  using HitToTuple = pixelTopology::HitToTupleT<TrackerTraits>;
+  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
+  using CellNeighbors = pixelTopology::CellNeighborsT<TrackerTraits>;
+  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  using CellTracks = pixelTopology::CellTracksT<TrackerTraits>;
+  using OuterHitOfCellContainer = pixelTopology::OuterHitOfCellContainerT<TrackerTraits>;
+  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
+
+  using GPUCACell = GPUCACellT<TrackerTraits>;
 
   using Quality = pixelTrack::Quality;
-  using TkSoA = pixelTrack::TrackSoA;
-  using HitContainer = pixelTrack::HitContainer;
+  using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
+  using HitContainer = pixelTrack::HitContainerT<TrackerTraits>;
 
-  CAHitNtupletGeneratorKernels(Params const& params)
+  CAHitNtupletGeneratorKernelsBaseT(Params const& params)
       : params_(params), paramsMaxDoubletes3Quarters_(3 * params.maxNumberOfDoublets_ / 4) {}
-  ~CAHitNtupletGeneratorKernels() = default;
+  ~CAHitNtupletGeneratorKernelsBaseT() = default;
 
   TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.get(); }
 
@@ -192,23 +202,24 @@ public:
   static void printCounters(Counters const* counters);
   void setCounters(Counters* counters) { counters_ = counters; }
 
-private:
+protected:
   Counters* counters_ = nullptr;
 
   // workspace
   unique_ptr<unsigned char[]> cellStorage_;
-  unique_ptr<caConstants::CellNeighborsVector> device_theCellNeighbors_;
-  caConstants::CellNeighbors* device_theCellNeighborsContainer_;
-  unique_ptr<caConstants::CellTracksVector> device_theCellTracks_;
-  caConstants::CellTracks* device_theCellTracksContainer_;
+  unique_ptr<CellNeighborsVector> device_theCellNeighbors_;
+  CellNeighbors* device_theCellNeighborsContainer_;
+  unique_ptr<CellTracksVector> device_theCellTracks_;
+  CellTracks* device_theCellTracksContainer_;
 
   unique_ptr<GPUCACell[]> device_theCells_;
-  unique_ptr<GPUCACell::OuterHitOfCellContainer[]> device_isOuterHitOfCell_;
-  GPUCACell::OuterHitOfCell isOuterHitOfCell_;
+  unique_ptr<OuterHitOfCellContainer[]> device_isOuterHitOfCell_;
+  OuterHitOfCell isOuterHitOfCell_;
   uint32_t* device_nCells_ = nullptr;
 
   unique_ptr<HitToTuple> device_hitToTuple_;
-  unique_ptr<HitToTuple::Counter[]> device_hitToTupleStorage_;
+  unique_ptr<uint32_t[]> device_hitToTupleStorage_;
+  typename
   HitToTuple::View hitToTupleView_;
 
   cms::cuda::AtomicPairCounter* device_hitToTuple_apc_ = nullptr;
@@ -230,12 +241,74 @@ private:
 
   /// Compute the number of quadruplet blocks for block size
   inline uint32_t nQuadrupletBlocks(uint32_t blockSize) {
-    // caConstants::maxNumberOfQuadruplets is a constexpr, so the compiler will pre compute the 3*max/4
-    return (3 * caConstants::maxNumberOfQuadruplets / 4 + blockSize - 1) / blockSize;
+    // pixelTopology::maxNumberOfQuadruplets is a constexpr, so the compiler will pre compute the 3*max/4
+    return (3 * TrackerTraits::maxNumberOfQuadruplets / 4 + blockSize - 1) / blockSize;
   }
 };
 
-using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernels<cms::cudacompat::GPUTraits>;
-using CAHitNtupletGeneratorKernelsCPU = CAHitNtupletGeneratorKernels<cms::cudacompat::CPUTraits>;
+template <typename Traits,typename TrackerTraits>
+class CAHitNtupletGeneratorKernelsGPUT : public CAHitNtupletGeneratorKernelsBaseT<Traits,TrackerTraits>{};
+
+template <typename TrackerTraits>
+class CAHitNtupletGeneratorKernelsGPUT<cms::cudacompat::GPUTraits,TrackerTraits> : public CAHitNtupletGeneratorKernelsBaseT<cms::cudacompat::GPUTraits,TrackerTraits>
+{
+  using CAHitNtupletGeneratorKernelsBaseT<cms::cudacompat::GPUTraits,TrackerTraits>::CAHitNtupletGeneratorKernelsBaseT;
+  using HitsOnCPU = TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits,TrackerTraits>;
+  using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
+  using Counters = cAHitNtupletGenerator::Counters;
+  using HitContainer = pixelTrack::HitContainerT<TrackerTraits>;
+  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
+  using HitToTuple = pixelTopology::HitToTupleT<TrackerTraits>;
+  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+
+  public:
+
+    void launchKernels(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
+    void classifyTuples(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
+    void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
+    void allocateOnGPU(int32_t nHits, cudaStream_t stream);
+    static void printCounters(Counters const* counters);
+
+};
+
+
+template <typename Traits,typename TrackerTraits>
+class CAHitNtupletGeneratorKernelsCPUT : public CAHitNtupletGeneratorKernelsBaseT<Traits,TrackerTraits> {};
+
+template <typename TrackerTraits>
+class CAHitNtupletGeneratorKernelsCPUT<cms::cudacompat::CPUTraits,TrackerTraits> : public CAHitNtupletGeneratorKernelsBaseT<cms::cudacompat::CPUTraits,TrackerTraits>
+{
+  using CAHitNtupletGeneratorKernelsBaseT<cms::cudacompat::CPUTraits,TrackerTraits>::CAHitNtupletGeneratorKernelsBaseT;
+  using HitsOnCPU = TrackingRecHit2DHeterogeneousT<cms::cudacompat::CPUTraits,TrackerTraits>;
+  using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
+  using Counters = cAHitNtupletGenerator::Counters;
+  using QualityCuts = cAHitNtupletGenerator::QualityCuts;
+  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
+  using HitToTuple = pixelTopology::HitToTupleT<TrackerTraits>;
+  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+
+  public:
+
+    void launchKernels(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
+    void classifyTuples(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
+    void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
+    void allocateOnGPU(int32_t nHits, cudaStream_t stream);
+    static void printCounters(Counters const* counters);
+
+};
+
+template<typename TrackerTraits>
+using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernelsGPUT<cms::cudacompat::GPUTraits,TrackerTraits>;
+
+template<typename TrackerTraits>
+using CAHitNtupletGeneratorKernelsCPU = CAHitNtupletGeneratorKernelsCPUT<cms::cudacompat::CPUTraits,TrackerTraits>;
+
+// using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernelsT<cms::cudacompat::GPUTraits,pixelTopology::Phase1>;
+// using CAHitNtupletGeneratorKernelsCPU = CAHitNtupletGeneratorKernelsT<cms::cudacompat::CPUTraits,pixelTopology::Phase1>;
+//
+// using CAHitNtupletGeneratorKernelsGPUPhase2 = CAHitNtupletGeneratorKernelsT<cms::cudacompat::GPUTraits,pixelTopology::Phase1>;
+// using CAHitNtupletGeneratorKernelsCPUPhase2 = CAHitNtupletGeneratorKernelsT<cms::cudacompat::CPUTraits,pixelTopology::Phase1>;
 
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h

@@ -10,12 +10,13 @@ from RecoLocalTracker.SiPixelRecHits.PixelCPETemplateReco_cfi import *
 # 2. Pixel Generic CPE
 #
 from RecoLocalTracker.SiPixelRecHits.PixelCPEGeneric_cfi import *
-from RecoLocalTracker.SiPixelRecHits.PixelCPEFastESProducer_cfi import *
+from RecoLocalTracker.SiPixelRecHits.pixelCPEFastESProducer_cfi import pixelCPEFastESProducer_cfi as PixelCPEFastESProducer
+from RecoLocalTracker.SiPixelRecHits.pixelCPEFastESProducerPhase2_cfi import pixelCPEFastESProducerPhase2_cfi as PixelCPEFastESProducerPhase2
 #
 # 3. ESProducer for the Magnetic-field dependent template records
 #
 from CalibTracker.SiPixelESProducers.SiPixelTemplateDBObjectESProducer_cfi import *
 from CalibTracker.SiPixelESProducers.SiPixel2DTemplateDBObjectESProducer_cfi import *
 
-from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
-phase2_tracker.toModify(PixelCPEFastESProducer, isPhase2 = True)
+# from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
+# phase2_tracker.toModify(PixelCPEFastESProducer, isPhase2 = True)

@@ -15,32 +15,33 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 #include "RecoPixelVertexing/PixelTriplets/interface/CircleEq.h"
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
-#include "CAConstants.h"
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 
-class GPUCACell {
+template <typename TrackerTraits>
+class GPUCACellT {
 public:
   using PtrAsInt = unsigned long long;
 
-  static constexpr auto maxCellsPerHit = caConstants::maxCellsPerHit;
-  using OuterHitOfCellContainer = caConstants::OuterHitOfCellContainer;
-  using OuterHitOfCell = caConstants::OuterHitOfCell;
-  using CellNeighbors = caConstants::CellNeighbors;
-  using CellTracks = caConstants::CellTracks;
-  using CellNeighborsVector = caConstants::CellNeighborsVector;
-  using CellTracksVector = caConstants::CellTracksVector;
+  static constexpr auto maxCellsPerHit = TrackerTraits::maxCellsPerHit;
+  using OuterHitOfCellContainer = pixelTopology::OuterHitOfCellContainerT<TrackerTraits>;
+  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
+  using CellNeighbors = pixelTopology::CellNeighborsT<TrackerTraits>;
+  using CellTracks = pixelTopology::CellTracksT<TrackerTraits>;
+  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
+  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
 
-  using Hits = TrackingRecHit2DSOAView;
-  using hindex_type = Hits::hindex_type;
+  using Hits = TrackingRecHit2DSOAViewT<TrackerTraits>;
+  using hindex_type = typename Hits::hindex_type;
 
-  using TmpTuple = cms::cuda::VecArray<uint32_t, 6>;
-
-  using HitContainer = pixelTrack::HitContainer;
+  using TmpTuple = cms::cuda::VecArray<uint32_t, TrackerTraits::maxDepth>;
+  
+  using HitContainer = pixelTrack::HitContainerT<TrackerTraits>;
   using Quality = pixelTrack::Quality;
   static constexpr auto bad = pixelTrack::Quality::bad;
 
   enum class StatusBit : uint16_t { kUsed = 1, kInTrack = 2, kKilled = 1 << 15 };
 
-  GPUCACell() = default;
+  GPUCACellT() = default;
 
   __device__ __forceinline__ void init(CellNeighborsVector& cellNeighbors,
                                        CellTracksVector& cellTracks,
@@ -65,7 +66,8 @@ public:
     assert(tracks().empty());
   }
 
-  __device__ __forceinline__ int addOuterNeighbor(CellNeighbors::value_t t, CellNeighborsVector& cellNeighbors) {
+
+  __device__ __forceinline__ int addOuterNeighbor(pixelTopology::cindex_type t, CellNeighborsVector& cellNeighbors) {
     // use smart cache
     if (outerNeighbors().empty()) {
       auto i = cellNeighbors.extend();  // maybe wasted....
@@ -87,7 +89,7 @@ public:
     return outerNeighbors().push_back(t);
   }
 
-  __device__ __forceinline__ int addTrack(CellTracks::value_t t, CellTracksVector& cellTracks) {
+  __device__ __forceinline__ int addTrack(pixelTopology::tindex_type t, CellTracksVector& cellTracks) {
     if (tracks().empty()) {
       auto i = cellTracks.extend();  // maybe wasted....
       if (i > 0) {
@@ -138,7 +140,7 @@ public:
   }
 
   __device__ bool check_alignment(Hits const& hh,
-                                  GPUCACell const& otherCell,
+                                  GPUCACellT const& otherCell,
                                   const float ptmin,
                                   const float hardCurvCut,
                                   const float caThetaCutBarrel,
@@ -156,7 +158,7 @@ public:
 
     auto r1 = otherCell.inner_r(hh);
     auto z1 = otherCell.inner_z(hh);
-    auto isBarrel = otherCell.outer_detIndex(hh) < caConstants::last_barrel_detIndex;
+    auto isBarrel = otherCell.outer_detIndex(hh) < pixelTopology::last_barrel_detIndex;
     bool aligned = areAlignedRZ(r1,
                                 z1,
                                 ri,
@@ -167,7 +169,7 @@ public:
                                 isBarrel ? caThetaCutBarrel : caThetaCutForward);  // 2.f*thetaCut); // FIXME tune cuts
     return (aligned && dcaCut(hh,
                               otherCell,
-                              otherCell.inner_detIndex(hh) < caConstants::last_bpix1_detIndex ? dcaCutInnerTriplet
+                              otherCell.inner_detIndex(hh) < pixelTopology::Phase1::last_bpix1_detIndex ? dcaCutInnerTriplet
                                                                                               : dcaCutOuterTriplet,
                               hardCurvCut));  // FIXME tune cuts
   }
@@ -185,7 +187,7 @@ public:
   }
 
   __device__ inline bool dcaCut(Hits const& hh,
-                                GPUCACell const& otherCell,
+                                GPUCACellT const& otherCell,
                                 const float region_origin_radius_plus_tolerance,
                                 const float maxCurv) const {
     auto x1 = otherCell.inner_x(hh);
@@ -221,11 +223,11 @@ public:
     return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
   }
 
-  __device__ inline bool hole0(Hits const& hh, GPUCACell const& innerCell) const {
-    using caConstants::first_ladder_bpx0;
-    using caConstants::max_ladder_bpx0;
-    using caConstants::module_length_bpx0;
-    using caConstants::module_tolerance_bpx0;
+  __device__ inline bool hole0(Hits const& hh, GPUCACellT const& innerCell) const {
+    using pixelTopology::first_ladder_bpx0;
+    using pixelTopology::max_ladder_bpx0;
+    using pixelTopology::module_length_bpx0;
+    using pixelTopology::module_tolerance_bpx0;
     int p = innerCell.inner_iphi(hh);
     if (p < 0)
       p += std::numeric_limits<unsigned short>::max();
@@ -244,11 +246,11 @@ public:
     return gap;
   }
 
-  __device__ inline bool hole4(Hits const& hh, GPUCACell const& innerCell) const {
-    using caConstants::first_ladder_bpx4;
-    using caConstants::max_ladder_bpx4;
-    using caConstants::module_length_bpx4;
-    using caConstants::module_tolerance_bpx4;
+  __device__ inline bool hole4(Hits const& hh, GPUCACellT const& innerCell) const {
+    using pixelTopology::first_ladder_bpx4;
+    using pixelTopology::max_ladder_bpx4;
+    using pixelTopology::module_length_bpx4;
+    using pixelTopology::module_tolerance_bpx4;
     int p = outer_iphi(hh);
     if (p < 0)
       p += std::numeric_limits<unsigned short>::max();
@@ -271,9 +273,10 @@ public:
 
   // trying to free the track building process from hardcoded layers, leaving
   // the visit of the graph based on the neighborhood connections between cells.
+
   template <int DEPTH>
   __device__ inline void find_ntuplets(Hits const& hh,
-                                       GPUCACell* __restrict__ cells,
+                                       GPUCACellT* __restrict__ cells,
                                        CellTracksVector& cellTracks,
                                        HitContainer& foundNtuplets,
                                        cms::cuda::AtomicPairCounter& apc,
@@ -286,52 +289,65 @@ public:
     // it has no compatible neighbor
     // the ntuplets is then saved if the number of hits it contains is greater
     // than a threshold
-
-    auto doubletId = this - cells;
-    tmpNtuplet.push_back_unsafe(doubletId);
-    assert(tmpNtuplet.size() <= 4);
-
-    bool last = true;
-    for (unsigned int otherCell : outerNeighbors()) {
-      if (cells[otherCell].isKilled())
-        continue;  // killed by earlyFishbone
-      last = false;
-      cells[otherCell].find_ntuplets<DEPTH - 1>(
-          hh, cells, cellTracks, foundNtuplets, apc, quality, tmpNtuplet, minHitsPerNtuplet, startAt0);
+    //
+    if constexpr(DEPTH<=0)
+    {
+      printf("ERROR: GPUCACellT::find_ntuplets reached full depth!\n");
+      #ifdef __CUDA_ARCH__
+        __trap();
+      #else
+        abort();
+      #endif
     }
-    if (last) {  // if long enough save...
-      if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
-#ifdef ONLY_TRIPLETS_IN_HOLE
-        // triplets accepted only pointing to the hole
-        if (tmpNtuplet.size() >= 3 || (startAt0 && hole4(hh, cells[tmpNtuplet[0]])) ||
-            ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
-#endif
-        {
-          hindex_type hits[8];
-          auto nh = 0U;
-          constexpr int maxFB = 2;  // for the time being let's limit this
-          int nfb = 0;
-          for (auto c : tmpNtuplet) {
-            hits[nh++] = cells[c].theInnerHitId;
-            if (nfb < maxFB && cells[c].hasFishbone()) {
-              ++nfb;
-              hits[nh++] = cells[c].theFishboneId;  // fishbone hit is always outer than inner hit
+    else {
+      auto doubletId = this - cells;
+      tmpNtuplet.push_back_unsafe(doubletId);
+      assert(tmpNtuplet.size() <= 16); //TODO make a constant
+
+      bool last = true;
+      for (unsigned int otherCell : outerNeighbors()) {
+        if (cells[otherCell].isKilled())
+          continue;  // killed by earlyFishbone
+        last = false;
+        cells[otherCell].template find_ntuplets<DEPTH - 1>(
+            hh, cells, cellTracks, foundNtuplets, apc, quality, tmpNtuplet, minHitsPerNtuplet, startAt0);
+      }
+
+      if (last) {  // if long enough save...
+        if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
+  #ifdef ONLY_TRIPLETS_IN_HOLE
+          // triplets accepted only pointing to the hole
+          if (tmpNtuplet.size() >= 3 || (startAt0 && hole4(hh, cells[tmpNtuplet[0]])) ||
+              ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
+  #endif
+          {
+            hindex_type hits[TrackerTraits::maxDepth+2];
+            auto nh = 0U;
+            constexpr int maxFB = 2;  // for the time being let's limit this
+            int nfb = 0;
+            for (auto c : tmpNtuplet) {
+              hits[nh++] = cells[c].theInnerHitId;
+              if (nfb < maxFB && cells[c].hasFishbone()) {
+                ++nfb;
+                hits[nh++] = cells[c].theFishboneId;  // fishbone hit is always outer than inner hit
+              }
             }
-          }
-          assert(nh < caConstants::maxHitsOnTrack);
-          hits[nh] = theOuterHitId;
-          auto it = foundNtuplets.bulkFill(apc, hits, nh + 1);
-          if (it >= 0) {  // if negative is overflow....
-            for (auto c : tmpNtuplet)
-              cells[c].addTrack(it, cellTracks);
-            quality[it] = bad;  // initialize to bad
+            assert(nh < TrackerTraits::maxHitsOnTrack);
+            hits[nh] = theOuterHitId;
+            auto it = foundNtuplets.bulkFill(apc, hits, nh + 1);
+            if (it >= 0) {  // if negative is overflow....
+              for (auto c : tmpNtuplet)
+                cells[c].addTrack(it, cellTracks);
+              quality[it] = bad;  // initialize to bad
+            }
           }
         }
       }
+      tmpNtuplet.pop_back();
+      assert(tmpNtuplet.size() < 20);
     }
-    tmpNtuplet.pop_back();
-    assert(tmpNtuplet.size() < 4);
   }
+
 
   // Cell status management
   __device__ __forceinline__ void kill() { theStatus_ |= uint16_t(StatusBit::kKilled); }
@@ -362,22 +378,7 @@ private:
   hindex_type theFishboneId;
 };
 
-template <>
-__device__ inline void GPUCACell::find_ntuplets<0>(Hits const& hh,
-                                                   GPUCACell* __restrict__ cells,
-                                                   CellTracksVector& cellTracks,
-                                                   HitContainer& foundNtuplets,
-                                                   cms::cuda::AtomicPairCounter& apc,
-                                                   Quality* __restrict__ quality,
-                                                   TmpTuple& tmpNtuplet,
-                                                   const unsigned int minHitsPerNtuplet,
-                                                   bool startAt0) const {
-  printf("ERROR: GPUCACell::find_ntuplets reached full depth!\n");
-#ifdef __CUDA_ARCH__
-  __trap();
-#else
-  abort();
-#endif
-}
+// using GPUCACell = GPUCACellT<pixelTopology::Phase1>;
+// using GPUCACellPhase2 = GPUCACellT<pixelTopology::Phase2>;
 
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_GPUCACell_h

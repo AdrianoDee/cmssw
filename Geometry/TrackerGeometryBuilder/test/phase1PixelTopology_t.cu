@@ -2,11 +2,12 @@
 #include <iostream>
 #include <tuple>
 
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 
 #include "HeterogeneousCore/CUDAUtilities/interface/cudaCheck.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/requireDevices.h"
 
+/*
 namespace {
 
   // original code from CMSSW_4_4
@@ -125,16 +126,16 @@ namespace {
   }
 
 }  // namespace
-
-constexpr void testLayer() {
-  for (auto i = 0U; i < phase1PixelTopology::numberOfModules; ++i) {
-    uint32_t layer = phase1PixelTopology::getLayer(i);
-    uint32_t tLayer = phase1PixelTopology::findLayer(i);
+L
+constexpr void testLayer() {:
+  for (auto i = 0U; i < pixelTopology::Phase1::numberOfModules; ++i) {
+    uint32_t layer = pixelTopology::Phase1::getLayer(i);
+    uint32_t tLayer = pixelTopology::Phase1::findLayer(i);
     assert(tLayer == layer);
-    //std::cout << "module " << i << ": " << "layer " << layer << ", \"" << phase1PixelTopology::layerName[layer] << "\", [" << phase1PixelTopology::layerStart[layer] << ", " << phase1PixelTopology::layerStart[layer+1] << ")" << std::endl;
-    assert(layer < phase1PixelTopology::numberOfLayers);
-    assert(i >= phase1PixelTopology::layerStart[layer]);
-    assert(i < phase1PixelTopology::layerStart[layer + 1]);
+    //std::cout << "module " << i << ": " << "layer " << layer << ", \"" << pixelTopology::Phase1::layerName[layer] << "\", [" << pixelTopology::Phase1::layerStart[layer] << ", " << pixelTopology::Phase1::layerStart[layer+1] << ")" << std::endl;
+    assert(layer < pixelTopology::Phase1::numberOfLayers);
+    assert(i >= pixelTopology::Phase1::layerStart[layer]);
+    assert(i < pixelTopology::Phase1::layerStart[layer + 1]);
   }
 }
 
@@ -145,8 +146,8 @@ int main() {
 
   for (uint16_t ix = 0; ix < 80 * 2; ++ix) {
     auto ori = localXori(ix);
-    auto xl = phase1PixelTopology::localX(ix);
-    auto bp = phase1PixelTopology::isBigPixX(ix);
+    auto xl = pixelTopology::Phase1::localX(ix);
+    auto bp = pixelTopology::Phase1::isBigPixX(ix);
     if (std::get<0>(ori) != xl)
       std::cout << "Error " << std::get<0>(ori) << "!=" << xl << std::endl;
     assert(std::get<1>(ori) == bp);
@@ -154,21 +155,21 @@ int main() {
 
   for (uint16_t iy = 0; iy < 52 * 8; ++iy) {
     auto ori = localYori(iy);
-    auto yl = phase1PixelTopology::localY(iy);
-    auto bp = phase1PixelTopology::isBigPixY(iy);
+    auto yl = pixelTopology::Phase1::localY(iy);
+    auto bp = pixelTopology::Phase1::isBigPixY(iy);
     if (std::get<0>(ori) != yl)
       std::cout << "Error " << std::get<0>(ori) << "!=" << yl << std::endl;
     assert(std::get<1>(ori) == bp);
   }
 
-  for (auto i = 0U; i < phase1PixelTopology::numberOfLayers; ++i) {
-    std::cout << "layer " << i << ", \"" << phase1PixelTopology::layerName[i] << "\", ["
-              << phase1PixelTopology::layerStart[i] << ", " << phase1PixelTopology::layerStart[i + 1] << ") "
-              << phase1PixelTopology::layerStart[i + 1] - phase1PixelTopology::layerStart[i] << std::endl;
+  for (auto i = 0U; i < pixelTopology::Phase1::numberOfLayers; ++i) {
+    std::cout << "layer " << i << ", \"" << pixelTopology::Phase1::layerName[i] << "\", ["
+              << pixelTopology::Phase1::layerStart[i] << ", " << pixelTopology::Phase1::layerStart[i + 1] << ") "
+              << pixelTopology::Phase1::layerStart[i + 1] - pixelTopology::Phase1::layerStart[i] << std::endl;
   }
 
-  std::cout << "maxModuleStide layerIndexSize " << phase1PixelTopology::maxModuleStride << ' '
-            << phase1PixelTopology::layerIndexSize << std::endl;
+  std::cout << "maxModuleStide layerIndexSize " << pixelTopology::Phase1::maxModuleStride << ' '
+            << pixelTopology::Phase1::layerIndexSize << std::endl;
 
   testLayer();
 
@@ -176,4 +177,4 @@ int main() {
   cudaCheck(cudaDeviceSynchronize());
 
   return 0;
-}
+} */

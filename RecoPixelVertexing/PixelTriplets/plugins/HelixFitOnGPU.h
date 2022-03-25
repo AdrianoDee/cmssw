@@ -5,11 +5,11 @@
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
 #include "RecoPixelVertexing/PixelTrackFitting/interface/FitResult.h"
 
-#include "CAConstants.h"
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 
 namespace riemannFit {
   // in case of memory issue can be made smaller
-  constexpr uint32_t maxNumberOfConcurrentFits = caConstants::maxNumberOfTuples;
+  constexpr uint32_t maxNumberOfConcurrentFits = 32 * 1024;
   constexpr uint32_t stride = maxNumberOfConcurrentFits;
   using Matrix3x4d = Eigen::Matrix<double, 3, 4>;
   using Map3x4d = Eigen::Map<Matrix3x4d, 0, Eigen::Stride<3 * stride, stride> >;
@@ -29,19 +29,30 @@ namespace riemannFit {
   // fast fit
   using Map4d = Eigen::Map<Vector4d, 0, Eigen::InnerStride<stride> >;
 
+  template <auto Start, auto End, auto Inc, class F>
+  constexpr void rolling_fits(F&& f)
+  {
+      if constexpr (Start < End)
+      {
+          f(std::integral_constant<decltype(Start), Start>());
+          rolling_fits<Start + Inc, End, Inc>(f);
+      }
+  }
+
 }  // namespace riemannFit
 
-class HelixFitOnGPU {
+template <typename TrackerTraits>
+class HelixFitOnGPUT {
 public:
-  using HitsView = TrackingRecHit2DSOAView;
+  using HitsView = TrackingRecHit2DSOAViewT<TrackerTraits>;
 
-  using Tuples = pixelTrack::HitContainer;
-  using OutputSoA = pixelTrack::TrackSoA;
+  using Tuples = pixelTrack::HitContainerT<TrackerTraits>;
+  using OutputSoA = pixelTrack::TrackSoAT<TrackerTraits>;
 
-  using TupleMultiplicity = caConstants::TupleMultiplicity;
+  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
 
-  explicit HelixFitOnGPU(float bf, bool fitNas4) : bField_(bf), fitNas4_(fitNas4) {}
-  ~HelixFitOnGPU() { deallocateOnGPU(); }
+  explicit HelixFitOnGPUT(float bf, bool fitNas4) : bField_(bf), fitNas4_(fitNas4) {}
+  ~HelixFitOnGPUT() { deallocateOnGPU(); }
 
   void setBField(double bField) { bField_ = bField; }
   void launchRiemannKernels(HitsView const *hv, uint32_t nhits, uint32_t maxNumberOfTuples, cudaStream_t cudaStream);

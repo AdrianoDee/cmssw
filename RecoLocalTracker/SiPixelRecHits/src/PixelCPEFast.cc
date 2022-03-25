@@ -5,13 +5,16 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "Geometry/CommonDetUnit/interface/PixelGeomDetUnit.h"
 #include "Geometry/TrackerGeometryBuilder/interface/RectangularPixelTopology.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cudaCheck.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEFast.h"
 
 // Services
 // this is needed to get errors from templates
+
+template class PixelCPEFastT<pixelTopology::Phase1>;
+template class PixelCPEFastT<pixelTopology::Phase2>;
 
 namespace {
   constexpr float micronsToCm = 1.0e-4;
@@ -20,7 +23,8 @@ namespace {
 //-----------------------------------------------------------------------------
 //!  The constructor.
 //-----------------------------------------------------------------------------
-PixelCPEFast::PixelCPEFast(edm::ParameterSet const& conf,
+template<typename TrackerTraits>
+PixelCPEFastT<TrackerTraits>::PixelCPEFastT(edm::ParameterSet const& conf,
                            const MagneticField* mag,
                            const TrackerGeometry& geom,
                            const TrackerTopology& ttopo,
@@ -36,8 +40,6 @@ PixelCPEFast::PixelCPEFast(edm::ParameterSet const& conf,
           << (*genErrorDBObject_).version();
   }
 
-  isPhase2_ = conf.getParameter<bool>("isPhase2");
-
   fillParamsForGpu();
 
   cpuData_ = {
@@ -48,18 +50,25 @@ PixelCPEFast::PixelCPEFast(edm::ParameterSet const& conf,
   };
 }
 
-const pixelCPEforGPU::ParamsOnGPU* PixelCPEFast::getGPUProductAsync(cudaStream_t cudaStream) const {
+
+template<typename TrackerTraits>
+const pixelCPEforGPU::ParamsOnGPUT<TrackerTraits>* PixelCPEFastT<TrackerTraits>::getGPUProductAsync(cudaStream_t cudaStream) const {
+
+  using ParamsOnGPU = pixelCPEforGPU::ParamsOnGPUT<TrackerTraits>;
+  using LayerGeometry = pixelCPEforGPU::LayerGeometryT<TrackerTraits>;
+  using AverageGeometry = pixelTopology::AverageGeometryT<TrackerTraits>;
+
   const auto& data = gpuData_.dataForCurrentDeviceAsync(cudaStream, [this](GPUData& data, cudaStream_t stream) {
     // and now copy to device...
 
     cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_commonParams, sizeof(pixelCPEforGPU::CommonParams)));
     cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_detParams,
                          this->detParamsGPU_.size() * sizeof(pixelCPEforGPU::DetParams)));
-    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_averageGeometry, sizeof(pixelCPEforGPU::AverageGeometry)));
-    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_layerGeometry, sizeof(pixelCPEforGPU::LayerGeometry)));
-    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_d, sizeof(pixelCPEforGPU::ParamsOnGPU)));
+    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_averageGeometry, sizeof(AverageGeometry)));
+    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_layerGeometry, sizeof(LayerGeometry)));
+    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_d, sizeof(ParamsOnGPU)));
     cudaCheck(cudaMemcpyAsync(
-        data.paramsOnGPU_d, &data.paramsOnGPU_h, sizeof(pixelCPEforGPU::ParamsOnGPU), cudaMemcpyDefault, stream));
+        data.paramsOnGPU_d, &data.paramsOnGPU_h, sizeof(ParamsOnGPU), cudaMemcpyDefault, stream));
     cudaCheck(cudaMemcpyAsync((void*)data.paramsOnGPU_h.m_commonParams,
                               &this->commonParamsGPU_,
                               sizeof(pixelCPEforGPU::CommonParams),
@@ -67,12 +76,12 @@ const pixelCPEforGPU::ParamsOnGPU* PixelCPEFast::getGPUProductAsync(cudaStream_t
                               stream));
     cudaCheck(cudaMemcpyAsync((void*)data.paramsOnGPU_h.m_averageGeometry,
                               &this->averageGeometry_,
-                              sizeof(pixelCPEforGPU::AverageGeometry),
+                              sizeof(AverageGeometry),
                               cudaMemcpyDefault,
                               stream));
     cudaCheck(cudaMemcpyAsync((void*)data.paramsOnGPU_h.m_layerGeometry,
                               &this->layerGeometry_,
-                              sizeof(pixelCPEforGPU::LayerGeometry),
+                              sizeof(LayerGeometry),
                               cudaMemcpyDefault,
                               stream));
     cudaCheck(cudaMemcpyAsync((void*)data.paramsOnGPU_h.m_detParams,
@@ -84,7 +93,8 @@ const pixelCPEforGPU::ParamsOnGPU* PixelCPEFast::getGPUProductAsync(cudaStream_t
   return data.paramsOnGPU_d;
 }
 
-void PixelCPEFast::fillParamsForGpu() {
+template<typename TrackerTraits>
+void PixelCPEFastT<TrackerTraits>::fillParamsForGpu() {
   //
   // this code executes only once per job, computation inefficiency is not an issue
   // many code blocks are repeated: better keep the computation local and self oconsistent as blocks may in future move around, be deleted ...
@@ -95,15 +105,13 @@ void PixelCPEFast::fillParamsForGpu() {
   commonParamsGPU_.thePitchX = m_DetParams[0].thePitchX;
   commonParamsGPU_.thePitchY = m_DetParams[0].thePitchY;
 
-  commonParamsGPU_.numberOfLaddersInBarrel =
-      isPhase2_ ? phase2PixelTopology::numberOfLaddersInBarrel : phase1PixelTopology::numberOfLaddersInBarrel;
-  commonParamsGPU_.isPhase2 = isPhase2_;
+  commonParamsGPU_.numberOfLaddersInBarrel = TrackerTraits::numberOfLaddersInBarrel;
 
   LogDebug("PixelCPEFast") << "pitch & thickness " << commonParamsGPU_.thePitchX << ' ' << commonParamsGPU_.thePitchY
                            << "  " << commonParamsGPU_.theThicknessB << ' ' << commonParamsGPU_.theThicknessE;
 
   // zero average geometry
-  memset(&averageGeometry_, 0, sizeof(pixelCPEforGPU::AverageGeometry));
+  memset(&averageGeometry_, 0, sizeof(pixelTopology::AverageGeometryT<TrackerTraits>));
 
   uint32_t oldLayer = 0;
   uint32_t oldLadder = 0;
@@ -118,22 +126,13 @@ void PixelCPEFast::fillParamsForGpu() {
     auto& p = m_DetParams[i];
     auto& g = detParamsGPU_[i];
 
-    if (!isPhase2_) {
-      g.nRowsRoc = phase1PixelTopology::numRowsInRoc;
-      g.nColsRoc = phase1PixelTopology::numColsInRoc;
-      g.nRows = phase1PixelTopology::numRowsInModule;
-      g.nCols = phase1PixelTopology::numColsInModule;
+    g.nRowsRoc = p.theDet->specificTopology().rowsperroc();
+    g.nColsRoc = p.theDet->specificTopology().colsperroc();
+    g.nRows = p.theDet->specificTopology().rocsX() * g.nRowsRoc;
+    g.nCols = p.theDet->specificTopology().rocsY() * g.nColsRoc;
 
-      g.numPixsInModule = g.nRows * g.nCols;
+    g.numPixsInModule = g.nRows * g.nCols;
 
-    } else {
-      g.nRowsRoc = p.theDet->specificTopology().rowsperroc();
-      g.nColsRoc = p.theDet->specificTopology().colsperroc();
-      g.nRows = p.theDet->specificTopology().rocsX() * g.nRowsRoc;
-      g.nCols = p.theDet->specificTopology().rocsY() * g.nColsRoc;
-
-      g.numPixsInModule = g.nRows * g.nCols;
-    }
 
     assert(p.theDet->index() == int(i));
     assert(commonParamsGPU_.thePitchY == p.thePitchY);
@@ -164,7 +163,7 @@ void PixelCPEFast::fillParamsForGpu() {
       rl = 0;
       zl = 0;
       pl = 0;
-      miz = isPhase2_ ? 500 : 90;
+      miz = 500;
       mxz = 0;
       nl++;
     }
@@ -213,10 +212,8 @@ void PixelCPEFast::fillParamsForGpu() {
       cp.cotalpha = gvx * gvz;
       cp.cotbeta = gvy * gvz;
 
-      if (!isPhase2_)
-        errorFromTemplates(p, cp, 20000.);
-      else
-        cp.qBin_ = 0.f;
+      errorFromTemplates(p, cp, 20000.);
+
     }
 
 #ifdef EDM_ML_DEBUG
@@ -235,7 +232,7 @@ void PixelCPEFast::fillParamsForGpu() {
     g.sy2 = std::max(55, toMicron(cp.sy2));  // sometimes sy2 is smaller than others (due to angle?)
 
     // sample xerr as function of position
-    auto const xoff = float(phase1PixelTopology::xOffset) * commonParamsGPU_.thePitchX;
+    auto const xoff = float(TrackerTraits::xOffset) * commonParamsGPU_.thePitchX;
 
     for (int ix = 0; ix < CPEFastParametrisation::kNumErrorBins; ++ix) {
       auto x = xoff * (1.f - (0.5f + float(ix)) / 8.f);
@@ -252,7 +249,7 @@ void PixelCPEFast::fillParamsForGpu() {
     }
 #ifdef EDM_ML_DEBUG
     // sample yerr as function of position
-    auto const yoff = float(phase1PixelTopology::yOffset) * commonParamsGPU_.thePitchY;
+    auto const yoff = float(TrackerTraits::yOffset) * commonParamsGPU_.thePitchY;
     for (int ix = 0; ix < CPEFastParametrisation::kNumErrorBins; ++ix) {
       auto y = yoff * (1.f - (0.5f + float(ix)) / 8.f);
       auto gvx = p.theOrigin.x() + 40.f * commonParamsGPU_.thePitchY;
@@ -320,14 +317,14 @@ void PixelCPEFast::fillParamsForGpu() {
     }
   }  // loop over det
 
-  const int numberOfModulesInLadder =
-      isPhase2_ ? int(phase2PixelTopology::numberOfModulesInLadder) : int(phase1PixelTopology::numberOfModulesInLadder);
-  const int numberOfModulesInBarrel =
-      isPhase2_ ? int(phase2PixelTopology::numberOfModulesInBarrel) : int(phase1PixelTopology::numberOfModulesInBarrel);
-  const int numberOfLaddersInBarrel = commonParamsGPU_.numberOfLaddersInBarrel;
+  constexpr int numberOfModulesInLadder = TrackerTraits::numberOfModulesInLadder;
+  constexpr int numberOfLaddersInBarrel = TrackerTraits::numberOfLaddersInBarrel;
+  constexpr int numberOfModulesInBarrel = TrackerTraits::numberOfModulesInBarrel;
 
-  const int firstEndcapPos = 4, firstEndcapNeg = isPhase2_ ? 16 : 7;
-  const float ladderFactor = 1.f / float(numberOfModulesInLadder);
+  constexpr float ladderFactor = 1.f / float(numberOfModulesInLadder);
+
+  constexpr int firstEndcapPos = TrackerTraits::firstEndcapPos;
+  constexpr int firstEndcapNeg = TrackerTraits::firstEndcapNeg;
 
   // compute ladder baricenter (only in global z) for the barrel
   //
@@ -347,44 +344,29 @@ void PixelCPEFast::fillParamsForGpu() {
   }
   assert(il + 1 == int(numberOfLaddersInBarrel));
   // add half_module and tollerance
-  const float module_length = isPhase2_ ? 4.345f : 6.7f;
+  constexpr float moduleLength = TrackerTraits::moduleLength;
   constexpr float module_tolerance = 0.2f;
   for (int il = 0, nl = numberOfLaddersInBarrel; il < nl; ++il) {
-    aveGeom.ladderMinZ[il] -= (0.5f * module_length - module_tolerance);
-    aveGeom.ladderMaxZ[il] += (0.5f * module_length - module_tolerance);
+    aveGeom.ladderMinZ[il] -= (0.5f * moduleLength - module_tolerance);
+    aveGeom.ladderMaxZ[il] += (0.5f * moduleLength - module_tolerance);
   }
 
   // compute "max z" for first layer in endcap (should we restrict to the outermost ring?)
-  if (!isPhase2_) {
-    for (auto im = phase1PixelTopology::layerStart[firstEndcapPos];
-         im < phase1PixelTopology::layerStart[firstEndcapPos + 1];
-         ++im) {
-      auto const& g = detParamsGPU_[im];
-      aveGeom.endCapZ[0] = std::max(aveGeom.endCapZ[0], g.frame.z());
-    }
-    for (auto im = phase1PixelTopology::layerStart[firstEndcapNeg];
-         im < phase1PixelTopology::layerStart[firstEndcapNeg + 1];
-         ++im) {
-      auto const& g = detParamsGPU_[im];
-      aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
-    }
-    // correct for outer ring being closer
-    aveGeom.endCapZ[0] -= 1.5f;
-    aveGeom.endCapZ[1] += 1.5f;
-  } else {
-    for (auto im = phase2PixelTopology::layerStart[firstEndcapPos];
-         im < phase2PixelTopology::layerStart[firstEndcapPos + 1];
-         ++im) {
-      auto const& g = detParamsGPU_[im];
-      aveGeom.endCapZ[0] = std::max(aveGeom.endCapZ[0], g.frame.z());
-    }
-    for (auto im = phase2PixelTopology::layerStart[firstEndcapNeg];
-         im < phase2PixelTopology::layerStart[firstEndcapNeg + 1];
-         ++im) {
-      auto const& g = detParamsGPU_[im];
-      aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
-    }
+  for (auto im = TrackerTraits::layerStart[firstEndcapPos];
+       im < TrackerTraits::layerStart[firstEndcapPos + 1];
+       ++im) {
+    auto const& g = detParamsGPU_[im];
+    aveGeom.endCapZ[0] = std::max(aveGeom.endCapZ[0], g.frame.z());
   }
+  for (auto im = TrackerTraits::layerStart[firstEndcapNeg];
+       im < TrackerTraits::layerStart[firstEndcapNeg + 1];
+       ++im) {
+    auto const& g = detParamsGPU_[im];
+    aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
+  }
+  // correct for outer ring being closer
+  aveGeom.endCapZ[0] -= TrackerTraits::endcapCorrection;
+  aveGeom.endCapZ[1] += TrackerTraits::endcapCorrection;
 #ifdef EDM_ML_DEBUG
   for (int jl = 0, nl = numberOfLaddersInBarrel; jl < nl; ++jl) {
     LogDebug("PixelCPEFast") << jl << ':' << aveGeom.ladderR[jl] << '/'
@@ -398,18 +380,13 @@ void PixelCPEFast::fillParamsForGpu() {
 
   // fill Layer and ladders geometry
   memset(&layerGeometry_, 0, sizeof(pixelCPEforGPU::LayerGeometry));
-  if (!isPhase2_) {
-    memcpy(layerGeometry_.layerStart, phase1PixelTopology::layerStart, sizeof(phase1PixelTopology::layerStart));
-    memcpy(layerGeometry_.layer, phase1PixelTopology::layer.data(), phase1PixelTopology::layer.size());
-    layerGeometry_.maxModuleStride = phase1PixelTopology::maxModuleStride;
-  } else {
-    memcpy(layerGeometry_.layerStart, phase2PixelTopology::layerStart, sizeof(phase2PixelTopology::layerStart));
-    memcpy(layerGeometry_.layer, phase2PixelTopology::layer.data(), phase2PixelTopology::layer.size());
-    layerGeometry_.maxModuleStride = phase2PixelTopology::maxModuleStride;
-  }
+  memcpy(layerGeometry_.layerStart, TrackerTraits::layerStart, sizeof(TrackerTraits::layerStart));
+  memcpy(layerGeometry_.layer, pixelTopology::layer<TrackerTraits>.data(), pixelTopology::layer<TrackerTraits>.size());
+  layerGeometry_.maxModuleStride = pixelTopology::maxModuleStride<TrackerTraits>;
 }
 
-PixelCPEFast::GPUData::~GPUData() {
+template<typename TrackerTraits>
+PixelCPEFastT<TrackerTraits>::GPUData::~GPUData() {
   if (paramsOnGPU_d != nullptr) {
     cudaFree((void*)paramsOnGPU_h.m_commonParams);
     cudaFree((void*)paramsOnGPU_h.m_detParams);
@@ -419,7 +396,8 @@ PixelCPEFast::GPUData::~GPUData() {
   }
 }
 
-void PixelCPEFast::errorFromTemplates(DetParam const& theDetParam,
+template<typename TrackerTraits>
+void PixelCPEFastT<TrackerTraits>::errorFromTemplates(DetParam const& theDetParam,
                                       ClusterParamGeneric& theClusterParam,
                                       float qclus) const {
   float locBz = theDetParam.bz;
@@ -470,12 +448,23 @@ void PixelCPEFast::errorFromTemplates(DetParam const& theDetParam,
   theClusterParam.sy2 = theClusterParam.sy2 * micronsToCm;
 }
 
+template<>
+void PixelCPEFastT<pixelTopology::Phase2>::errorFromTemplates(
+                                      DetParam const& theDetParam,
+                                      ClusterParamGeneric& theClusterParam,
+                                      float qclus) const
+                                      {
+                                        theClusterParam.qBin_ = 0.0f;
+                                      }
+
+
 //-----------------------------------------------------------------------------
 //! Hit position in the local frame (in cm).  Unlike other CPE's, this
 //! one converts everything from the measurement frame (in channel numbers)
 //! into the local frame (in centimeters).
 //-----------------------------------------------------------------------------
-LocalPoint PixelCPEFast::localPosition(DetParam const& theDetParam, ClusterParam& theClusterParamBase) const {
+template<typename TrackerTraits>
+LocalPoint PixelCPEFastT<TrackerTraits>::localPosition(DetParam const& theDetParam, ClusterParam& theClusterParamBase) const {
   ClusterParamGeneric& theClusterParam = static_cast<ClusterParamGeneric&>(theClusterParamBase);
 
   assert(!theClusterParam.with_track_angle);
@@ -508,12 +497,12 @@ LocalPoint PixelCPEFast::localPosition(DetParam const& theDetParam, ClusterParam
   cp.charge[0] = theClusterParam.theCluster->charge();
 
   auto ind = theDetParam.theDet->index();
-  pixelCPEforGPU::position(commonParamsGPU_, detParamsGPU_[ind], cp, 0);
+  pixelCPEforGPU::position<TrackerTraits>(commonParamsGPU_, detParamsGPU_[ind], cp, 0);
   auto xPos = cp.xpos[0];
   auto yPos = cp.ypos[0];
 
   // set the error  (mind ape....)
-  pixelCPEforGPU::errorFromDB(commonParamsGPU_, detParamsGPU_[ind], cp, 0);
+  pixelCPEforGPU::errorFromDB<TrackerTraits>(commonParamsGPU_, detParamsGPU_[ind], cp, 0);
   theClusterParam.sigmax = cp.xerr[0];
   theClusterParam.sigmay = cp.yerr[0];
 
@@ -530,7 +519,8 @@ LocalPoint PixelCPEFast::localPosition(DetParam const& theDetParam, ClusterParam
 //-------------------------------------------------------------------------
 //  Hit error in the local frame
 //-------------------------------------------------------------------------
-LocalError PixelCPEFast::localError(DetParam const& theDetParam, ClusterParam& theClusterParamBase) const {
+template<typename TrackerTraits>
+LocalError PixelCPEFastT<TrackerTraits>::localError(DetParam const& theDetParam, ClusterParam& theClusterParamBase) const {
   ClusterParamGeneric& theClusterParam = static_cast<ClusterParamGeneric&>(theClusterParamBase);
 
   auto xerr = theClusterParam.sigmax;
@@ -544,8 +534,8 @@ LocalError PixelCPEFast::localError(DetParam const& theDetParam, ClusterParam& t
   return LocalError(xerr_sq, 0, yerr_sq);
 }
 
-void PixelCPEFast::fillPSetDescription(edm::ParameterSetDescription& desc) {
+template<typename TrackerTraits>
+void PixelCPEFastT<TrackerTraits>::fillPSetDescription(edm::ParameterSetDescription& desc) {
   // call PixelCPEGenericBase fillPSetDescription to add common rechit errors
   PixelCPEGenericBase::fillPSetDescription(desc);
-  desc.add<bool>("isPhase2", false);
 }

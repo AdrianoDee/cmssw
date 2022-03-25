@@ -20,13 +20,15 @@
 #include "RecoLocalTracker/Records/interface/TkPixelCPERecord.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEBase.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEFast.h"
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 
 #include "PixelRecHitGPUKernel.h"
 
-class SiPixelRecHitCUDA : public edm::global::EDProducer<> {
+template<typename TrackerTraits>
+class SiPixelRecHitCUDAT : public edm::global::EDProducer<> {
 public:
-  explicit SiPixelRecHitCUDA(const edm::ParameterSet& iConfig);
-  ~SiPixelRecHitCUDA() override = default;
+  explicit SiPixelRecHitCUDAT(const edm::ParameterSet& iConfig);
+  ~SiPixelRecHitCUDAT() override = default;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -37,29 +39,36 @@ private:
   const edm::EDGetTokenT<cms::cuda::Product<BeamSpotCUDA>> tBeamSpot;
   const edm::EDGetTokenT<cms::cuda::Product<SiPixelClustersCUDA>> token_;
   const edm::EDGetTokenT<cms::cuda::Product<SiPixelDigisCUDA>> tokenDigi_;
-  const edm::EDPutTokenT<cms::cuda::Product<TrackingRecHit2DGPU>> tokenHit_;
+  const edm::EDPutTokenT<cms::cuda::Product<TrackingRecHit2DGPUT<TrackerTraits>>> tokenHit_;
 
-  const pixelgpudetails::PixelRecHitGPUKernel gpuAlgo_;
+  const pixelgpudetails::PixelRecHitGPUKernelT<TrackerTraits> gpuAlgo_;
 };
 
-SiPixelRecHitCUDA::SiPixelRecHitCUDA(const edm::ParameterSet& iConfig)
+template<typename TrackerTraits>
+SiPixelRecHitCUDAT<TrackerTraits>::SiPixelRecHitCUDAT(const edm::ParameterSet& iConfig)
     : cpeToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("CPE")))),
       tBeamSpot(consumes<cms::cuda::Product<BeamSpotCUDA>>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
       token_(consumes<cms::cuda::Product<SiPixelClustersCUDA>>(iConfig.getParameter<edm::InputTag>("src"))),
       tokenDigi_(consumes<cms::cuda::Product<SiPixelDigisCUDA>>(iConfig.getParameter<edm::InputTag>("src"))),
-      tokenHit_(produces<cms::cuda::Product<TrackingRecHit2DGPU>>()) {}
+      tokenHit_(produces<cms::cuda::Product<TrackingRecHit2DGPUT<TrackerTraits>>>()) {}
 
-void SiPixelRecHitCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+template<typename TrackerTraits>
+void SiPixelRecHitCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpotCUDA"));
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplittingCUDA"));
   desc.add<std::string>("CPE", "PixelCPEFast");
-  descriptions.add("siPixelRecHitCUDA", desc);
+  //one could use descriptions.add(defaultModuleLabel<SiPixelRecHitCUDAT<TrackerTraits>>(), desc);
+  //but this creates terrible names
+  std::string name = "siPixelRecHitCUDA";
+  name += TrackerTraits::nameModifier;
+  descriptions.add(name,desc);
 }
 
-void SiPixelRecHitCUDA::produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& es) const {
-  PixelCPEFast const* fcpe = dynamic_cast<const PixelCPEFast*>(&es.getData(cpeToken_));
+template<typename TrackerTraits>
+void SiPixelRecHitCUDAT<TrackerTraits>::produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& es) const {
+  PixelCPEFastT<TrackerTraits> const* fcpe = dynamic_cast<const PixelCPEFastT<TrackerTraits>*>(&es.getData(cpeToken_));
   if (not fcpe) {
     throw cms::Exception("Configuration") << "SiPixelRecHitSoAFromLegacy can only use a CPE of type PixelCPEFast";
   }
@@ -81,7 +90,10 @@ void SiPixelRecHitCUDA::produce(edm::StreamID streamID, edm::Event& iEvent, cons
   ctx.emplace(iEvent,
               tokenHit_,
               gpuAlgo_.makeHitsAsync(
-                  digis, clusters, bs, fcpe->getGPUProductAsync(ctx.stream()), fcpe->isPhase2(), ctx.stream()));
+                  digis, clusters, bs, fcpe->getGPUProductAsync(ctx.stream()), ctx.stream()));
 }
 
+using SiPixelRecHitCUDA = SiPixelRecHitCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SiPixelRecHitCUDA);
+using SiPixelRecHitCUDAPhase2 = SiPixelRecHitCUDAT<pixelTopology::Phase2>;
+DEFINE_FWK_MODULE(SiPixelRecHitCUDAPhase2);
