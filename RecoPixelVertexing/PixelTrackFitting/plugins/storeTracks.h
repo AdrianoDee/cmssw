@@ -25,7 +25,7 @@ void storeTracks(Ev& ev, const TWH& tracksWithHits, const TrackerTopology& ttopo
 
   trackExtras->resize(nTracks);
   tracks->reserve(nTracks);
-  recHits->reserve(4 * nTracks);
+  recHits->reserve(16 * nTracks);
 
   for (int i = 0; i < nTracks; i++) {
     reco::Track* track = tracksWithHits[i].first;
