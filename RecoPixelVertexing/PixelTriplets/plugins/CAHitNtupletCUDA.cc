@@ -22,11 +22,21 @@
 #include "CAHitNtupletGeneratorOnGPU.h"
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "HLTrigger/HLTcore/interface/defaultModuleLabel.h"
 
-class CAHitNtupletCUDA : public edm::global::EDProducer<> {
+template <typename TrackerTraits>
+class CAHitNtupletCUDAT : public edm::global::EDProducer<> {
+
+  using PixelTrackHeterogeneous = PixelTrackHeterogeneousT<TrackerTraits>;
+
+  using HitsView = TrackingRecHit2DSOAViewT<TrackerTraits>;
+  using HitsOnGPU = TrackingRecHit2DGPUT<TrackerTraits>;
+  using HitsOnCPU = TrackingRecHit2DCPUT<TrackerTraits>;
+  using GPUAlgo = CAHitNtupletGeneratorOnGPUT<TrackerTraits>;
+
 public:
-  explicit CAHitNtupletCUDA(const edm::ParameterSet& iConfig);
-  ~CAHitNtupletCUDA() override = default;
+  explicit CAHitNtupletCUDAT(const edm::ParameterSet& iConfig);
+  ~CAHitNtupletCUDAT() override = default;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -36,37 +46,43 @@ private:
   bool onGPU_;
 
   edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> tokenField_;
-  edm::EDGetTokenT<cms::cuda::Product<TrackingRecHit2DGPU>> tokenHitGPU_;
+  edm::EDGetTokenT<cms::cuda::Product<HitsOnGPU>> tokenHitGPU_;
   edm::EDPutTokenT<cms::cuda::Product<PixelTrackHeterogeneous>> tokenTrackGPU_;
-  edm::EDGetTokenT<TrackingRecHit2DCPU> tokenHitCPU_;
+  edm::EDGetTokenT<HitsOnCPU> tokenHitCPU_;
   edm::EDPutTokenT<PixelTrackHeterogeneous> tokenTrackCPU_;
 
-  CAHitNtupletGeneratorOnGPU gpuAlgo_;
+  GPUAlgo gpuAlgo_;
 };
 
-CAHitNtupletCUDA::CAHitNtupletCUDA(const edm::ParameterSet& iConfig)
+template <typename TrackerTraits>
+CAHitNtupletCUDAT<TrackerTraits>::CAHitNtupletCUDAT(const edm::ParameterSet& iConfig)
     : onGPU_(iConfig.getParameter<bool>("onGPU")), tokenField_(esConsumes()), gpuAlgo_(iConfig, consumesCollector()) {
   if (onGPU_) {
     tokenHitGPU_ =
-        consumes<cms::cuda::Product<TrackingRecHit2DGPU>>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
+        consumes<cms::cuda::Product<HitsOnGPU>>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
     tokenTrackGPU_ = produces<cms::cuda::Product<PixelTrackHeterogeneous>>();
   } else {
-    tokenHitCPU_ = consumes<TrackingRecHit2DCPU>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
+    tokenHitCPU_ = consumes<HitsOnCPU>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
     tokenTrackCPU_ = produces<PixelTrackHeterogeneous>();
   }
 }
 
-void CAHitNtupletCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+template <typename TrackerTraits>
+void CAHitNtupletCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
   desc.add<bool>("onGPU", true);
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
 
-  CAHitNtupletGeneratorOnGPU::fillDescriptions(desc);
-  descriptions.add("pixelTracksCUDA", desc);
+  GPUAlgo::fillDescriptions(desc);
+  //descriptions.add("pixelTracksCUDA", desc);
+  std::string name = "pixelTracksCUDA";
+  name += TrackerTraits::nameModifier;
+  descriptions.add(name,desc);
 }
 
-void CAHitNtupletCUDA::produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& es) const {
+template <typename TrackerTraits>
+void CAHitNtupletCUDAT<TrackerTraits>::produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& es) const {
   auto bf = 1. / es.getData(tokenField_).inverseBzAtOriginInGeV();
 
   if (onGPU_) {
@@ -82,4 +98,7 @@ void CAHitNtupletCUDA::produce(edm::StreamID streamID, edm::Event& iEvent, const
   }
 }
 
+using CAHitNtupletCUDA = CAHitNtupletCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(CAHitNtupletCUDA);
+using CAHitNtupletCUDAPhase2 = CAHitNtupletCUDAT<pixelTopology::Phase2>;
+DEFINE_FWK_MODULE(CAHitNtupletCUDAPhase2);

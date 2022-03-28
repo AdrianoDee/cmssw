@@ -97,8 +97,14 @@ from RecoPixelVertexing.PixelTriplets.pixelTracksCUDA_cfi import pixelTracksCUDA
 pixelTracksCPU = _pixelTracksCUDA.clone(
     pixelRecHitSrc = "siPixelRecHitsPreSplitting",
     idealConditions = False,
-    onGPU = False
+    onGPU = False,
+    fillStatistics = True
 )
+
+phase2_tracker.toModify(pixelTracksCPU,
+    isPhase2 = True)
+
+from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
 
 # SwitchProducer providing the pixel tracks in SoA format on the CPU
 pixelTracksSoA = SwitchProducerCUDA(
@@ -112,11 +118,11 @@ run3_common.toModify(pixelTracksSoA.cpu,
 
 # convert the pixel tracks from SoA to legacy format
 from RecoPixelVertexing.PixelTrackFitting.pixelTrackProducerFromSoA_cfi import pixelTrackProducerFromSoA as _pixelTrackProducerFromSoA
-(pixelNtupletFit & ~phase2_tracker).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoA.clone(
+pixelNtupletFit.toReplaceWith(pixelTracks, _pixelTrackProducerFromSoA.clone(
     pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
 ))
 
-(pixelNtupletFit & ~phase2_tracker).toReplaceWith(pixelTracksTask, cms.Task(
+pixelNtupletFit.toReplaceWith(pixelTracksTask, cms.Task(
     #pixelTracksTrackingRegions,
     #pixelFitterByHelixProjections,
     #pixelTrackFilterByKinematics,
@@ -140,8 +146,13 @@ from Configuration.ProcessModifiers.gpu_cff import gpu
 pixelTracksCUDA = _pixelTracksCUDA.clone(
     pixelRecHitSrc = "siPixelRecHitsPreSplittingCUDA",
     idealConditions = False,
-    onGPU = True
+    onGPU = True,
+    fillStatistics = True
 )
+
+phase2_tracker.toModify(pixelTracksCUDA,
+    isPhase2 = True)
+
 # use quality cuts tuned for Run 2 ideal conditions for all Run 3 workflows
 run3_common.toModify(pixelTracksCUDA,
     idealConditions = True
@@ -154,9 +165,7 @@ gpu.toModify(pixelTracksSoA,
     cuda = _pixelTracksSoA.clone()
 )
 
-from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
-
-(pixelNtupletFit & gpu & ~phase2_tracker).toReplaceWith(pixelTracksTask, cms.Task(
+(pixelNtupletFit & gpu).toReplaceWith(pixelTracksTask, cms.Task(
     # build the pixel ntuplets and pixel tracks in SoA format on the GPU
     pixelTracksCUDA,
     # transfer the pixel tracks in SoA format to the CPU, and convert them to legacy format

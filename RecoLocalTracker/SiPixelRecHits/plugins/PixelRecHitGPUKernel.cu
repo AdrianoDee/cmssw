@@ -13,13 +13,14 @@
 #include "PixelRecHitGPUKernel.h"
 #include "gpuPixelRecHits.h"
 
+
 namespace {
+  template<typename TrackerTraits>
   __global__ void setHitsLayerStart(uint32_t const* __restrict__ hitsModuleStart,
-                                    pixelCPEforGPU::ParamsOnGPU const* cpeParams,
+                                    pixelCPEforGPU::ParamsOnGPUT<TrackerTraits> const* cpeParams,
                                     uint32_t* hitsLayerStart) {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
-    auto m =
-        cpeParams->commonParams().isPhase2 ? phase2PixelTopology::numberOfLayers : phase1PixelTopology::numberOfLayers;
+    constexpr auto m = TrackerTraits::numberOfLayers;
 
     assert(0 == hitsModuleStart[0]);
 
@@ -34,18 +35,16 @@ namespace {
 
 namespace pixelgpudetails {
 
-  TrackingRecHit2DGPU PixelRecHitGPUKernel::makeHitsAsync(SiPixelDigisCUDA const& digis_d,
+  template<typename TrackerTraits>
+  TrackingRecHit2DGPUT<TrackerTraits> PixelRecHitGPUKernelT<TrackerTraits>::makeHitsAsync(SiPixelDigisCUDA const& digis_d,
                                                           SiPixelClustersCUDA const& clusters_d,
                                                           BeamSpotCUDA const& bs_d,
-                                                          pixelCPEforGPU::ParamsOnGPU const* cpeParams,
-                                                          bool isPhase2,
+                                                          pixelCPEforGPU::ParamsOnGPUT<TrackerTraits> const* cpeParams,
                                                           cudaStream_t stream) const {
     auto nHits = clusters_d.nClusters();
 
-    TrackingRecHit2DGPU hits_d(
-        nHits, isPhase2, clusters_d.offsetBPIX2(), cpeParams, clusters_d.clusModuleStart(), stream);
-    assert(hits_d.nMaxModules() == isPhase2 ? phase2PixelTopology::numberOfModules
-                                            : phase1PixelTopology::numberOfModules);
+    TrackingRecHit2DGPUT<TrackerTraits> hits_d(nHits,clusters_d.offsetBPIX2(), cpeParams, clusters_d.clusModuleStart(), stream);
+    assert(hits_d.nMaxModules() == TrackerTraits::numberOfModules);
 
     int activeModulesWithDigis = digis_d.nModules();
     // protect from empty events
@@ -67,7 +66,7 @@ namespace pixelgpudetails {
       if (nHits) {
         setHitsLayerStart<<<1, 32, 0, stream>>>(clusters_d.clusModuleStart(), cpeParams, hits_d.hitsLayerStart());
         cudaCheck(cudaGetLastError());
-        auto nLayers = isPhase2 ? phase2PixelTopology::numberOfLayers : phase1PixelTopology::numberOfLayers;
+        constexpr auto nLayers = TrackerTraits::numberOfLayers;
         cms::cuda::fillManyFromVector(hits_d.phiBinner(),
                                       nLayers,
                                       hits_d.iphi(),
@@ -87,4 +86,6 @@ namespace pixelgpudetails {
     return hits_d;
   }
 
+  template class PixelRecHitGPUKernelT<pixelTopology::Phase1>;
+  template class PixelRecHitGPUKernelT<pixelTopology::Phase2>;
 }  // namespace pixelgpudetails

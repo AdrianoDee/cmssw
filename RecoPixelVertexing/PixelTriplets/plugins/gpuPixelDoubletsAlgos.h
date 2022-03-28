@@ -12,28 +12,64 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/VecArray.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 
-#include "CAConstants.h"
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 #include "GPUCACell.h"
 
+#define GPU_DEBUG 1
+#define NTUPLE_DEBUG 1
 namespace gpuPixelDoublets {
 
-  using CellNeighbors = caConstants::CellNeighbors;
-  using CellTracks = caConstants::CellTracks;
-  using CellNeighborsVector = caConstants::CellNeighborsVector;
-  using CellTracksVector = caConstants::CellTracksVector;
+  template <typename TrackerTraits>
+  using CellNeighbors = pixelTopology::CellNeighborsT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using CellTracks = pixelTopology::CellTracksT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using Hits = typename GPUCACellT<TrackerTraits>::Hits;
 
-  __device__ __forceinline__ void doubletsFromHisto(uint8_t const* __restrict__ layerPairs,
-                                                    uint32_t nPairs,
-                                                    GPUCACell* cells,
+  template<typename TrackerTraits>
+  __device__ __forceinline__ bool clusterCut(bool ideal_cond, int16_t cY, uint16_t mi) { return false;}
+
+  template<>
+  __device__ __forceinline__ bool clusterCut<pixelTopology::Phase2>(bool ideal_cond, int16_t cY, uint16_t mi){ return false;}
+
+  template<>
+  __device__ __forceinline__ bool clusterCut<pixelTopology::Phase1>(bool ideal_cond, int16_t cY, uint16_t mi) {
+    bool isOuterLadder = ideal_cond ? true : 0 == (mi / 8) % 2;  // only for B1/B2/B3 B4 is opposite, FPIX:noclue...
+
+    // in any case we always test mes>0 ...
+    auto mes = mi > pixelTopology::Phase1::last_bpix1_detIndex || isOuterLadder ? cY : -1;
+
+    bool innerB1 = mi < pixelTopology::Phase1::last_bpix1_detIndex;
+    bool outerFwd = (mi >= 1184);
+
+    if (!outerFwd)
+      return false;
+
+    if (innerB1 && outerFwd)  // B1 and F1
+      if (mes > 0 && mes < pixelTopology::Phase1::minYsizeB1)
+        return true;                 // only long cluster  (5*8)
+    bool innerB2 = (mi >= pixelTopology::Phase1::last_bpix1_detIndex) && (mi <=320); //FIXME number
+    if (innerB2 && outerFwd)  // B2 and F1
+      if (mes > 0 && mes < pixelTopology::Phase1::minYsizeB2)
+        return true;
+
+    return false;
+  };
+
+  template <typename TrackerTraits>
+  __device__ __forceinline__ void doubletsFromHisto(uint32_t nPairs,
+                                                    GPUCACellT<TrackerTraits>* cells,
                                                     uint32_t* nCells,
-                                                    CellNeighborsVector* cellNeighbors,
-                                                    CellTracksVector* cellTracks,
-                                                    TrackingRecHit2DSOAView const& __restrict__ hh,
-                                                    GPUCACell::OuterHitOfCell isOuterHitOfCell,
-                                                    int16_t const* __restrict__ phicuts,
-                                                    float const* __restrict__ minz,
-                                                    float const* __restrict__ maxz,
-                                                    float const* __restrict__ maxr,
+                                                    CellNeighborsVector<TrackerTraits>* cellNeighbors,
+                                                    CellTracksVector<TrackerTraits>* cellTracks,
+                                                    TrackingRecHit2DSOAViewT<TrackerTraits> const& __restrict__ hh,
+                                                    OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
                                                     bool ideal_cond,
                                                     bool doClusterCut,
                                                     bool doZ0Cut,
@@ -41,8 +77,7 @@ namespace gpuPixelDoublets {
                                                     uint32_t maxNumOfDoublets) {
     // ysize cuts (z in the barrel)  times 8
     // these are used if doClusterCut is true
-    constexpr int minYsizeB1 = 36;
-    constexpr int minYsizeB2 = 28;
+
     constexpr int maxDYsize12 = 28;
     constexpr int maxDYsize = 20;
     constexpr int maxDYPred = 20;
@@ -50,7 +85,7 @@ namespace gpuPixelDoublets {
 
     bool isOuterLadder = ideal_cond;
 
-    using PhiBinner = TrackingRecHit2DSOAView::PhiBinner;
+    using PhiBinner = typename TrackingRecHit2DSOAViewT<TrackerTraits>::PhiBinner;
 
     auto const& __restrict__ phiBinner = hh.phiBinner();
     uint32_t const* __restrict__ offsets = hh.hitsLayerStart();
@@ -61,14 +96,14 @@ namespace gpuPixelDoublets {
     // nPairsMax to be optimized later (originally was 64).
     // If it should be much bigger, consider using a block-wide parallel prefix scan,
     // e.g. see  https://nvlabs.github.io/cub/classcub_1_1_warp_scan.html
-    const int nPairsMax = caConstants::maxNumberOfLayerPairs;
-    assert(nPairs <= nPairsMax);
-    __shared__ uint32_t innerLayerCumulativeSize[nPairsMax];
+
+    // assert(nPairs <= nPairsMax);
+    __shared__ uint32_t innerLayerCumulativeSize[TrackerTraits::nPairs];
     __shared__ uint32_t ntot;
     if (threadIdx.y == 0 && threadIdx.x == 0) {
-      innerLayerCumulativeSize[0] = layerSize(layerPairs[0]);
+      innerLayerCumulativeSize[0] = layerSize(TrackerTraits::layerPairs[0]);
       for (uint32_t i = 1; i < nPairs; ++i) {
-        innerLayerCumulativeSize[i] = innerLayerCumulativeSize[i - 1] + layerSize(layerPairs[2 * i]);
+        innerLayerCumulativeSize[i] = innerLayerCumulativeSize[i - 1] + layerSize(TrackerTraits::layerPairs[2 * i]);
       }
       ntot = innerLayerCumulativeSize[nPairs - 1];
     }
@@ -80,6 +115,21 @@ namespace gpuPixelDoublets {
     auto stride = blockDim.x;
 
     uint32_t pairLayerId = 0;  // cannot go backward
+
+    #ifdef DOUBLET_DEBUG
+         int nDoublets[60],nZ[60],nPhi[60],nz0[60],nPt[60],nClus[60];
+
+         for (size_t i = 0; i < 60; i++) {
+           nDoublets[i]=0;
+           nZ[i] = 0;
+           nPhi[i] = 0;
+           nz0[i] = 0;
+           nPt[i] = 0;
+           nClus[i] = 0;
+         }
+
+    #endif
+
     for (auto j = idy; j < ntot; j += blockDim.y * gridDim.y) {
       while (j >= innerLayerCumulativeSize[pairLayerId++])
         ;
@@ -89,8 +139,8 @@ namespace gpuPixelDoublets {
       assert(j < innerLayerCumulativeSize[pairLayerId]);
       assert(0 == pairLayerId || j >= innerLayerCumulativeSize[pairLayerId - 1]);
 
-      uint8_t inner = layerPairs[2 * pairLayerId];
-      uint8_t outer = layerPairs[2 * pairLayerId + 1];
+      uint8_t inner = TrackerTraits::layerPairs[2 * pairLayerId];
+      uint8_t outer = TrackerTraits::layerPairs[2 * pairLayerId + 1];
       assert(outer > inner);
 
       auto hoff = PhiBinner::histOff(outer);
@@ -116,32 +166,20 @@ namespace gpuPixelDoublets {
 
       auto mez = hh.zGlobal(i);
 
-      if (mez < minz[pairLayerId] || mez > maxz[pairLayerId])
+      if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
         continue;
 
       int16_t mes = -1;  // make compiler happy
-      if (doClusterCut) {
-        // if ideal treat inner ladder as outer
-        if (inner == 0)
-          assert(mi < 96);
-        isOuterLadder = ideal_cond ? true : 0 == (mi / 8) % 2;  // only for B1/B2/B3 B4 is opposite, FPIX:noclue...
 
-        // in any case we always test mes>0 ...
-        mes = inner > 0 || isOuterLadder ? hh.clusterSizeY(i) : -1;
+      if (doClusterCut && clusterCut<TrackerTraits>(ideal_cond,hh.clusterSizeY(i),mi))
+        continue;
 
-        if (inner == 0 && outer > 3)  // B1 and F1
-          if (mes > 0 && mes < minYsizeB1)
-            continue;                 // only long cluster  (5*8)
-        if (inner == 1 && outer > 3)  // B2 and F1
-          if (mes > 0 && mes < minYsizeB2)
-            continue;
-      }
       auto mep = hh.iphi(i);
       auto mer = hh.rGlobal(i);
 
       // all cuts: true if fails
-      constexpr float z0cut = 12.f;      // cm
-      constexpr float hardPtCut = 0.5f;  // GeV
+      constexpr float z0cut = 40.f;//12.f;      // cm
+      constexpr float hardPtCut = 0.1f; //0.5f;  // GeV
       // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
       constexpr float minRadius = hardPtCut * 87.78f;
       constexpr float minRadius2T4 = 4.f * minRadius * minRadius;
@@ -156,7 +194,7 @@ namespace gpuPixelDoublets {
         auto zo = hh.zGlobal(j);
         auto ro = hh.rGlobal(j);
         auto dr = ro - mer;
-        return dr > maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
+        return dr > TrackerTraits::maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
       };
 
       auto zsizeCut = [&](int j) {
@@ -173,7 +211,7 @@ namespace gpuPixelDoublets {
                                 std::abs(mes - int(std::abs((mez - zo) / (mer - ro)) * dzdrFact + 0.5f)) > maxDYPred;
       };
 
-      auto iphicut = phicuts[pairLayerId];
+      auto iphicut = TrackerTraits::phicuts[pairLayerId];
 
       auto kl = PhiBinner::bin(int16_t(mep - iphicut));
       auto kh = PhiBinner::bin(int16_t(mep + iphicut));
@@ -184,6 +222,8 @@ namespace gpuPixelDoublets {
       int nmin = 0;
       int tooMany = 0;
 #endif
+
+
 
       auto khh = kh;
       incr(khh);
@@ -196,6 +236,11 @@ namespace gpuPixelDoublets {
         auto const* __restrict__ e = phiBinner.end(kk + hoff);
         p += first;
         for (; p < e; p += stride) {
+
+          #ifdef DOUBLET_DEBUG
+          nDoublets[pairLayerId]++;
+          #endif
+
           auto oi = __ldg(p);
           assert(oi >= offsets[outer]);
           assert(oi < offsets[outer + 1]);
@@ -205,16 +250,26 @@ namespace gpuPixelDoublets {
 
           if (doZ0Cut && z0cutoff(oi))
             continue;
-
+          #ifdef DOUBLET_DEBUG
+          nz0[pairLayerId]++;
+          #endif
           auto mop = hh.iphi(oi);
           uint16_t idphi = std::min(std::abs(int16_t(mop - mep)), std::abs(int16_t(mep - mop)));
           if (idphi > iphicut)
             continue;
-
+          #ifdef DOUBLET_DEBUG
+           nPhi[pairLayerId]++;
+          #endif
           if (doClusterCut && zsizeCut(oi))
             continue;
+          #ifdef DOUBLET_DEBUG
+           nClus[pairLayerId]++;
+           #endif
           if (doPtCut && ptcut(oi, idphi))
             continue;
+          #ifdef DOUBLET_DEBUG
+           nPt[pairLayerId]++;
+           #endif
 
           auto ind = atomicAdd(nCells, 1);
           if (ind >= maxNumOfDoublets) {
@@ -231,11 +286,21 @@ namespace gpuPixelDoublets {
 #endif
         }
       }
+     //printf("gpuDoublets %d \n",*nCells);
+//      #endif
 #ifdef GPU_DEBUG
       if (tooMany > 0)
         printf("OuterHitOfCell full for %d in layer %d/%d, %d,%d %d\n", i, inner, outer, nmin, tot, tooMany);
 #endif
     }  // loop in block...
+
+    #ifdef DOUBLET_DEBUG
+         for (int i = 0; i < 60; i++) {
+           if(i>int(nPairs))
+           continue;
+           printf("pair %d %d %d %d %d %d %d %d %d %.2f %.2f \n", i, TrackerTraits::layerPairs[2 * i], TrackerTraits::layerPairs[2 * i + 1], nDoublets[i] ,nZ[i],nz0[i],nPhi[i],nPt[i],nClus[i],TrackerTraits::minz[pairLayerId],TrackerTraits::maxz[pairLayerId]);
+         }
+    #endif
   }
 
 }  // namespace gpuPixelDoublets

@@ -20,12 +20,15 @@
 #include "RecoLocalTracker/SiPixelClusterizer/plugins/gpuClusterChargeCut.h"
 #include "RecoLocalTracker/SiPixelClusterizer/plugins/SiPixelClusterThresholds.h"
 
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
+
 int main(void) {
 #ifdef __CUDACC__
   cms::cudatest::requireDevices();
 #endif  // __CUDACC__
 
   using namespace gpuClustering;
+  using pixelTopology::Phase1;
 
   constexpr int numElements = 256 * maxNumModules;
   constexpr SiPixelClusterThresholds clusterThresholds(kSiPixelClusterThresholdsDefaultPhase1);
@@ -255,7 +258,7 @@ int main(void) {
               << " threads\n";
 
     cms::cuda::launch(
-        countModules<false>, {blocksPerGrid, threadsPerBlock}, d_id.get(), d_moduleStart.get(), d_clus.get(), n);
+        countModules<Phase1>, {blocksPerGrid, threadsPerBlock}, d_id.get(), d_moduleStart.get(), d_clus.get(), n);
 
     blocksPerGrid = maxNumModules;  //nModules;
 
@@ -263,7 +266,7 @@ int main(void) {
               << " threads\n";
     cudaCheck(cudaMemset(d_clusInModule.get(), 0, maxNumModules * sizeof(uint32_t)));
 
-    cms::cuda::launch(findClus<false>,
+    cms::cuda::launch(findClus<Phase1>,
                       {blocksPerGrid, threadsPerBlock},
                       d_id.get(),
                       d_x.get(),
@@ -289,7 +292,7 @@ int main(void) {
     if (ncl != std::accumulate(nclus, nclus + maxNumModules, 0))
       std::cout << "ERROR!!!!! wrong number of cluster found" << std::endl;
 
-    cms::cuda::launch(clusterChargeCut<false>,
+    cms::cuda::launch(clusterChargeCut<Phase1>,
                       {blocksPerGrid, threadsPerBlock},
                       clusterThresholds,
                       d_id.get(),
@@ -303,9 +306,9 @@ int main(void) {
     cudaDeviceSynchronize();
 #else   // __CUDACC__
     h_moduleStart[0] = nModules;
-    countModules<false>(h_id.get(), h_moduleStart.get(), h_clus.get(), n);
+    countModules<Phase1>(h_id.get(), h_moduleStart.get(), h_clus.get(), n);
     memset(h_clusInModule.get(), 0, maxNumModules * sizeof(uint32_t));
-    findClus<false>(
+    findClus<Phase1>(
         h_id.get(), h_x.get(), h_y.get(), h_moduleStart.get(), h_clusInModule.get(), h_moduleId.get(), h_clus.get(), n);
 
     nModules = h_moduleStart[0];
@@ -321,7 +324,7 @@ int main(void) {
     if (ncl != std::accumulate(nclus, nclus + maxNumModules, 0))
       std::cout << "ERROR!!!!! wrong number of cluster found" << std::endl;
 
-    clusterChargeCut<false>(clusterThresholds,
+    clusterChargeCut<Phase1>(clusterThresholds,
                             h_id.get(),
                             h_adc.get(),
                             h_moduleStart.get(),

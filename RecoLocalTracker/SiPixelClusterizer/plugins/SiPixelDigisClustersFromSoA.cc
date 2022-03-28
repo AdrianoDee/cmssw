@@ -15,7 +15,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 
 // local include(s)
 #include "PixelClusterizerBase.h"

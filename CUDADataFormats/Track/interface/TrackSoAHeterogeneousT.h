@@ -5,9 +5,8 @@
 #include <algorithm>
 
 #include "CUDADataFormats/Track/interface/TrajectoryStateSoAT.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"
-
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 #include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
 
 namespace pixelTrack {
@@ -20,14 +19,16 @@ namespace pixelTrack {
   }
 }  // namespace pixelTrack
 
-template <int32_t S>
+template <typename TrackerTraits>
 class TrackSoAHeterogeneousT {
 public:
+  static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
+  static constexpr int32_t H = TrackerTraits::maxHitsOnTrack;
   static constexpr int32_t stride() { return S; }
 
   using Quality = pixelTrack::Quality;
   using hindex_type = uint32_t;
-  using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, 5 * S>;
+  using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>; // TODO plot for average number of hits
 
   // Always check quality is at least loose!
   // CUDA does not support enums  in __lgc ...
@@ -53,9 +54,9 @@ public:
     // layers are in order and we assume tracks are either forward or backward
     auto pdet = detIndices.begin(i);
     int nl = 1;
-    auto ol = phase1PixelTopology::getLayer(*pdet);
+    auto ol = pixelTopology::getLayer<TrackerTraits>(*pdet);
     for (; pdet < detIndices.end(i); ++pdet) {
-      auto il = phase1PixelTopology::getLayer(*pdet);
+      auto il = pixelTopology::getLayer<TrackerTraits>(*pdet);
       if (il != ol)
         ++nl;
       ol = il;
@@ -84,17 +85,19 @@ public:
 
 namespace pixelTrack {
 
-#ifdef GPU_SMALL_EVENTS
-  // kept for testing and debugging
-  constexpr uint32_t maxNumber() { return 2 * 1024; }
-#else
-  // tested on MC events with 55-75 pileup events
-  constexpr uint32_t maxNumber() { return 32 * 1024; }
-#endif
+  template <typename TrackerTraits>
+  using TrackSoAT = TrackSoAHeterogeneousT<TrackerTraits>;
 
-  using TrackSoA = TrackSoAHeterogeneousT<maxNumber()>;
-  using TrajectoryState = TrajectoryStateSoAT<maxNumber()>;
+  template <typename TrackerTraits>
+  using HitContainerT = typename TrackSoAT<TrackerTraits>::HitContainer;
+
+  typedef TrackSoAT<pixelTopology::Phase1> TrackSoA; 
+  using TrajectoryState = TrajectoryStateSoAT<TrackSoA::S>;
   using HitContainer = TrackSoA::HitContainer;
+
+  typedef TrackSoAT<pixelTopology::Phase2> TrackSoAPhase2;
+  using TrajectoryStatePhase2 = TrajectoryStateSoAT<TrackSoA::S>;
+  using HitContainerPhase2 = TrackSoAPhase2::HitContainer;
 
 }  // namespace pixelTrack
 

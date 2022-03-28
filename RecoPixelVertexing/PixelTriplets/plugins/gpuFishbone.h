@@ -8,7 +8,7 @@
 #include <limits>
 
 #include "DataFormats/Math/interface/approx_atan2.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/VecArray.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 
@@ -16,13 +16,27 @@
 
 namespace gpuPixelDoublets {
 
-  __global__ void fishbone(GPUCACell::Hits const* __restrict__ hhp,
-                           GPUCACell* cells,
+  template <typename TrackerTraits>
+  using CellNeighbors = pixelTopology::CellNeighborsT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using CellTracks = pixelTopology::CellTracksT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
+  template <typename TrackerTraits>
+  using Hits = typename GPUCACellT<TrackerTraits>::Hits;
+
+   template <typename TrackerTraits>
+  __global__ void fishbone(Hits<TrackerTraits> const* __restrict__ hhp,
+                           GPUCACellT<TrackerTraits>* cells,
                            uint32_t const* __restrict__ nCells,
-                           GPUCACell::OuterHitOfCell const isOuterHitOfCellWrap,
+                           OuterHitOfCell<TrackerTraits> const isOuterHitOfCellWrap,
                            int32_t nHits,
                            bool checkTrack) {
-    constexpr auto maxCellsPerHit = GPUCACell::maxCellsPerHit;
+    constexpr auto maxCellsPerHit = GPUCACellT<TrackerTraits>::maxCellsPerHit;
 
     auto const& hh = *hhp;
 
