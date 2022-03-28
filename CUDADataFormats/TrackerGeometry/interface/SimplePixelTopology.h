@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <type_traits>
 
-#include <cuda_runtime.h>
-
 #include "HeterogeneousCore/CUDAUtilities/interface/SimpleVector.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/VecArray.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"

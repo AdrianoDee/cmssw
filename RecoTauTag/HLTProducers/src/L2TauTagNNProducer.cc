@@ -146,8 +146,6 @@ struct L2TauNNProducerCacheData {
 
 class L2TauNNProducer : public edm::stream::EDProducer<edm::GlobalCache<L2TauNNProducerCacheData>> {
 public:
-  using TrackSoA = pixelTrack::TrackSoAT<pixelTopology::Phase1>;
-
   struct caloRecHitCollections {
     const HBHERecHitCollection* hbhe;
     const HORecHitCollection* ho;
@@ -181,18 +179,16 @@ private:
                        const caloRecHitCollections& caloRecHits);
   void fillPatatracks(tensorflow::Tensor& cellGridMatrix,
                       const std::vector<l1t::TauRef>& allTaus,
-                      const TrackSoA& patatracks_tsoa,
+                      const pixelTrack::TrackSoA& patatracks_tsoa,
                       const ZVertexSoA& patavtx_soa,
                       const reco::BeamSpot& beamspot,
                       const MagneticField* magfi);
-
   void selectGoodTracksAndVertices(const ZVertexSoA& patavtx_soa,
                                    const pixelTrack::TrackSoA& patatracks_tsoa,
                                    std::vector<int>& trkGood,
                                    std::vector<int>& vtxGood);
-
   std::pair<float, float> impactParameter(int it,
-                                          const TrackSoA& patatracks_tsoa,
+                                          const pixelTrack::TrackSoA& patatracks_tsoa,
                                           float patatrackPhi,
                                           const reco::BeamSpot& beamspot,
                                           const MagneticField* magfi);
@@ -573,12 +569,11 @@ void L2TauNNProducer::fillCaloRecHits(tensorflow::Tensor& cellGridMatrix,
   }
 }
 
-
 void L2TauNNProducer::selectGoodTracksAndVertices(const ZVertexSoA& patavtx_soa,
                                                   const pixelTrack::TrackSoA& patatracks_tsoa,
                                                   std::vector<int>& trkGood,
                                                   std::vector<int>& vtxGood) {
-
+  const auto maxTracks = patatracks_tsoa.stride();
   const int nv = patavtx_soa.nvFinal;
   trkGood.clear();
   trkGood.reserve(maxTracks);
@@ -622,7 +617,7 @@ void L2TauNNProducer::selectGoodTracksAndVertices(const ZVertexSoA& patavtx_soa,
 }
 
 std::pair<float, float> L2TauNNProducer::impactParameter(int it,
-                                                         const TrackSoA& patatracks_tsoa,
+                                                         const pixelTrack::TrackSoA& patatracks_tsoa,
                                                          float patatrackPhi,
                                                          const reco::BeamSpot& beamspot,
                                                          const MagneticField* magfi) {
@@ -655,7 +650,7 @@ std::pair<float, float> L2TauNNProducer::impactParameter(int it,
 
 void L2TauNNProducer::fillPatatracks(tensorflow::Tensor& cellGridMatrix,
                                      const std::vector<l1t::TauRef>& allTaus,
-                                     const TrackSoA& patatracks_tsoa,
+                                     const pixelTrack::TrackSoA& patatracks_tsoa,
                                      const ZVertexSoA& patavtx_soa,
                                      const reco::BeamSpot& beamspot,
                                      const MagneticField* magfi) {
