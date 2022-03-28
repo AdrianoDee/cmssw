@@ -52,7 +52,7 @@ private:
   int m_nHits;
 };
 
-using TrackingRecHit2DReduced = TrackingRecHit2DReducedT<pixelTopology::Phase1>;
-using TrackingRecHit2DReducedPhase2 = TrackingRecHit2DReducedT<pixelTopology::Phase2>;
+typedef TrackingRecHit2DReducedT<pixelTopology::Phase1> TrackingRecHit2DReduced;
+typedef TrackingRecHit2DReducedT<pixelTopology::Phase2> TrackingRecHit2DReducedPhase2;
 
 #endif
