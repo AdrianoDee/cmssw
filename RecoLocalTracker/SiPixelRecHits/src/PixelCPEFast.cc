@@ -13,9 +13,6 @@
 // Services
 // this is needed to get errors from templates
 
-template class PixelCPEFastT<pixelTopology::Phase1>;
-template class PixelCPEFastT<pixelTopology::Phase2>;
-
 namespace {
   constexpr float micronsToCm = 1.0e-4;
 }
@@ -539,3 +536,6 @@ void PixelCPEFastT<TrackerTraits>::fillPSetDescription(edm::ParameterSetDescript
   // call PixelCPEGenericBase fillPSetDescription to add common rechit errors
   PixelCPEGenericBase::fillPSetDescription(desc);
 }
+
+template class PixelCPEFastT<pixelTopology::Phase1>;
+template class PixelCPEFastT<pixelTopology::Phase2>;

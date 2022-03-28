@@ -120,4 +120,7 @@ private:
   uint32_t m_nMaxModules;
 };
 
+using TrackingRecHit2DSOAView = TrackingRecHit2DSOAViewT<pixelTopology::Phase1>;
+using TrackingRecHit2DSOAViewPhase2 = TrackingRecHit2DSOAViewT<pixelTopology::Phase2>;
+
 #endif  // CUDADataFormats_TrackingRecHit_interface_TrackingRecHit2DSOAView_h
