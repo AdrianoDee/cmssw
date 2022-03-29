@@ -8,15 +8,15 @@
 namespace gpuPixelDoublets {
 
   template <typename TrackerTraits>
-  using CellNeighbors = pixelTopology::CellNeighborsT<TrackerTraits>;
+  using CellNeighbors = caStructures::CellNeighborsT<TrackerTraits>;
   template <typename TrackerTraits>
-  using CellTracks = pixelTopology::CellTracksT<TrackerTraits>;
+  using CellTracks = caStructures::CellTracksT<TrackerTraits>;
   template <typename TrackerTraits>
-  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
   template <typename TrackerTraits>
-  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
   template <typename TrackerTraits>
-  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
+  using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
   template <typename TrackerTraits>
   using Hits = typename GPUCACellT<TrackerTraits>::Hits;
 

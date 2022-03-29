@@ -12,7 +12,7 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernels(HitsView const *hv,
   auto numberOfBlocks = (maxNumberOfConcurrentFits_ + blockSize - 1) / blockSize;
 
   //  Fit internals
-  auto tkidGPU = cms::cuda::make_device_unique<pixelTopology::tindex_type[]>(maxNumberOfConcurrentFits_, stream);
+  auto tkidGPU = cms::cuda::make_device_unique<caStructures::tindex_type[]>(maxNumberOfConcurrentFits_, stream);
   auto hitsGPU = cms::cuda::make_device_unique<double[]>(
       maxNumberOfConcurrentFits_ * sizeof(riemannFit::Matrix3xNd<6>) / sizeof(double), stream);
   auto hits_geGPU = cms::cuda::make_device_unique<float[]>(

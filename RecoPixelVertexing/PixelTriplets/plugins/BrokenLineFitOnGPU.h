@@ -23,9 +23,9 @@ using Tuples = pixelTrack::HitContainerT<TrackerTraits>;
 template <typename TrackerTraits>
 using OutputSoA = pixelTrack::TrackSoAT<TrackerTraits>;
 template <typename TrackerTraits>
-using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
-using tindex_type = pixelTopology::tindex_type;
+using tindex_type = caStructures::tindex_type;
 constexpr auto invalidTkId = std::numeric_limits<tindex_type>::max();
 
 // #define BL_DUMP_HITS

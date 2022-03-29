@@ -26,15 +26,7 @@ namespace cAHitNtupletGenerator {
     unsigned long long nZeroTrackCells;
   };
 
-  // using HitsView = TrackingRecHit2DSOAView;
-  // using HitsOnGPU = TrackingRecHit2DSOAView;
-
-  // using HitToTuple = pixelTopology::HitToTuple;
-  // using TupleMultiplicity = pixelTopology::TupleMultiplicity;
-
   using Quality = pixelTrack::Quality;
-  using TkSoA = pixelTrack::TrackSoA;
-  using HitContainer = pixelTrack::HitContainer;
 
   struct QualityCuts {
     // chi2 cut = chi2Scale * (chi2Coeff[0] + pT/GeV * (chi2Coeff[1] + pT/GeV * (chi2Coeff[2] + pT/GeV * chi2Coeff[3])))
@@ -170,14 +162,14 @@ public:
   using HitsView = TrackingRecHit2DSOAViewT<TrackerTraits>;
   using HitsOnCPU = TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>;
 
-  using HitToTuple = pixelTopology::HitToTupleT<TrackerTraits>;
-  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
-  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
-  using CellNeighbors = pixelTopology::CellNeighborsT<TrackerTraits>;
-  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
-  using CellTracks = pixelTopology::CellTracksT<TrackerTraits>;
-  using OuterHitOfCellContainer = pixelTopology::OuterHitOfCellContainerT<TrackerTraits>;
-  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
+  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using CellNeighbors = caStructures::CellNeighborsT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+  using CellTracks = caStructures::CellTracksT<TrackerTraits>;
+  using OuterHitOfCellContainer = caStructures::OuterHitOfCellContainerT<TrackerTraits>;
+  using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
 
   using GPUCACell = GPUCACellT<TrackerTraits>;
 
@@ -257,10 +249,10 @@ class CAHitNtupletGeneratorKernelsGPUT<cms::cudacompat::GPUTraits,TrackerTraits>
   using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
   using Counters = cAHitNtupletGenerator::Counters;
   using HitContainer = pixelTrack::HitContainerT<TrackerTraits>;
-  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
-  using HitToTuple = pixelTopology::HitToTupleT<TrackerTraits>;
-  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
-  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
   public:
 
@@ -284,10 +276,10 @@ class CAHitNtupletGeneratorKernelsCPUT<cms::cudacompat::CPUTraits,TrackerTraits>
   using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
   using Counters = cAHitNtupletGenerator::Counters;
   using QualityCuts = cAHitNtupletGenerator::QualityCuts;
-  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
-  using HitToTuple = pixelTopology::HitToTupleT<TrackerTraits>;
-  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
-  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
   public:
 
@@ -304,11 +296,5 @@ using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernelsGPUT<cms::cu
 
 template<typename TrackerTraits>
 using CAHitNtupletGeneratorKernelsCPU = CAHitNtupletGeneratorKernelsCPUT<cms::cudacompat::CPUTraits,TrackerTraits>;
-
-// using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernelsT<cms::cudacompat::GPUTraits,pixelTopology::Phase1>;
-// using CAHitNtupletGeneratorKernelsCPU = CAHitNtupletGeneratorKernelsT<cms::cudacompat::CPUTraits,pixelTopology::Phase1>;
-//
-// using CAHitNtupletGeneratorKernelsGPUPhase2 = CAHitNtupletGeneratorKernelsT<cms::cudacompat::GPUTraits,pixelTopology::Phase1>;
-// using CAHitNtupletGeneratorKernelsCPUPhase2 = CAHitNtupletGeneratorKernelsT<cms::cudacompat::CPUTraits,pixelTopology::Phase1>;
 
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h

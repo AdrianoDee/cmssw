@@ -33,17 +33,17 @@ public:
   using HitsOnCPU = TrackingRecHit2DCPUT<TrackerTraits>;
   using hindex_type = typename HitsView::hindex_type;
 
-  using HitToTuple = pixelTopology::HitToTupleT<TrackerTraits>;
-  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
-  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
+  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
+  using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
 
   using GPUCACell = GPUCACellT<TrackerTraits>;
   using OutputSoA = pixelTrack::TrackSoAT<TrackerTraits>;
   using HitContainer = typename OutputSoA::HitContainer;
   using Tuple = HitContainer;
 
-  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
-  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
 
   using Quality = pixelTrack::Quality;
 

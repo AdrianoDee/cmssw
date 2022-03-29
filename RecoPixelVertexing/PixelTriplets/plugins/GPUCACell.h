@@ -16,6 +16,7 @@
 #include "RecoPixelVertexing/PixelTriplets/interface/CircleEq.h"
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
+#include "CAStructures.h"
 
 template <typename TrackerTraits>
 class GPUCACellT {
@@ -23,18 +24,18 @@ public:
   using PtrAsInt = unsigned long long;
 
   static constexpr auto maxCellsPerHit = TrackerTraits::maxCellsPerHit;
-  using OuterHitOfCellContainer = pixelTopology::OuterHitOfCellContainerT<TrackerTraits>;
-  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
-  using CellNeighbors = pixelTopology::CellNeighborsT<TrackerTraits>;
-  using CellTracks = pixelTopology::CellTracksT<TrackerTraits>;
-  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
-  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  using OuterHitOfCellContainer = caStructures::OuterHitOfCellContainerT<TrackerTraits>;
+  using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
+  using CellNeighbors = caStructures::CellNeighborsT<TrackerTraits>;
+  using CellTracks = caStructures::CellTracksT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
 
   using Hits = TrackingRecHit2DSOAViewT<TrackerTraits>;
   using hindex_type = typename Hits::hindex_type;
 
   using TmpTuple = cms::cuda::VecArray<uint32_t, TrackerTraits::maxDepth>;
-  
+
   using HitContainer = pixelTrack::HitContainerT<TrackerTraits>;
   using Quality = pixelTrack::Quality;
   static constexpr auto bad = pixelTrack::Quality::bad;
@@ -67,7 +68,7 @@ public:
   }
 
 
-  __device__ __forceinline__ int addOuterNeighbor(pixelTopology::cindex_type t, CellNeighborsVector& cellNeighbors) {
+  __device__ __forceinline__ int addOuterNeighbor(caStructures::cindex_type t, CellNeighborsVector& cellNeighbors) {
     // use smart cache
     if (outerNeighbors().empty()) {
       auto i = cellNeighbors.extend();  // maybe wasted....
@@ -89,7 +90,7 @@ public:
     return outerNeighbors().push_back(t);
   }
 
-  __device__ __forceinline__ int addTrack(pixelTopology::tindex_type t, CellTracksVector& cellTracks) {
+  __device__ __forceinline__ int addTrack(caStructures::tindex_type t, CellTracksVector& cellTracks) {
     if (tracks().empty()) {
       auto i = cellTracks.extend();  // maybe wasted....
       if (i > 0) {

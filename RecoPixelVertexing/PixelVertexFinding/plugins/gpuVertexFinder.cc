@@ -18,7 +18,8 @@ namespace gpuVertexFinder {
   // split vertices with a chi2/NDoF greater than this
   constexpr float maxChi2ForSplit = 9.f;
 
-  __global__ void loadTracks(TkSoA const* ptracks, ZVertexSoA* soa, WorkSpace* pws, float ptMin) {
+  template<typename TrackerTraits>
+  __global__ void loadTracks(pixelTrack::TrackSoAT<TrackerTraits> const* ptracks, ZVertexSoA* soa, WorkSpace* pws, float ptMin) {
     assert(ptracks);
     assert(soa);
     auto const& tracks = *ptracks;
@@ -26,7 +27,7 @@ namespace gpuVertexFinder {
     auto const* quality = tracks.qualityData();
 
     auto first = blockIdx.x * blockDim.x + threadIdx.x;
-    for (int idx = first, nt = TkSoA::stride(); idx < nt; idx += gridDim.x * blockDim.x) {
+    for (int idx = first, nt = pixelTrack::TrackSoAT<TrackerTraits>::stride(); idx < nt; idx += gridDim.x * blockDim.x) {
       auto nHits = tracks.nHits(idx);
       if (nHits == 0)
         break;  // this is a guard: maybe we need to move to nTracks...
@@ -92,14 +93,15 @@ namespace gpuVertexFinder {
   }
 #endif
 
+template<typename TrackerTraits>
 #ifdef __CUDACC__
-  ZVertexHeterogeneous Producer::makeAsync(cudaStream_t stream, TkSoA const* tksoa, float ptMin) const {
+  ZVertexHeterogeneous ProducerT<TrackerTraits>::makeAsync(cudaStream_t stream, pixelTrack::TrackSoAT<TrackerTraits> const* tksoa, float ptMin) const {
 #ifdef PIXVERTEX_DEBUG_PRODUCE
     std::cout << "producing Vertices on GPU" << std::endl;
 #endif  // PIXVERTEX_DEBUG_PRODUCE
     ZVertexHeterogeneous vertices(cms::cuda::make_device_unique<ZVertexSoA>(stream));
 #else
-  ZVertexHeterogeneous Producer::make(TkSoA const* tksoa, float ptMin) const {
+  ZVertexHeterogeneous ProducerT<TrackerTraits>::make(pixelTrack::TrackSoAT<TrackerTraits> const* tksoa, float ptMin) const {
 #ifdef PIXVERTEX_DEBUG_PRODUCE
     std::cout << "producing Vertices on  CPU" << std::endl;
 #endif  // PIXVERTEX_DEBUG_PRODUCE
@@ -118,12 +120,12 @@ namespace gpuVertexFinder {
 #ifdef __CUDACC__
     init<<<1, 1, 0, stream>>>(soa, ws_d.get());
     auto blockSize = 128;
-    auto numberOfBlocks = (TkSoA::stride() + blockSize - 1) / blockSize;
-    loadTracks<<<numberOfBlocks, blockSize, 0, stream>>>(tksoa, soa, ws_d.get(), ptMin);
+    auto numberOfBlocks = (pixelTrack::TrackSoAT<TrackerTraits>::stride() + blockSize - 1) / blockSize;
+    loadTracks<TrackerTraits><<<numberOfBlocks, blockSize, 0, stream>>>(tksoa, soa, ws_d.get(), ptMin);
     cudaCheck(cudaGetLastError());
 #else
     init(soa, ws_d.get());
-    loadTracks(tksoa, soa, ws_d.get(), ptMin);
+    loadTracks<TrackerTraits>(tksoa, soa, ws_d.get(), ptMin);
 #endif
 
 #ifdef __CUDACC__
@@ -183,5 +185,8 @@ namespace gpuVertexFinder {
 
     return vertices;
   }
+
+  template class ProducerT<pixelTopology::Phase1>;
+  template class ProducerT<pixelTopology::Phase2>;
 
 }  // namespace gpuVertexFinder

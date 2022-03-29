@@ -5,9 +5,12 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "HeterogeneousCore/CUDAUtilities/interface/SimpleVector.h"
-#include "HeterogeneousCore/CUDAUtilities/interface/VecArray.h"
-#include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"
+#ifdef __CUDA_ARCH__
+  #define DEVICECONST __device__ constexpr
+#else
+  #define DEVICECONST constexpr
+#endif
+
 
 namespace pixelTopology {
 
@@ -139,11 +142,6 @@ template<typename TrackerTraits>
     uint16_t r = n - q * 13;
     return q + ((r + 3) >> 4);
   }
-
-  // types
-  using hindex_type = uint32_t;  // FIXME from siPixelRecHitsHeterogeneousProduct
-  using tindex_type = uint32_t;  // for tuples
-  using cindex_type = uint32_t;  // for cells
 }
 
 
@@ -158,7 +156,7 @@ namespace phase1PixelTopology
   constexpr int nPairs = 13 + 2 + 4;
   constexpr uint16_t numberOfModules = 1856;
 
-  __device__ constexpr uint8_t layerPairs[2 * nPairs] = {
+  DEVICECONST uint8_t layerPairs[2 * nPairs] = {
       0, 1, 0, 4, 0, 7,              // BPIX1 (3)
       1, 2, 1, 4, 1, 7,              // BPIX2 (6)
       4, 5, 7, 8,                    // FPIX1 (8)
@@ -168,7 +166,7 @@ namespace phase1PixelTopology
       4, 6, 7, 9                     // Jumping Forward (19)
   };
 
-  __device__ constexpr int16_t phicuts[nPairs]{phi0p05,
+  DEVICECONST int16_t phicuts[nPairs]{phi0p05,
                                              phi0p07,
                                              phi0p07,
                                              phi0p05,
@@ -187,11 +185,11 @@ namespace phase1PixelTopology
                                              phi0p05,
                                              phi0p05,
                                              phi0p05};
-__device__ constexpr float minz[nPairs] = {
+DEVICECONST float minz[nPairs] = {
       -20., 0., -30., -22., 10., -30., -70., -70., -22., 15., -30, -70., -70., -20., -22., 0, -30., -70., -70.};
-__device__ constexpr float maxz[nPairs] = {
+DEVICECONST float maxz[nPairs] = {
       20., 30., 0., 22., 30., -10., 70., 70., 22., 30., -15., 70., 70., 20., 22., 30., 0., 70., 70.};
-__device__ constexpr float maxr[nPairs] = {
+DEVICECONST float maxr[nPairs] = {
       20., 9., 9., 20., 7., 7., 5., 5., 20., 6., 6., 5., 5., 20., 20., 9., 9., 9., 9.};
 
       static constexpr uint32_t layerStart[numberOfLayers + 1] = {0,
@@ -215,7 +213,7 @@ namespace phase2PixelTopology
   constexpr int nPairs = 23 + 6 + 14 + 8;  // include far forward layer pairs
   constexpr uint16_t numberOfModules = 3892;
 
-  __device__ constexpr uint8_t layerPairs[2 * nPairs] = {
+  DEVICECONST uint8_t layerPairs[2 * nPairs] = {
 
      0, 1, 0, 4, 0, 16, //BPIX1 (3)
      1, 2, 1, 4, 1, 16, //BPIX2 (6)
@@ -233,7 +231,7 @@ namespace phase2PixelTopology
      11,12,12,13,13,14,14,15, //Late POS (47)
      23,24,24,25,25,26,26,27, //Late NEG (51)
 };
-  __device__ constexpr uint32_t layerStart[numberOfLayers + 1] = {0,
+  DEVICECONST uint32_t layerStart[numberOfLayers + 1] = {0,
                                                        108,
                                                        324,
                                                        504,  //Barrel
@@ -263,7 +261,7 @@ namespace phase2PixelTopology
                                                        3716,  //Np
                                                        numberOfModules};
 
-     __device__ constexpr int16_t phicuts[nPairs]{
+     DEVICECONST int16_t phicuts[nPairs]{
                         phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
                         phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
                         phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
@@ -273,7 +271,7 @@ namespace phase2PixelTopology
                         phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
                         phi0p07,phi0p07};
 
-     __device__ constexpr float minz[nPairs] = {
+     DEVICECONST float minz[nPairs] = {
         -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
         -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
         -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
@@ -281,13 +279,13 @@ namespace phase2PixelTopology
         -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999., -9999.};
 
 
-     __device__ constexpr float maxz[nPairs] = {
+     DEVICECONST float maxz[nPairs] = {
       9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
       9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
       9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
       9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
       9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999., 9999.};
-     __device__ constexpr float maxr[nPairs] = {
+     DEVICECONST float maxr[nPairs] = {
       9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
       9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
       9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
@@ -364,15 +362,16 @@ namespace pixelTopology{
 
      static_assert(numberOfLayers <= phase2PixelTopology::numberOfLayers);
 
-      static constexpr uint32_t const *layerStart = phase2PixelTopology::layerStart;
-      static constexpr uint8_t const *layerPairs = phase2PixelTopology::layerPairs;
-      static constexpr int16_t const *phicuts = phase2PixelTopology::phicuts;
-      static constexpr float const *minz = phase2PixelTopology::minz;
-      static constexpr float const *maxz = phase2PixelTopology::maxz;
-      static constexpr float const *maxr = phase2PixelTopology::maxr;
+    static constexpr uint32_t const *layerStart = phase2PixelTopology::layerStart;
+    static constexpr uint8_t const *layerPairs = phase2PixelTopology::layerPairs;
+    static constexpr int16_t const *phicuts = phase2PixelTopology::phicuts;
+    static constexpr float const *minz = phase2PixelTopology::minz;
+    static constexpr float const *maxz = phase2PixelTopology::maxz;
+    static constexpr float const *maxr = phase2PixelTopology::maxr;
 
-       static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
-       static constexpr uint32_t getDoubletsFromHistoMinBlocksPerMP = 16;
+    static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
+    static constexpr uint32_t getDoubletsFromHistoMinBlocksPerMP = 16;
+
 
   };
 
@@ -495,37 +494,6 @@ namespace pixelTopology{
 
   };
 
-  template<typename Tracker>
-  using CellNeighborsT = cms::cuda::VecArray<cindex_type, Tracker::maxCellNeighbors>;
-
-  template <typename Tracker>
-  using TupleMultiplicityT = cms::cuda::OneToManyAssoc<tindex_type, Tracker::maxHitsOnTrack + 1, Tracker::maxNumberOfTuples>;
-
-  template <typename Tracker>
-  using HitToTupleT = cms::cuda::OneToManyAssoc<tindex_type, -1, Tracker::maxHitsForContainers>;  // 3.5 should be enough
-
-  template<typename Tracker>
-  using CellTracksT = cms::cuda::VecArray<tindex_type, Tracker::maxCellTracks>;
-
-  template<typename Tracker>
-  using CellNeighborsVectorT = cms::cuda::SimpleVector<CellNeighborsT<Tracker>>;
-
-  template<typename Tracker>
-  using CellTracksVectorT = cms::cuda::SimpleVector<CellTracksT<Tracker>>;
-
-  template<typename Tracker>
-  using OuterHitOfCellContainerT = cms::cuda::VecArray<uint32_t, Tracker::maxCellsPerHit>;
-
-  template<typename Tracker>
-  using TuplesContainerT = cms::cuda::OneToManyAssoc<hindex_type, Tracker::maxNumberOfTuples, Tracker::maxHitsForContainers>;
-
-  template<typename Tracker>
-  struct OuterHitOfCellT {
-    OuterHitOfCellContainerT<Tracker>* container;
-    int32_t offset;
-    constexpr auto& operator[](int i) { return container[i - offset]; }
-    constexpr auto const& operator[](int i) const { return container[i - offset]; }
-  };
 
 }  // namespace trackerTopology
 

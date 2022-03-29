@@ -4,8 +4,9 @@
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
 #include "RecoPixelVertexing/PixelTrackFitting/interface/FitResult.h"
-
 #include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
+
+#include "CAStructures.h"
 
 namespace riemannFit {
   // in case of memory issue can be made smaller
@@ -49,7 +50,7 @@ public:
   using Tuples = pixelTrack::HitContainerT<TrackerTraits>;
   using OutputSoA = pixelTrack::TrackSoAT<TrackerTraits>;
 
-  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
   explicit HelixFitOnGPUT(float bf, bool fitNas4) : bField_(bf), fitNas4_(fitNas4) {}
   ~HelixFitOnGPUT() { deallocateOnGPU(); }

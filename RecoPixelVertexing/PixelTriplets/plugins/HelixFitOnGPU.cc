@@ -3,7 +3,7 @@
 
 template<typename TrackerTraits>
 void HelixFitOnGPUT<TrackerTraits>::allocateOnGPU(Tuples const *tuples,
-                                  pixelTopology::TupleMultiplicityT<TrackerTraits> const *tupleMultiplicity,
+                                  caStructures::TupleMultiplicityT<TrackerTraits> const *tupleMultiplicity,
                                   pixelTrack::TrackSoAT<TrackerTraits> *helix_fit_results) {
   tuples_ = tuples;
   tupleMultiplicity_ = tupleMultiplicity;

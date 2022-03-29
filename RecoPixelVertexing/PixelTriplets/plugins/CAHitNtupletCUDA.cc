@@ -76,9 +76,9 @@ void CAHitNtupletCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescri
 
   GPUAlgo::fillDescriptions(desc);
   //descriptions.add("pixelTracksCUDA", desc);
-  std::string name = "pixelTracksCUDA";
-  name += TrackerTraits::nameModifier;
-  descriptions.add(name,desc);
+  std::string label = "pixelTracksCUDA";
+  label += TrackerTraits::nameModifier;
+  descriptions.add(label,desc);
 }
 
 template <typename TrackerTraits>

@@ -1,12 +1,17 @@
 <lcgdict>
+  <class name="pixelTrack::TrackSoA" persistent="false" ClassVersion="10">
+    <version ClassVersion="10" checksum="2853455777"/>
+  </class>
   <class name="cms::cuda::Product<HeterogeneousSoA<pixelTrack::TrackSoA>>" persistent="false"/>
   <class name="edm::Wrapper<cms::cuda::Product<HeterogeneousSoA<pixelTrack::TrackSoA>>>" persistent="false"/>
   <class name="HeterogeneousSoA<pixelTrack::TrackSoA>" persistent="false"/>
-  <class name="edm::Wrapper<HeterogeneousSoA<pixelTrack::TrackSoA>>" persistent="false"/>
 
+  <class name="pixelTrack::TrackSoAPhase2" persistent="false" ClassVersion="10">
+    <version ClassVersion="10" checksum="1390791474"/>
+  </class>
+  <class name="edm::Wrapper<HeterogeneousSoA<pixelTrack::TrackSoAPhase2>>" persistent="false" />
   <class name="cms::cuda::Product<HeterogeneousSoA<pixelTrack::TrackSoAPhase2>>" persistent="false"/>
   <class name="edm::Wrapper<cms::cuda::Product<HeterogeneousSoA<pixelTrack::TrackSoAPhase2>>>" persistent="false"/>
-  <class name="HeterogeneousSoA<pixelTrack::TrackSoAPhase2>" persistent="false"/>
-  <class name="edm::Wrapper<HeterogeneousSoA<pixelTrack::TrackSoAPhase2>>" persistent="false"/>
+  <class name="HeterogeneousSoA<pixelTrack::TrackSoAPhase2>" persistent="false" />
 
 </lcgdict>

@@ -1,5 +1,5 @@
 #include "RecoPixelVertexing/PixelTriplets/plugins/GPUCACell.h"
-
+#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
 #include <typeinfo>
 #include <iostream>
 
@@ -10,29 +10,29 @@ void print() {
 
 int main() {
   using namespace pixelTopology;
-
+  using namespace caStructures;
   //for Phase-I
-  print<GPUCACellT<pixelTopology::Phase1>>();
-  print<CellNeighborsT<pixelTopology::Phase1>>();
-  print<CellTracksT<pixelTopology::Phase1>>();
-  print<OuterHitOfCellContainerT<pixelTopology::Phase1>>();
-  print<TuplesContainerT<pixelTopology::Phase1>>();
-  print<HitToTupleT<pixelTopology::Phase1>>();
-  print<TupleMultiplicityT<pixelTopology::Phase1>>();
+  print<GPUCACellT<Phase1>>();
+  print<CellNeighborsT<Phase1>>();
+  print<CellTracksT<Phase1>>();
+  print<OuterHitOfCellContainerT<Phase1>>();
+  print<TuplesContainerT<Phase1>>();
+  print<HitToTupleT<Phase1>>();
+  print<TupleMultiplicityT<Phase1>>();
 
-  print<CellNeighborsVectorT<pixelTopology::Phase1>>();
+  print<CellNeighborsVectorT<Phase1>>();
 
   //for Phase-II
 
-  print<GPUCACellT<pixelTopology::Phase2>>();
-  print<CellNeighborsT<pixelTopology::Phase2>>();
-  print<CellTracksT<pixelTopology::Phase2>>();
-  print<OuterHitOfCellContainerT<pixelTopology::Phase2>>();
-  print<TuplesContainerT<pixelTopology::Phase2>>();
-  print<HitToTupleT<pixelTopology::Phase2>>();
-  print<TupleMultiplicityT<pixelTopology::Phase2>>();
+  print<GPUCACellT<Phase2>>();
+  print<CellNeighborsT<Phase2>>();
+  print<CellTracksT<Phase2>>();
+  print<OuterHitOfCellContainerT<Phase2>>();
+  print<TuplesContainerT<Phase2>>();
+  print<HitToTupleT<Phase2>>();
+  print<TupleMultiplicityT<Phase2>>();
 
-  print<CellNeighborsVectorT<pixelTopology::Phase2>>();
+  print<CellNeighborsVectorT<Phase2>>();
 
   return 0;
 }

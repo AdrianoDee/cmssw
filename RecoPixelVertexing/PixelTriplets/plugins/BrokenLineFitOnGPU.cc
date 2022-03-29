@@ -9,7 +9,7 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernelsOnCPU(HitsView const*
 #endif
 
   //  Fit internals
-  auto tkidGPU = std::make_unique<pixelTopology::tindex_type[]>(maxNumberOfConcurrentFits_);
+  auto tkidGPU = std::make_unique<caStructures::tindex_type[]>(maxNumberOfConcurrentFits_);
   auto hitsGPU =
       std::make_unique<double[]>(maxNumberOfConcurrentFits_ * sizeof(riemannFit::Matrix3xNd<6>) / sizeof(double));
   auto hits_geGPU =

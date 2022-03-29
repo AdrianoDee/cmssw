@@ -15,7 +15,7 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 
-#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
+#include "CAStructures.h"
 #include "CAHitNtupletGeneratorKernels.h"
 #include "GPUCACell.h"
 #include "gpuFishbone.h"
@@ -31,19 +31,19 @@ namespace caHitNtupletGeneratorKernels {
   using HitsView = TrackingRecHit2DSOAViewT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using HitToTuple = pixelTopology::HitToTupleT<TrackerTraits>;
+  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using CellNeighborsVector = pixelTopology::CellNeighborsVectorT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using CellTracksVector = pixelTopology::CellTracksVectorT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using OuterHitOfCell = pixelTopology::OuterHitOfCellT<TrackerTraits>;
+  using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
 
   using Quality = pixelTrack::Quality;
 

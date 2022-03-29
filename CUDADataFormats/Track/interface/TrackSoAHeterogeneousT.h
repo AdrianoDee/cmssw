@@ -19,9 +19,9 @@ namespace pixelTrack {
   }
 }  // namespace pixelTrack
 
-template <typename TrackerTraits>
-class TrackSoAHeterogeneousT {
-public:
+  template <typename TrackerTraits>
+  class TrackSoAHeterogeneousT {
+  public:
   static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
   static constexpr int32_t H = TrackerTraits::maxHitsOnTrack;
   static constexpr int32_t stride() { return S; }
@@ -81,7 +81,7 @@ public:
 
   HitContainer hitIndices;
   HitContainer detIndices;
-};
+};  
 
 namespace pixelTrack {
 
@@ -91,7 +91,7 @@ namespace pixelTrack {
   template <typename TrackerTraits>
   using HitContainerT = typename TrackSoAT<TrackerTraits>::HitContainer;
 
-  typedef TrackSoAT<pixelTopology::Phase1> TrackSoA; 
+  typedef TrackSoAT<pixelTopology::Phase1> TrackSoA;
   using TrajectoryState = TrajectoryStateSoAT<TrackSoA::S>;
   using HitContainer = TrackSoA::HitContainer;
 

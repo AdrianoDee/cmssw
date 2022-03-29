@@ -21,7 +21,7 @@ using Tuples = pixelTrack::HitContainerT<TrackerTraits>;
 template <typename TrackerTraits>
 using OutputSoA = pixelTrack::TrackSoAT<TrackerTraits>;
 template <typename TrackerTraits>
-using TupleMultiplicity = pixelTopology::TupleMultiplicityT<TrackerTraits>;
+using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
 template <int N, typename TrackerTraits>
 __global__ void kernel_FastFit(Tuples<TrackerTraits> const *__restrict__ foundNtuplets,
