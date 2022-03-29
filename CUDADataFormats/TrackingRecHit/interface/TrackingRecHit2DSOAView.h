@@ -27,8 +27,8 @@ public:
 
   template <typename,typename>
   friend class TrackingRecHit2DHeterogeneousT;
-  template <typename>
-  friend class TrackingRecHit2DReducedT;
+  // template <typename>
+  // friend class TrackingRecHit2DReducedT;
 
   __device__ __forceinline__ uint32_t nHits() const { return m_nHits; }
   __device__ __forceinline__ uint32_t nMaxModules() const { return m_nMaxModules; }
