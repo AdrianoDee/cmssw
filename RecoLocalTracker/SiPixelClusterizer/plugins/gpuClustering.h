@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h"
-#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 

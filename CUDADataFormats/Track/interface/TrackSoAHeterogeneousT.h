@@ -6,7 +6,7 @@
 
 #include "CUDADataFormats/Track/interface/TrajectoryStateSoAT.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"
-#include "CUDADataFormats/TrackerGeometry/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
 
 namespace pixelTrack {
@@ -81,7 +81,11 @@ public:
 
   HitContainer hitIndices;
   HitContainer detIndices;
-};  
+};
+
+
+template class TrackSoAHeterogeneousT<pixelTopology::Phase1>;
+template class TrackSoAHeterogeneousT<pixelTopology::Phase2>;
 
 namespace pixelTrack {
 
@@ -96,9 +100,10 @@ namespace pixelTrack {
   using HitContainer = TrackSoA::HitContainer;
 
   typedef TrackSoAT<pixelTopology::Phase2> TrackSoAPhase2;
-  using TrajectoryStatePhase2 = TrajectoryStateSoAT<TrackSoA::S>;
+  using TrajectoryStatePhase2 = TrajectoryStateSoAT<TrackSoAPhase2::S>;
   using HitContainerPhase2 = TrackSoAPhase2::HitContainer;
 
 }  // namespace pixelTrack
+
 
 #endif  // CUDADataFormats_Track_TrackHeterogeneousT_H

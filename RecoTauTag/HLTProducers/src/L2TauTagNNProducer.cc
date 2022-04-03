@@ -145,7 +145,7 @@ struct L2TauNNProducerCacheData {
 };
 
 class L2TauNNProducer : public edm::stream::EDProducer<edm::GlobalCache<L2TauNNProducerCacheData>> {
-using TrackSoA = pixelTrack::TrackSoAT<pixelTopology::Phase1>; 
+using TrackSoA = pixelTrack::TrackSoA;
 public:
   struct caloRecHitCollections {
     const HBHERecHitCollection* hbhe;
