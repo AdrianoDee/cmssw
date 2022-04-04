@@ -44,6 +44,7 @@ namespace pixelgpudetails {
     auto nHits = clusters_d.nClusters();
 
     TrackingRecHit2DGPUT<TrackerTraits> hits_d(nHits,clusters_d.offsetBPIX2(), cpeParams, clusters_d.clusModuleStart(), stream);
+    std::cout << hits_d.nMaxModules() << " - " << TrackerTraits::numberOfModules << std::endl; 
     assert(hits_d.nMaxModules() == TrackerTraits::numberOfModules);
 
     int activeModulesWithDigis = digis_d.nModules();

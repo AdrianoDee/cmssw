@@ -94,10 +94,12 @@ void PixelCPEFastESProducerT<TrackerTraits>::fillDescriptions(edm::Configuration
   desc.add<bool>("TruncatePixelCharge", true);
 
   // specific to PixelCPEFastESProducer
-  desc.add<std::string>("ComponentName", "PixelCPEFast");
+  std::string name = "PixelCPEFast";
+  name += TrackerTraits::nameModifier;
+  desc.add<std::string>("ComponentName", name);
   desc.add<edm::ESInputTag>("MagneticFieldRecord", edm::ESInputTag());
 
-  std::string name = "PixelCPEFastESProducer";
+  name = "PixelCPEFastESProducer";
   name += TrackerTraits::nameModifier;
   descriptions.add(name,desc);
 }

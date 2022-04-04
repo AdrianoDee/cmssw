@@ -153,7 +153,7 @@ TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>::TrackingRecHit2DHeterogene
 
   auto view = Traits::template make_host_unique<TrackingRecHit2DSOAView>(stream);
 
-  //m_nMaxModules = isPhase2 ? phase2PixelTopology::numberOfModules : phase1PixelTopology::numberOfModules;
+  m_nMaxModules = TrackerTraits::numberOfModules;
 
   view->m_nHits = nHits;
   view->m_nMaxModules = TrackerTraits::numberOfModules;
