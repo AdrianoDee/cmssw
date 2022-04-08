@@ -10,7 +10,7 @@
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDA.h"
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
-
+#define GPU_DEBUG 1
 namespace pixelgpudetails {
 
   template <typename TrackerTraits>
@@ -32,9 +32,6 @@ namespace pixelgpudetails {
                                       ParamsOnGPU const* cpeParams,
                                       cudaStream_t stream) const;
   };
-
-  // using PixelRecHitGPUKernel = PixelRecHitGPUKernelT<pixelTopology::Phase1>;
-  // using PixelRecHitGPUKernelPhase2 = PixelRecHitGPUKernelT<pixelTopology::Phase2>;
 
 }  // namespace pixelgpudetails
 

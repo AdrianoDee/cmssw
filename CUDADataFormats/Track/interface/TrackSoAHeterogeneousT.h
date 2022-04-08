@@ -88,11 +88,13 @@ public:
 template <typename TrackerTraits>
 class PixelTrackSoAT : public  TrackSoAHeterogeneousT<TrackerTraits::maxNumberOfTuples> {
 public:
+
   static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
   static constexpr int32_t H = TrackerTraits::maxHitsOnTrack;
   using hindex_type = uint32_t;
 
   using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>; // TODO plot for average number of hits
+  using Quality = pixelTrack::Quality;
 
   constexpr int computeNumberOfLayers(int32_t i) const {
     // layers are in order and we assume tracks are either forward or backward
@@ -107,6 +109,8 @@ public:
     }
     return nl;
   }
+
+  constexpr int nHits(int i) const { return this->detIndices.size(i); }
 
   HitContainer hitIndices;
   HitContainer detIndices;

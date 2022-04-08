@@ -589,15 +589,25 @@ __global__ void kernel_fillHitDetIndices(HitContainer<TrackerTraits> const *__re
   int first = blockDim.x * blockIdx.x + threadIdx.x;
   // copy offsets
   for (int idx = first, ntot = tuples->totOnes(); idx < ntot; idx += gridDim.x * blockDim.x) {
+
     hitDetIndices->off[idx] = tuples->off[idx];
+      // if(idx<500)
+      // printf("OFF %d - %d - %d - %d\n",idx,tuples->totOnes(),tuples->off[idx],  hitDetIndices->off[idx]);
   }
   // fill hit indices
   auto const &hh = *hhp;
   auto nhits = hh.nHits();
+
   for (int idx = first, ntot = tuples->size(); idx < ntot; idx += gridDim.x * blockDim.x) {
     assert(tuples->content[idx] < nhits);
     hitDetIndices->content[idx] = hh.detectorIndex(tuples->content[idx]);
+    // if(idx<100)
+    //   printf("CONT %d - %d - %d - %d - %d \n",idx,nhits,hh.detectorIndex(tuples->content[idx]),hitDetIndices->content[idx],tuples->size());
   }
+    // for (int idx = first, nt = TkSoA<TrackerTraits>::stride(); idx < nt; idx += gridDim.x * blockDim.x) {
+    //   if(idx<100)
+    //   printf("SIZE %d - %d \n",idx,hitDetIndices->size(idx));
+    // }
 }
 
 template <typename TrackerTraits>
@@ -606,6 +616,8 @@ __global__ void kernel_fillNLayers(TkSoA<TrackerTraits> *__restrict__ ptracks) {
   auto first = blockIdx.x * blockDim.x + threadIdx.x;
   for (int idx = first, nt = TkSoA<TrackerTraits>::stride(); idx < nt; idx += gridDim.x * blockDim.x) {
     auto nHits = tracks.nHits(idx);
+    // if(idx<100)
+    // printf("NHITs %d - %d \n",idx,nHits);
     if (nHits == 0)
       break;  // this is a guard: maybe we need to move to nTracks...
     tracks.nLayers(idx) = tracks.computeNumberOfLayers(idx);

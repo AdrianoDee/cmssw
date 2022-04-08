@@ -12,7 +12,7 @@
 
 #include "PixelRecHitGPUKernel.h"
 #include "gpuPixelRecHits.h"
-
+#define GPU_DEBUG 1
 
 namespace {
   template<typename TrackerTraits>
@@ -41,10 +41,12 @@ namespace pixelgpudetails {
                                                           BeamSpotCUDA const& bs_d,
                                                           pixelCPEforGPU::ParamsOnGPUT<TrackerTraits> const* cpeParams,
                                                           cudaStream_t stream) const {
+
+    using namespace gpuPixelRecHits;
     auto nHits = clusters_d.nClusters();
 
     TrackingRecHit2DGPUT<TrackerTraits> hits_d(nHits,clusters_d.offsetBPIX2(), cpeParams, clusters_d.clusModuleStart(), stream);
-    std::cout << hits_d.nMaxModules() << " - " << TrackerTraits::numberOfModules << std::endl; 
+
     assert(hits_d.nMaxModules() == TrackerTraits::numberOfModules);
 
     int activeModulesWithDigis = digis_d.nModules();
@@ -54,9 +56,10 @@ namespace pixelgpudetails {
       int blocks = activeModulesWithDigis;
 
 #ifdef GPU_DEBUG
+
       std::cout << "launching getHits kernel for " << blocks << " blocks" << std::endl;
 #endif
-      gpuPixelRecHits::getHits<<<blocks, threadsPerBlock, 0, stream>>>(
+      getHits<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(
           cpeParams, bs_d.data(), digis_d.view(), digis_d.nDigis(), clusters_d.view(), hits_d.view());
       cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG
@@ -65,7 +68,7 @@ namespace pixelgpudetails {
 
       // assuming full warp of threads is better than a smaller number...
       if (nHits) {
-        setHitsLayerStart<<<1, 32, 0, stream>>>(clusters_d.clusModuleStart(), cpeParams, hits_d.hitsLayerStart());
+        setHitsLayerStart<TrackerTraits> <<<1, 32, 0, stream>>>(clusters_d.clusModuleStart(), cpeParams, hits_d.hitsLayerStart());
         cudaCheck(cudaGetLastError());
         constexpr auto nLayers = TrackerTraits::numberOfLayers;
         cms::cuda::fillManyFromVector(hits_d.phiBinner(),

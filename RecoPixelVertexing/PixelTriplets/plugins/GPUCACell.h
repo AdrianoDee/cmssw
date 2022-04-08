@@ -159,7 +159,7 @@ public:
 
     auto r1 = otherCell.inner_r(hh);
     auto z1 = otherCell.inner_z(hh);
-    auto isBarrel = otherCell.outer_detIndex(hh) < pixelTopology::last_barrel_detIndex;
+    auto isBarrel = otherCell.outer_detIndex(hh) < TrackerTraits::last_barrel_detIndex;
     bool aligned = areAlignedRZ(r1,
                                 z1,
                                 ri,
@@ -167,10 +167,10 @@ public:
                                 ro,
                                 zo,
                                 ptmin,
-                                isBarrel ? caThetaCutBarrel : caThetaCutForward);  // 2.f*thetaCut); // FIXME tune cuts
+                                isBarrel ? TrackerTraits::caThetaCutBarrel : TrackerTraits::caThetaCutForward);  // 2.f*thetaCut); // FIXME tune cuts
     return (aligned && dcaCut(hh,
                               otherCell,
-                              otherCell.inner_detIndex(hh) < pixelTopology::Phase1::last_bpix1_detIndex ? dcaCutInnerTriplet
+                              otherCell.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? dcaCutInnerTriplet
                                                                                               : dcaCutOuterTriplet,
                               hardCurvCut));  // FIXME tune cuts
   }
@@ -225,10 +225,9 @@ public:
   }
 
   __device__ inline bool hole0(Hits const& hh, GPUCACellT const& innerCell) const {
-    using pixelTopology::first_ladder_bpx0;
-    using pixelTopology::max_ladder_bpx0;
-    using pixelTopology::module_length_bpx0;
-    using pixelTopology::module_tolerance_bpx0;
+
+    using namespace phase1PixelTopology;
+
     int p = innerCell.inner_iphi(hh);
     if (p < 0)
       p += std::numeric_limits<unsigned short>::max();
@@ -248,10 +247,9 @@ public:
   }
 
   __device__ inline bool hole4(Hits const& hh, GPUCACellT const& innerCell) const {
-    using pixelTopology::first_ladder_bpx4;
-    using pixelTopology::max_ladder_bpx4;
-    using pixelTopology::module_length_bpx4;
-    using pixelTopology::module_tolerance_bpx4;
+
+    using namespace phase1PixelTopology;
+
     int p = outer_iphi(hh);
     if (p < 0)
       p += std::numeric_limits<unsigned short>::max();
@@ -378,8 +376,5 @@ private:
   hindex_type theOuterHitId;
   hindex_type theFishboneId;
 };
-
-// using GPUCACell = GPUCACellT<pixelTopology::Phase1>;
-// using GPUCACellPhase2 = GPUCACellT<pixelTopology::Phase2>;
 
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_GPUCACell_h

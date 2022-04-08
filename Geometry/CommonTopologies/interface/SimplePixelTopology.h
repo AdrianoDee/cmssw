@@ -14,22 +14,6 @@
 
 namespace pixelTopology {
 
-   constexpr uint32_t max_ladder_bpx0 = 12;
-   constexpr uint32_t first_ladder_bpx0 = 0;
-   constexpr float module_length_bpx0 = 6.7f;
-   constexpr float module_tolerance_bpx0 = 0.4f;  // projection to cylinder is inaccurate on BPIX1
-   constexpr uint32_t max_ladder_bpx4 = 64;
-   constexpr uint32_t first_ladder_bpx4 = 84;
-   constexpr float radius_even_ladder = 15.815f;
-   constexpr float radius_odd_ladder = 16.146f;
-   constexpr float module_length_bpx4 = 6.7f;
-   constexpr float module_tolerance_bpx4 = 0.2f;
-   constexpr float barrel_z_length = 26.f;
-   constexpr float forward_z_begin = 32.f;
-
-   constexpr uint32_t last_bpix1_detIndex = 96;
-  constexpr uint32_t last_barrel_detIndex = 1184;
-
   constexpr auto maxNumberOfLadders = 160;
   constexpr uint32_t maxLayers = 28;
 
@@ -155,6 +139,19 @@ namespace phase1PixelTopology
   constexpr uint32_t numberOfLayers = 28;
   constexpr int nPairs = 13 + 2 + 4;
   constexpr uint16_t numberOfModules = 1856;
+
+  constexpr uint32_t max_ladder_bpx0 = 12;
+  constexpr uint32_t first_ladder_bpx0 = 0;
+  constexpr float module_length_bpx0 = 6.7f;
+  constexpr float module_tolerance_bpx0 = 0.4f;  // projection to cylinder is inaccurate on BPIX1
+  constexpr uint32_t max_ladder_bpx4 = 64;
+  constexpr uint32_t first_ladder_bpx4 = 84;
+  constexpr float radius_even_ladder = 15.815f;
+  constexpr float radius_odd_ladder = 16.146f;
+  constexpr float module_length_bpx4 = 6.7f;
+  constexpr float module_tolerance_bpx4 = 0.2f;
+  constexpr float barrel_z_length = 26.f;
+  constexpr float forward_z_begin = 32.f;
 
   DEVICECONST uint8_t layerPairs[2 * nPairs] = {
       0, 1, 0, 4, 0, 7,              // BPIX1 (3)
@@ -299,50 +296,86 @@ namespace pixelTopology{
    struct Phase2
    {
 
-    static constexpr char const* nameModifier = "Phase2";
 
-    static constexpr uint32_t maxCellNeighbors = 256;
-    static constexpr uint32_t maxCellTracks = 128;
-    static constexpr uint32_t maxHitsOnTrack = 18;
-    static constexpr uint32_t avgHitsPerTrack = 12;
-    static constexpr uint32_t maxCellsPerHit = 8 * 256;
-    static constexpr uint32_t avgTracksPerHit = 12;
-    static constexpr uint32_t maxNumberOfTuples = 128 * 1024;
-    static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
-    static constexpr uint32_t maxNumberOfDoublets = 16 * 512 * 1024;
-    static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 16;
-    static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
-    static constexpr uint32_t maxDepth = 12;
-    static constexpr uint32_t numberOfLayers = 28;
+     static constexpr uint32_t maxCellNeighbors = 256;
+     static constexpr uint32_t maxCellTracks = 128;
+     static constexpr uint32_t maxHitsOnTrack = 18;
+     static constexpr uint32_t avgHitsPerTrack = 12;
+     static constexpr uint32_t maxCellsPerHit = 8 * 256;
+     static constexpr uint32_t avgTracksPerHit = 12;
+     static constexpr uint32_t maxNumberOfTuples = 128 * 1024;
+     static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
+     static constexpr uint32_t maxNumberOfDoublets = 16 * 512 * 1024;
+     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 16;
+     static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
+     static constexpr uint32_t maxDepth = 12;
+     static constexpr uint32_t numberOfLayers = 28;
 
-    static constexpr float xerr_barrel_l1_def = 0.00035f;
-    static constexpr float yerr_barrel_l1_def = 0.00125f;
-    static constexpr float xerr_barrel_ln_def = 0.00035f;
-    static constexpr float yerr_barrel_ln_def = 0.00125f;
-    static constexpr float xerr_endcap_def = 0.00060f;
-    static constexpr float yerr_endcap_def = 0.00180f;
+     static constexpr uint32_t maxSizeCluster = 2047;
 
-    static constexpr float bigPixXCorrection = 0.0f;
-    static constexpr float bigPixYCorrection = 0.0f;
+     static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
+     static constexpr uint32_t getDoubletsFromHistoMinBlocksPerMP = 16;
 
-    static constexpr uint16_t numberOfModules = 3892;
+     static constexpr uint32_t last_bpix1_detIndex = 108;
+     static constexpr uint32_t last_bpix2_detIndex = 324;
+     static constexpr uint32_t last_barrel_detIndex = 504;
 
-    static constexpr uint16_t numberOfModulesInBarrel = 756;
-    static constexpr uint16_t numberOfModulesInLadder = 9;
-    static constexpr uint16_t numberOfLaddersInBarrel = numberOfModulesInBarrel / numberOfModulesInLadder;
+     static constexpr float moduleLength = 4.345f;
+     static constexpr float endcapCorrection = 0.0f;
 
-    static constexpr uint32_t maxSizeCluster = 2047;
-    static constexpr uint16_t firstEndcapPos = 4;
-    static constexpr uint16_t firstEndcapNeg = 16;
+     static constexpr float xerr_barrel_l1_def = 0.00035f;
+     static constexpr float yerr_barrel_l1_def = 0.00125f;
+     static constexpr float xerr_barrel_ln_def = 0.00035f;
+     static constexpr float yerr_barrel_ln_def = 0.00125f;
+     static constexpr float xerr_endcap_def = 0.00060f;
+     static constexpr float yerr_endcap_def = 0.00180f;
 
-    static constexpr float moduleLength = 4.345f;
-    static constexpr float endcapCorrection = 0.0f;
+     static constexpr float bigPixXCorrection = 0.0f;
+     static constexpr float bigPixYCorrection = 0.0f;
 
-    static constexpr uint32_t last_bpix1_detIndex = 108;
-    static constexpr uint32_t last_barrel_detIndex = 504;
+     static constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
 
-    static constexpr int minYsizeB1 = 36;
-    static constexpr int minYsizeB2 = 28;
+     static constexpr int minYsizeB1 = 36;
+     static constexpr int minYsizeB2 = 28;
+
+     static constexpr int nPairsForQuadruplets = 23;                            // doublets only from contigous layers
+     static constexpr int nPairsForTriplets = nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
+     static constexpr int nPairs = nPairsForTriplets + 8;  // include far forward layer pairs
+
+     static constexpr int maxDYsize12 = 28;
+     static constexpr int maxDYsize = 20;
+     static constexpr int maxDYPred = 20;
+
+     static constexpr uint16_t numberOfModules = 3892;
+
+     static constexpr uint16_t numRowsInRoc = 80;
+     static constexpr uint16_t numColsInRoc = 52;
+     static constexpr uint16_t lastRowInRoc = numRowsInRoc - 1;
+     static constexpr uint16_t lastColInRoc = numColsInRoc - 1;
+
+     static constexpr uint16_t numRowsInModule = 2 * numRowsInRoc;
+     static constexpr uint16_t numColsInModule = 8 * numColsInRoc;
+     static constexpr uint16_t lastRowInModule = numRowsInModule - 1;
+     static constexpr uint16_t lastColInModule = numColsInModule - 1;
+
+     static constexpr uint16_t numberOfModulesInBarrel = 756;
+     static constexpr uint16_t numberOfModulesInLadder = 9;
+     static constexpr uint16_t numberOfLaddersInBarrel = numberOfModulesInBarrel / numberOfModulesInLadder;
+
+     static constexpr uint16_t firstEndcapPos = 4;
+     static constexpr uint16_t firstEndcapNeg = 16;
+
+     static constexpr int16_t xOffset = -81;
+
+     static constexpr char const* nameModifier = "Phase2";
+
+     static constexpr uint32_t const *layerStart = phase2PixelTopology::layerStart;
+     static constexpr float const *minz = phase2PixelTopology::minz;
+     static constexpr float const *maxz = phase2PixelTopology::maxz;
+     static constexpr float const *maxr = phase2PixelTopology::maxr;
+
+     static constexpr uint8_t const *layerPairs = phase2PixelTopology::layerPairs;
+     static constexpr int16_t const *phicuts = phase2PixelTopology::phicuts;
 
     static constexpr inline bool isBigPixX(uint16_t px) { return false; }
     static constexpr inline bool isBigPixY(uint16_t py) { return false; }
@@ -350,34 +383,11 @@ namespace pixelTopology{
     static constexpr inline uint16_t localX(uint16_t px) { return px; }
     static constexpr inline uint16_t localY(uint16_t py) { return py; }
 
-    static constexpr int16_t xOffset = -81;
-
-     // constexpr int nPairsContigousPhase2 = 23;                            // doublets only from contigous layers
-     // constexpr int nPairsWithJumpingPhase2 = nPairsContigousPhase2 + 6;  // include barrel "jumping" layer pairs
-     // constexpr int nPairsWithJumpingForwardsPhase2 = nPairsWithJumpingPhase2 + 14;  // include forward "jumping" layer pairs
-     // constexpr int nPairsPhase2 = nPairsWithJumpingForwardsPhase2 + 8;  // include far forward layer pairs
-     static constexpr int nPairsForQuadruplets = 23;                            // doublets only from contigous layers
-     static constexpr int nPairsForTriplets = nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
-     static constexpr int nPairs = nPairsForTriplets + 8;  // include far forward layer pairs
-
-     static_assert(numberOfLayers <= phase2PixelTopology::numberOfLayers);
-
-    static constexpr uint32_t const *layerStart = phase2PixelTopology::layerStart;
-    static constexpr uint8_t const *layerPairs = phase2PixelTopology::layerPairs;
-    static constexpr int16_t const *phicuts = phase2PixelTopology::phicuts;
-    static constexpr float const *minz = phase2PixelTopology::minz;
-    static constexpr float const *maxz = phase2PixelTopology::maxz;
-    static constexpr float const *maxr = phase2PixelTopology::maxr;
-
-    static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
-    static constexpr uint32_t getDoubletsFromHistoMinBlocksPerMP = 16;
-
 
   };
 
    struct Phase1
    {
-      static constexpr char const* nameModifier = "";
 
       static constexpr uint32_t maxCellNeighbors = 64;
       static constexpr uint32_t maxCellTracks = 48;
@@ -393,6 +403,18 @@ namespace pixelTopology{
       static constexpr uint32_t maxDepth = 6;
       static constexpr uint32_t numberOfLayers = 10;
 
+      static constexpr uint32_t maxSizeCluster = 1023;
+
+      static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
+      static constexpr uint32_t getDoubletsFromHistoMinBlocksPerMP = 16;
+
+      static constexpr uint32_t last_bpix1_detIndex = 96;
+      static constexpr uint32_t last_bpix2_detIndex = 320;
+      static constexpr uint32_t last_barrel_detIndex = 1184;
+
+      static constexpr float moduleLength = 6.7f;
+      static constexpr float endcapCorrection = 1.5f;
+
       static constexpr float xerr_barrel_l1_def = 0.00200f;
       static constexpr float yerr_barrel_l1_def = 0.00210f;
       static constexpr float xerr_barrel_ln_def = 0.00200f;
@@ -402,6 +424,19 @@ namespace pixelTopology{
 
       static constexpr float bigPixXCorrection = 1.0f;
       static constexpr float bigPixYCorrection = 8.0f;
+
+      static constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
+
+      static constexpr int minYsizeB1 = 36;
+      static constexpr int minYsizeB2 = 28;
+
+      static constexpr int nPairsForQuadruplets = 13;                     // quadruplets require hits in all layers
+      static constexpr int nPairsForTriplets = nPairsForQuadruplets + 2;  // include barrel "jumping" layer pairs
+      static constexpr int nPairs = nPairsForTriplets + 4;                // include forward "jumping" layer pairs
+
+      static constexpr int maxDYsize12 = 28;
+      static constexpr int maxDYsize = 20;
+      static constexpr int maxDYPred = 20;
 
       static constexpr uint16_t numberOfModules = 1856;
 
@@ -419,31 +454,20 @@ namespace pixelTopology{
       static constexpr uint16_t numberOfModulesInLadder = 8;
       static constexpr uint16_t numberOfLaddersInBarrel = numberOfModulesInBarrel / numberOfModulesInLadder;
 
-      static constexpr uint32_t maxSizeCluster = 1023;
       static constexpr uint16_t firstEndcapPos = 4;
       static constexpr uint16_t firstEndcapNeg = 7;
 
-      static constexpr float moduleLength = 6.7f;
-      static constexpr float endcapCorrection = 1.5f;
-
-      static constexpr uint32_t last_bpix1_detIndex = 96;
-      static constexpr uint32_t last_barrel_detIndex = 1184;
-
-      static constexpr int minYsizeB1 = 36;
-      static constexpr int minYsizeB2 = 28;
-
       static constexpr int16_t xOffset = -81;
 
-      static constexpr int nPairsForQuadruplets = 13;                     // quadruplets require hits in all layers
-      static constexpr int nPairsForTriplets = nPairsForQuadruplets + 2;  // include barrel "jumping" layer pairs
-      static constexpr int nPairs = nPairsForTriplets + 4;                // include forward "jumping" layer pairs
+      static constexpr char const* nameModifier = "";
 
       static constexpr uint32_t const *layerStart = phase1PixelTopology::layerStart;
-      static constexpr uint8_t const *layerPairs = phase1PixelTopology::layerPairs;
-      static constexpr int16_t const *phicuts = phase1PixelTopology::phicuts;
       static constexpr float const *minz = phase1PixelTopology::minz;
       static constexpr float const *maxz = phase1PixelTopology::maxz;
       static constexpr float const *maxr = phase1PixelTopology::maxr;
+
+      static constexpr uint8_t const *layerPairs = phase1PixelTopology::layerPairs;
+      static constexpr int16_t const *phicuts = phase1PixelTopology::phicuts;
 
 
       static constexpr inline bool isEdgeX(uint16_t px) { return (px == 0) | (px == lastRowInModule); }
@@ -458,7 +482,6 @@ namespace pixelTopology{
       }
 
       static constexpr inline bool isBigPixX(uint16_t px) { return (px == 79) | (px == 80); }
-
       static constexpr inline bool isBigPixY(uint16_t py) {
         auto ly = toRocY(py);
         return (ly == 0) | (ly == lastColInRoc);
@@ -481,16 +504,6 @@ namespace pixelTopology{
           shift += 1;
         return py + shift;
       }
-
-      static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
-      static constexpr uint32_t getDoubletsFromHistoMinBlocksPerMP = 16;
-
-      // struct ClusterCut
-      // {
-      //   bool ideal_cond;
-      //   int16_t cY;
-      //   uint16_t mi;
-      // }
 
   };
 

@@ -13,6 +13,7 @@
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDASOAView.h"
 
+#define GPU_DEBUG 1
 namespace gpuPixelRecHits {
 
   template <typename TrackerTraits>
@@ -26,6 +27,8 @@ namespace gpuPixelRecHits {
     // the compiler seems NOT to optimize loads from views (even in a simple test case)
     // The whole gimnastic here of copying or not is a pure heuristic exercise that seems to produce the fastest code with the above signature
     // not using views (passing a gazzilion of array pointers) seems to produce the fastest code (but it is harder to mantain)
+
+
     assert(phits);
     assert(cpeParams);
     auto& hits = *phits;
@@ -67,19 +70,21 @@ namespace gpuPixelRecHits {
 
     if (0 == nclus)
       return;
-#ifdef GPU_DEBUG
-    if (threadIdx.x == 0) {
-      auto k = clusters.moduleStart(1 + blockIdx.x);
-      while (digis.moduleInd(k) == invalidModuleId)
-        ++k;
-      assert(digis.moduleInd(k) == me);
-    }
-#endif
+// #ifdef GPU_DEBUG
+//     if (threadIdx.x == 0) {
+//       auto k = clusters.moduleStart(1 + blockIdx.x);
+//       while (digis.moduleInd(k) == invalidModuleId)
+//         ++k;
+//       assert(digis.moduleInd(k) == me);
+//     }
+// #endif
 #ifdef GPU_DEBUG
     if (me % 100 == 1)
       if (threadIdx.x == 0)
         printf("hitbuilder: %d clusters in module %d. will write at %d\n", nclus, me, clusters.clusModuleStart(me));
 #endif
+
+
     for (int startClus = 0, endClus = nclus; startClus < endClus; startClus += MaxHitsInIter) {
       int nClusInIter = std::min(MaxHitsInIter, endClus - startClus);
       int lastClus = startClus + nClusInIter;

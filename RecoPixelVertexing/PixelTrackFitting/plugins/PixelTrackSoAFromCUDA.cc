@@ -17,7 +17,7 @@
 #include "HeterogeneousCore/CUDACore/interface/ScopedContext.h"
 
 // Switch on to enable checks and printout for found tracks
-#undef PIXEL_DEBUG_PRODUCE
+#define PIXEL_DEBUG_PRODUCE
 
 template<typename TrackerTraits>
 class PixelTrackSoAFromCUDAT : public edm::stream::EDProducer<edm::ExternalWork> {
@@ -72,7 +72,7 @@ void PixelTrackSoAFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
 #ifdef PIXEL_DEBUG_PRODUCE
   auto const& tsoa = *soa_;
   auto maxTracks = tsoa.stride();
-  std::cout << "size of SoA" << sizeof(tsoa) << " stride " << maxTracks << std::endl;
+  std::cout << "size of SoA " << sizeof(tsoa) << " stride " << maxTracks << std::endl;
 
   int32_t nt = 0;
   for (int32_t it = 0; it < maxTracks; ++it) {

@@ -34,34 +34,57 @@ namespace gpuPixelDoublets {
   using Hits = typename GPUCACellT<TrackerTraits>::Hits;
 
   template<typename TrackerTraits>
-  __device__ __forceinline__ bool clusterCut(bool ideal_cond, int16_t cY, uint16_t mi) { return false;}
+  __device__ __forceinline__ bool clusterCut(int16_t mes, uint16_t mi) { return false;}
 
   template<>
-  __device__ __forceinline__ bool clusterCut<pixelTopology::Phase2>(bool ideal_cond, int16_t cY, uint16_t mi){ return false;}
+  __device__ __forceinline__ bool clusterCut<pixelTopology::Phase2>(int16_t mes, uint16_t mi){ return false;}
 
   template<>
-  __device__ __forceinline__ bool clusterCut<pixelTopology::Phase1>(bool ideal_cond, int16_t cY, uint16_t mi) {
-    bool isOuterLadder = ideal_cond ? true : 0 == (mi / 8) % 2;  // only for B1/B2/B3 B4 is opposite, FPIX:noclue...
+  __device__ __forceinline__ bool clusterCut<pixelTopology::Phase1>(int16_t mes,  uint16_t mi) {
 
-    // in any case we always test mes>0 ...
-    auto mes = mi > pixelTopology::Phase1::last_bpix1_detIndex || isOuterLadder ? cY : -1;
+    using namespace pixelTopology;
 
-    bool innerB1 = mi < pixelTopology::Phase1::last_bpix1_detIndex;
-    bool outerFwd = (mi >= 1184);
+    bool innerB1 = mi < Phase1::last_bpix1_detIndex;
+    bool outerFwd = (mi >= Phase1::last_barrel_detIndex);
 
     if (!outerFwd)
       return false;
 
     if (innerB1 && outerFwd)  // B1 and F1
-      if (mes > 0 && mes < pixelTopology::Phase1::minYsizeB1)
+      if (mes > 0 && mes < Phase1::minYsizeB1)
         return true;                 // only long cluster  (5*8)
-    bool innerB2 = (mi >= pixelTopology::Phase1::last_bpix1_detIndex) && (mi <=320); //FIXME number
+    bool innerB2 = (mi >= Phase1::last_bpix1_detIndex) && (mi <=Phase1::last_bpix2_detIndex); //FIXME number
     if (innerB2 && outerFwd)  // B2 and F1
-      if (mes > 0 && mes < pixelTopology::Phase1::minYsizeB2)
+      if (mes > 0 && mes < Phase1::minYsizeB2)
         return true;
 
     return false;
   };
+
+  template<typename TrackerTraits>
+  __device__ __forceinline__ bool zsizeCut(uint16_t mi, uint16_t mo, int16_t si, int16_t so, float dr, float dz) { return false;}
+
+  template<>
+  __device__ __forceinline__ bool zsizeCut<pixelTopology::Phase2>(uint16_t mi, uint16_t mo, int16_t si, int16_t so, float dr, float dz){ return false;}
+
+  template<>
+  __device__ __forceinline__ bool zsizeCut<pixelTopology::Phase1>(uint16_t mi, uint16_t mo, int16_t si, int16_t so, float dr, float dz) {
+
+    using namespace pixelTopology;
+
+    auto onlyBarrel = mo <= Phase1::last_barrel_detIndex;
+    bool innerB1 = mi < Phase1::last_bpix1_detIndex;
+    bool innerBarrel = mo <= Phase1::last_barrel_detIndex;
+
+    auto dy = innerB1 ? Phase1::maxDYsize12 : Phase1::maxDYsize;
+    // in the barrel cut on difference in size
+    // in the endcap on the prediction on the first layer (actually in the barrel only: happen to be safe for endcap as well)
+    // FIXME move pred cut to z0cutoff to optmize loading of and computaiton ...
+
+    return onlyBarrel ? si > 0 && so > 0 && std::abs(so - si) > dy
+                      : innerBarrel && si > 0 &&
+                            std::abs(si - int(std::abs(dz/ dr) * Phase1::dzdrFact + 0.5f)) > Phase1::maxDYPred;
+  }
 
   template <typename TrackerTraits>
   __device__ __forceinline__ void doubletsFromHisto(uint32_t nPairs,
@@ -76,13 +99,6 @@ namespace gpuPixelDoublets {
                                                     bool doZ0Cut,
                                                     bool doPtCut,
                                                     uint32_t maxNumOfDoublets) {
-    // ysize cuts (z in the barrel)  times 8
-    // these are used if doClusterCut is true
-
-    constexpr int maxDYsize12 = 28;
-    constexpr int maxDYsize = 20;
-    constexpr int maxDYPred = 20;
-    constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
 
     bool isOuterLadder = ideal_cond;
 
@@ -172,15 +188,20 @@ namespace gpuPixelDoublets {
 
       int16_t mes = -1;  // make compiler happy
 
-      if (doClusterCut && clusterCut<TrackerTraits>(ideal_cond,hh.clusterSizeY(i),mi))
+      if (doClusterCut) {
+        if (inner == 0)
+          isOuterLadder = ideal_cond ? true : 0 == (mi / 8) % 2;  // only for B1/B2/B3 B4 is opposite, FPIX:noclue...
+        mes = inner > 0 || isOuterLadder ? hh.clusterSizeY(i) : -1;
+      }
+      if (doClusterCut && clusterCut<TrackerTraits>(mes,mi))
         continue;
 
       auto mep = hh.iphi(i);
       auto mer = hh.rGlobal(i);
 
       // all cuts: true if fails
-      constexpr float z0cut = 40.f;//12.f;      // cm
-      constexpr float hardPtCut = 0.1f; //0.5f;  // GeV
+      constexpr float z0cut = 12.f;      // cm
+      constexpr float hardPtCut = 0.5f;  // GeV
       // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
       constexpr float minRadius = hardPtCut * 87.78f;
       constexpr float minRadius2T4 = 4.f * minRadius * minRadius;
@@ -198,19 +219,19 @@ namespace gpuPixelDoublets {
         return dr > TrackerTraits::maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
       };
 
-      auto zsizeCut = [&](int j) {
-        auto onlyBarrel = outer < 4;
-        auto so = hh.clusterSizeY(j);
-        auto dy = inner == 0 ? maxDYsize12 : maxDYsize;
-        // in the barrel cut on difference in size
-        // in the endcap on the prediction on the first layer (actually in the barrel only: happen to be safe for endcap as well)
-        // FIXME move pred cut to z0cutoff to optmize loading of and computaiton ...
-        auto zo = hh.zGlobal(j);
-        auto ro = hh.rGlobal(j);
-        return onlyBarrel ? mes > 0 && so > 0 && std::abs(so - mes) > dy
-                          : (inner < 4) && mes > 0 &&
-                                std::abs(mes - int(std::abs((mez - zo) / (mer - ro)) * dzdrFact + 0.5f)) > maxDYPred;
-      };
+      // auto zsizeCut = [&](int j) {
+      //   auto onlyBarrel = outer < 4;
+      //   auto so = hh.clusterSizeY(j);
+      //   auto dy = inner == 0 ? maxDYsize12 : maxDYsize;
+      //   // in the barrel cut on difference in size
+      //   // in the endcap on the prediction on the first layer (actually in the barrel only: happen to be safe for endcap as well)
+      //   // FIXME move pred cut to z0cutoff to optmize loading of and computaiton ...
+      //   auto zo = hh.zGlobal(j);
+      //   auto ro = hh.rGlobal(j);
+      //   return onlyBarrel ? mes > 0 && so > 0 && std::abs(so - mes) > dy
+      //                     : (inner < 4) && mes > 0 &&
+      //                           std::abs(mes - int(std::abs((mez - zo) / (mer - ro)) * dzdrFact + 0.5f)) > maxDYPred;
+      // };
 
       auto iphicut = TrackerTraits::phicuts[pairLayerId];
 
@@ -261,7 +282,7 @@ namespace gpuPixelDoublets {
           #ifdef DOUBLET_DEBUG
            nPhi[pairLayerId]++;
           #endif
-          if (doClusterCut && zsizeCut(oi))
+          if (doClusterCut && zsizeCut<TrackerTraits>(mi,mo,mes,hh.clusterSizeY(j),mer-hh.rGlobal(j),mez-hh.zGlobal(j)))
             continue;
           #ifdef DOUBLET_DEBUG
            nClus[pairLayerId]++;

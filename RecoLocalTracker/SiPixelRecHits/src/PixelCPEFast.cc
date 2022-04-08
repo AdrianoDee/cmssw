@@ -376,8 +376,8 @@ void PixelCPEFastT<TrackerTraits>::fillParamsForGpu() {
 #endif  // EDM_ML_DEBUG
 
   // fill Layer and ladders geometry
-  memset(&layerGeometry_, 0, sizeof(pixelCPEforGPU::LayerGeometry));
-  memcpy(layerGeometry_.layerStart, TrackerTraits::layerStart, sizeof(TrackerTraits::layerStart));
+  memset(&layerGeometry_, 0, sizeof(pixelCPEforGPU::LayerGeometryT<TrackerTraits>));
+  memcpy(layerGeometry_.layerStart, TrackerTraits::layerStart, sizeof(pixelCPEforGPU::LayerGeometryT<TrackerTraits>::layerStart));
   memcpy(layerGeometry_.layer, pixelTopology::layer<TrackerTraits>.data(), pixelTopology::layer<TrackerTraits>.size());
   layerGeometry_.maxModuleStride = pixelTopology::maxModuleStride<TrackerTraits>;
 }

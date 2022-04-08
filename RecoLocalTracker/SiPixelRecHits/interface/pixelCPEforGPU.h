@@ -78,8 +78,8 @@ namespace pixelCPEforGPU {
     uint16_t maxModuleStride;
   };
 
-  using LayerGeometry = LayerGeometryT<pixelTopology::Phase1>;
-  using LayerGeometryPhase2 = LayerGeometryT<pixelTopology::Phase2>;
+  // using LayerGeometry = LayerGeometryT<pixelTopology::Phase1>;
+  // using LayerGeometryPhase2 = LayerGeometryT<pixelTopology::Phase2>;
 
   template<typename TrackerTopology>
   struct ParamsOnGPUT {
@@ -214,6 +214,8 @@ namespace pixelCPEforGPU {
                                  DetParams const& __restrict__ detParams,
                                  ClusParams& cp,
                                  uint32_t ic) {
+
+    constexpr uint32_t maxSize = TrackerTraits::maxSizeCluster;
     //--- Upper Right corner of Lower Left pixel -- in measurement frame
     uint16_t llx = cp.minRow[ic] + 1;
     uint16_t lly = cp.minCol[ic] + 1;
@@ -246,16 +248,19 @@ namespace pixelCPEforGPU {
     if (TrackerTraits::isBigPixY(cp.maxCol[ic]))
       ++ysize;
 
+
     int unbalanceX = 8.f * std::abs(float(cp.q_f_X[ic] - cp.q_l_X[ic])) / float(cp.q_f_X[ic] + cp.q_l_X[ic]);
     int unbalanceY = 8.f * std::abs(float(cp.q_f_Y[ic] - cp.q_l_Y[ic])) / float(cp.q_f_Y[ic] + cp.q_l_Y[ic]);
+
     xsize = 8 * xsize - unbalanceX;
     ysize = 8 * ysize - unbalanceY;
 
-    cp.xsize[ic] = std::min(uint32_t(xsize), TrackerTraits::maxSizeCluster);
-    cp.ysize[ic] = std::min(uint32_t(ysize), TrackerTraits::maxSizeCluster);
+    cp.xsize[ic] = std::min(uint32_t(xsize), maxSize);
+    cp.ysize[ic] = std::min(uint32_t(ysize), maxSize);
 
     if (cp.minRow[ic] == 0 || cp.maxRow[ic] == uint32_t(detParams.nRows - 1))
       cp.xsize[ic] = -cp.xsize[ic];
+
     if (cp.minCol[ic] == 0 || cp.maxCol[ic] == uint32_t(detParams.nCols - 1))
       cp.ysize[ic] = -cp.ysize[ic];
 
@@ -265,7 +270,7 @@ namespace pixelCPEforGPU {
 
      //correction for bigpixels for phase1
     xoff = xoff + TrackerTraits::bigPixXCorrection * comParams.thePitchX;
-    yoff = yoff + TrackerTraits::bigPixYCorrection *  comParams.thePitchY;
+    yoff = yoff + TrackerTraits::bigPixYCorrection * comParams.thePitchY;
 
     // apply the lorentz offset correction
     auto xPos = detParams.shiftX + (comParams.thePitchX * 0.5f * float(mx)) - xoff;
