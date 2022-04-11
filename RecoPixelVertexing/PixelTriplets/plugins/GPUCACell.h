@@ -167,7 +167,7 @@ public:
                                 ro,
                                 zo,
                                 ptmin,
-                                isBarrel ? TrackerTraits::caThetaCutBarrel : TrackerTraits::caThetaCutForward);  // 2.f*thetaCut); // FIXME tune cuts
+                                isBarrel ? caThetaCutBarrel : caThetaCutForward);  // 2.f*thetaCut); // FIXME tune cuts
     return (aligned && dcaCut(hh,
                               otherCell,
                               otherCell.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? dcaCutInnerTriplet
