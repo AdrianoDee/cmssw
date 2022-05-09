@@ -1,6 +1,18 @@
 <use name="FWCore/Framework"/>
 <use name="clhep"/>
 <use name="RecoVertex/PrimaryVertexProducer"/>
-<library file="*.cc" name="RecoVertexPrimaryVertexProducerPlugins">
+<use name="cuda"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/PluginManager"/>
+<use name="FWCore/Utilities"/>
+<use name="HeterogeneousCore/CUDAUtilities"/>
+<use name="HeterogeneousCore/CUDACore"/>
+<use name="DataFormats/GeometryVector"/>
+<use name="TrackingTools/PatternTools"/>
+<use name="TrackingTools/TransientTrack"/>
+<use name="DataFormats/GeometryCommonDetAlgo"/>
+<use name="RecoVertex/VertexPrimitives"/>
+<library file="*.cc *.cu" name="RecoVertexPrimaryVertexProducerPlugins">
   <flags EDM_PLUGIN="1"/>
+  <flags CXXFLAGS="-g"/>
 </library>

@@ -28,6 +28,7 @@ private:
   // ----------member data ---------------------------
   const double absZ_;
   const double sigmaZ_;
+  const double sigmaXY_;
   const double maxRecoZ_;
   const double absT_;
   const double sigmaT_;
@@ -41,6 +42,7 @@ private:
 VertexAssociatorByPositionAndTracksProducer::VertexAssociatorByPositionAndTracksProducer(const edm::ParameterSet &config)
     : absZ_(config.getParameter<double>("absZ")),
       sigmaZ_(config.getParameter<double>("sigmaZ")),
+      sigmaXY_(config.getParameter<double>("sigmaXY")),
       maxRecoZ_(config.getParameter<double>("maxRecoZ")),
       absT_(config.getParameter<double>("absT")),
       sigmaT_(config.getParameter<double>("sigmaT")),
@@ -61,6 +63,7 @@ void VertexAssociatorByPositionAndTracksProducer::fillDescriptions(edm::Configur
   // Matching conditions
   desc.add<double>("absZ", 0.1);
   desc.add<double>("sigmaZ", 3.0);
+  desc.add<double>("sigmaXY", 3.0);
   desc.add<double>("maxRecoZ", 1000.0);
   desc.add<double>("absT", -1.0);
   desc.add<double>("sigmaT", -1.0);
@@ -95,6 +98,7 @@ void VertexAssociatorByPositionAndTracksProducer::produce(edm::StreamID,
     impl = std::make_unique<VertexAssociatorByPositionAndTracks>(&(iEvent.productGetter()),
                                                                  absZ_,
                                                                  sigmaZ_,
+                                                                 sigmaXY_,
                                                                  maxRecoZ_,
                                                                  sharedTrackFraction_,
                                                                  recotosimCollectionH.product(),
@@ -103,6 +107,7 @@ void VertexAssociatorByPositionAndTracksProducer::produce(edm::StreamID,
     impl = std::make_unique<VertexAssociatorByPositionAndTracks>(&(iEvent.productGetter()),
                                                                  absZ_,
                                                                  sigmaZ_,
+                                                                 sigmaXY_,
                                                                  maxRecoZ_,
                                                                  absT_,
                                                                  sigmaT_,

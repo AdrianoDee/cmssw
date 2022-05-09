@@ -22,6 +22,7 @@ PrimaryVertexProducer::PrimaryVertexProducer(const edm::ParameterSet& conf)
   trkToken = consumes<reco::TrackCollection>(conf.getParameter<edm::InputTag>("TrackLabel"));
   bsToken = consumes<reco::BeamSpot>(conf.getParameter<edm::InputTag>("beamSpotLabel"));
   f4D = false;
+  weightFit = false;
 
   // select and configure the track selection
   std::string trackSelectionAlgorithm =
@@ -76,6 +77,9 @@ PrimaryVertexProducer::PrimaryVertexProducer(const edm::ParameterSet& conf)
       algorithm.fitter = new KalmanVertexFitter();
     } else if (fitterAlgorithm == "AdaptiveVertexFitter") {
       algorithm.fitter = new AdaptiveVertexFitter(GeometricAnnealing(algoconf->getParameter<double>("chi2cutoff")));
+    } else if (fitterAlgorithm == "WeightedMeanFitter") {
+      algorithm.fitter = nullptr;
+      weightFit = true;
     } else {
       throw VertexException("PrimaryVertexProducer: unknown algorithm: " + fitterAlgorithm);
     }
@@ -177,6 +181,18 @@ void PrimaryVertexProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 
   // select tracks
   std::vector<reco::TransientTrack>&& seltks = theTrackFilter->select(t_tks);
+  /*
+  std::vector<reco::TransientTrack> subtracks;
+  for (auto i=0; i< 1024; i++){
+    subtracks.push_back(seltks[i]);
+  }
+  seltks = subtracks;
+  */
+//  if (seltks.size() > 4096) {
+//    std::cout << "RecoVertex/PrimaryVertexProducer"
+//              << "Found: " << seltks.size() << " reconstructed tracks"
+//              << "\n";
+//    }
 
   // clusterize tracks in Z
   std::vector<std::vector<reco::TransientTrack> >&& clusters = theTrackClusterizer->clusterize(seltks);
@@ -217,11 +233,43 @@ void PrimaryVertexProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
       }
 
       TransientVertex v;
-      if (algorithm->useBeamConstraint && validBS && (iclus->size() > 1)) {
+      if(algorithm->fitter)
+      {if (algorithm->useBeamConstraint && validBS && (iclus->size() > 1)) {
         v = algorithm->fitter->vertex(*iclus, beamSpot);
       } else if (!(algorithm->useBeamConstraint) && (iclus->size() > 1)) {
         v = algorithm->fitter->vertex(*iclus);
       }  // else: no fit ==> v.isValid()=False
+      }else if(weightFit)
+      {
+        std::vector<std::pair<GlobalPoint, GlobalPoint>> points;
+        if (algorithm->useBeamConstraint && validBS && (iclus->size() > 1)) {
+            for (const auto& itrack : *iclus){
+                   GlobalPoint p =  itrack.stateAtBeamLine().trackStateAtPCA().position();
+                   GlobalPoint err(itrack.stateAtBeamLine().transverseImpactParameter().error(), itrack.stateAtBeamLine().transverseImpactParameter().error(), itrack.track().dzError());
+                   std::pair<GlobalPoint, GlobalPoint> p2(p, err);
+                   points.push_back(p2);
+            }
+
+           v = WeightedMeanFitter::weightedMeanOutlierRejection(points, *iclus);
+           if ((v.positionError().matrix())(2,2) != (WeightedMeanFitter::startError*WeightedMeanFitter::startError)) pvs.push_back(v);
+        }
+        else if (!(algorithm->useBeamConstraint) && (iclus->size() > 1)) {
+           for (const auto& itrack : *iclus){
+                   GlobalPoint p = itrack.impactPointState().globalPosition();
+                   GlobalPoint err(itrack.track().dxyError(), itrack.track().dxyError(), itrack.track().dzError());
+                   std::pair<GlobalPoint, GlobalPoint> p2(p, err);
+                   points.push_back(p2);
+           }
+
+           v = WeightedMeanFitter::weightedMeanOutlierRejection(points, *iclus);
+           if ((v.positionError().matrix())(2,2) != (WeightedMeanFitter::startError*WeightedMeanFitter::startError)) pvs.push_back(v); //FIX with constants
+        }
+      }
+      else
+        throw VertexException(
+            "PrimaryVertexProducer: Something went wrong. You are not using the weighted mean fit and no algorithm was selected.");
+
+
 
       // 4D vertices: add timing information
       if (f4D and v.isValid()) {
@@ -310,7 +358,18 @@ void PrimaryVertexProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
         std::cout << std::endl;
       }
     }
+    /*
+      int ivtx = 0;
+        std::cout << "recvtx,#trk,chi2,ndof,x,dx,y,dy,z,dz" << std::endl;
+      for (reco::VertexCollection::const_iterator v = vColl.begin(); v != vColl.end(); ++v) {
+        std::cout << ivtx++ << "," << v->tracksSize() << "," << v->chi2() << ","  << v->ndof() << ","  << v->position().x()
+                  << ","  << v->xError() << ","  << v->position().y() << ","
+                   << v->yError() << ","  << v->position().z() << ","
+                  << v->zError();
+        std::cout << std::endl;
 
+      }
+    */
     iEvent.put(std::move(result), algorithm->label);
   }
 }
