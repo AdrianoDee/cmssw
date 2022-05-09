@@ -18,6 +18,7 @@ public:
   VertexAssociatorByPositionAndTracks(const edm::EDProductGetter *productGetter,
                                       double absZ,
                                       double sigmaZ,
+                                      double sigmaXY,
                                       double maxRecoZ,
                                       double absT,
                                       double sigmaT,
@@ -29,6 +30,7 @@ public:
   VertexAssociatorByPositionAndTracks(const edm::EDProductGetter *productGetter,
                                       double absZ,
                                       double sigmaZ,
+                                      double sigmaXY,
                                       double maxRecoZ,
                                       double sharedTrackFraction,
                                       const reco::RecoToSimCollection *trackRecoToSimAssociation,
@@ -49,6 +51,7 @@ private:
 
   const double absZ_;
   const double sigmaZ_;
+  const double sigmaXY_;
   const double maxRecoZ_;
   const double absT_;
   const double sigmaT_;

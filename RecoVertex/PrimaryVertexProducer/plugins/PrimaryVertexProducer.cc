@@ -177,6 +177,18 @@ void PrimaryVertexProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 
   // select tracks
   std::vector<reco::TransientTrack>&& seltks = theTrackFilter->select(t_tks);
+  /*
+  std::vector<reco::TransientTrack> subtracks;
+  for (auto i=0; i< 1024; i++){
+    subtracks.push_back(seltks[i]);
+  }
+  seltks = subtracks;
+  */
+//  if (seltks.size() > 4096) {
+//    std::cout << "RecoVertex/PrimaryVertexProducer"
+//              << "Found: " << seltks.size() << " reconstructed tracks"
+//              << "\n";
+//    }
 
   // clusterize tracks in Z
   std::vector<std::vector<reco::TransientTrack> >&& clusters = theTrackClusterizer->clusterize(seltks);
@@ -310,7 +322,18 @@ void PrimaryVertexProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
         std::cout << std::endl;
       }
     }
+    /*
+      int ivtx = 0;
+        std::cout << "recvtx,#trk,chi2,ndof,x,dx,y,dy,z,dz" << std::endl;
+      for (reco::VertexCollection::const_iterator v = vColl.begin(); v != vColl.end(); ++v) {
+        std::cout << ivtx++ << "," << v->tracksSize() << "," << v->chi2() << ","  << v->ndof() << ","  << v->position().x()
+                  << ","  << v->xError() << ","  << v->position().y() << ","
+                   << v->yError() << ","  << v->position().z() << "," 
+                  << v->zError();
+        std::cout << std::endl;
 
+      }
+    */
     iEvent.put(std::move(result), algorithm->label);
   }
 }
