@@ -10,7 +10,7 @@
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDA.h"
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
-#define GPU_DEBUG 1
+//#define GPU_DEBUG 1
 namespace pixelgpudetails {
 
   template <typename TrackerTraits>

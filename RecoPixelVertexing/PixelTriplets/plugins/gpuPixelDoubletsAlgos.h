@@ -16,9 +16,9 @@
 #include "CAStructures.h"
 #include "GPUCACell.h"
 
-#define GPU_DEBUG
-#define NTUPLE_DEBUG
-#define DOUBLET_DEBUG
+//#define GPU_DEBUG
+//#define NTUPLE_DEBUG
+//#define DOUBLET_DEBUG
 namespace gpuPixelDoublets {
 
   template <typename TrackerTraits>
@@ -55,7 +55,7 @@ namespace gpuPixelDoublets {
   __device__ __forceinline__ bool clusterCut(int16_t mes, uint16_t mi) { return false;}
 
   template<>
-  __device__ __forceinline__ bool clusterCut<pixelTopology::Phase2>(bool ideal_cond, int16_t cY, uint16_t mi){ return false;}
+  __device__ __forceinline__ bool clusterCut<pixelTopology::Phase2>(int16_t mes, uint16_t mi){ return false;}
 
   template<>
   __device__ __forceinline__ bool clusterCut<pixelTopology::Phase1>(int16_t mes, uint16_t mi) {
@@ -218,7 +218,7 @@ namespace gpuPixelDoublets {
         auto dr = ro - mer;
         return dr > TrackerTraits::maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
       };
-
+/*
       auto zsizeCutOld = [&](int j) {
         auto onlyBarrel = outer < 4;
         auto so = hh.clusterSizeY(j);
@@ -232,7 +232,7 @@ namespace gpuPixelDoublets {
                           : (inner < 4) && mes > 0 &&
                                 std::abs(mes - int(std::abs((mez - zo) / (mer - ro)) * dzdrFact + 0.5f)) > maxDYPred;
       };
-
+*/
       auto iphicut = TrackerTraits::phicuts[pairLayerId];
 
       auto kl = PhiBinner::bin(int16_t(mep - iphicut));
@@ -263,10 +263,13 @@ namespace gpuPixelDoublets {
           nDoublets[pairLayerId]++;
           #endif
 
+          // printf("%.2f - %.2f - %.2f - %.2f", inner, mi, mep, mez, mer);
           auto oi = __ldg(p);
           assert(oi >= offsets[outer]);
           assert(oi < offsets[outer + 1]);
           auto mo = hh.detectorIndex(oi);
+
+          // printf("%.2f - %.2f - %.2f - %.2f", outer, mo, mep, hh.zGlobal(j), hh.rGlobal(j))
           if (mo > gpuClustering::maxNumModules)
             continue;  //    invalid
           bool no = false;
@@ -284,8 +287,8 @@ namespace gpuPixelDoublets {
           #else
            {nPhi[pairLayerId]++;no=true;}
           #endif
-          bool doCut = zsizeCut<TrackerTraits>(mez-hh.zGlobal(j), mer-hh.rGlobal(j), inner, outer, mes, hh.clusterSizeY(j));
-          assert(zsizeCutOld(j) == doCut);
+          bool doCut = zsizeCut<TrackerTraits>(mez-hh.zGlobal(oi), mer-hh.rGlobal(oi), inner, outer, mes, hh.clusterSizeY(oi));
+          //assert(zsizeCutOld(oi) == doCut);
           if (doClusterCut && doCut)
           #ifndef DOUBLET_DEBUG
             continue;

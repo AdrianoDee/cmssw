@@ -72,7 +72,10 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::fillDescriptions(edm::Configura
   desc.add<std::string>("CPE", "PixelCPEFast");
   desc.add<bool>("convertToLegacy", false);
   desc.add<bool>("isPhase2", false);
-  descriptions.addWithDefaultLabel(desc);
+
+  std::string name = "siPixelRecHitSoAFromLegacy";
+  name += TrackerTraits::nameModifier;
+  descriptions.add(name,desc);
 }
 
 template<typename TrackerTraits>
