@@ -143,7 +143,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::launchKernels(HitsOnCPU con
   cms::cuda::finalizeBulk(this->device_hitTuple_apc_, tuples_d);
 
   kernel_fillHitDetIndices<TrackerTraits>(tuples_d, hh.view(), detId_d);
-  kernel_fillNLayers<TrackerTraits>(tracks_d,device_hitTuple_apc_);
+  kernel_fillNLayers<TrackerTraits>(tracks_d,this->device_hitTuple_apc_);
 
   // remove duplicates (tracks that share a doublet)
   kernel_earlyDuplicateRemover<TrackerTraits>(this->device_theCells_.get(), this->device_nCells_, tracks_d, quality_d, this->params_.dupPassThrough_);

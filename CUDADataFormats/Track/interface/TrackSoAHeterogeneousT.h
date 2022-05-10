@@ -88,6 +88,7 @@ private:
   int nTracks_;
 };
 
+//This mess seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackSoAHeterogeneousT
 template <typename TrackerTraits>
 class PixelTrackSoAT : public  TrackSoAHeterogeneousT<TrackerTraits::maxNumberOfTuples> {
 public:

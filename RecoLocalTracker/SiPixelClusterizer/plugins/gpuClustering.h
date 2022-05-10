@@ -9,6 +9,8 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 
+//#define GPU_DEBUG
+
 namespace gpuClustering {
 
 #ifdef GPU_DEBUG
@@ -49,7 +51,6 @@ namespace gpuClustering {
                            int numElements) {
     __shared__ int msize;
 
-    constexpr bool isPhase2 = std::is_same_v<TrackerTraits, pixelTopology::Phase2>;
     auto firstModule = blockIdx.x;
     auto endModule = moduleStart[0];
 
@@ -85,9 +86,10 @@ namespace gpuClustering {
 
       //init hist  (ymax=416 < 512 : 9bits)
       //6000 max pixels required for HI operations with no measurable impact on pp performance
-      constexpr uint32_t maxPixInModule = 6000;
-      constexpr auto nbins = isPhase2 ? 1024 : 512;  //2+2;
-      constexpr auto nbits = isPhase2 ? 10 : 9;                                           //2+2;
+      constexpr uint32_t maxPixInModule = TrackerTraits::maxPixInModule;
+      constexpr auto nbins = TrackerTraits::clusterBinning;  //2+2;
+      constexpr auto nbits = TrackerTraits::clusterBits;
+
       using Hist = cms::cuda::HistoContainer<uint16_t, nbins, maxPixInModule, nbits, uint16_t>;
       __shared__ Hist hist;
       __shared__ typename Hist::Counter ws[32];

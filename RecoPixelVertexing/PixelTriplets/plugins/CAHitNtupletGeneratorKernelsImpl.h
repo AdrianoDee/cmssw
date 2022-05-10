@@ -2,8 +2,8 @@
 // Original Author: Felice Pantaleo, CERN
 //
 
-#define NTUPLE_DEBUG
-#define GPU_DEBUG
+//#define NTUPLE_DEBUG
+//#define GPU_DEBUG
 
 #include <cmath>
 #include <cstdint>
@@ -614,14 +614,19 @@ __global__ void kernel_fillHitDetIndices(HitContainer<TrackerTraits> const *__re
 
 
 template <typename TrackerTraits>
-__global__ void kernel_fillNLayers(TkSoA<TrackerTraits> *__restrict__ ptracks) {
+__global__ void kernel_fillNLayers(TkSoA<TrackerTraits> *__restrict__ ptracks, cms::cuda::AtomicPairCounter *apc) {
   auto &tracks = *ptracks;
   auto first = blockIdx.x * blockDim.x + threadIdx.x;
   auto ntracks = apc->get().m;
-  for (int idx = first, nt = TkSoA<TrackerTraits>::stride(); idx < nt; idx += gridDim.x * blockDim.x) {
-    auto nHits = tracks.nHits(idx);
-    assert(nHits >= 3);
-  }
+  
+if (0 == first)
+    tracks.setNTracks(ntracks);
+  for (int idx = first, nt = ntracks; idx < nt; idx += gridDim.x * blockDim.x) {
+     auto nHits = tracks.nHits(idx);
+     assert(nHits >= 3);
+    tracks.nLayers(idx) = tracks.computeNumberOfLayers(idx);
+   }
+
 }
 
 template <typename TrackerTraits>

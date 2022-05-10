@@ -85,6 +85,7 @@ template <typename TrackerTraits>
 void CAHitNtupletCUDAT<TrackerTraits>::produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& es) const {
   auto bf = 1. / es.getData(tokenField_).inverseBzAtOriginInGeV();
 
+  std::cout << "CAHitNtupletCUDAT "<< __LINE__ << std::endl;
   if (onGPU_) {
     auto hHits = iEvent.getHandle(tokenHitGPU_);
 

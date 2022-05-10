@@ -2,7 +2,7 @@
 // Author: Felice Pantaleo, CERN
 //
 
-// #define BROKENLINE_DEBUG
+//#define BROKENLINE_DEBUG
 
 #include <cstdint>
 
@@ -219,7 +219,7 @@ __global__ void kernel_BLFit(TupleMultiplicity<TrackerTraits> const *__restrict_
       printf("kernelBLFit failed! %f/%f\n", circle.chi2, line.chi2);
     printf("kernelBLFit size %d for %d hits circle.par(0,1,2): %d %f,%f,%f\n",
            N,
-           nHits,
+           N,
            tkid,
            circle.par(0),
            circle.par(1),

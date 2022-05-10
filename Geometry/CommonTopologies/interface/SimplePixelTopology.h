@@ -296,17 +296,16 @@ namespace pixelTopology{
    struct Phase2
    {
 
-
-     static constexpr uint32_t maxCellNeighbors = 256;
+     static constexpr uint32_t maxCellNeighbors = 300;
      static constexpr uint32_t maxCellTracks = 128;
      static constexpr uint32_t maxHitsOnTrack = 18;
      static constexpr uint32_t avgHitsPerTrack = 12;
-     static constexpr uint32_t maxCellsPerHit = 8 * 256;
+     static constexpr uint32_t maxCellsPerHit = 2 * 256;
      static constexpr uint32_t avgTracksPerHit = 12;
-     static constexpr uint32_t maxNumberOfTuples = 128 * 1024;
+     static constexpr uint32_t maxNumberOfTuples = 64 * 1024;
      static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
-     static constexpr uint32_t maxNumberOfDoublets = 16 * 512 * 1024;
-     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 16;
+     static constexpr uint32_t maxNumberOfDoublets = 8 * 512 * 1024;
+     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 32;
      static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
      static constexpr uint32_t maxDepth = 12;
      static constexpr uint32_t numberOfLayers = 28;
@@ -319,6 +318,8 @@ namespace pixelTopology{
      static constexpr uint32_t last_bpix1_detIndex = 108;
      static constexpr uint32_t last_bpix2_detIndex = 324;
      static constexpr uint32_t last_barrel_detIndex = 504;
+
+     static constexpr uint32_t maxPixInModule = 6000;
 
      static constexpr float moduleLength = 4.345f;
      static constexpr float endcapCorrection = 0.0f;
@@ -339,8 +340,8 @@ namespace pixelTopology{
      static constexpr int minYsizeB2 = 28;
 
      static constexpr int nPairsForQuadruplets = 23;                            // doublets only from contigous layers
-     static constexpr int nPairsForTriplets = nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
-     static constexpr int nPairs = nPairsForTriplets + 8;  // include far forward layer pairs
+     static constexpr int nPairsForTriplets = nPairsForQuadruplets; //nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
+     static constexpr int nPairs = nPairsForQuadruplets; //nPairsForTriplets + 8;  // include far forward layer pairs
 
      static constexpr int maxDYsize12 = 28;
      static constexpr int maxDYsize = 20;
@@ -357,6 +358,9 @@ namespace pixelTopology{
      static constexpr uint16_t numColsInModule = 8 * numColsInRoc;
      static constexpr uint16_t lastRowInModule = numRowsInModule - 1;
      static constexpr uint16_t lastColInModule = numColsInModule - 1;
+
+     static constexpr uint16_t clusterBinning = 1024;
+     static constexpr uint16_t clusterBits = 10;
 
      static constexpr uint16_t numberOfModulesInBarrel = 756;
      static constexpr uint16_t numberOfModulesInLadder = 9;
@@ -412,6 +416,8 @@ namespace pixelTopology{
       static constexpr uint32_t last_bpix2_detIndex = 320;
       static constexpr uint32_t last_barrel_detIndex = 1184;
 
+      static constexpr uint32_t maxPixInModule = 6000;
+
       static constexpr float moduleLength = 6.7f;
       static constexpr float endcapCorrection = 1.5f;
 
@@ -430,7 +436,7 @@ namespace pixelTopology{
       static constexpr int minYsizeB1 = 36;
       static constexpr int minYsizeB2 = 28;
 
-      static constexpr int nPairsForQuadruplets = 13;                     // quadruplets require hits in all layers
+      static constexpr int nPairsForQuadruplets = 23 + 6 + 14 + 8;                     // quadruplets require hits in all layers
       static constexpr int nPairsForTriplets = nPairsForQuadruplets + 2;  // include barrel "jumping" layer pairs
       static constexpr int nPairs = nPairsForTriplets + 4;                // include forward "jumping" layer pairs
 
@@ -449,6 +455,9 @@ namespace pixelTopology{
       static constexpr uint16_t numColsInModule = 8 * numColsInRoc;
       static constexpr uint16_t lastRowInModule = numRowsInModule - 1;
       static constexpr uint16_t lastColInModule = numColsInModule - 1;
+
+      static constexpr uint16_t clusterBinning = numColsInModule + 2;
+      static constexpr uint16_t clusterBits = 9;
 
       static constexpr uint16_t numberOfModulesInBarrel = 1184;
       static constexpr uint16_t numberOfModulesInLadder = 8;

@@ -574,6 +574,7 @@ namespace pixelgpudetails {
       auto word_d = cms::cuda::make_device_unique<uint32_t[]>(wordCounter, stream);
       auto fedId_d = cms::cuda::make_device_unique<uint8_t[]>(wordCounter, stream);
 
+      std::cout << "wordCounter "<< wordCounter << std::endl;
       cudaCheck(
           cudaMemcpyAsync(word_d.get(), wordFed.word(), wordCounter * sizeof(uint32_t), cudaMemcpyDefault, stream));
       cudaCheck(cudaMemcpyAsync(

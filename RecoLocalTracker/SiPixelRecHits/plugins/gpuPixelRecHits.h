@@ -13,7 +13,7 @@
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDASOAView.h"
 
-#define GPU_DEBUG 1
+//#define GPU_DEBUG 1
 namespace gpuPixelRecHits {
 
   template <typename TrackerTraits>

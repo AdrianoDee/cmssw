@@ -80,6 +80,20 @@ protected:
 };
 
 
+//This mess seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous given the change in template
+template <typename Traits,typename TrackerTraits>
+class TrackingRecHit2DHeterogeneousBase : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
+
+template <typename Traits>
+class TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1> : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
+
+template <typename Traits>
+using TrackingRecHit2DHeterogeneous = TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1>;
+
+using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
+using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
+using TrackingRecHit2DHostLegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
+
 //TrackingRecHit2DGPU/CPU/Host workaround to avoid partial specialization (forbidden)
 
 template <typename Traits,typename TrackerTraits>

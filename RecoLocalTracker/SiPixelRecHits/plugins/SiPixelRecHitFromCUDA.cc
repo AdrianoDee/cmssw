@@ -132,7 +132,11 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
     auto fc = hitsModuleStart_[gind];
     auto lc = hitsModuleStart_[gind + 1];
     auto nhits = lc - fc;
-
+    if (lc <= fc)
+     std::cout << "assertion is going to fail!" << std::endl;
+    
+std::cout << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
+                                      << " legacy clusters" << ' ' << fc << ',' << lc << std::endl;
     assert(lc > fc);
     LogDebug("SiPixelRecHitFromCUDA") << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
                                       << " legacy clusters" << ' ' << fc << ',' << lc;

@@ -56,13 +56,18 @@ template<typename TrackerTraits>
 void SiPixelRecHitCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
-  desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpotCUDA"));
-  desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplittingCUDA"));
-  desc.add<std::string>("CPE", "PixelCPEFast");
   //one could use descriptions.add(defaultModuleLabel<SiPixelRecHitCUDAT<TrackerTraits>>(), desc);
   //but this creates terrible names
   std::string name = "siPixelRecHitCUDA";
   name += TrackerTraits::nameModifier;
+
+  desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpotCUDA"));
+  desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplittingCUDA"));
+  
+  std::string cpe = "PixelCPEFast";
+  cpe += TrackerTraits::nameModifier;
+  desc.add<std::string>("CPE", cpe);
+
   descriptions.add(name,desc);
 }
 
@@ -70,7 +75,7 @@ template<typename TrackerTraits>
 void SiPixelRecHitCUDAT<TrackerTraits>::produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& es) const {
   PixelCPEFastT<TrackerTraits> const* fcpe = dynamic_cast<const PixelCPEFastT<TrackerTraits>*>(&es.getData(cpeToken_));
   if (not fcpe) {
-    throw cms::Exception("Configuration") << "SiPixelRecHitSoAFromLegacy can only use a CPE of type PixelCPEFast";
+    throw cms::Exception("Configuration") << "SiPixelRecHitCUDA can only use a CPE of type PixelCPEFast";
   }
 
   edm::Handle<cms::cuda::Product<SiPixelClustersCUDA>> hclusters;
