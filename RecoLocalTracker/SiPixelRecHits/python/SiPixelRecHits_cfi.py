@@ -47,8 +47,10 @@ siPixelRecHitsPreSplittingCUDA = _siPixelRecHitCUDA.clone(
 
 # transfer the pixel rechits to the host and convert them from SoA
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDA_cfi import siPixelRecHitFromCUDA as _siPixelRecHitFromCUDA
+from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
+from Configuration.Eras.Modifier_pp_on_PbPb_run3_cff import pp_on_PbPb_run3
 
-(gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplitting,
+(gpu & (pixelNtupletFit | pp_on_AA | pp_on_PbPb_run3)).toModify(siPixelRecHitsPreSplitting,
     cpu = cms.EDAlias(
             siPixelRecHitsPreSplittingSoA = cms.VPSet(
                  cms.PSet(type = cms.string("SiPixelRecHitedmNewDetSetVector")),
@@ -57,7 +59,7 @@ from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDA_cfi import siPixelRec
          ),
     cuda = _siPixelRecHitFromCUDA.clone())
 
-(gpu & pixelNtupletFit).toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
+(gpu & (pixelNtupletFit | pp_on_AA | pp_on_PbPb_run3)).toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     # reconstruct the pixel rechits on the gpu
     siPixelRecHitsPreSplittingCUDA,
     # producing and converting on cpu

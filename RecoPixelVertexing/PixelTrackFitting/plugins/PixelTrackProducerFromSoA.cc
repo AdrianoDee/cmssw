@@ -35,7 +35,7 @@
 
 /**
  * This class creates "leagcy"  reco::Track
- * objects from the output of SoA CA. 
+ * objects from the output of SoA CA.
  */
 class PixelTrackProducerFromSoA : public edm::global::EDProducer<> {
 public:
@@ -162,6 +162,7 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
 
   for (int32_t it = 0; it < nTracks; ++it) {
     auto nHits = tsoa.nHits(it);
+    
     assert(nHits >= 3);
     indToEdm.push_back(-1);
     auto q = quality[it];

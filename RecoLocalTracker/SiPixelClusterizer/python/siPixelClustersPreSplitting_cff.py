@@ -1,5 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.Eras.Modifier_run3_common_cff import run3_common
+from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
+from Configuration.Eras.Modifier_pp_on_PbPb_run3_cff import pp_on_PbPb_run3
 from Configuration.ProcessModifiers.gpu_cff import gpu
 
 # conditions used *only* by the modules running on GPU
@@ -23,6 +25,7 @@ run3_common.toModify(siPixelClustersPreSplittingCUDA,
                      isRun2 = False,
                      clusterThreshold_layer1 = 4000)
 
+(pp_on_AA | pp_on_PbPb_run3).toModify(siPixelClustersPreSplittingCUDA,MaxFEDWords = 500000)
 # convert the pixel digis (except errors) and clusters to the legacy format
 from RecoLocalTracker.SiPixelClusterizer.siPixelDigisClustersFromSoA_cfi import siPixelDigisClustersFromSoA as _siPixelDigisClustersFromSoA
 siPixelDigisClustersPreSplitting = _siPixelDigisClustersFromSoA.clone()

@@ -17,11 +17,11 @@ namespace caConstants {
 
   // constants
 #ifdef ONLY_PHICUT
-  constexpr uint32_t maxCellNeighbors = 64;
-  constexpr uint32_t maxCellTracks = 64;
-  constexpr uint32_t maxNumberOfTuples = 48 * 1024;
-  constexpr uint32_t maxNumberOfDoublets = 2 * 1024 * 1024;
-  constexpr uint32_t maxCellsPerHit = 8 * 128;
+  constexpr uint32_t maxCellNeighbors = 42;
+  constexpr uint32_t maxCellTracks = 50;
+  constexpr uint32_t maxNumberOfTuples = 64 * 1024;
+  constexpr uint32_t maxNumberOfDoublets = 4 * 512 * 1024;
+  constexpr uint32_t maxCellsPerHit = 3 * 128;
 #else  // ONLY_PHICUT
   constexpr uint32_t maxCellNeighbors = 36;
   constexpr uint32_t maxCellTracks = 48;
@@ -33,8 +33,8 @@ namespace caConstants {
 #else   // GPU_SMALL_EVENTS
   // tested on MC events with 55-75 pileup events
   // and extended for Heavy Ions operations (24k -> 32k tuples, 128 -> 256 cells)
-  constexpr uint32_t maxNumberOfTuples = 32 * 1024;
-  constexpr uint32_t maxNumberOfDoublets = 512 * 1024;
+  constexpr uint32_t maxNumberOfTuples = 128 * 1024;
+  constexpr uint32_t maxNumberOfDoublets = 4 * 512 * 1024;
   constexpr uint32_t maxCellsPerHit = 256;
 #endif  // GPU_SMALL_EVENTS
 #endif  // ONLY_PHICUT

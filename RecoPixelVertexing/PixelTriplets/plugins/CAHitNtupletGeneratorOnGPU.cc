@@ -148,7 +148,7 @@ void CAHitNtupletGeneratorOnGPU::fillDescriptions(edm::ParameterSetDescription& 
   desc.add<bool>("earlyFishbone", true);
   desc.add<bool>("lateFishbone", false);
   desc.add<bool>("idealConditions", true);
-  desc.add<bool>("fillStatistics", false);
+  desc.add<bool>("fillStatistics", true);
   desc.add<unsigned int>("minHitsPerNtuplet", 4);
   desc.add<unsigned int>("maxNumberOfDoublets", caConstants::maxNumberOfDoublets);
   desc.add<unsigned int>("minHitsForSharingCut", 10)

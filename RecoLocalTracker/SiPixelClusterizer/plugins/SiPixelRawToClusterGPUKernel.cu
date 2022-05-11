@@ -32,6 +32,7 @@
 // local includes
 #include "SiPixelRawToClusterGPUKernel.h"
 
+#define GPU_DEBUG
 namespace pixelgpudetails {
 
   SiPixelRawToClusterGPUKernel::WordFedAppender::WordFedAppender(uint32_t maxFedWords) {
@@ -572,7 +573,7 @@ namespace pixelgpudetails {
       // wordCounter is the total no of words in each event to be trasfered on device
       auto word_d = cms::cuda::make_device_unique<uint32_t[]>(wordCounter, stream);
       auto fedId_d = cms::cuda::make_device_unique<uint8_t[]>(wordCounter, stream);
-
+      
       cudaCheck(
           cudaMemcpyAsync(word_d.get(), wordFed.word(), wordCounter * sizeof(uint32_t), cudaMemcpyDefault, stream));
       cudaCheck(cudaMemcpyAsync(
