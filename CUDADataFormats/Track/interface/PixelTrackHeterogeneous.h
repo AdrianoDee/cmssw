@@ -3,7 +3,14 @@
 
 #include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
 #include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousT.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+
+template <typename TrackerTraits>
+using PixelTrackHeterogeneousT = HeterogeneousSoA<pixelTrack::TrackSoAT<TrackerTraits>>;
 
 using PixelTrackHeterogeneous = HeterogeneousSoA<pixelTrack::TrackSoA>;
+
+using PixelTrackHeterogeneousPhase1 = PixelTrackHeterogeneousT<pixelTopology::Phase1>;
+using PixelTrackHeterogeneousPhase2 = PixelTrackHeterogeneousT<pixelTopology::Phase2>;
 
 #endif  // #ifndef CUDADataFormats_Track_PixelTrackHeterogeneous_h

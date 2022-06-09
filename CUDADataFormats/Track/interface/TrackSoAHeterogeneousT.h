@@ -5,9 +5,8 @@
 #include <algorithm>
 
 #include "CUDADataFormats/Track/interface/TrajectoryStateSoAT.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"
-
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
 
 namespace pixelTrack {
@@ -20,18 +19,20 @@ namespace pixelTrack {
   }
 }  // namespace pixelTrack
 
-template <int32_t S>
-class TrackSoAHeterogeneousT {
-public:
+  template <int32_t S>
+  class TrackSoAHeterogeneousT {
+  public:
+
+  static constexpr int32_t H = 5;
   static constexpr int32_t stride() { return S; }
 
   using Quality = pixelTrack::Quality;
   using hindex_type = uint32_t;
-  using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, 5 * S>;
+  using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>; // TODO plot for average number of hits
 
   // Always check quality is at least loose!
   // CUDA does not support enums  in __lgc ...
-private:
+protected:
   eigenSoA::ScalarSoA<uint8_t, S> quality_;
 
 public:
@@ -56,9 +57,9 @@ public:
     // layers are in order and we assume tracks are either forward or backward
     auto pdet = detIndices.begin(i);
     int nl = 1;
-    auto ol = phase1PixelTopology::getLayer(*pdet);
+    auto ol = pixelTopology::getLayer<pixelTopology::Phase1>(*pdet);
     for (; pdet < detIndices.end(i); ++pdet) {
-      auto il = phase1PixelTopology::getLayer(*pdet);
+      auto il = pixelTopology::getLayer<pixelTopology::Phase1>(*pdet);
       if (il != ol)
         ++nl;
       ol = il;
@@ -83,9 +84,40 @@ public:
 
   HitContainer hitIndices;
   HitContainer detIndices;
-
 private:
   int nTracks_;
+};
+
+//This mess seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackSoAHeterogeneousT
+template <typename TrackerTraits>
+class PixelTrackSoAT : public  TrackSoAHeterogeneousT<TrackerTraits::maxNumberOfTuples> {
+public:
+
+  static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
+  static constexpr int32_t H = TrackerTraits::maxHitsOnTrack;
+  using hindex_type = uint32_t;
+
+  using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>; // TODO plot for average number of hits
+  using Quality = pixelTrack::Quality;
+
+  constexpr int computeNumberOfLayers(int32_t i) const {
+    // layers are in order and we assume tracks are either forward or backward
+    auto pdet = this->detIndices.begin(i);
+    int nl = 1;
+    auto ol = pixelTopology::getLayer<TrackerTraits>(*pdet);
+    for (; pdet < this->detIndices.end(i); ++pdet) {
+      auto il = pixelTopology::getLayer<TrackerTraits>(*pdet);
+      if (il != ol)
+        ++nl;
+      ol = il;
+    }
+    return nl;
+  }
+
+  constexpr int nHits(int i) const { return this->detIndices.size(i); }
+
+  HitContainer hitIndices;
+  HitContainer detIndices;
 };
 
 namespace pixelTrack {
@@ -102,6 +134,16 @@ namespace pixelTrack {
   using TrajectoryState = TrajectoryStateSoAT<maxNumber()>;
   using HitContainer = TrackSoA::HitContainer;
 
+  template <typename TrackerTraits>
+  using TrackSoAT = PixelTrackSoAT<TrackerTraits>;
+
+  template <typename TrackerTraits>
+  using HitContainerT = typename PixelTrackSoAT<TrackerTraits>::HitContainer;
+
+  using TrackSoAPhase1 = TrackSoAT<pixelTopology::Phase1>;
+  using TrackSoAPhase2 = TrackSoAT<pixelTopology::Phase2>;
+
 }  // namespace pixelTrack
+
 
 #endif  // CUDADataFormats_Track_TrackHeterogeneousT_H
