@@ -74,6 +74,10 @@ public:
   cms::cuda::host::unique_ptr<uint16_t[]> store16ToHostAsync(cudaStream_t stream) const;
   cms::cuda::host::unique_ptr<float[]> store32ToHostAsync(cudaStream_t stream) const;
 
+  std::unique_ptr<uint16_t[]> store16() const;
+  std::unique_ptr<float[]> store32() const;
+  std::unique_ptr<uint32_t[]> modules() const;
+
   // needs specialization for Host
   void copyFromGPU(TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits> const* input, cudaStream_t stream);
 
@@ -234,8 +238,8 @@ TrackingRecHit2DHeterogeneous<Traits>::TrackingRecHit2DHeterogeneous(
 
   //store transfer
   if constexpr (std::is_same_v<Traits, cms::cudacompat::GPUTraits>) {
-    cms::cuda::copyAsync(m_store16, store16, stream);
-    cms::cuda::copyAsync(m_store32, store32, stream);
+    cudaCheck(cudaMemcpyAsync( m_store16.get(), store16, static_cast<uint32_t>(n16 * nHits) * sizeof(uint16_t), cudaMemcpyHostToDevice, stream));
+    cudaCheck(cudaMemcpyAsync( m_store32.get(), store32, static_cast<uint32_t>(n32 * nHits) * sizeof(float), cudaMemcpyHostToDevice, stream));
   } else {
     std::copy(store32, store32 + nHits * n32, m_store32.get());  // want to copy it
     std::copy(store16, store16 + nHits * n16, m_store16.get());
