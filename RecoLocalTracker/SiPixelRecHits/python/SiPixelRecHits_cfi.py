@@ -50,10 +50,13 @@ siPixelRecHitsPreSplittingTask = cms.Task(
 
 # reconstruct the pixel rechits on the gpu
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitCUDA_cfi import siPixelRecHitCUDA as _siPixelRecHitCUDA
-siPixelRecHitsPreSplittingCUDA = _siPixelRecHitCUDA.clone(
-    beamSpot = "offlineBeamSpotToCUDA"
-)
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitCUDAFromSoA_cfi import siPixelRecHitCUDAFromSoA as _siPixelRecHitCUDAFromSoA
 
+# siPixelRecHitsPreSplittingCUDA = _siPixelRecHitCUDA.clone(
+#     beamSpot = "offlineBeamSpotToCUDA"
+# )
+
+siPixelRecHitsPreSplittingCUDA = _siPixelRecHitCUDAFromSoA.clone(pixelRecHitSoASrc="siPixelRecHitsPreSplittingCPU");
 # transfer the pixel rechits to the host and convert them from SoA
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDA_cfi import siPixelRecHitFromCUDA as _siPixelRecHitFromCUDA
 
