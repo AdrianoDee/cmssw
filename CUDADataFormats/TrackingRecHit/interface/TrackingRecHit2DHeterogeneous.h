@@ -47,6 +47,9 @@ public:
 
   explicit TrackingRecHit2DHeterogeneous(
       float* store32, uint16_t* store16, uint32_t* modules, int nHits, cudaStream_t stream = nullptr);
+  explicit TrackingRecHit2DHeterogeneous(
+      float* store32, uint16_t* store16, uint32_t* modules, int nHits, bool isPhase2,
+      int32_t offsetBPIX2, cudaStream_t stream = nullptr);
   ~TrackingRecHit2DHeterogeneous() = default;
 
   TrackingRecHit2DHeterogeneous(const TrackingRecHit2DHeterogeneous&) = delete;
@@ -216,6 +219,78 @@ TrackingRecHit2DHeterogeneous<Traits>::TrackingRecHit2DHeterogeneous(
   auto view = Traits::template make_host_unique<TrackingRecHit2DSOAView>(stream);
 
   m_view = Traits::template make_unique<TrackingRecHit2DSOAView>(stream);
+
+  view->m_nHits = nHits;
+
+  if (0 == nHits) {
+    if constexpr (std::is_same_v<Traits, cms::cudacompat::GPUTraits>) {
+      cms::cuda::copyAsync(m_view, view, stream);
+    } else {
+      m_view = std::move(view);
+    }
+    return;
+  }
+
+  m_store16 = Traits::template make_unique<uint16_t[]>(nHits * n16, stream);
+  m_store32 = Traits::template make_unique<float[]>(nHits * n32, stream);
+  m_PhiBinnerStore = Traits::template make_unique<TrackingRecHit2DSOAView::PhiBinner>(stream);
+  m_AverageGeometryStore = Traits::template make_unique<TrackingRecHit2DSOAView::AverageGeometry>(stream);
+
+  view->m_averageGeometry = m_AverageGeometryStore.get();
+  view->m_hitsModuleStart = m_hitsModuleStart;
+
+  //store transfer
+  if constexpr (std::is_same_v<Traits, cms::cudacompat::GPUTraits>) {
+    cudaCheck(cudaMemcpyAsync( m_store16.get(), store16, static_cast<uint32_t>(n16 * nHits) * sizeof(uint16_t), cudaMemcpyHostToDevice, stream));
+    cudaCheck(cudaMemcpyAsync( m_store32.get(), store32, static_cast<uint32_t>(n32 * nHits) * sizeof(float), cudaMemcpyHostToDevice, stream));
+  } else {
+    std::copy(store32, store32 + nHits * n32, m_store32.get());  // want to copy it
+    std::copy(store16, store16 + nHits * n16, m_store16.get());
+  }
+
+  //getters
+  auto get32 = [&](Storage32 i) { return m_store32.get() + static_cast<int>(i) * nHits; };
+  auto get16 = [&](Storage16 i) { return m_store16.get() + static_cast<int>(i) * nHits; };
+
+  //Store 32
+  view->m_xl = get32(Storage32::kXLocal);
+  view->m_yl = get32(Storage32::kYLocal);
+  view->m_xerr = get32(Storage32::kXerror);
+  view->m_yerr = get32(Storage32::kYerror);
+  view->m_chargeAndStatus = reinterpret_cast<uint32_t*>(get32(Storage32::kCharge));
+  view->m_xg = get32(Storage32::kXGlobal);
+  view->m_yg = get32(Storage32::kYGlobal);
+  view->m_zg = get32(Storage32::kZGlobal);
+  view->m_rg = get32(Storage32::kRGlobal);
+
+  m_phiBinner = view->m_phiBinner = m_PhiBinnerStore.get();
+  m_phiBinnerStorage = view->m_phiBinnerStorage =
+      reinterpret_cast<TrackingRecHit2DSOAView::PhiBinner::index_type*>(get32(Storage32::kPhiStorage));
+
+  //Store 16
+  view->m_detInd = get16(Storage16::kDetId);
+  m_iphi = view->m_iphi = reinterpret_cast<int16_t*>(get16(Storage16::kPhi));
+  view->m_xsize = reinterpret_cast<int16_t*>(get16(Storage16::kXSize));
+  view->m_ysize = reinterpret_cast<int16_t*>(get16(Storage16::kYSize));
+
+  // transfer view
+  if constexpr (std::is_same_v<Traits, cms::cudacompat::GPUTraits>) {
+    cms::cuda::copyAsync(m_view, view, stream);
+  } else {
+    m_view = std::move(view);
+  }
+}
+
+//this is intended to be used only for CPU SoA but doesn't hurt to have it for all cases
+template <typename Traits>
+TrackingRecHit2DHeterogeneous<Traits>::TrackingRecHit2DHeterogeneous(
+    float* store32, uint16_t* store16, uint32_t* modules, int nHits, bool isPhase2,
+    int32_t offsetBPIX2, cudaStream_t stream)
+    : m_nHits(nHits), m_offsetBPIX2(offsetBPIX2), m_hitsModuleStart(modules) {
+  auto view = Traits::template make_host_unique<TrackingRecHit2DSOAView>(stream);
+
+  m_view = Traits::template make_unique<TrackingRecHit2DSOAView>(stream);
+  m_nMaxModules = isPhase2 ? phase2PixelTopology::numberOfModules : phase1PixelTopology::numberOfModules;
 
   view->m_nHits = nHits;
 
