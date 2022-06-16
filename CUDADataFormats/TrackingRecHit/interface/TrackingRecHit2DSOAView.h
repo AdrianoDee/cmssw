@@ -10,24 +10,25 @@
 #include "CUDADataFormats/TrackingRecHit/interface/SiPixelHitStatus.h"
 
 namespace pixelCPEforGPU {
-  struct ParamsOnGPU;
+  template <typename TrackerTraits>
+  struct ParamsOnGPUT;
 }
 
-class TrackingRecHit2DSOAView {
+template <typename TrackerTraits>
+class TrackingRecHit2DSOAViewT {
 public:
   using Status = SiPixelHitStatus;
   static_assert(sizeof(Status) == sizeof(uint8_t));
 
   using hindex_type = uint32_t;  // if above is <=2^32
+  using PhiBinner = cms::cuda::HistoContainer<int16_t, 256, -1, 8 * sizeof(int16_t), hindex_type, TrackerTraits::numberOfLayers>;  //28 for phase2 geometry
+  using AverageGeometry = pixelTopology::AverageGeometryT<TrackerTraits>;
+  using ParamsOnGPU = pixelCPEforGPU::ParamsOnGPUT<TrackerTraits>;
 
-  using PhiBinner = cms::cuda::
-      HistoContainer<int16_t, 256, -1, 8 * sizeof(int16_t), hindex_type, pixelTopology::maxLayers>;  //28 for phase2 geometry
-
-  using AverageGeometry = pixelTopology::AverageGeometry;
-
-  template <typename>
-  friend class TrackingRecHit2DHeterogeneous;
-  friend class TrackingRecHit2DReduced;
+  template <typename,typename>
+  friend class TrackingRecHit2DHeterogeneousT;
+  // template <typename>
+  // friend class TrackingRecHit2DReducedT;
 
   __device__ __forceinline__ uint32_t nHits() const { return m_nHits; }
   __device__ __forceinline__ uint32_t nMaxModules() const { return m_nMaxModules; }
@@ -75,7 +76,7 @@ public:
   __device__ __forceinline__ uint16_t& detectorIndex(int i) { return m_detInd[i]; }
   __device__ __forceinline__ uint16_t detectorIndex(int i) const { return __ldg(m_detInd + i); }
 
-  __device__ __forceinline__ pixelCPEforGPU::ParamsOnGPU const& cpeParams() const { return *m_cpeParams; }
+  __device__ __forceinline__ ParamsOnGPU const& cpeParams() const { return *m_cpeParams; }
 
   __device__ __forceinline__ uint32_t hitsModuleStart(int i) const { return __ldg(m_hitsModuleStart + i); }
 
@@ -88,6 +89,8 @@ public:
   __device__ __forceinline__ AverageGeometry& averageGeometry() { return *m_averageGeometry; }
   __device__ __forceinline__ AverageGeometry const& averageGeometry() const { return *m_averageGeometry; }
 
+  __device__ __forceinline__ bool clusterCut(int i) const { return false; }
+  __device__ __forceinline__ bool zSizeCut(int i, int o) const { return false; }
 private:
   // local coord
   float *m_xl, *m_yl;
@@ -107,16 +110,62 @@ private:
   // supporting objects
   // m_averageGeometry is corrected for beam spot, not sure where to host it otherwise
   AverageGeometry* m_averageGeometry;              // owned by TrackingRecHit2DHeterogeneous
-  pixelCPEforGPU::ParamsOnGPU const* m_cpeParams;  // forwarded from setup, NOT owned
+  ParamsOnGPU const* m_cpeParams;  // forwarded from setup, NOT owned
   uint32_t const* m_hitsModuleStart;               // forwarded from clusters
 
   uint32_t* m_hitsLayerStart;
 
   PhiBinner* m_phiBinner;
-  PhiBinner::index_type* m_phiBinnerStorage;
+  typename PhiBinner::index_type* m_phiBinnerStorage;
 
   uint32_t m_nHits;
   uint32_t m_nMaxModules;
 };
+
+template<>
+__device__ __forceinline__ bool TrackingRecHit2DSOAViewT<pixelTopology::Phase1>::zSizeCut(int i, int o) const
+{
+  auto dz = zGlobal(i)-zGlobal(o);
+  auto dr = zGlobal(i)-rGlobal(o);
+  auto mes = clusterSizeY(i);
+  auto so = clusterSizeY(o);
+  auto mi = detectorIndex(i);
+  auto mo = detectorIndex(o);
+
+  auto innerBarrel = mi < pixelTopology::Phase1::last_barrel_detIndex;
+  auto onlyBarrel = mo < pixelTopology::Phase1::last_barrel_detIndex;
+  auto dy = mi < pixelTopology::Phase1::last_bpix1_detIndex ? pixelTopology::Phase1::maxDYsize12 : pixelTopology::Phase1::maxDYsize;
+
+  return onlyBarrel ? mes > 0 && so > 0 && std::abs(so - mes) > dy
+                    : innerBarrel && mes > 0 &&
+                          std::abs(mes - int(std::abs(dz / dr) * pixelTopology::Phase1::dzdrFact + 0.5f)) > pixelTopology::Phase1::maxDYPred;
+}
+
+
+template <>
+__device__ __forceinline__ bool TrackingRecHit2DSOAViewT<pixelTopology::Phase1>::clusterCut(int i) const
+{
+
+  auto mi = detectorIndex(i);
+  bool innerB1 = mi < pixelTopology::Phase1::last_bpix1_detIndex;
+  bool outerFwd = (mi > pixelTopology::Phase1::last_barrel_detIndex);
+  auto mes = clusterSizeY(i);
+
+  if (!outerFwd)
+    return false;
+
+  if (innerB1 && outerFwd)  // B1 and F1
+    if (mes > 0 && mes < pixelTopology::Phase1::minYsizeB1)
+      return true; // only long cluster  (5*8)
+  bool innerB2 = (mi >= pixelTopology::Phase1::last_bpix1_detIndex) && (mi <=pixelTopology::Phase1::last_bpix2_detIndex); //FIXME number
+  if (innerB2 && outerFwd)  // B2 and F1
+    if (mes > 0 && mes < pixelTopology::Phase1::minYsizeB2)
+      return true;
+
+  return false;
+}
+
+using TrackingRecHit2DSOAView = TrackingRecHit2DSOAViewT<pixelTopology::Phase1>;
+using TrackingRecHit2DSOAViewPhase2 = TrackingRecHit2DSOAViewT<pixelTopology::Phase2>;
 
 #endif  // CUDADataFormats_TrackingRecHit_interface_TrackingRecHit2DSOAView_h
