@@ -394,8 +394,8 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
       continue;
     auto pid = thisCell.layerPairId();
     auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
-    doit = doit;
-    doit = true;
+    // doit = doit;
+    // doit = true;
     constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
     if (doit) {
       typename Cell::TmpTuple stack;
