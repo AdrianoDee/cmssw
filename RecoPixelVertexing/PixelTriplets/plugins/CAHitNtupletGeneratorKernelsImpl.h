@@ -2,7 +2,7 @@
 // Original Author: Felice Pantaleo, CERN
 //
 
-//#define NTUPLE_DEBUG
+#define NTUPLE_DEBUG
 //#define GPU_DEBUG
 
 #include <cmath>
@@ -86,7 +86,7 @@ __global__ void kernel_checkOverflows(HitContainer<TrackerTraits> const *foundNt
 
 #ifdef NTUPLE_DEBUG
   if (0 == first) {
-    printf("number of found cells %d, found tuples %d with total hits %d out of %d %d\n",
+    printf("number of found cells %d \n found tuples %d with total hits %d out of %d %d\n",
            *nCells,
            apc->get().m,
            apc->get().n,
@@ -118,6 +118,9 @@ __global__ void kernel_checkOverflows(HitContainer<TrackerTraits> const *foundNt
       printf("cellTracks overflow\n");
     if (int(hitToTuple->nOnes()) < nHits)
       printf("ERROR hitToTuple  overflow %d %d\n", hitToTuple->nOnes(), nHits);
+      #ifdef NTUPLE_DEBUG
+      printf("number of cellNeighbors %d \n cellTracks %d \n hitToTuple %d \n",cellNeighbors->size(),cellTracks->size(),hitToTuple->size());
+      #endif
   }
 
   for (int idx = first, nt = (*nCells); idx < nt; idx += gridDim.x * blockDim.x) {
@@ -392,6 +395,7 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
     auto pid = thisCell.layerPairId();
     auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
     doit = doit;
+    doit = true;
     constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
     if (doit) {
       typename Cell::TmpTuple stack;
@@ -399,7 +403,6 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
       thisCell.template find_ntuplets<maxDepth>(
           hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, minHitsPerNtuplet, pid < 3);
       assert(stack.empty());
-      // printf("in %d found quadruplets: %d\n", cellIndex, apc->get());
     }
   }
 }
@@ -618,7 +621,7 @@ __global__ void kernel_fillNLayers(TkSoA<TrackerTraits> *__restrict__ ptracks, c
   auto &tracks = *ptracks;
   auto first = blockIdx.x * blockDim.x + threadIdx.x;
   auto ntracks = apc->get().m;
-  
+
 if (0 == first)
     tracks.setNTracks(ntracks);
   for (int idx = first, nt = ntracks; idx < nt; idx += gridDim.x * blockDim.x) {

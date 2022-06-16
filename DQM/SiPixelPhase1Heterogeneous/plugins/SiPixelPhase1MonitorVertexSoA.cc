@@ -3,7 +3,7 @@
 // Package:    SiPixelPhase1MonitorVertexSoA
 // Class:      SiPixelPhase1MonitorVertexSoA
 //
-/**\class SiPixelPhase1MonitorVertexSoA SiPixelPhase1MonitorVertexSoA.cc 
+/**\class SiPixelPhase1MonitorVertexSoA SiPixelPhase1MonitorVertexSoA.cc
 */
 //
 // Author: Suvankar Roy Chowdhury
@@ -67,6 +67,7 @@ void SiPixelPhase1MonitorVertexSoA::analyze(const edm::Event& iEvent, const edm:
     return;
   }
 
+
   auto const& vsoa = *((vsoaHandle.product())->get());
   int nVertices = vsoa.nvFinal;
   auto bsHandle = iEvent.getHandle(tokenBeamSpot_);
@@ -81,11 +82,13 @@ void SiPixelPhase1MonitorVertexSoA::analyze(const edm::Event& iEvent, const edm:
     dxdz = bs.dxdz();
     dydz = bs.dydz();
   }
+
   for (int iv = 0; iv < nVertices; iv++) {
     auto si = vsoa.sortInd[iv];
     auto z = vsoa.zv[si];
     auto x = x0 + dxdz * z;
     auto y = y0 + dydz * z;
+
     z += z0;
     hx->Fill(x);
     hy->Fill(y);
@@ -95,8 +98,10 @@ void SiPixelPhase1MonitorVertexSoA::analyze(const edm::Event& iEvent, const edm:
     hchi2oNdof->Fill(vsoa.chi2[si] / ndof);
     hptv2->Fill(vsoa.ptv2[si]);
     hntrks->Fill(ndof + 1);
+
   }
   hnVertex->Fill(nVertices);
+
 }
 
 //

@@ -208,6 +208,8 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::buildDoublets(HitsOnCPU con
   }
 
   assert(nActualPairs <= TrackerTraits::nPairs);
+  nActualPairs = TrackerTraits::nPairs;
+  std::cout << "nActualPairs GPU -> " << nActualPairs << std::endl;
   int stride = 4;
   int threadsPerBlock = TrackerTraits::getDoubletsFromHistoMaxBlockSize / stride;
   int blocks = (4 * nhits + threadsPerBlock - 1) / threadsPerBlock;

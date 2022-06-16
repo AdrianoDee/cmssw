@@ -73,6 +73,8 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::buildDoublets(HitsOnCPU con
   }
 
   assert(nActualPairs <= TrackerTraits::nPairs);
+  nActualPairs = TrackerTraits::nPairs;
+  std::cout << "nActualPairs CPU -> " << nActualPairs << std::endl;
 
   getDoubletsFromHisto<TrackerTraits>(this->device_theCells_.get(),
                                          this->device_nCells_,

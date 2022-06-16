@@ -30,7 +30,7 @@ namespace riemannFit {
   // fast fit
   using Map4d = Eigen::Map<Vector4d, 0, Eigen::InnerStride<stride> >;
 
-  template <auto Start, auto End, auto Inc, class F>
+  template <auto Start, auto End, auto Inc, class F> //a compile-time bounded for loop
   constexpr void rolling_fits(F&& f)
   {
       if constexpr (Start < End)

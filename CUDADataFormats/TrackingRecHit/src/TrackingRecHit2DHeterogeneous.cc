@@ -13,15 +13,15 @@ cms::cuda::host::unique_ptr<float[]> TrackingRecHit2DGPUT<TrackerTraits>::localC
 
 template <typename TrackerTraits>
 cms::cuda::host::unique_ptr<float[]> TrackingRecHit2DGPUT<TrackerTraits>::store32ToHostAsync(cudaStream_t stream) const {
-  auto ret = cms::cuda::make_host_unique<float[]>(static_cast<int>(n32) * nHits(), stream);
-  cms::cuda::copyAsync(ret, m_store32, static_cast<int>(n32) * nHits(), stream);
+  auto ret = cms::cuda::make_host_unique<float[]>(static_cast<int>(this->n32) * this->nHits(), stream);
+  cms::cuda::copyAsync(ret, this->m_store32, static_cast<int>(this->n32) * this->nHits(), stream);
   return ret;
 }
 
 template <typename TrackerTraits>
 cms::cuda::host::unique_ptr<uint16_t[]> TrackingRecHit2DGPUT<TrackerTraits>::store16ToHostAsync(cudaStream_t stream) const {
-  auto ret = cms::cuda::make_host_unique<uint16_t[]>(static_cast<int>(n16) * nHits(), stream);
-  cms::cuda::copyAsync(ret, m_store16, static_cast<int>(n16) * nHits(), stream);
+  auto ret = cms::cuda::make_host_unique<uint16_t[]>(static_cast<int>(this->n16) * this->nHits(), stream);
+  cms::cuda::copyAsync(ret, this->m_store16, static_cast<int>(this->n16) * this->nHits(), stream);
   return ret;
 }
 

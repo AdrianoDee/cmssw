@@ -5,6 +5,7 @@
 #include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "DataFormats/Common/interface/CMS_CLASS_VERSION.h"
 
 template <typename Traits, typename TrackerTraits>
 class TrackingRecHit2DHeterogeneousT {
@@ -107,18 +108,37 @@ protected:
 
 
 //This mess seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous given the change in template
-template <typename Traits,typename TrackerTraits>
-class TrackingRecHit2DHeterogeneousBase : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
+
+// template <typename Traits,typename TrackerTraits>
+// class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{
+//
+//   public:
+//   CMS_CLASS_VERSION(10);
+// };
 
 template <typename Traits>
-class TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1> : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
+class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{
 
-template <typename Traits>
-using TrackingRecHit2DHeterogeneous = TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1>;
+  public:
+  CMS_CLASS_VERSION(10);
+};
 
-using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
-using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
-using TrackingRecHit2DHostLegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
+using TrackingRecHit2DCPU = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
+using TrackingRecHit2DGPU = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
+using TrackingRecHit2DHost = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
+
+// template <typename Traits,typename TrackerTraits>
+// class TrackingRecHit2DHeterogeneousBase : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
+//
+// template <typename Traits>
+// class TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1> : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
+//
+// template <typename Traits>
+// using TrackingRecHit2DHeterogeneous = TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1>;
+//
+// using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
+// using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
+// using TrackingRecHit2DHostLegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
 
 //TrackingRecHit2DGPU/CPU/Host workaround to avoid partial specialization (forbidden)
 
@@ -140,6 +160,8 @@ class TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits,TrackerTraits> : publi
     using TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits,TrackerTraits>::TrackingRecHit2DHeterogeneousT;
     cms::cuda::host::unique_ptr<float[]> localCoordToHostAsync(cudaStream_t stream) const;
     cms::cuda::host::unique_ptr<uint32_t[]> hitsModuleStartToHostAsync(cudaStream_t stream) const;
+    cms::cuda::host::unique_ptr<uint16_t[]> store16ToHostAsync(cudaStream_t stream) const;
+    cms::cuda::host::unique_ptr<float[]> store32ToHostAsync(cudaStream_t stream) const;
 };
 // Alias to avoid bringing GPUTraits around
 template<typename TrackerTraits>
@@ -150,6 +172,9 @@ template <typename TrackerTraits>
 class TrackingRecHit2DCPUBaseT<cms::cudacompat::CPUTraits,TrackerTraits> : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::CPUTraits,TrackerTraits> {
 public:
   using TrackingRecHit2DHeterogeneousT<cms::cudacompat::CPUTraits,TrackerTraits>::TrackingRecHit2DHeterogeneousT;
+  cms::cuda::host::unique_ptr<uint32_t[]> hitsModuleStartToHostAsync(cudaStream_t stream) const;
+  cms::cuda::host::unique_ptr<uint16_t[]> store16ToHostAsync(cudaStream_t stream) const;
+  cms::cuda::host::unique_ptr<float[]> store32ToHostAsync(cudaStream_t stream) const;
 };
 
 // Alias to avoid bringing GPUTraits around
@@ -168,9 +193,9 @@ template<typename TrackerTraits>
 using TrackingRecHit2DHostT = TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits,TrackerTraits>;
 
 //Classes definition for Phase1
-using TrackingRecHit2DGPU = TrackingRecHit2DGPUT<pixelTopology::Phase1>;
-using TrackingRecHit2DCPU = TrackingRecHit2DCPUT<pixelTopology::Phase1>;
-using TrackingRecHit2DHost = TrackingRecHit2DHostT<pixelTopology::Phase1>;
+using TrackingRecHit2DGPUPhase1 = TrackingRecHit2DGPUT<pixelTopology::Phase1>;
+using TrackingRecHit2DCPUPhase1 = TrackingRecHit2DCPUT<pixelTopology::Phase1>;
+using TrackingRecHit2DHostPhase1 = TrackingRecHit2DHostT<pixelTopology::Phase1>;
 //Classes definition for Phase2
 using TrackingRecHit2DGPUPhase2 = TrackingRecHit2DGPUT<pixelTopology::Phase2>;
 using TrackingRecHit2DCPUPhase2 = TrackingRecHit2DCPUT<pixelTopology::Phase2>;
@@ -278,7 +303,7 @@ TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>::TrackingRecHit2DHeterogene
 
 //this is intended to be used only for CPU SoA but doesn't hurt to have it for all cases
 template <typename Traits, typename TrackerTraits>
-TrackingRecHit2DHeterogeneousT::TrackingRecHit2DHeterogeneousT(
+TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>::TrackingRecHit2DHeterogeneousT(
     float* store32, uint16_t* store16, uint32_t* modules, int nHits, cudaStream_t stream)
     : m_nHits(nHits), m_hitsModuleStart(modules) {
   auto view = Traits::template make_host_unique<TrackingRecHit2DSOAView>(stream);
@@ -298,8 +323,8 @@ TrackingRecHit2DHeterogeneousT::TrackingRecHit2DHeterogeneousT(
 
   m_store16 = Traits::template make_unique<uint16_t[]>(nHits * n16, stream);
   m_store32 = Traits::template make_unique<float[]>(nHits * n32, stream);
-  m_PhiBinnerStore = Traits::template make_unique<TrackingRecHit2DSOAView::PhiBinner>(stream);
-  m_AverageGeometryStore = Traits::template make_unique<TrackingRecHit2DSOAView::AverageGeometry>(stream);
+  m_PhiBinnerStore = Traits::template make_unique<typename TrackingRecHit2DSOAView::PhiBinner>(stream);
+  m_AverageGeometryStore = Traits::template make_unique<typename TrackingRecHit2DSOAView::AverageGeometry>(stream);
 
   view->m_averageGeometry = m_AverageGeometryStore.get();
   view->m_hitsModuleStart = m_hitsModuleStart;
@@ -331,7 +356,7 @@ TrackingRecHit2DHeterogeneousT::TrackingRecHit2DHeterogeneousT(
 
   m_phiBinner = view->m_phiBinner = m_PhiBinnerStore.get();
   m_phiBinnerStorage = view->m_phiBinnerStorage =
-      reinterpret_cast<TrackingRecHit2DSOAView::PhiBinner::index_type*>(get32(Storage32::kPhiStorage));
+      reinterpret_cast<typename TrackingRecHit2DSOAView::PhiBinner::index_type*>(get32(Storage32::kPhiStorage));
 
   //Store 16
   view->m_detInd = get16(Storage16::kDetId);

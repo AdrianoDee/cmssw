@@ -17,6 +17,28 @@ namespace pixelTrack {
     auto qp = std::find(qualityName, qualityName + qualitySize, name) - qualityName;
     return static_cast<Quality>(qp);
   }
+
+  inline float roughLog(float x) {
+    // max diff [0.5,12] at 1.25 0.16143
+    // average diff  0.0662998
+    union IF {
+      uint32_t i;
+      float f;
+    };
+    IF z;
+    z.f = x;
+    uint32_t lsb = 1 < 21;
+    z.i += lsb;
+    z.i >>= 21;
+    auto f = z.i & 3;
+    int ex = int(z.i >> 2) - 127;
+
+    // log2(1+0.25*f)
+    // averaged over bins
+    const float frac[4] = {0.160497f, 0.452172f, 0.694562f, 0.901964f};
+    return float(ex) + frac[f];
+  }
+
 }  // namespace pixelTrack
 
   template <int32_t S>
@@ -115,10 +137,32 @@ public:
   }
 
   constexpr int nHits(int i) const { return this->detIndices.size(i); }
+  constexpr inline bool tightCut(int i) const { return false; }
+  constexpr inline bool highQualityCut(int i) const { return false; }
 
   HitContainer hitIndices;
   HitContainer detIndices;
 };
+
+// template<>
+// constexpr inline bool PixelTrackSoAT<pixelTopology::Phase1>::tightCut(int i) const {
+//   // (see CAHitNtupletGeneratorGPU.cc)
+//   float pt = std::min<float>(this->pt(i), cuts.chi2MaxPt);
+//   float chi2Cut = cuts.chi2Scale * (cuts.chi2Coeff[0] + roughLog(pt) * cuts.chi2Coeff[1]);
+//   if (tracks->chi2(it) >= chi2Cut) {
+// #ifdef NTUPLE_FIT_DEBUG
+//     printf("Bad chi2 %d size %d pt %f eta %f chi2 %f\n",
+//            it,
+//            tuples->size(it),
+//            tracks->pt(it),
+//            tracks->eta(it),
+//            tracks->chi2(it));
+// #endif
+//     continue;
+//   }
+//   return false;
+// }
+
 
 namespace pixelTrack {
 

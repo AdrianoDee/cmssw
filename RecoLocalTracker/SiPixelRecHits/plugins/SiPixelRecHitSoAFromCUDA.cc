@@ -52,19 +52,24 @@ private:
 };
 
 template<typename TrackerTraits>
-SiPixelRecHitSoAFromCUDAT::SiPixelRecHitSoAFromCUDAT(const edm::ParameterSet& iConfig)
+SiPixelRecHitSoAFromCUDAT<TrackerTraits>::SiPixelRecHitSoAFromCUDAT(const edm::ParameterSet& iConfig)
     : hitsTokenGPU_(
           consumes<cms::cuda::Product<TrackingRecHit2DGPUT<TrackerTraits>>>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
       hitsPutTokenCPU_(produces<TrackingRecHit2DCPUT<TrackerTraits>>()),
       hostPutToken_(produces<HMSstorage>()) {}
 
-void SiPixelRecHitSoAFromCUDAT::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+template<typename TrackerTraits>
+void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
-  descriptions.addWithDefaultLabel(desc);
+
+  std::string name = "siPixelRecHitSoAFromCUDA";
+  name += TrackerTraits::nameModifier;
+  descriptions.add(name,desc);
 }
 
-void SiPixelRecHitSoAFromCUDAT::acquire(edm::Event const& iEvent,
+template<typename TrackerTraits>
+void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
                                        edm::EventSetup const& iSetup,
                                        edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
   cms::cuda::Product<TrackingRecHit2DGPUT<TrackerTraits>> const& inputDataWrapped = iEvent.get(hitsTokenGPU_);
@@ -82,7 +87,8 @@ void SiPixelRecHitSoAFromCUDAT::acquire(edm::Event const& iEvent,
   hitsModuleStart_ = inputData.hitsModuleStartToHostAsync(ctx.stream());
 }
 
-void SiPixelRecHitSoAFromCUDAT::produce(edm::Event& iEvent, edm::EventSetup const& es) {
+template<typename TrackerTraits>
+void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::EventSetup const& es) {
   auto hmsp = std::make_unique<uint32_t[]>(nMaxModules_ + 1);
 
   if (nHits_ > 0)
@@ -93,6 +99,6 @@ void SiPixelRecHitSoAFromCUDAT::produce(edm::Event& iEvent, edm::EventSetup cons
 }
 
 using SiPixelRecHitSoAFromCUDA = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase1>;
-DEFINE_FWK_MODULE(SiPixelRecHitFromCUDA);
+DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDA);
 using SiPixelRecHitSoAFromCUDAPhase2 = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase2>;
-DEFINE_FWK_MODULE(SiPixelRecHitFromCUDAPhase2);
+DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDAPhase2);

@@ -89,6 +89,8 @@ public:
   __device__ __forceinline__ AverageGeometry& averageGeometry() { return *m_averageGeometry; }
   __device__ __forceinline__ AverageGeometry const& averageGeometry() const { return *m_averageGeometry; }
 
+  __device__ __forceinline__ bool clusterCut(int i) const { return false; }
+  __device__ __forceinline__ bool zSizeCut(int i, int o) const { return false; }
 private:
   // local coord
   float *m_xl, *m_yl;
@@ -119,6 +121,49 @@ private:
   uint32_t m_nHits;
   uint32_t m_nMaxModules;
 };
+
+template<>
+__device__ __forceinline__ bool TrackingRecHit2DSOAViewT<pixelTopology::Phase1>::zSizeCut(int i, int o) const
+{
+  auto dz = zGlobal(i)-zGlobal(o);
+  auto dr = zGlobal(i)-rGlobal(o);
+  auto mes = clusterSizeY(i);
+  auto so = clusterSizeY(o);
+  auto mi = detectorIndex(i);
+  auto mo = detectorIndex(o);
+
+  auto innerBarrel = mi < pixelTopology::Phase1::last_barrel_detIndex;
+  auto onlyBarrel = mo < pixelTopology::Phase1::last_barrel_detIndex;
+  auto dy = mi < pixelTopology::Phase1::last_bpix1_detIndex ? pixelTopology::Phase1::maxDYsize12 : pixelTopology::Phase1::maxDYsize;
+
+  return onlyBarrel ? mes > 0 && so > 0 && std::abs(so - mes) > dy
+                    : innerBarrel && mes > 0 &&
+                          std::abs(mes - int(std::abs(dz / dr) * pixelTopology::Phase1::dzdrFact + 0.5f)) > pixelTopology::Phase1::maxDYPred;
+}
+
+
+template <>
+__device__ __forceinline__ bool TrackingRecHit2DSOAViewT<pixelTopology::Phase1>::clusterCut(int i) const
+{
+
+  auto mi = detectorIndex(i);
+  bool innerB1 = mi < pixelTopology::Phase1::last_bpix1_detIndex;
+  bool outerFwd = (mi > pixelTopology::Phase1::last_barrel_detIndex);
+  auto mes = clusterSizeY(i);
+
+  if (!outerFwd)
+    return false;
+
+  if (innerB1 && outerFwd)  // B1 and F1
+    if (mes > 0 && mes < pixelTopology::Phase1::minYsizeB1)
+      return true; // only long cluster  (5*8)
+  bool innerB2 = (mi >= pixelTopology::Phase1::last_bpix1_detIndex) && (mi <=pixelTopology::Phase1::last_bpix2_detIndex); //FIXME number
+  if (innerB2 && outerFwd)  // B2 and F1
+    if (mes > 0 && mes < pixelTopology::Phase1::minYsizeB2)
+      return true;
+
+  return false;
+}
 
 using TrackingRecHit2DSOAView = TrackingRecHit2DSOAViewT<pixelTopology::Phase1>;
 using TrackingRecHit2DSOAViewPhase2 = TrackingRecHit2DSOAViewT<pixelTopology::Phase2>;

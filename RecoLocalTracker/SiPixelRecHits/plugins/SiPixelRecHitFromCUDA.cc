@@ -66,7 +66,10 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationD
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplitting"));
-  descriptions.addWithDefaultLabel(desc);
+
+  std::string name = "siPixelRecHitFromCUDA";
+  name += TrackerTraits::nameModifier;
+  descriptions.add(name,desc);
 }
 
 template<typename TrackerTraits>
@@ -134,7 +137,7 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
     auto nhits = lc - fc;
     if (lc <= fc)
      std::cout << "assertion is going to fail!" << std::endl;
-    
+
 std::cout << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
                                       << " legacy clusters" << ' ' << fc << ',' << lc << std::endl;
     assert(lc > fc);

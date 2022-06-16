@@ -2,8 +2,8 @@
 // Author: Felice Pantaleo, CERN
 //
 
-//#define BROKENLINE_DEBUG
-
+// #define BROKENLINE_DEBUG
+//#define BL_DUMP_HITS
 #include <cstdint>
 
 #include <cuda_runtime.h>
@@ -75,8 +75,10 @@ __global__ void kernel_BLFastFit(Tuples<TrackerTraits> const *__restrict__ found
     auto tkid = *(tupleMultiplicity->begin(nHitsL) + tuple_idx);
     assert(int(tkid) < foundNtuplets->nOnes());
 
-    ptkids[local_idx] = tkid;
 
+    ptkids[local_idx] = tkid;
+//    if(local_idx == 10)
+//    printf("local_idx %d tkid %d ptkids[local_idx] %d \n",local_idx,tkid,ptkids[local_idx]);
     auto nHits = foundNtuplets->size(tkid);
 
     assert(nHits >= nHitsL);
@@ -184,14 +186,12 @@ __global__ void kernel_BLFit(TupleMultiplicity<TrackerTraits> const *__restrict_
   assert(pfast_fit);
 
   // same as above...
-
   // look in bin for this hit multiplicity
   auto local_start = blockIdx.x * blockDim.x + threadIdx.x;
   for (int local_idx = local_start, nt = riemannFit::maxNumberOfConcurrentFits; local_idx < nt;
        local_idx += gridDim.x * blockDim.x) {
     if (invalidTkId == ptkids[local_idx])
       break;
-
     auto tkid = ptkids[local_idx];
 
     assert(tkid < TrackerTraits::maxNumberOfTuples);

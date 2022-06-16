@@ -207,7 +207,7 @@ namespace phase2PixelTopology
 
   using pixelTopology::phi0p07;
   constexpr uint32_t numberOfLayers = 28;
-  constexpr int nPairs = 23 + 6 + 14 + 8;  // include far forward layer pairs
+  constexpr int nPairs = 23 + 6 + 14 + 8 + 4;  // include far forward layer pairs
   constexpr uint16_t numberOfModules = 3892;
 
   DEVICECONST uint8_t layerPairs[2 * nPairs] = {
@@ -219,14 +219,14 @@ namespace phase2PixelTopology
      4 ,5 ,5 ,6 ,6 ,7 ,7 ,8 ,8 ,9 ,9 ,10,10,11, //POS (16)
      16,17,17,18,18,19,19,20,20,21,21,22,22,23, //NEG (23)
 
-     0, 2, 0, 5, 0, 17, // BPIX1 Jump (26)
-     1, 3, 1, 5, 1, 17, // BPIX2 Jump (29)
+     0, 2, 0, 5, 0, 17, 0, 6, 0, 18,// BPIX1 Jump (26+2)
+     1, 3, 1, 5, 1, 17, 1, 6, 1, 18,// BPIX2 Jump (29+4)
 
-     4, 6, 5, 7, 6, 8, 7, 9, 8, 10,9 ,11,10,12, //POS Jump (36)
-     16,18,17,19,18,20,19,21,20,22,21,23,22,24, //NEG Jump (43)
+     4, 6, 5, 7, 6, 8, 7, 9, 8, 10,9 ,11,10,12, //POS Jump (36+4)
+     16,18,17,19,18,20,19,21,20,22,21,23,22,24, //NEG Jump (43+4)
 
-     11,12,12,13,13,14,14,15, //Late POS (47)
-     23,24,24,25,25,26,26,27, //Late NEG (51)
+     11,12,12,13,13,14,14,15, //Late POS (47+4)
+     23,24,24,25,25,26,26,27, //Late NEG (51+4)
 };
   DEVICECONST uint32_t layerStart[numberOfLayers + 1] = {0,
                                                        108,
@@ -266,37 +266,142 @@ namespace phase2PixelTopology
                         phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
                         phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
                         phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
-                        phi0p07,phi0p07};
+                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07};
 
      DEVICECONST float minz[nPairs] = {
-        -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
-        -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
-        -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
-        -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
-        -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999., -9999.};
+        -18.0,-3.0,-22.0,-18.0,4.0,-22.0,-19.0,
+        10.0,-22.0,23.0,30.0,39.0,50.0,65.0,82.0,
+        109.0,-28.0,-35.0,-44.0,-55.0,-70.0,-87.0,
+        -113.0,-7.0,-1.0,-22.0,2.0,-22.0,-999.,6.0,
+        -22.0,11.0,-22.0,23.0,30.0,39.0,50.0,65.0,
+        82.0,109.0,-28.0,-35.0,-44.0,-55.0,-70.0,-87.0,
+        -113.0,137.0,173.0,199.0,229.0,-142.0,-177.0,-203.0,-233.0};
 
 
      DEVICECONST float maxz[nPairs] = {
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999., 9999.};
+      18.0,22.0,3.0,17.0,22.0,-3.0,19.0,22.0,-10.0,28.0,
+      35.0,44.0,55.0,70.0,87.0,113.0,-23.0,-30.0,-39.0,
+      -50.0,-65.0,-82.0,-109.0,6.0,22.0,2.0,22.0,-1.0,
+      -999.,22.0,-7.0,22.0,-10.0,28.0,35.0,44.0,55.0,
+      70.0,87.0,113.0,-23.0,-30.0,-39.0,-50.0,-65.0,
+      -82.0,-109.0,142.0,177.0,203.0,233.0,-137.0,-173.0,-199.0,-229.0 };
+
      DEVICECONST float maxr[nPairs] = {
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-      9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999., 9999.};
+       4.0,4.0,4.0,7.0,7.0,7.0,12.0,12.0,12.0,14.0,
+       14.0,14.0,14.0,14.0,13.0,13.0,14.0,14.0,14.0,
+       14.0,14.0,13.0,13.0,4.0,4.0,4.0,4.0,4.0,-999.,
+       7.0,7.0,7.0,7.0,12.0,12.0,11.0,11.0,11.0,10.0,
+       16.0,12.0,12.0,11.0,11.0,11.0,11.0,17.0,17.0,
+       23.0,23.0,22.0,16.0,23.0,22.0,22.0 };
 }
 
 
 namespace pixelTopology{
 
-   struct Phase2
+  struct topology
+  {
+    const uint32_t maxCellNeighbors;
+    const uint32_t maxCellTracks;
+    const uint32_t maxHitsOnTrack;
+    const uint32_t avgHitsPerTrack;
+    const uint32_t maxCellsPerHit;
+    const uint32_t avgTracksPerHit;
+    const uint32_t maxNumberOfTuples;
+    const uint32_t maxHitsForContainers;
+    const uint32_t maxNumberOfDoublets;
+    const uint32_t maxNumOfActiveDoublets;
+    const uint32_t maxNumberOfQuadruplets;
+    const uint32_t maxDepth;
+    const uint32_t numberOfLayers;
+
+    const uint32_t maxSizeCluster;
+
+    const uint32_t getDoubletsFromHistoMaxBlockSize;
+    const uint32_t getDoubletsFromHistoMinBlocksPerMP;
+
+    const uint32_t last_bpix1_detIndex;
+    const uint32_t last_bpix2_detIndex;
+    const uint32_t last_barrel_detIndex;
+
+    const uint32_t maxPixInModule;
+
+    const float moduleLength;
+    const float endcapCorrection;
+
+    const float xerr_barrel_l1_def;
+    const float yerr_barrel_l1_def;
+    const float xerr_barrel_ln_def;
+    const float yerr_barrel_ln_def;
+    const float xerr_endcap_def;
+    const float yerr_endcap_def;
+
+    const float bigPixXCorrection;
+    const float bigPixYCorrection;
+
+    const float dzdrFact;
+
+    const int minYsizeB1;
+    const int minYsizeB2;
+
+    const int nPairsForQuadruplets;
+    const int nPairsForTriplets;
+    const int nPairs;
+
+    const int maxDYsize12;
+    const int maxDYsize;
+    const int maxDYPred;
+
+    const uint16_t numberOfModules;
+
+    const uint16_t numRowsInRoc;
+    const uint16_t numColsInRoc;
+    const uint16_t lastRowInRoc;
+    const uint16_t lastColInRoc;
+
+    const uint16_t numRowsInModule;
+    const uint16_t numColsInModule;
+    const uint16_t lastRowInModule;
+    const uint16_t lastColInModule;
+
+    const uint16_t clusterBinning;
+    const uint16_t clusterBits;
+
+    const uint16_t numberOfModulesInBarrel;
+    const uint16_t numberOfModulesInLadder;
+    const uint16_t numberOfLaddersInBarrel;
+
+    const uint16_t firstEndcapPos;
+    const uint16_t firstEndcapNeg;
+
+    const int16_t xOffset;
+
+    char const* nameModifier;
+
+    uint32_t const *layerStart;
+    float const *minz;
+    float const *maxz;
+    float const *maxr;
+
+     uint8_t const *layerPairs;
+     int16_t const *phicuts;
+
+      bool isBigPixX(uint16_t px) ;
+      bool isBigPixY(uint16_t py) ;
+
+      uint16_t localX(uint16_t px) ;
+      uint16_t localY(uint16_t py) ;
+
+      bool isEdgeX(uint16_t px);
+ bool isEdgeY(uint16_t py);
+ uint16_t toRocX(uint16_t px);
+ uint16_t toRocY(uint16_t py);
+
+  };
+
+   struct Phase2 : public topology
    {
 
-     static constexpr uint32_t maxCellNeighbors = 300;
+     static constexpr uint32_t maxCellNeighbors = 64;
      static constexpr uint32_t maxCellTracks = 128;
      static constexpr uint32_t maxHitsOnTrack = 18;
      static constexpr uint32_t avgHitsPerTrack = 12;
@@ -304,8 +409,8 @@ namespace pixelTopology{
      static constexpr uint32_t avgTracksPerHit = 12;
      static constexpr uint32_t maxNumberOfTuples = 64 * 1024;
      static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
-     static constexpr uint32_t maxNumberOfDoublets = 8 * 512 * 1024;
-     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 32;
+     static constexpr uint32_t maxNumberOfDoublets = 8 * 1024 * 1024;
+     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 8;
      static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
      static constexpr uint32_t maxDepth = 12;
      static constexpr uint32_t numberOfLayers = 28;
@@ -335,13 +440,15 @@ namespace pixelTopology{
      static constexpr float bigPixYCorrection = 0.0f;
 
      static constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
+     static constexpr float z0Cut = 8.f;
+     static constexpr float doubletHardPt = 0.85f;
 
      static constexpr int minYsizeB1 = 36;
      static constexpr int minYsizeB2 = 28;
 
      static constexpr int nPairsForQuadruplets = 23;                            // doublets only from contigous layers
      static constexpr int nPairsForTriplets = nPairsForQuadruplets; //nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
-     static constexpr int nPairs = nPairsForQuadruplets; //nPairsForTriplets + 8;  // include far forward layer pairs
+     static constexpr int nPairs = phase2PixelTopology::nPairs; //nPairsForTriplets + 8;  // include far forward layer pairs
 
      static constexpr int maxDYsize12 = 28;
      static constexpr int maxDYsize = 20;
@@ -381,8 +488,8 @@ namespace pixelTopology{
      static constexpr uint8_t const *layerPairs = phase2PixelTopology::layerPairs;
      static constexpr int16_t const *phicuts = phase2PixelTopology::phicuts;
 
-    static constexpr inline bool isBigPixX(uint16_t px) { return false; }
-    static constexpr inline bool isBigPixY(uint16_t py) { return false; }
+    static constexpr inline bool isBigPixX(uint16_t px)  { return false; }
+    static constexpr inline bool isBigPixY(uint16_t py)  { return false; }
 
     static constexpr inline uint16_t localX(uint16_t px) { return px; }
     static constexpr inline uint16_t localY(uint16_t py) { return py; }
@@ -390,7 +497,7 @@ namespace pixelTopology{
 
   };
 
-   struct Phase1
+   struct Phase1 : public topology
    {
 
       static constexpr uint32_t maxCellNeighbors = 64;
@@ -432,11 +539,13 @@ namespace pixelTopology{
       static constexpr float bigPixYCorrection = 8.0f;
 
       static constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
+      static constexpr float z0Cut = 12.f;
+      static constexpr float doubletHardPt = 0.5f;
 
       static constexpr int minYsizeB1 = 36;
       static constexpr int minYsizeB2 = 28;
 
-      static constexpr int nPairsForQuadruplets = 23 + 6 + 14 + 8;                     // quadruplets require hits in all layers
+      static constexpr int nPairsForQuadruplets = 13;                     // quadruplets require hits in all layers
       static constexpr int nPairsForTriplets = nPairsForQuadruplets + 2;  // include barrel "jumping" layer pairs
       static constexpr int nPairs = nPairsForTriplets + 4;                // include forward "jumping" layer pairs
 
@@ -479,19 +588,19 @@ namespace pixelTopology{
       static constexpr int16_t const *phicuts = phase1PixelTopology::phicuts;
 
 
-      static constexpr inline bool isEdgeX(uint16_t px) { return (px == 0) | (px == lastRowInModule); }
+      static constexpr inline bool isEdgeX(uint16_t px)  { return (px == 0) | (px == lastRowInModule); }
 
-      static constexpr inline bool isEdgeY(uint16_t py) { return (py == 0) | (py == lastColInModule); }
+      static constexpr inline bool isEdgeY(uint16_t py)  { return (py == 0) | (py == lastColInModule); }
 
-      static constexpr inline uint16_t toRocX(uint16_t px) { return (px < numRowsInRoc) ? px : px - numRowsInRoc; }
+      static constexpr inline uint16_t toRocX(uint16_t px)  { return (px < numRowsInRoc) ? px : px - numRowsInRoc; }
 
-      static constexpr inline uint16_t toRocY(uint16_t py) {
+      static constexpr inline uint16_t toRocY(uint16_t py)  {
         auto roc = divu52(py);
         return py - 52 * roc;
       }
 
-      static constexpr inline bool isBigPixX(uint16_t px) { return (px == 79) | (px == 80); }
-      static constexpr inline bool isBigPixY(uint16_t py) {
+      static constexpr inline bool isBigPixX(uint16_t px)  { return (px == 79) | (px == 80); }
+      static constexpr inline bool isBigPixY(uint16_t py)  {
         auto ly = toRocY(py);
         return (ly == 0) | (ly == lastColInRoc);
       }
@@ -516,6 +625,8 @@ namespace pixelTopology{
 
   };
 
+  struct HIonPhase1 : public Phase1 {
+      static constexpr uint32_t maxNumberOfDoublets=3*1024*1024;};
 
 }  // namespace trackerTopology
 

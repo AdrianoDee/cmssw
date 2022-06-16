@@ -119,15 +119,11 @@ pixelNtupletFit.toReplaceWith(pixelTracks, _pixelTrackProducerFromSoA.clone(
     pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
 ))
 
-<<<<<<< HEAD
-(pixelNtupletFit & ~phase2_tracker).toReplaceWith(pixelTracksTask, cms.Task(
-=======
 (pixelNtupletFit & phase2_tracker).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAPhase2.clone(
     pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
 ))
 
 pixelNtupletFit.toReplaceWith(pixelTracksTask, cms.Task(
->>>>>>> 41bc2adaf86 (rebase needed)
     # build the pixel ntuplets and the pixel tracks in SoA format on the GPU
     pixelTracksSoA,
     # convert the pixel tracks from SoA to legacy format

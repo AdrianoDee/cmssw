@@ -39,7 +39,8 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernelsOnCPU(HitsView const*
                     hits_geGPU.get(),
                     fast_fit_resultsGPU.get());
     if (fitNas4_)
-      riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrack,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset](auto i) { kernel_BLFastFit<3,TrackerTraits>(tuples_,
+    {
+      riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrack,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset](auto i) { kernel_BLFastFit<4,TrackerTraits>(tuples_,
                           tupleMultiplicity_,
                           hv,
                           tkidGPU.get(),
@@ -49,17 +50,44 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernelsOnCPU(HitsView const*
                           4,
                           i,
                           offset);});
-    else
-      riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrack,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset](auto i) { kernel_BLFastFit<3,TrackerTraits>(tuples_,
-                          tupleMultiplicity_,
-                          hv,
+
+      riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrack,1>([this,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU](auto i) { kernel_BLFit<4,TrackerTraits>(tupleMultiplicity_,
+                          bField_,
+                          outputSoa_,
                           tkidGPU.get(),
                           hitsGPU.get(),
                           hits_geGPU.get(),
-                          fast_fit_resultsGPU.get(),
-                          i,
-                          i,
-                          offset);});
+                          fast_fit_resultsGPU.get());});
+
+                        }
+    else
+      {
+
+        riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrack,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset](auto i)
+        {
+
+          kernel_BLFastFit<i,TrackerTraits>(tuples_,
+                            tupleMultiplicity_,
+                            hv,
+                            tkidGPU.get(),
+                            hitsGPU.get(),
+                            hits_geGPU.get(),
+                            fast_fit_resultsGPU.get(),
+                            i,
+                            i,
+                            offset);
+
+          kernel_BLFit<i,TrackerTraits>(tupleMultiplicity_,
+                              bField_,
+                              outputSoa_,
+                              tkidGPU.get(),
+                              hitsGPU.get(),
+                              hits_geGPU.get(),
+                              fast_fit_resultsGPU.get());
+                            }
+                          );
+                          }
+
     // // fit triplets
     // kernel_BLFastFit<3,TrackerTraits>(tuples_,
     //                     tupleMultiplicity_,
