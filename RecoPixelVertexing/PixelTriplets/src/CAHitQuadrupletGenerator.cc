@@ -36,7 +36,8 @@ CAHitQuadrupletGenerator::CAHitQuadrupletGenerator(const edm::ParameterSet& cfg,
                  cfg.getParameter<std::vector<edm::ParameterSet>>("CAThetaCut_byTriplets")),
       caPhiCut(cfg.getParameter<double>("CAPhiCut"),
                cfg.getParameter<std::vector<edm::ParameterSet>>("CAPhiCut_byTriplets")),
-      caHardPtCut(cfg.getParameter<double>("CAHardPtCut")) {
+      caHardPtCut(cfg.getParameter<double>("CAHardPtCut")),
+      cellsPerOuterHit(cfg.getParameter<int>("CAcellsPerOuterHit")) {
   edm::ParameterSet comparitorPSet = cfg.getParameter<edm::ParameterSet>("SeedComparitorPSet");
   std::string comparitorName = comparitorPSet.getParameter<std::string>("ComponentName");
   if (comparitorName != "none") {
@@ -51,6 +52,8 @@ void CAHitQuadrupletGenerator::fillDescriptions(edm::ParameterSetDescription& de
   desc.add<bool>("useBendingCorrection", false);
   desc.add<double>("CAThetaCut", 0.00125);
   desc.add<double>("CAPhiCut", 10);
+
+  desc.add<int>("CAcellsPerOuterHit", 100)->setComment("Expected number of cells per hit used to reserve the vector.");
 
   edm::ParameterSetDescription validatorCACut;
   validatorCACut.add<string>("seedingLayers", "BPix1+BPix2+BPix3");
@@ -115,7 +118,9 @@ namespace {
       g.theLayers[i].theOuterLayers.clear();
       g.theLayers[i].theOuterLayerPairs.clear();
       for (auto& v : g.theLayers[i].isOuterHitOfCell)
-        v.clear();
+      {  v.clear();
+        // v.reserve(cellsPerOuterHit_);
+      }
     }
   }
   void fillGraph(const SeedingLayerSetsHits& layers,

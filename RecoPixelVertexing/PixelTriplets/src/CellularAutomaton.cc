@@ -18,6 +18,8 @@ void CellularAutomaton::createAndConnectCells(const std::vector<const HitDoublet
   float region_origin_y = region.origin().y();
   float region_origin_radius = region.originRBound();
 
+  size_t maxOuterCellSize = 0;//, capacity = 999999999;
+  float theCut = 0.0;
   std::vector<bool> alreadyVisitedLayerPairs;
   alreadyVisitedLayerPairs.resize(theLayerGraph.theLayerPairs.size());
   for (auto visited : alreadyVisitedLayerPairs) {
@@ -44,6 +46,7 @@ void CellularAutomaton::createAndConnectCells(const std::vector<const HitDoublet
       CACut::CAValuesByInnerLayerIds caPhiCut =
           phiCut.getCutsByInnerLayer(currentInnerLayerRef.seqNum(), currentOuterLayerRef.seqNum());
 
+      theCut = caPhiCut.at(currentLayerPairRef.theLayers[0]);
       for (auto innerLayerPair : currentInnerLayerRef.theInnerLayerPairs) {
         allInnerLayerPairsAlreadyVisited &= alreadyVisitedLayerPairs[innerLayerPair];
       }
@@ -60,7 +63,8 @@ void CellularAutomaton::createAndConnectCells(const std::vector<const HitDoublet
           currentOuterLayerRef.isOuterHitOfCell[doubletLayerPairId->outerHitId(i)].push_back(cellId);
 
           cellId++;
-
+          // capacity = std::min(currentOuterLayerRef.isOuterHitOfCell[doubletLayerPairId->outerHitId(i)].capacity(),capacity);
+          maxOuterCellSize = std::max(currentOuterLayerRef.isOuterHitOfCell[doubletLayerPairId->outerHitId(i)].size(),maxOuterCellSize);
           auto &neigCells = currentInnerLayerRef.isOuterHitOfCell[doubletLayerPairId->innerHitId(i)];
           allCells.back().checkAlignmentAndTag(allCells,
                                                neigCells,
@@ -86,6 +90,8 @@ void CellularAutomaton::createAndConnectCells(const std::vector<const HitDoublet
       }
     }
   }
+
+  std::cout << "maxOuterCellSize = " << maxOuterCellSize  <<";"<<theCut<<std::endl;
 }
 
 void CellularAutomaton::evolve(const unsigned int minHitsPerNtuplet) {
@@ -143,6 +149,8 @@ void CellularAutomaton::findTriplets(std::vector<const HitDoublets *> const &hit
                                      const CACut &phiCut,
                                      const float hardPtCut) {
   int tsize = 0;
+  size_t maxOuterCellSize = 0;
+  float theCut = 0;
   for (auto hd : hitDoublets) {
     tsize += hd->size();
   }
@@ -179,7 +187,7 @@ void CellularAutomaton::findTriplets(std::vector<const HitDoublets *> const &hit
           thetaCut.getCutsByInnerLayer(currentInnerLayerRef.seqNum(), currentOuterLayerRef.seqNum());
       CACut::CAValuesByInnerLayerIds caPhiCut =
           phiCut.getCutsByInnerLayer(currentInnerLayerRef.seqNum(), currentOuterLayerRef.seqNum());
-
+      theCut = caPhiCut.at(currentLayerPairRef.theLayers[0]);
       for (auto innerLayerPair : currentInnerLayerRef.theInnerLayerPairs) {
         allInnerLayerPairsAlreadyVisited &= alreadyVisitedLayerPairs[innerLayerPair];
       }
@@ -196,7 +204,8 @@ void CellularAutomaton::findTriplets(std::vector<const HitDoublets *> const &hit
           currentOuterLayerRef.isOuterHitOfCell[doubletLayerPairId->outerHitId(i)].push_back(cellId);
 
           cellId++;
-
+          // capacity = std::min(currentOuterLayerRef.isOuterHitOfCell[doubletLayerPairId->outerHitId(i)].capacity(),capacity);
+          maxOuterCellSize = std::max(currentOuterLayerRef.isOuterHitOfCell[doubletLayerPairId->outerHitId(i)].size(),maxOuterCellSize);
           auto &neigCells = currentInnerLayerRef.isOuterHitOfCell[doubletLayerPairId->innerHitId(i)];
           allCells.back().checkAlignmentAndPushTriplet(allCells,
                                                        neigCells,
@@ -223,4 +232,6 @@ void CellularAutomaton::findTriplets(std::vector<const HitDoublets *> const &hit
       }
     }
   }
+
+  std::cout << "maxOuterCellSizeTriplets = " << maxOuterCellSize <<";"<<theCut<<std::endl;
 }

@@ -131,6 +131,7 @@ private:
   CACut caThetaCut;
   CACut caPhiCut;
   const float caHardPtCut = 0.f;
+  const int cellsPerOuterHit;
 };
 
 #endif

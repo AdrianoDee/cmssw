@@ -41,7 +41,7 @@ highPtTripletStepSeedLayers = _PixelLayerTriplets_cfi.PixelLayerTriplets.clone(
 
 from Configuration.Eras.Modifier_trackingPhase2PU140_cff import trackingPhase2PU140
 trackingPhase2PU140.toModify(highPtTripletStepSeedLayers,
-# combination with gap removed as only source of fakes in current geometry (kept for doc) 
+# combination with gap removed as only source of fakes in current geometry (kept for doc)
     layerList = ['BPix1+BPix2+BPix3', 'BPix2+BPix3+BPix4',
                  'BPix1+BPix3+BPix4', 'BPix1+BPix2+BPix4',
                  'BPix2+BPix3+FPix1_pos', 'BPix2+BPix3+FPix1_neg',
@@ -73,7 +73,7 @@ trackingPhase2PU140.toModify(highPtTripletStepTrackingRegions, RegionPSet = dict
 from Configuration.Eras.Modifier_pp_on_XeXe_2017_cff import pp_on_XeXe_2017
 from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
 from RecoTracker.TkTrackingRegions.globalTrackingRegionWithVertices_cff import globalTrackingRegionWithVertices as _globalTrackingRegionWithVertices
-(pp_on_XeXe_2017 | pp_on_AA).toReplaceWith(highPtTripletStepTrackingRegions, 
+(pp_on_XeXe_2017 | pp_on_AA).toReplaceWith(highPtTripletStepTrackingRegions,
                 _globalTrackingRegionWithVertices.clone(RegionPSet=dict(
                     fixedError   = 0.2,
                     ptMin        = 0.7,
@@ -112,10 +112,11 @@ highPtTripletStepHitTriplets = _caHitTripletEDProducer.clone(
     useBendingCorrection = True,
     CAThetaCut           = 0.004,
     CAPhiCut             = 0.07,
-    CAHardPtCut          = 0.3,
+    CAHardPtCut          = 0.308,
+    CAcellsPerOuterHit   = 35
 )
 
-trackingPhase2PU140.toModify(highPtTripletStepHitTriplets,CAThetaCut = 0.003,CAPhiCut = 0.06,CAHardPtCut = 0.5)
+trackingPhase2PU140.toModify(highPtTripletStepHitTriplets,CAThetaCut = 0.003,CAPhiCut = 0.0606,CAHardPtCut = 0.5,CAcellsPerOuterHit   = 600)
 highBetaStar_2018.toModify(highPtTripletStepHitTriplets,CAThetaCut = 0.008,CAPhiCut = 0.14,CAHardPtCut = 0)
 
 from RecoTracker.TkSeedGenerator.seedCreatorFromRegionConsecutiveHitsEDProducer_cff import seedCreatorFromRegionConsecutiveHitsEDProducer as _seedCreatorFromRegionConsecutiveHitsEDProducer
@@ -123,7 +124,7 @@ highPtTripletStepSeeds = _seedCreatorFromRegionConsecutiveHitsEDProducer.clone(
     seedingHitSets = 'highPtTripletStepHitTriplets',
 )
 
-#For FastSim phase1 tracking 
+#For FastSim phase1 tracking
 import FastSimulation.Tracking.TrajectorySeedProducer_cfi
 from FastSimulation.Tracking.SeedingMigration import _hitSetProducerToFactoryPSet
 _fastSim_highPtTripletStepSeeds = FastSimulation.Tracking.TrajectorySeedProducer_cfi.trajectorySeedProducer.clone(
@@ -251,13 +252,13 @@ highPtTripletStepTrajectoryCleanerBySharedHits = _trajectoryCleanerBySharedHits.
     fractionShared      = 0.16,
     allowSharedFirstHit = True
 )
-trackingPhase2PU140.toModify(highPtTripletStepTrackCandidates, 
-    TrajectoryCleaner    = 'highPtTripletStepTrajectoryCleanerBySharedHits', 
+trackingPhase2PU140.toModify(highPtTripletStepTrackCandidates,
+    TrajectoryCleaner    = 'highPtTripletStepTrajectoryCleanerBySharedHits',
     clustersToSkip       = '',
     phase2clustersToSkip = 'highPtTripletStepClusters'
 )
 
-#For FastSim phase1 tracking 
+#For FastSim phase1 tracking
 import FastSimulation.Tracking.TrackCandidateProducer_cfi
 _fastSim_highPtTripletStepTrackCandidates = FastSimulation.Tracking.TrackCandidateProducer_cfi.trackCandidateProducer.clone(
     src                      = 'highPtTripletStepSeeds',
@@ -294,7 +295,7 @@ trackdnn.toReplaceWith(highPtTripletStep, trackTfClassifier.clone(
     qualityCuts = qualityCutDictionary.HighPtTripletStep.value()
 ))
 highBetaStar_2018.toModify(highPtTripletStep,qualityCuts = [-0.2,0.3,0.4])
-pp_on_AA.toModify(highPtTripletStep, 
+pp_on_AA.toModify(highPtTripletStep,
         mva = dict(GBRForestLabel = 'HIMVASelectorHighPtTripletStep_Phase1'),
         qualityCuts = [-0.9, -0.3, 0.85],
 )
@@ -374,7 +375,7 @@ _HighPtTripletStepTask_Phase2PU140.replace(highPtTripletStep, highPtTripletStepS
 _HighPtTripletStep_Phase2PU140 = cms.Sequence(_HighPtTripletStepTask_Phase2PU140)
 trackingPhase2PU140.toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_Phase2PU140)
 
-# fast tracking mask producer 
+# fast tracking mask producer
 from FastSimulation.Tracking.FastTrackerRecHitMaskProducer_cfi import maskProducerFromClusterRemover
 highPtTripletStepMasks = maskProducerFromClusterRemover(highPtTripletStepClusters)
 fastSim.toReplaceWith(HighPtTripletStepTask,
