@@ -42,6 +42,9 @@ class RectangularPixelTopology;
 class MagneticField;
 class PixelCPEBase : public PixelClusterParameterEstimator {
 public:
+
+  friend class SiPixelRecHitSoAProducer;
+
   struct DetParam {
     DetParam() {}
     const PixelGeomDetUnit* theDet;
