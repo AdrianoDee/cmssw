@@ -44,6 +44,7 @@ private:
 
   uint32_t nHits_;
   uint32_t nMaxModules_;
+  int32_t offsetBPIX2_;
 
   cms::cuda::host::unique_ptr<float[]> store32_;
   cms::cuda::host::unique_ptr<uint16_t[]> store16_;
@@ -75,6 +76,7 @@ void SiPixelRecHitSoAFromCUDA::acquire(edm::Event const& iEvent,
   if (0 == nHits_)
     return;
   nMaxModules_ = inputData.nMaxModules();
+  offsetBPIX2_ = inputData.offsetBPIX2();
   store32_ = inputData.store32ToHostAsync(ctx.stream());
   store16_ = inputData.store16ToHostAsync(ctx.stream());
   hitsModuleStart_ = inputData.hitsModuleStartToHostAsync(ctx.stream());
@@ -87,7 +89,7 @@ void SiPixelRecHitSoAFromCUDA::produce(edm::Event& iEvent, edm::EventSetup const
     std::copy(hitsModuleStart_.get(), hitsModuleStart_.get() + nMaxModules_ + 1, hmsp.get());
 
   iEvent.emplace(hostPutToken_, std::move(hmsp));
-  iEvent.emplace(hitsPutTokenCPU_, store32_.get(), store16_.get(), hitsModuleStart_.get(), nHits_);
+  iEvent.emplace(hitsPutTokenCPU_, store32_.get(), store16_.get(), hitsModuleStart_.get(), offsetBPIX2_, false, nHits_);
 }
 
 DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDA);
