@@ -69,7 +69,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
   }
 
   blockSize = 64;
-  numberOfBlocks = (3 * this->params_.maxNumberOfDoublets_ / 4 + blockSize - 1) / blockSize;
+  numberOfBlocks = (3 * this->params_.cellCuts_.maxNumberOfDoublets_ / 4 + blockSize - 1) / blockSize;
   kernel_find_ntuplets<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(hh.view(),
                                                                      this->device_theCells_.get(),
                                                                      this->device_nCells_,
@@ -186,7 +186,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::buildDoublets(HitsOnCPU con
     cudaCheck(cudaGetLastError());
   }
 
-  this->device_theCells_ = cms::cuda::make_device_unique<GPUCACell[]>(this->params_.maxNumberOfDoublets_, stream);
+  this->device_theCells_ = cms::cuda::make_device_unique<GPUCACell[]>(this->params_.cellCuts_.maxNumberOfDoublets_, stream);
 
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
@@ -197,15 +197,17 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::buildDoublets(HitsOnCPU con
     return;  // protect against empty events
 
   // take all layer pairs into account
-  auto nActualPairs = TrackerTraits::nPairs;
-  if (not this->params_.includeJumpingForwardDoublets_) {
-    // exclude forward "jumping" layer pairs
-    nActualPairs = TrackerTraits::nPairsForTriplets;
-  }
-  if (this->params_.minHitsPerNtuplet_ > 3) {
-    // for quadruplets, exclude all "jumping" layer pairs
-    nActualPairs = TrackerTraits::nPairsForQuadruplets;
-  }
+  auto nActualPairs = this->params_.nPairs();
+
+  // TrackerTraits::nPairs;
+  // if (not this->params_.includeJumpingForwardDoublets_) {
+  //   // exclude forward "jumping" layer pairs
+  //   nActualPairs = TrackerTraits::nPairsForTriplets;
+  // }
+  // if (this->params_.minHitsPerNtuplet_ > 3) {
+  //   // for quadruplets, exclude all "jumping" layer pairs
+  //   nActualPairs = TrackerTraits::nPairsForQuadruplets;
+  // }
 
   assert(nActualPairs <= TrackerTraits::nPairs);
   nActualPairs = TrackerTraits::nPairs;
@@ -222,11 +224,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::buildDoublets(HitsOnCPU con
                                                                     hh.view(),
                                                                     this->isOuterHitOfCell_,
                                                                     nActualPairs,
-                                                                    this->params_.idealConditions_,
-                                                                    this->params_.doClusterCut_,
-                                                                    this->params_.doZ0Cut_,
-                                                                    this->params_.doPtCut_,
-                                                                    this->params_.maxNumberOfDoublets_);
+                                                                    this->params_.cellCuts_);
   cudaCheck(cudaGetLastError());
 
 #ifdef GPU_DEBUG
@@ -250,7 +248,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::classifyTuples(HitsOnCPU co
 
   // classify tracks based on kinematics
   auto numberOfBlocks = this->nQuadrupletBlocks(blockSize);
-  kernel_classifyTracks<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tuples_d, tracks_d, this->params_.cuts_, quality_d);
+  kernel_classifyTracks<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tuples_d, tracks_d, this->params_.qualityCuts_, quality_d);
 
   if (this->params_.lateFishbone_) {
     // apply fishbone cleaning to good tracks
@@ -315,7 +313,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::classifyTuples(HitsOnCPU co
   }
 
   if (this->params_.doStats_) {
-    numberOfBlocks = (std::max(nhits, int(this->params_.maxNumberOfDoublets_)) + blockSize - 1) / blockSize;
+    numberOfBlocks = (std::max(nhits, int(this->params_.cellCuts_.maxNumberOfDoublets_)) + blockSize - 1) / blockSize;
     kernel_checkOverflows<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tuples_d,
                                                                         this->device_tupleMultiplicity_.get(),
                                                                         this->device_hitToTuple_.get(),
@@ -326,7 +324,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::classifyTuples(HitsOnCPU co
                                                                         this->device_theCellTracks_.get(),
                                                                         this->isOuterHitOfCell_,
                                                                         nhits,
-                                                                        this->params_.maxNumberOfDoublets_,
+                                                                        this->params_.cellCuts_.maxNumberOfDoublets_,
                                                                         this->counters_);
     cudaCheck(cudaGetLastError());
   }

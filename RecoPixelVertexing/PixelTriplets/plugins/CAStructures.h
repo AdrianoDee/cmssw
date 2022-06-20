@@ -44,6 +44,7 @@ namespace caStructures {
     constexpr auto const& operator[](int i) const { return container[i - offset]; }
   };
 
+
 }
 
 #endif

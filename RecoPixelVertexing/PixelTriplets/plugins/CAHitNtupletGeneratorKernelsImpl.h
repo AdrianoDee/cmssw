@@ -56,8 +56,10 @@ namespace caHitNtupletGeneratorKernels {
   template <typename TrackerTraits>
   using Hits = typename GPUCACellT<TrackerTraits>::Hits;
 
-  using QualityCuts = cAHitNtupletGenerator::QualityCuts;
-  using Counters = cAHitNtupletGenerator::Counters;
+  template <typename TrackerTraits>
+  using QualityCuts = pixelTrack::QualityCutsT<TrackerTraits>;
+
+  using Counters = caHitNtupletGenerator::Counters;
 
 template <typename TrackerTraits>
 __global__ void kernel_checkOverflows(HitContainer<TrackerTraits> const *foundNtuplets,
@@ -118,9 +120,9 @@ __global__ void kernel_checkOverflows(HitContainer<TrackerTraits> const *foundNt
       printf("cellTracks overflow\n");
     if (int(hitToTuple->nOnes()) < nHits)
       printf("ERROR hitToTuple  overflow %d %d\n", hitToTuple->nOnes(), nHits);
-      #ifdef NTUPLE_DEBUG
-      printf("number of cellNeighbors %d \n cellTracks %d \n hitToTuple %d \n",cellNeighbors->size(),cellTracks->size(),hitToTuple->size());
-      #endif
+    #ifdef NTUPLE_DEBUG
+    printf("size of cellNeighbors %d \n cellTracks %d \n hitToTuple %d \n",cellNeighbors->size(),cellTracks->size(),hitToTuple->size());
+    #endif
   }
 
   for (int idx = first, nt = (*nCells); idx < nt; idx += gridDim.x * blockDim.x) {
@@ -455,10 +457,31 @@ __global__ void kernel_fillMultiplicity(HitContainer<TrackerTraits> const *__res
   }
 }
 
-  template <typename TrackerTraits>
+template <typename TrackerTraits>
 __global__ void kernel_classifyTracks(HitContainer<TrackerTraits> const *__restrict__ tuples,
-                                      TkSoA<TrackerTraits> const *__restrict__ tracks,
-                                      QualityCuts cuts,
+                                    TkSoA<TrackerTraits> const *__restrict__ tracks,
+                                    QualityCuts<TrackerTraits> cuts,
+                                    Quality *__restrict__ quality) {
+
+ int first = blockDim.x * blockIdx.x + threadIdx.x;
+ for (int it = first, nt = tuples->nOnes(); it < nt; it += gridDim.x * blockDim.x) {
+   auto nhits = tuples->size(it);
+   if (nhits == 0)
+     break;
+
+   // if duplicate: not even fit
+   if (quality[it] == pixelTrack::Quality::edup)
+     continue;
+
+   assert(quality[it] == pixelTrack::Quality::bad);
+
+   }
+}
+
+  template <>
+__global__ void kernel_classifyTracks<pixelTopology::Phase1>(HitContainer<pixelTopology::Phase1> const *__restrict__ tuples,
+                                      TkSoA<pixelTopology::Phase1> const *__restrict__ tracks,
+                                      QualityCuts<pixelTopology::Phase1> cuts,
                                       Quality *__restrict__ quality) {
   int first = blockDim.x * blockIdx.x + threadIdx.x;
   for (int it = first, nt = tuples->nOnes(); it < nt; it += gridDim.x * blockDim.x) {
@@ -489,8 +512,6 @@ __global__ void kernel_classifyTracks(HitContainer<TrackerTraits> const *__restr
     }
 
     quality[it] = pixelTrack::Quality::strict;
-
-    // compute a pT-dependent chi2 cut
 
     auto roughLog = [](float x) {
       // max diff [0.5,12] at 1.25 0.16143
@@ -536,12 +557,72 @@ __global__ void kernel_classifyTracks(HitContainer<TrackerTraits> const *__restr
     //   - for quadruplets: |Tip| < 0.5 cm, pT > 0.3 GeV, |Zip| < 12.0 cm
     // (see CAHitNtupletGeneratorGPU.cc)
     auto const &region = (nhits > 3) ? cuts.quadruplet : cuts.triplet;
-    bool isOk = (std::abs(tracks->tip(it)) < region.maxTip) and (tracks->pt(it) > region.minPt) and
+    bool isHP = (std::abs(tracks->tip(it)) < region.maxTip) and (tracks->pt(it) > region.minPt) and
                 (std::abs(tracks->zip(it)) < region.maxZip);
 
-    if (isOk)
+    if (isHP)
       quality[it] = pixelTrack::Quality::highPurity;
   }
+}
+
+
+
+template <>
+__global__ void kernel_classifyTracks<pixelTopology::Phase2>(HitContainer<pixelTopology::Phase2> const *__restrict__ tuples,
+                                    TkSoA<pixelTopology::Phase2> const *__restrict__ tracks,
+                                    QualityCuts<pixelTopology::Phase2> cuts,
+                                    Quality *__restrict__ quality) {
+int first = blockDim.x * blockIdx.x + threadIdx.x;
+for (int it = first, nt = tuples->nOnes(); it < nt; it += gridDim.x * blockDim.x) {
+  auto nhits = tuples->size(it);
+  if (nhits == 0)
+    break;  // guard
+
+  // if duplicate: not even fit
+  if (quality[it] == pixelTrack::Quality::edup)
+    continue;
+
+  assert(quality[it] == pixelTrack::Quality::bad);
+
+  // mark doublets as bad
+  if (nhits < 3)
+    continue;
+
+  // if the fit has any invalid parameters, mark it as bad
+  bool isNaN = false;
+  for (int i = 0; i < 5; ++i) {
+    isNaN |= std::isnan(tracks->stateAtBS.state(it)(i));
+  }
+  if (isNaN) {
+#ifdef NTUPLE_DEBUG
+    printf("NaN in fit %d size %d chi2 %f\n", it, tuples->size(it), tracks->chi2(it));
+#endif
+    continue;
+  }
+
+  quality[it] = pixelTrack::Quality::strict;
+
+  float chi2Cut = cuts.maxChi2;// * (cuts.chi2Coeff[0] + roughLog(pt) * cuts.chi2Coeff[1]);
+  if (tracks->chi2(it) >= chi2Cut) {
+#ifdef NTUPLE_FIT_DEBUG
+    printf("Bad chi2 %d size %d pt %f eta %f chi2 %f\n",
+           it,
+           tuples->size(it),
+           tracks->pt(it),
+           tracks->eta(it),
+           tracks->chi2(it));
+#endif
+    continue;
+  }
+
+  quality[it] = pixelTrack::Quality::tight;
+
+  bool isHP = (std::abs(tracks->tip(it)) < cuts.maxTip) and (tracks->pt(it) > cuts.minPt) and
+              (std::abs(tracks->zip(it)) < cuts.maxZip);
+
+  if (isHP)
+    quality[it] = pixelTrack::Quality::highPurity;
+}
 }
 
 template <typename TrackerTraits>

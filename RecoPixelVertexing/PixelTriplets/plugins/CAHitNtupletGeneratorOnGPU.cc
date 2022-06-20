@@ -30,7 +30,14 @@ namespace {
     return x * x;
   }
 
-  cAHitNtupletGenerator::QualityCuts makeQualityCuts(edm::ParameterSet const& pset) {
+  template<typename TrakterTraits>
+  pixelTrack::QualityCutsT<TrakterTraits> makeQualityCuts(edm::ParameterSet const& pset)
+  {
+    return pixelTrack::QualityCutsT<TrakterTraits> {};
+  }
+
+  template<>
+  pixelTrack::QualityCutsT<pixelTopology::Phase1> makeQualityCuts<pixelTopology::Phase1>(edm::ParameterSet const& pset) {
     auto coeff = pset.getParameter<std::vector<double>>("chi2Coeff");
     auto ptMax = pset.getParameter<double>("chi2MaxPt");
     if (coeff.size() != 2) {
@@ -38,7 +45,7 @@ namespace {
                            "CAHitNtupletGeneratorOnGPUT.trackQualityCuts.chi2Coeff must have 2 elements");
     }
     coeff[1] = (coeff[1] - coeff[0]) / log2(ptMax);
-    return cAHitNtupletGenerator::QualityCuts{// polynomial coefficients for the pT-dependent chi2 cut
+    return pixelTrack::QualityCutsT<pixelTopology::Phase1>{// polynomial coefficients for the pT-dependent chi2 cut
                                               {(float)coeff[0], (float)coeff[1], 0.f, 0.f},
                                               // max pT used to determine the chi2 cut
                                               (float)ptMax,
@@ -54,11 +61,53 @@ namespace {
                                                (float)pset.getParameter<double>("quadrupletMaxZip")}};
   }
 
+  template<>
+  pixelTrack::QualityCutsT<pixelTopology::Phase2> makeQualityCuts<pixelTopology::Phase2>(edm::ParameterSet const& pset) {
+    return pixelTrack::QualityCutsT<pixelTopology::Phase2>{
+                                              (float)pset.getParameter<double>("maxChi2"),
+                                              (float)pset.getParameter<double>("minPt"),
+                                              (float)pset.getParameter<double>("maxTip"),
+                                              (float)pset.getParameter<double>("maxZip"),};
+  }
+
+
 }  // namespace
 
+
+//Given the params may be changed when adding a new topology one should define it's own constructor
 using namespace std;
+
+//Base one, not really used
 template<typename TrackerTraits>
 CAHitNtupletGeneratorOnGPUT<TrackerTraits>::CAHitNtupletGeneratorOnGPUT(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC)
+    : m_params(cfg.getParameter<bool>("onGPU"),
+               cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
+               cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
+               cfg.getParameter<unsigned int>("minHitsForSharingCut"),
+               cfg.getParameter<bool>("useRiemannFit"),
+               cfg.getParameter<bool>("fitNas4"),
+               // cfg.getParameter<bool>("includeJumpingForwardDoublets"),
+               cfg.getParameter<bool>("earlyFishbone"),
+               cfg.getParameter<bool>("lateFishbone"),
+               // cfg.getParameter<bool>("idealConditions"),
+               cfg.getParameter<bool>("fillStatistics"),
+               cfg.getParameter<bool>("doClusterCut"),
+               cfg.getParameter<bool>("doZ0Cut"),
+               cfg.getParameter<bool>("doPtCut"),
+               cfg.getParameter<bool>("doSharedHitCut"),
+               cfg.getParameter<bool>("dupPassThrough"),
+               cfg.getParameter<bool>("useSimpleTripletCleaner"),
+               cfg.getParameter<double>("ptmin"),
+               cfg.getParameter<double>("CAThetaCutBarrel"),
+               cfg.getParameter<double>("CAThetaCutForward"),
+               cfg.getParameter<double>("hardCurvCut"),
+               cfg.getParameter<double>("dcaCutInnerTriplet"),
+               cfg.getParameter<double>("dcaCutOuterTriplet"),
+               makeQualityCuts<TrackerTraits>(cfg.getParameterSet("trackQualityCuts"))) {
+}
+
+template< >
+CAHitNtupletGeneratorOnGPUT<pixelTopology::Phase1>::CAHitNtupletGeneratorOnGPUT(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC)
     : m_params(cfg.getParameter<bool>("onGPU"),
                cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
                cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
@@ -76,14 +125,61 @@ CAHitNtupletGeneratorOnGPUT<TrackerTraits>::CAHitNtupletGeneratorOnGPUT(const ed
                cfg.getParameter<bool>("doSharedHitCut"),
                cfg.getParameter<bool>("dupPassThrough"),
                cfg.getParameter<bool>("useSimpleTripletCleaner"),
-               cfg.getParameter<bool>("isPhase2"),
                cfg.getParameter<double>("ptmin"),
                cfg.getParameter<double>("CAThetaCutBarrel"),
                cfg.getParameter<double>("CAThetaCutForward"),
                cfg.getParameter<double>("hardCurvCut"),
                cfg.getParameter<double>("dcaCutInnerTriplet"),
                cfg.getParameter<double>("dcaCutOuterTriplet"),
-               makeQualityCuts(cfg.getParameterSet("trackQualityCuts"))) {
+               makeQualityCuts<pixelTopology::Phase1>(cfg.getParameterSet("trackQualityCuts"))) {
+#ifdef DUMP_GPU_TK_TUPLES
+  printf("TK: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
+         "tid",
+         "qual",
+         "nh",
+         "nl",
+         "charge",
+         "pt",
+         "eta",
+         "phi",
+         "tip",
+         "zip",
+         "chi2",
+         "h1",
+         "h2",
+         "h3",
+         "h4",
+         "h5",
+         "hn");
+#endif
+}
+
+template< >
+CAHitNtupletGeneratorOnGPUT<pixelTopology::Phase2>::CAHitNtupletGeneratorOnGPUT(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC)
+    : m_params(cfg.getParameter<bool>("onGPU"),
+               cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
+               cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
+               cfg.getParameter<unsigned int>("minHitsForSharingCut"),
+               cfg.getParameter<bool>("useRiemannFit"),
+               cfg.getParameter<bool>("fitNas4"),
+               cfg.getParameter<bool>("includeJumpingForwardDoublets"),
+               cfg.getParameter<bool>("includeFarForwards"),
+               cfg.getParameter<bool>("earlyFishbone"),
+               cfg.getParameter<bool>("lateFishbone"),
+               cfg.getParameter<bool>("fillStatistics"),
+               cfg.getParameter<bool>("doClusterCut"),
+               cfg.getParameter<bool>("doZ0Cut"),
+               cfg.getParameter<bool>("doPtCut"),
+               cfg.getParameter<bool>("doSharedHitCut"),
+               cfg.getParameter<bool>("dupPassThrough"),
+               cfg.getParameter<bool>("useSimpleTripletCleaner"),
+               cfg.getParameter<double>("ptmin"),
+               cfg.getParameter<double>("CAThetaCutBarrel"),
+               cfg.getParameter<double>("CAThetaCutForward"),
+               cfg.getParameter<double>("hardCurvCut"),
+               cfg.getParameter<double>("dcaCutInnerTriplet"),
+               cfg.getParameter<double>("dcaCutOuterTriplet"),
+               makeQualityCuts<pixelTopology::Phase2>(cfg.getParameterSet("trackQualityCuts"))) {
 #ifdef DUMP_GPU_TK_TUPLES
   printf("TK: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
          "tid",
@@ -107,34 +203,18 @@ CAHitNtupletGeneratorOnGPUT<TrackerTraits>::CAHitNtupletGeneratorOnGPUT(const ed
 }
 
 template<typename TrackerTraits>
-void CAHitNtupletGeneratorOnGPUT<TrackerTraits>::fillDescriptions(edm::ParameterSetDescription& desc) {
-  // 87 cm/GeV = 1/(3.8T * 0.3)
-  // take less than radius given by the hardPtCut and reject everything below
-  // auto hardCurvCut = 1.f/(0.35 * 87.f);
-  desc.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
-  desc.add<double>("CAThetaCutBarrel", 0.002f)->setComment("Cut on RZ alignement for Barrel");
-  desc.add<double>("CAThetaCutForward", 0.003f)->setComment("Cut on RZ alignment for Forward");
-  desc.add<double>("hardCurvCut", 1.f / (0.35 * 87.f))->setComment("Cut on minimum curvature");
-  desc.add<double>("dcaCutInnerTriplet", 0.15f)->setComment("Cut on origin radius when the inner hit is on BPix1");
-  desc.add<double>("dcaCutOuterTriplet", 0.25f)->setComment("Cut on origin radius when the outer hit is on BPix1");
-  desc.add<bool>("earlyFishbone", true);
-  desc.add<bool>("lateFishbone", false);
+void CAHitNtupletGeneratorOnGPUT<TrackerTraits>::fillDescriptions(edm::ParameterSetDescription& desc)
+{
+  fillDescriptionsCommon(desc);
+
+}
+
+template<>
+void CAHitNtupletGeneratorOnGPUT<pixelTopology::Phase1>::fillDescriptions(edm::ParameterSetDescription& desc)
+{
+  fillDescriptionsCommon(desc);
+
   desc.add<bool>("idealConditions", true);
-  desc.add<bool>("fillStatistics", true);
-  desc.add<unsigned int>("minHitsPerNtuplet", 4);
-  desc.add<unsigned int>("maxNumberOfDoublets", TrackerTraits::maxNumberOfDoublets);
-  desc.add<unsigned int>("minHitsForSharingCut", 10)
-      ->setComment("Maximum number of hits in a tuple to clean also if the shared hit is on bpx1");
-  desc.add<bool>("includeJumpingForwardDoublets", false);
-  desc.add<bool>("fitNas4", false)->setComment("fit only 4 hits out of N");
-  desc.add<bool>("doClusterCut", true);
-  desc.add<bool>("doZ0Cut", true);
-  desc.add<bool>("doPtCut", true);
-  desc.add<bool>("useRiemannFit", false)->setComment("true for Riemann, false for BrokenLine");
-  desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
-  desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
-  desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
-  desc.add<bool>("isPhase2", true)->setComment("use Phase-II tracker geometry");
 
   edm::ParameterSetDescription trackQualityCuts;
   trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
@@ -153,6 +233,53 @@ void CAHitNtupletGeneratorOnGPUT<TrackerTraits>::fillDescriptions(edm::Parameter
       ->setComment(
           "Quality cuts based on the results of the track fit:\n  - apply a pT-dependent chi2 cut;\n  - apply \"region "
           "cuts\" based on the fit results (pT, Tip, Zip).");
+}
+
+template<>
+void CAHitNtupletGeneratorOnGPUT<pixelTopology::Phase2>::fillDescriptions(edm::ParameterSetDescription& desc)
+{
+  fillDescriptionsCommon(desc);
+
+  desc.add<bool>("includeFarForwards", false);
+
+  edm::ParameterSetDescription trackQualityCuts;
+  trackQualityCuts.add<double>("maxChi2", 50.)->setComment("Max normalized chi2");
+  trackQualityCuts.add<double>("minPt", 0.5)->setComment("Min pT in GeV");
+  trackQualityCuts.add<double>("maxTip", 0.4)->setComment("Max |Tip| in cm");
+  trackQualityCuts.add<double>("maxZip", 12.)->setComment("Max |Zip|, in cm");
+  desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)->setComment(
+      "Quality cuts based on the results of the track fit:\n  - apply cuts based on the fit results (pT, Tip, Zip).");
+}
+
+template<typename TrackerTraits>
+void CAHitNtupletGeneratorOnGPUT<TrackerTraits>::fillDescriptionsCommon(edm::ParameterSetDescription& desc) {
+  // 87 cm/GeV = 1/(3.8T * 0.3)
+  // take less than radius given by the hardPtCut and reject everything below
+  // auto hardCurvCut = 1.f/(0.35 * 87.f);
+  desc.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
+  desc.add<double>("CAThetaCutBarrel", 0.002f)->setComment("Cut on RZ alignement for Barrel");
+  desc.add<double>("CAThetaCutForward", 0.003f)->setComment("Cut on RZ alignment for Forward");
+  desc.add<double>("hardCurvCut", 1.f / (0.35 * 87.f))->setComment("Cut on minimum curvature");
+  desc.add<double>("dcaCutInnerTriplet", 0.15f)->setComment("Cut on origin radius when the inner hit is on BPix1");
+  desc.add<double>("dcaCutOuterTriplet", 0.25f)->setComment("Cut on origin radius when the outer hit is on BPix1");
+  desc.add<bool>("earlyFishbone", true);
+  desc.add<bool>("lateFishbone", false);
+  desc.add<bool>("fillStatistics", true);
+  desc.add<bool>("includeJumpingForwardDoublets", false);
+  desc.add<unsigned int>("minHitsPerNtuplet", 4);
+  desc.add<unsigned int>("maxNumberOfDoublets", TrackerTraits::maxNumberOfDoublets);
+  desc.add<unsigned int>("minHitsForSharingCut", 10)
+      ->setComment("Maximum number of hits in a tuple to clean also if the shared hit is on bpx1");
+
+  desc.add<bool>("fitNas4", false)->setComment("fit only 4 hits out of N");
+  desc.add<bool>("doClusterCut", true);
+  desc.add<bool>("doZ0Cut", true);
+  desc.add<bool>("doPtCut", true);
+  desc.add<bool>("useRiemannFit", false)->setComment("true for Riemann, false for BrokenLine");
+  desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
+  desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
+  desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+
 }
 
 template<typename TrackerTraits>

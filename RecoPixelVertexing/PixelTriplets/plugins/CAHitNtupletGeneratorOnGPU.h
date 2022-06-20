@@ -46,9 +46,9 @@ public:
 
   using Quality = pixelTrack::Quality;
 
-  using QualityCuts = cAHitNtupletGenerator::QualityCuts;
-  using Params = cAHitNtupletGenerator::Params;
-  using Counters = cAHitNtupletGenerator::Counters;
+  using QualityCuts = pixelTrack::QualityCutsT<TrackerTraits>;
+  using Params = caHitNtupletGenerator::ParamsT<TrackerTraits>;
+  using Counters = caHitNtupletGenerator::Counters;
 
 public:
   CAHitNtupletGeneratorOnGPUT(const edm::ParameterSet& cfg, edm::ConsumesCollector&& iC)
@@ -56,6 +56,7 @@ public:
   CAHitNtupletGeneratorOnGPUT(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC);
 
   static void fillDescriptions(edm::ParameterSetDescription& desc);
+  static void fillDescriptionsCommon(edm::ParameterSetDescription& desc);
   //static const char* fillDescriptionsLabel() { return "caHitNtupletOnGPU"; }
 
   void beginJob();

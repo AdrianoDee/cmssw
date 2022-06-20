@@ -343,8 +343,6 @@ namespace pixelTopology{
     const int minYsizeB1;
     const int minYsizeB2;
 
-    const int nPairsForQuadruplets;
-    const int nPairsForTriplets;
     const int nPairs;
 
     const int maxDYsize12;
@@ -446,8 +444,8 @@ namespace pixelTopology{
      static constexpr int minYsizeB1 = 36;
      static constexpr int minYsizeB2 = 28;
 
-     static constexpr int nPairsForQuadruplets = 23;                            // doublets only from contigous layers
-     static constexpr int nPairsForTriplets = nPairsForQuadruplets; //nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
+     static constexpr int nPairsForJumpingForwards = phase2PixelTopology::nPairs;                            // doublets only from contigous layers
+     static constexpr int nPairsFarForwards = phase2PixelTopology::nPairs; //nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
      static constexpr int nPairs = phase2PixelTopology::nPairs; //nPairsForTriplets + 8;  // include far forward layer pairs
 
      static constexpr int maxDYsize12 = 28;

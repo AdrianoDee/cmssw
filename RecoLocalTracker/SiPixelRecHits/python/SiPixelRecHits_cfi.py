@@ -57,11 +57,6 @@ phase2_tracker.toReplaceWith(siPixelRecHitsPreSplittingCUDA,_siPixelRecHitCUDAPh
     beamSpot = "offlineBeamSpotToCUDA"
 ))
 
-
-# transfer the pixel rechits to the host and convert them from SoA
-from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDA_cfi import siPixelRecHitFromCUDA as _siPixelRecHitFromCUDA
-from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDAPhase2_cfi import siPixelRecHitFromCUDAPhase2 as _siPixelRecHitFromCUDAPhase2
-
 #this is an alias for the SoA on GPU or CPU to be used for DQM
 siPixelRecHitsPreSplittingSoA = SwitchProducerCUDA(
     cpu = cms.EDAlias(
@@ -71,21 +66,27 @@ siPixelRecHitsPreSplittingSoA = SwitchProducerCUDA(
              )),
 )
 
-from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromCUDA_cfi import siPixelRecHitSoAFromCUDA as _siPixelRecHitSoAFromCUDA
-from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromCUDAPhase2_cfi import siPixelRecHitSoAFromCUDAPhase2 as _siPixelRecHitSoAFromCUDAPhase2
-
-phase2_tracker.toReplaceWith(siPixelRecHitsPreSplittingSoA.cpu,
-cms.EDAlias(
+phase2_tracker.toModify(siPixelRecHitsPreSplittingSoA,
+cpu = cms.EDAlias(
         siPixelRecHitsPreSplittingCPU = cms.VPSet(
              cms.PSet(type = cms.string("cmscudacompatCPUTraitspixelTopologyPhase2TrackingRecHit2DCPUBaseT")),
              cms.PSet(type = cms.string("uintAsHostProduct"))
          )))
 
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromCUDA_cfi import siPixelRecHitSoAFromCUDA as _siPixelRecHitSoAFromCUDA
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromCUDAPhase2_cfi import siPixelRecHitSoAFromCUDAPhase2 as _siPixelRecHitSoAFromCUDAPhase2
+
 (gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplittingSoA, cuda = _siPixelRecHitSoAFromCUDA.clone())
 (gpu & pixelNtupletFit & phase2_tracker).toModify(siPixelRecHitsPreSplittingSoA, cuda = _siPixelRecHitSoAFromCUDAPhase2.clone())
 
-(gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDA.clone())
-(gpu & pixelNtupletFit & phase2_tracker).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitSoAFromCUDAPhase2.clone())
+# transfer the pixel rechits to the host and convert them from SoA
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDA_cfi import siPixelRecHitFromCUDA as _siPixelRecHitFromCUDA
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDAPhase2_cfi import siPixelRecHitFromCUDAPhase2 as _siPixelRecHitFromCUDAPhase2
+
+(gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitSoAFromCUDA.clone())
+(gpu & pixelNtupletFit & phase2_tracker).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDAPhase2.clone())
+
+
 
 pixelNtupletFit.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     cms.Task(
@@ -99,7 +100,7 @@ pixelNtupletFit.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
         )
 
 
-(gpu & pixelNtupletFit & phase2_tracker).toReplaceWith(siPixelRecHitsPreSplitting.cuda, _siPixelRecHitFromCUDAPhase2.clone())
+#(gpu & pixelNtupletFit & phase2_tracker).toReplaceWith(siPixelRecHitsPreSplitting , cuda = _siPixelRecHitFromCUDAPhase2.clone())
 
 (gpu & pixelNtupletFit).toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     # reconstruct the pixel rechits on the gpu or on the cpu

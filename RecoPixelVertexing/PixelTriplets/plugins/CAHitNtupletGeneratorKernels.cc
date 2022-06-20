@@ -56,24 +56,26 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::buildDoublets(HitsOnCPU con
                                  this->device_theCellTracksContainer_);
 
   // no need to use the Traits allocations, since we know this is being compiled for the CPU
-  //this->device_theCells_ = Traits::template make_unique<GPUCACell[]>(this->params_.maxNumberOfDoublets_, stream);
-  this->device_theCells_ = std::make_unique<GPUCACell[]>(this->params_.maxNumberOfDoublets_);
+  //this->device_theCells_ = Traits::template make_unique<GPUCACell[]>(this->params_.cellCuts_.maxNumberOfDoublets_, stream);
+  this->device_theCells_ = std::make_unique<GPUCACell[]>(this->params_.cellCuts_.maxNumberOfDoublets_);
   if (0 == nhits)
     return;  // protect against empty events
 
   // take all layer pairs into account
-  auto nActualPairs = TrackerTraits::nPairs;
-  if (not this->params_.includeJumpingForwardDoublets_) {
-    // exclude forward "jumping" layer pairs
-    nActualPairs = TrackerTraits::nPairsForTriplets;
-  }
-  if (this->params_.minHitsPerNtuplet_ > 3) {
-    // for quadruplets, exclude all "jumping" layer pairs
-    nActualPairs = TrackerTraits::nPairsForQuadruplets;
-  }
+  auto nActualPairs = this->params_.nPairs();
+
+  // TrackerTraits::nPairs;
+  // if (not this->params_.includeJumpingForwardDoublets_) {
+  //   // exclude forward "jumping" layer pairs
+  //   nActualPairs = TrackerTraits::nPairsForTriplets;
+  // }
+  // if (this->params_.minHitsPerNtuplet_ > 3) {
+  //   // for quadruplets, exclude all "jumping" layer pairs
+  //   nActualPairs = TrackerTraits::nPairsForQuadruplets;
+  // }
 
   assert(nActualPairs <= TrackerTraits::nPairs);
-  nActualPairs = TrackerTraits::nPairs;
+  // nActualPairs = TrackerTraits::nPairs;
   std::cout << "nActualPairs CPU -> " << nActualPairs << std::endl;
 
   getDoubletsFromHisto<TrackerTraits>(this->device_theCells_.get(),
@@ -83,11 +85,13 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::buildDoublets(HitsOnCPU con
                                          hh.view(),
                                          this->isOuterHitOfCell_,
                                          nActualPairs,
-                                         this->params_.idealConditions_,
-                                         this->params_.doClusterCut_,
-                                         this->params_.doZ0Cut_,
-                                         this->params_.doPtCut_,
-                                         this->params_.maxNumberOfDoublets_);
+                                         this->params_.cellCuts_);
+                                         //
+                                         // this->params_.idealConditions_,
+                                         // this->params_.doClusterCut_,
+                                         // this->params_.doZ0Cut_,
+                                         // this->params_.doPtCut_,
+                                         // this->params_.cellCuts_.maxNumberOfDoublets_);
 }
 
 template <typename TrackerTraits>
@@ -170,7 +174,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::classifyTuples(HitsOnCPU co
   auto *quality_d = tracks_d->qualityData();
 
   // classify tracks based on kinematics
-  kernel_classifyTracks<TrackerTraits>(tuples_d, tracks_d, this->params_.cuts_, quality_d);
+  kernel_classifyTracks<TrackerTraits>(tuples_d, tracks_d, this->params_.qualityCuts_, quality_d);
   if (this->params_.lateFishbone_) {
     // apply fishbone cleaning to good tracks
     kernel_fishboneCleaner<TrackerTraits>(this->device_theCells_.get(), this->device_nCells_, quality_d);
@@ -218,7 +222,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::classifyTuples(HitsOnCPU co
                           this->device_theCellTracks_.get(),
                           this->isOuterHitOfCell_,
                           nhits,
-                          this->params_.maxNumberOfDoublets_,
+                          this->params_.cellCuts_.maxNumberOfDoublets_,
                           this->counters_);
   }
 
