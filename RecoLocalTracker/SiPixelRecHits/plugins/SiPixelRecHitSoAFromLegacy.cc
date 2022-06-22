@@ -70,7 +70,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::fillDescriptions(edm::Configura
   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplitting"));
   std::string cpeName = "PixelCPEFast";
-  name += TrackerTraits::nameModifier;
+  cpeName += TrackerTraits::nameModifier;
   desc.add<std::string>("CPE", cpeName);
   desc.add<bool>("convertToLegacy", false);
 

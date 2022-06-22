@@ -77,7 +77,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
                                                                      tuples_d,
                                                                      this->device_hitTuple_apc_,
                                                                      quality_d,
-                                                                     this->params_.minHitsPerNtuplet_);
+                                                                     this->params_);
   cudaCheck(cudaGetLastError());
 
   if (this->params_.doStats_)

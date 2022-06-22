@@ -88,7 +88,10 @@ namespace caHitNtupletGenerator {
   };
 
   template<typename TrackerTraits>
-  struct ParamsT : public ParamsCommon {};
+  struct ParamsT : public ParamsCommon {
+    // one should define the params for its own pixelTopology
+    // not defining anything here
+  };
 
   template<>
   struct ParamsT<pixelTopology::Phase1> : public ParamsCommon {
@@ -171,6 +174,23 @@ namespace caHitNtupletGenerator {
         return nActualPairs;
       }
 
+      /// Is is a starting layer pair?
+      #ifdef __CUDA_ARCH__
+        __device__
+      #endif
+      constexpr inline bool startingLayerPair(int16_t pid) const {
+        return minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
+      }
+
+      /// Is this a pair with inner == 0
+      #ifdef __CUDA_ARCH__
+        __device__
+      #endif
+      constexpr inline bool startAt0(int16_t pid) const {
+        assert((pixelTopology::Phase1::layerPairs[pid*2] == 0) == (pid < 3));
+        return pixelTopology::Phase1::layerPairs[pid*2] == 0;
+      }
+
   };  // Params Phase1
 
   template<>
@@ -234,6 +254,24 @@ namespace caHitNtupletGenerator {
       }
 
       return nActualPairs;
+    }
+
+    /// Is is a starting layer pair?
+    #ifdef __CUDA_ARCH__
+      __device__
+    #endif
+    constexpr inline bool startingLayerPair(int16_t pid) const {
+      return pid < 33; // in principle one could remove 5,6,7 23, 28 and 29
+    }
+
+    /// Is this a pair with inner == 0
+    #ifdef __CUDA_ARCH__
+      __device__
+    #endif
+    constexpr inline bool startAt0(int16_t pid) const {
+      assert((pixelTopology::Phase2::layerPairs[pid*2] == 0) == ((pid < 3) | (pid>=23 && pid <28)));
+      return pixelTopology::Phase2::layerPairs[pid*2] == 0;
+      // return pid < 3;
     }
 
   };  // Params Phase1

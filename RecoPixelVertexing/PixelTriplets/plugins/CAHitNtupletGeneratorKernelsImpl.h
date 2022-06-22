@@ -59,6 +59,9 @@ namespace caHitNtupletGeneratorKernels {
   template <typename TrackerTraits>
   using QualityCuts = pixelTrack::QualityCutsT<TrackerTraits>;
 
+  template <typename TrackerTraits>
+  using Params = caHitNtupletGenerator::ParamsT<TrackerTraits>;
+
   using Counters = caHitNtupletGenerator::Counters;
 
 template <typename TrackerTraits>
@@ -380,7 +383,7 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
                                      HitContainer<TrackerTraits> *foundNtuplets,
                                      cms::cuda::AtomicPairCounter *apc,
                                      Quality *__restrict__ quality,
-                                     unsigned int minHitsPerNtuplet) {
+                                     Params<TrackerTraits> const& params) {
   // recursive: not obvious to widen
   auto const &hh = *hhp;
 
@@ -395,15 +398,15 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
     if (thisCell.outerNeighbors().empty())
       continue;
     auto pid = thisCell.layerPairId();
-    auto doit = minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
-    // doit = doit;
-    // doit = true;
+    auto doit = params.startingLayerPair(pid);
+
     constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
     if (doit) {
       typename Cell::TmpTuple stack;
       stack.reset();
+      auto startAt0 = params.startAt0(pid);
       thisCell.template find_ntuplets<maxDepth>(
-          hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, minHitsPerNtuplet, pid < 3);
+          hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params.minHitsPerNtuplet_, startAt0);
       assert(stack.empty());
     }
   }

@@ -128,7 +128,7 @@ namespace gpuPixelDoublets {
                                                     CellTracksVector<TrackerTraits>* cellTracks,
                                                     TrackingRecHit2DSOAViewT<TrackerTraits> const& __restrict__ hh,
                                                     OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
-                                                    CellCutsT<TrackerTraits> cuts) {
+                                                    CellCutsT<TrackerTraits> const& cuts) {
     // ysize cuts (z in the barrel)  times 8
     // these are used if doClusterCut is true
 

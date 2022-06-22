@@ -142,7 +142,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::launchKernels(HitsOnCPU con
                        tuples_d,
                        this->device_hitTuple_apc_,
                        quality_d,
-                       this->params_.minHitsPerNtuplet_);
+                       this->params_);
   if (this->params_.doStats_)
     kernel_mark_used(this->device_theCells_.get(), this->device_nCells_);
 
