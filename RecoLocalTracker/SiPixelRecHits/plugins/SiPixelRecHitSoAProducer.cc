@@ -88,7 +88,7 @@ void SiPixelRecHitSoAProducer::fillDescriptions(edm::ConfigurationDescriptions& 
   desc.add<edm::InputTag>("hits", edm::InputTag("siPixelRecHitsPreSplitting"));
   desc.add<std::string>("CPE", "PixelCPEFast");
   desc.add<bool>("convertToLegacy", false);
-  desc.add<bool>("onGPU", false);
+  desc.add<bool>("onGPU", true);
   desc.add<bool>("isPhase2", false);
   descriptions.addWithDefaultLabel(desc);
 }
@@ -269,7 +269,8 @@ void SiPixelRecHitSoAProducer::produce(edm::Event& iEvent, edm::EventSetup const
 
   auto theStream = ctx.stream();
   // auto output = std::make_unique<TrackingRecHit2DCPU>(store32.data(),store16.data(), hmsp.get(), numberOfHits, isPhase2_, nullptr);
-  TrackingRecHit2DCPU output(store32.data(),store16.data(), hmsp.get(), numberOfHits, hitsModuleStart[startBPIX2], isPhase2_, theStream);
+  // TrackingRecHit2DCPU output
+  auto output = std::make_unique<TrackingRecHit2DCPU>(store32.data(),store16.data(), hmsp.get(), numberOfHits, hitsModuleStart[startBPIX2], isPhase2_, theStream);
   std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
 
 
@@ -305,13 +306,13 @@ void SiPixelRecHitSoAProducer::produce(edm::Event& iEvent, edm::EventSetup const
 	// for (auto h = fc; h < lc; ++h)
   //     if (h - fc < maxHitsInModule)
   //       {
-  //         if(gind!=output.view()->detectorIndex(h))
-  //           std::cout << "AIA " << gind << " - " <<  output.view()->detectorIndex(h) << " - " << output.view()->iphi(h)<<std::endl;
+  //         if(gind!=output->view()->detectorIndex(h))
+  //           std::cout << "AIA " << gind << " - " <<  output->view()->detectorIndex(h) << " - " << output->view()->iphi(h)<<std::endl;
   //         else
-  //           std::cout << "GOO " << gind << " - " <<  output.view()->detectorIndex(h) << " - " << output.view()->iphi(h)<<std::endl;
-  //         assert(gind == output.view()->detectorIndex(h));}
+  //           std::cout << "GOO " << gind << " - " <<  output->view()->detectorIndex(h) << " - " << output->view()->iphi(h)<<std::endl;
+  //         assert(gind == output->view()->detectorIndex(h));}
   //     else
-  //       assert(gpuClustering::invalidModuleId == output.view()->detectorIndex(h));
+  //       assert(gpuClustering::invalidModuleId == output->view()->detectorIndex(h));
   }
 
   std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
@@ -321,37 +322,16 @@ void SiPixelRecHitSoAProducer::produce(edm::Event& iEvent, edm::EventSetup const
   constexpr int L[11] = {0, 96, 320, 672, 1184, 1296, 1408,  1520, 1632, 1744, 1856};
 
   std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
-  for (size_t i = 0; i < 11; i++) {
-    std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << " " << L[i] << std::endl;
-    auto start = L[i];
-    // auto start = 96;//layerStart[i];//isPhase2_ ? phase2PixelTopology::layerStart[i] : phase1PixelTopology::layerStart[i];
-    std::cout << "SiPixelRecHitSoAProducer" << "- starting at module: " << start;
-    output.hitsLayerStart()[i] = hitsModuleStart[start];
 
-        std::cout << " - starts ad cluster: " << output.hitsLayerStart()[i] << " -" << output.iphi()[i] << "\n";
-  }
   std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
 
-
-    typename TrackingRecHit2DSOAView::PhiBinner::View view = {output.phiBinner(), nullptr, output.phiBinnerStorage(), -1, numberOfHits};
-    cms::cuda::launchZero(view, theStream);
-    cms::cuda::countFromVector(output.phiBinner(), nLayers, output.iphi(), output.hitsLayerStart());
-    std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
-    output.phiBinner()->finalize();
-    std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
-    cms::cuda::fillFromVector(output.phiBinner(), nLayers, output.iphi(), output.hitsLayerStart());
-    std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
-
-    LogDebug("SiPixelRecHitSoAProducer") << "created HitSoa for " << numberOfHits << " clusters in "
-                                           << numberOfDetUnits << " Dets";
-    std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
-    iEvent.emplace(tokenHitCPU_, std::move(output));
+    iEvent.put(std::move(output));
     std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
     if (onGPU_)
     {
       std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
       // auto outputGPU = std::make_unique<TrackingRecHit2DGPU>
-      auto store32ForGPU = output.store32ToHostAsync(theStream).get();
+      auto store32ForGPU = output->store32ToHostAsync(theStream).get();
       std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
       TrackingRecHit2DGPU outputGPU(store32ForGPU, store16.data(), hmsp.get(), numberOfHits, hitsModuleStart[startBPIX2], isPhase2_, theStream);
       ctx.emplace(iEvent, tokenHitGPU_, std::move(outputGPU));
