@@ -161,7 +161,6 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
 
   auto output = std::make_unique<TrackingRecHit2DCPUT<TrackerTraits>>(
       numberOfClusters, hitsModuleStart[startBPIX2], &cpeView, hitsModuleStart, nullptr);
-  assert(output->nMaxModules() == uint32_t(maxModules));
 
   if (0 == numberOfClusters) {
     iEvent.put(std::move(output));

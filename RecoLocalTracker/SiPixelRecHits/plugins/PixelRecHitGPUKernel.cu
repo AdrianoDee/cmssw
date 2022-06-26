@@ -12,7 +12,7 @@
 
 #include "PixelRecHitGPUKernel.h"
 #include "gpuPixelRecHits.h"
-#define GPU_DEBUG 1
+//#define GPU_DEBUG 1
 
 namespace {
   template<typename TrackerTraits>
@@ -46,8 +46,6 @@ namespace pixelgpudetails {
     auto nHits = clusters_d.nClusters();
 
     TrackingRecHit2DGPUT<TrackerTraits> hits_d(nHits,clusters_d.offsetBPIX2(), cpeParams, clusters_d.clusModuleStart(), stream);
-
-    assert(hits_d.nMaxModules() == TrackerTraits::numberOfModules);
 
     int activeModulesWithDigis = digis_d.nModules();
     // protect from empty events

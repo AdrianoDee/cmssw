@@ -63,7 +63,7 @@ void SiPixelRecHitCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescr
 
   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpotCUDA"));
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplittingCUDA"));
-  
+
   std::string cpe = "PixelCPEFast";
   cpe += TrackerTraits::nameModifier;
   desc.add<std::string>("CPE", cpe);

@@ -2,8 +2,8 @@
 // Original Author: Felice Pantaleo, CERN
 //
 
-//#define GPU_DEBUG
-//#define DUMP_GPU_TK_TUPLES
+#define GPU_DEBUG
+#define DUMP_GPU_TK_TUPLES
 
 #include <array>
 #include <cassert>
@@ -325,19 +325,28 @@ PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPUT<TrackerTrait
   using PixelTrackHeterogeneous = PixelTrackHeterogeneousT<TrackerTraits>;
   using GPUKernels = CAHitNtupletGeneratorKernelsGPU<TrackerTraits>;
 
+  std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   PixelTrackHeterogeneous tracks(cms::cuda::make_device_unique<OutputSoA>(stream));
-
+  std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   auto* soa = tracks.get();
   assert(soa);
-std::cout << "CAHitNtupletGeneratorOnGPUT "<< __LINE__ << std::endl;
+  cudaDeviceSynchronize();
+  cudaCheck(cudaGetLastError());
+  std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   GPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_d.nHits(), stream);
-  std::cout << "CAHitNtupletGeneratorOnGPUT "<< __LINE__ << std::endl;
+  cudaDeviceSynchronize();
+  cudaCheck(cudaGetLastError());
+  std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   kernels.buildDoublets(hits_d, stream);
-  std::cout << "CAHitNtupletGeneratorOnGPUT "<< __LINE__ << std::endl;
+  cudaDeviceSynchronize();
+  cudaCheck(cudaGetLastError());
+  std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   kernels.launchKernels(hits_d, soa, stream);
-  std::cout << "CAHitNtupletGeneratorOnGPUT "<< __LINE__ << std::endl;
+  cudaDeviceSynchronize();
+  cudaCheck(cudaGetLastError());
+  std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
   fitter.allocateOnGPU(&(soa->hitIndices), kernels.tupleMultiplicity(), soa);
   if (m_params.useRiemannFit_) {
@@ -346,7 +355,6 @@ std::cout << "CAHitNtupletGeneratorOnGPUT "<< __LINE__ << std::endl;
     fitter.launchBrokenLineKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
   }
   kernels.classifyTuples(hits_d, soa, stream);
-  std::cout << "CAHitNtupletGeneratorOnGPUT "<< __LINE__ << std::endl;
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());

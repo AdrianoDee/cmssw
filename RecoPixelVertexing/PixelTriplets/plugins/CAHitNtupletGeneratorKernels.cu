@@ -1,6 +1,7 @@
 #include "RecoPixelVertexing/PixelTriplets/plugins/CAHitNtupletGeneratorKernelsImpl.h"
 #include <mutex>
 
+#define NTUPLE_DEBUG
 
 template <typename TrackerTraits>
 void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU const &hh, TkSoA *tracks_d, cudaStream_t cudaStream) {
@@ -38,7 +39,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
   assert(blockSize > 0 && 0 == blockSize % 16);
   dim3 blks(1, numberOfBlocks, 1);
   dim3 thrs(stride, blockSize, 1);
-
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   kernel_connect<TrackerTraits><<<blks, thrs, 0, cudaStream>>>(
       this->device_hitTuple_apc_,
       this->device_hitToTuple_apc_,  // needed only to be reset, ready for next kernel
@@ -55,6 +56,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
       this->params_.dcaCutOuterTriplet_);
   cudaCheck(cudaGetLastError());
 
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   // do not run the fishbone if there are hits only in BPIX1
   if (nhits > this->isOuterHitOfCell_.offset && this->params_.earlyFishbone_) {
     auto nthTot = 128;
@@ -68,6 +70,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
     cudaCheck(cudaGetLastError());
   }
 
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   blockSize = 64;
   numberOfBlocks = (3 * this->params_.cellCuts_.maxNumberOfDoublets_ / 4 + blockSize - 1) / blockSize;
   kernel_find_ntuplets<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(hh.view(),
@@ -78,12 +81,13 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
                                                                      this->device_hitTuple_apc_,
                                                                      quality_d,
                                                                      this->params_);
+  cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
-
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   if (this->params_.doStats_)
     kernel_mark_used<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(this->device_theCells_.get(), this->device_nCells_);
   cudaCheck(cudaGetLastError());
-
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
@@ -91,19 +95,42 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
 
   blockSize = 128;
   numberOfBlocks = (HitContainer::ctNOnes() + blockSize - 1) / blockSize;
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << " " << numberOfBlocks << __LINE__ << std::endl;
   cms::cuda::finalizeBulk<<<numberOfBlocks, blockSize, 0, cudaStream>>>(this->device_hitTuple_apc_, tuples_d);
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
+  cudaDeviceSynchronize();
+  cudaCheck(cudaGetLastError());
 
   kernel_fillHitDetIndices<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tuples_d, hh.view(), detId_d);
   cudaCheck(cudaGetLastError());
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
+  #ifdef GPU_DEBUG
+    cudaDeviceSynchronize();
+    cudaCheck(cudaGetLastError());
+  #endif
   kernel_fillNLayers<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tracks_d, this->device_hitTuple_apc_);
   cudaCheck(cudaGetLastError());
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
+  #ifdef GPU_DEBUG
+    cudaDeviceSynchronize();
+    cudaCheck(cudaGetLastError());
+  #endif
 
   // remove duplicates (tracks that share a doublet)
   numberOfBlocks = this->nDoubletBlocks(blockSize);
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
   kernel_earlyDuplicateRemover<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(
       this->device_theCells_.get(), this->device_nCells_, tracks_d, quality_d, this->params_.dupPassThrough_);
   cudaCheck(cudaGetLastError());
-
+  #ifdef GPU_DEBUG
+    cudaDeviceSynchronize();
+    cudaCheck(cudaGetLastError());
+  #endif
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   blockSize = 128;
   numberOfBlocks = (3 * TrackerTraits::maxNumberOfTuples / 4 + blockSize - 1) / blockSize;
   kernel_countMultiplicity<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(
@@ -112,7 +139,11 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
   kernel_fillMultiplicity<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(
       tuples_d, quality_d, this->device_tupleMultiplicity_.get());
   cudaCheck(cudaGetLastError());
-
+  #ifdef GPU_DEBUG
+    cudaDeviceSynchronize();
+    cudaCheck(cudaGetLastError());
+  #endif
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   // do not run the fishbone if there are hits only in BPIX1
   if (nhits > this->isOuterHitOfCell_.offset && this->params_.lateFishbone_) {
     auto nthTot = 128;
@@ -125,7 +156,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
         hh.view(), this->device_theCells_.get(), this->device_nCells_, this->isOuterHitOfCell_, nhits, true);
     cudaCheck(cudaGetLastError());
   }
-
+  std::cout << "CAHitNtupletGeneratorKernelsGPU" << TrackerTraits::nameModifier << __LINE__ << std::endl;
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
@@ -211,7 +242,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::buildDoublets(HitsOnCPU con
 
   assert(nActualPairs <= TrackerTraits::nPairs);
   nActualPairs = TrackerTraits::nPairs;
-  std::cout << "nActualPairs GPU -> " << nActualPairs << std::endl;
+  // std::cout << "nActualPairs GPU -> " << nActualPairs << std::endl;
   int stride = 4;
   int threadsPerBlock = TrackerTraits::getDoubletsFromHistoMaxBlockSize / stride;
   int blocks = (4 * nhits + threadsPerBlock - 1) / threadsPerBlock;

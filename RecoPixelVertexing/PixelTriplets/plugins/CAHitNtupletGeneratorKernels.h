@@ -1,7 +1,7 @@
 #ifndef RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h
 #define RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "GPUCACell.h"
@@ -175,17 +175,17 @@ namespace caHitNtupletGenerator {
       }
 
       /// Is is a starting layer pair?
-      #ifdef __CUDA_ARCH__
-        __device__
-      #endif
+      // #ifdef __CUDA_ARCH__
+      //   __device__
+      // #endif
       constexpr inline bool startingLayerPair(int16_t pid) const {
         return minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
       }
 
       /// Is this a pair with inner == 0
-      #ifdef __CUDA_ARCH__
-        __device__
-      #endif
+      // #ifdef __CUDA_ARCH__
+      //   __device__
+      // #endif
       constexpr inline bool startAt0(int16_t pid) const {
         assert((pixelTopology::Phase1::layerPairs[pid*2] == 0) == (pid < 3));
         return pixelTopology::Phase1::layerPairs[pid*2] == 0;
@@ -329,6 +329,18 @@ public:
 
   CAHitNtupletGeneratorKernelsBaseT(Params const& params)
       : params_(params), paramsMaxDoubletes3Quarters_(3 * params.cellCuts_.maxNumberOfDoublets_ / 4) {}
+      // {
+      //   if(params.onGPU_)
+      //   {
+      //     cudaCheck(cudaMalloc(&params_, sizeof(Params)));
+      //     cudaCheck(cudaMemcpyToSymbol(params_, &params, sizeof(Params),cudaMemcpyDefault));
+      //   }
+      //   else
+      //   {
+      //     params_ = &params;
+      //   }
+      //
+      // }
   ~CAHitNtupletGeneratorKernelsBaseT() = default;
 
   TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.get(); }
@@ -346,7 +358,6 @@ public:
 
 protected:
   Counters* counters_ = nullptr;
-
   // workspace
   unique_ptr<unsigned char[]> cellStorage_;
   unique_ptr<CellNeighborsVector> device_theCellNeighbors_;
@@ -371,8 +382,9 @@ protected:
   unique_ptr<TupleMultiplicity> device_tupleMultiplicity_;
 
   unique_ptr<cms::cuda::AtomicPairCounter::c_type[]> device_storage_;
+
   // params
-  Params const& params_;
+  Params params_;
   /// Intermediate result avoiding repeated computations.
   const uint32_t paramsMaxDoubletes3Quarters_;
   /// Compute the number of doublet blocks for block size
@@ -380,6 +392,9 @@ protected:
     // We want (3 * params_.maxNumberOfDoublets_ / 4 + blockSize - 1) / blockSize, but first part is pre-computed.
     return (paramsMaxDoubletes3Quarters_ + blockSize - 1) / blockSize;
   }
+
+  // params
+  const Params* params_ = nullptr;
 
   /// Compute the number of quadruplet blocks for block size
   inline uint32_t nQuadrupletBlocks(uint32_t blockSize) {

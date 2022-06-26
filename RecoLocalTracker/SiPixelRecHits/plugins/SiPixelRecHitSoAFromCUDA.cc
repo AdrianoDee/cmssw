@@ -32,6 +32,7 @@ public:
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
   using HMSstorage = HostProduct<uint32_t[]>;
+  using TrackingRecHit2DSOAView = TrackingRecHit2DSOAViewT<TrackerTraits>;
 
 private:
   void acquire(edm::Event const& iEvent,
@@ -44,7 +45,6 @@ private:
   const edm::EDPutTokenT<HMSstorage> hostPutToken_;
 
   uint32_t nHits_;
-  uint32_t nMaxModules_;
 
   cms::cuda::host::unique_ptr<float[]> store32_;
   cms::cuda::host::unique_ptr<uint16_t[]> store16_;
@@ -81,7 +81,6 @@ void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
 
   if (0 == nHits_)
     return;
-  nMaxModules_ = inputData.nMaxModules();
   store32_ = inputData.store32ToHostAsync(ctx.stream());
   store16_ = inputData.store16ToHostAsync(ctx.stream());
   hitsModuleStart_ = inputData.hitsModuleStartToHostAsync(ctx.stream());
@@ -89,13 +88,18 @@ void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
 
 template<typename TrackerTraits>
 void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::EventSetup const& es) {
-  auto hmsp = std::make_unique<uint32_t[]>(nMaxModules_ + 1);
+  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
+  auto hmsp = std::make_unique<uint32_t[]>(TrackerTraits::numberOfModules + 1);
 
+  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
   if (nHits_ > 0)
-    std::copy(hitsModuleStart_.get(), hitsModuleStart_.get() + nMaxModules_ + 1, hmsp.get());
+    std::copy(hitsModuleStart_.get(), hitsModuleStart_.get() + TrackerTraits::numberOfModules + 1, hmsp.get());
 
+  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
   iEvent.emplace(hostPutToken_, std::move(hmsp));
+  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
   iEvent.emplace(hitsPutTokenCPU_, store32_.get(), store16_.get(), hitsModuleStart_.get(), nHits_);
+  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
 }
 
 using SiPixelRecHitSoAFromCUDA = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase1>;

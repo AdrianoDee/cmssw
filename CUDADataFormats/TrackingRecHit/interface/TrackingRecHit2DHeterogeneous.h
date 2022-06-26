@@ -9,6 +9,7 @@
 
 template <typename Traits, typename TrackerTraits>
 class TrackingRecHit2DHeterogeneousT {
+
 public:
   enum class Storage32 {
     kXLocal = 0,
@@ -61,7 +62,6 @@ public:
   TrackingRecHit2DSOAView const* view() const { return m_view.get(); }
 
   auto nHits() const { return m_nHits; }
-  auto nMaxModules() const { return m_nMaxModules; }
   auto offsetBPIX2() const { return m_offsetBPIX2; }
 
   auto hitsModuleStart() const { return m_hitsModuleStart; }
@@ -98,7 +98,6 @@ protected:
 
   uint32_t const* m_hitsModuleStart;  // needed for legacy, this is on GPU!
 
-  uint32_t m_nMaxModules;
   // needed as kernel params...
   PhiBinner* m_phiBinner;
   typename PhiBinner::index_type* m_phiBinnerStorage;
@@ -107,25 +106,19 @@ protected:
 };
 
 
-//This mess seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous given the change in template
-
-// template <typename Traits,typename TrackerTraits>
-// class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{
-//
-//   public:
-//   CMS_CLASS_VERSION(10);
-// };
+// This mess seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous
+// in RAW samples on which the Run3 HLT has been run. Without this those samples are useless beacuse of ROOT dictionary error
 
 template <typename Traits>
 class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{
 
   public:
-  CMS_CLASS_VERSION(10);
+  CMS_CLASS_VERSION(10); //TODO re-check if useful
 };
 
-using TrackingRecHit2DCPU = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
-using TrackingRecHit2DGPU = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
-using TrackingRecHit2DHost = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
+// using TrackingRecHit2DCPU = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
+// using TrackingRecHit2DGPU = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
+// using TrackingRecHit2DHost = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
 
 // template <typename Traits,typename TrackerTraits>
 // class TrackingRecHit2DHeterogeneousBase : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
@@ -136,12 +129,13 @@ using TrackingRecHit2DHost = TrackingRecHit2DHeterogeneous<cms::cudacompat::Host
 // template <typename Traits>
 // using TrackingRecHit2DHeterogeneous = TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1>;
 //
-// using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
-// using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
-// using TrackingRecHit2DHostLegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
 
-//TrackingRecHit2DGPU/CPU/Host workaround to avoid partial specialization (forbidden)
+//Classes definition for "Legacy" Phase1, to make the classes_def lighter. Not actually used in the code.
+using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
+using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
+using TrackingRecHit2DHostLegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
 
+//TrackingRecHit2DGPU/CPU/Host workaround to avoid partial specialization (forbidden?)
 template <typename Traits,typename TrackerTraits>
 class TrackingRecHit2DGPUBaseT : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits,TrackerTraits>{};
 
@@ -152,7 +146,7 @@ template <typename Traits,typename TrackerTraits>
 class TrackingRecHit2DHostBaseT : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits,TrackerTraits>{};
 
 
-//Specilize and overload only what we need to overload, for other memebers use this->
+//Specilize and overload only what we need to overload, remember to use this->
 //GPU
 template <typename TrackerTraits>
 class TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits,TrackerTraits> : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits,TrackerTraits> {
@@ -192,11 +186,11 @@ class TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits,TrackerTraits> : pub
 template<typename TrackerTraits>
 using TrackingRecHit2DHostT = TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits,TrackerTraits>;
 
-//Classes definition for Phase1
+//Classes definition for Phase1, to make the classes_def lighter. Not actually used in the code.
 using TrackingRecHit2DGPUPhase1 = TrackingRecHit2DGPUT<pixelTopology::Phase1>;
 using TrackingRecHit2DCPUPhase1 = TrackingRecHit2DCPUT<pixelTopology::Phase1>;
 using TrackingRecHit2DHostPhase1 = TrackingRecHit2DHostT<pixelTopology::Phase1>;
-//Classes definition for Phase2
+//Classes definition for Phase2, to make the classes_def lighter. Not actually used in the code.
 using TrackingRecHit2DGPUPhase2 = TrackingRecHit2DGPUT<pixelTopology::Phase2>;
 using TrackingRecHit2DCPUPhase2 = TrackingRecHit2DCPUT<pixelTopology::Phase2>;
 using TrackingRecHit2DHostPhase2 = TrackingRecHit2DHostT<pixelTopology::Phase2>;
@@ -218,10 +212,7 @@ TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>::TrackingRecHit2DHeterogene
 
   auto view = Traits::template make_host_unique<TrackingRecHit2DSOAView>(stream);
 
-  m_nMaxModules = TrackerTraits::numberOfModules;
-
   view->m_nHits = nHits;
-  view->m_nMaxModules = TrackerTraits::numberOfModules;
   m_view = Traits::template make_unique<TrackingRecHit2DSOAView>(stream);  // leave it on host and pass it by value?
   m_AverageGeometryStore = Traits::template make_unique<typename TrackingRecHit2DSOAView::AverageGeometry>(stream);
   view->m_averageGeometry = m_AverageGeometryStore.get();
@@ -328,7 +319,6 @@ TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>::TrackingRecHit2DHeterogene
 
   view->m_averageGeometry = m_AverageGeometryStore.get();
   view->m_hitsModuleStart = m_hitsModuleStart;
-  view->m_nMaxModules = TrackerTraits::numberOfModules;
 
   //store transfer
   if constexpr (std::is_same_v<Traits, cms::cudacompat::GPUTraits>) {

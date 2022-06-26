@@ -33,6 +33,7 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
   using HMSstorage = HostProduct<uint32_t[]>;
+  using HitsOnGPU = TrackingRecHit2DGPUT<TrackerTraits>;
 
 private:
   void acquire(edm::Event const& iEvent,
@@ -41,13 +42,12 @@ private:
   void produce(edm::Event& iEvent, edm::EventSetup const& iSetup) override;
 
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
-  const edm::EDGetTokenT<cms::cuda::Product<TrackingRecHit2DGPUT<TrackerTraits>>> hitsToken_;  // CUDA hits
+  const edm::EDGetTokenT<cms::cuda::Product<HitsOnGPU>> hitsToken_;  // CUDA hits
   const edm::EDGetTokenT<SiPixelClusterCollectionNew> clusterToken_;           // legacy clusters
   const edm::EDPutTokenT<SiPixelRecHitCollection> rechitsPutToken_;            // legacy rechits
   const edm::EDPutTokenT<HMSstorage> hostPutToken_;
 
   uint32_t nHits_;
-  uint32_t nMaxModules_;
   cms::cuda::host::unique_ptr<float[]> store32_;
   cms::cuda::host::unique_ptr<uint32_t[]> hitsModuleStart_;
 };
@@ -56,7 +56,7 @@ template<typename TrackerTraits>
 SiPixelRecHitFromCUDAT<TrackerTraits>::SiPixelRecHitFromCUDAT(const edm::ParameterSet& iConfig)
     : geomToken_(esConsumes()),
       hitsToken_(
-          consumes<cms::cuda::Product<TrackingRecHit2DGPUT<TrackerTraits>>>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
+          consumes<cms::cuda::Product<HitsOnGPU>>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
       clusterToken_(consumes<SiPixelClusterCollectionNew>(iConfig.getParameter<edm::InputTag>("src"))),
       rechitsPutToken_(produces<SiPixelRecHitCollection>()),
       hostPutToken_(produces<HMSstorage>()) {}
@@ -76,36 +76,41 @@ template<typename TrackerTraits>
 void SiPixelRecHitFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
                                     edm::EventSetup const& iSetup,
                                     edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
-  cms::cuda::Product<TrackingRecHit2DGPUT<TrackerTraits>> const& inputDataWrapped = iEvent.get(hitsToken_);
+  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+  cms::cuda::Product<HitsOnGPU> const& inputDataWrapped = iEvent.get(hitsToken_);
+  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   cms::cuda::ScopedContextAcquire ctx{inputDataWrapped, std::move(waitingTaskHolder)};
+  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   auto const& inputData = ctx.get(inputDataWrapped);
-
+  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   nHits_ = inputData.nHits();
-  nMaxModules_ = inputData.nMaxModules();
   LogDebug("SiPixelRecHitFromCUDA") << "converting " << nHits_ << " Hits";
-
+  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   if (0 == nHits_)
     return;
   store32_ = inputData.localCoordToHostAsync(ctx.stream());
+  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
   hitsModuleStart_ = inputData.hitsModuleStartToHostAsync(ctx.stream());
+  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
 }
 
 template<typename TrackerTraits>
 void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::EventSetup const& es) {
   // allocate a buffer for the indices of the clusters
-  auto hmsp = std::make_unique<uint32_t[]>(nMaxModules_ + 1);
+  constexpr auto nMaxModules = TrackerTraits::numberOfModules;
+  auto hmsp = std::make_unique<uint32_t[]>(nMaxModules + 1);
 
   SiPixelRecHitCollection output;
-  output.reserve(nMaxModules_, nHits_);
+  output.reserve(nMaxModules, nHits_);
 
   if (0 == nHits_) {
     iEvent.emplace(rechitsPutToken_, std::move(output));
     iEvent.emplace(hostPutToken_, std::move(hmsp));
     return;
   }
-  output.reserve(nMaxModules_, nHits_);
+  output.reserve(nMaxModules, nHits_);
 
-  std::copy(hitsModuleStart_.get(), hitsModuleStart_.get() + nMaxModules_ + 1, hmsp.get());
+  std::copy(hitsModuleStart_.get(), hitsModuleStart_.get() + nMaxModules + 1, hmsp.get());
   // wrap the buffer in a HostProduct, and move it to the Event, without reallocating the buffer or affecting hitsModuleStart
   iEvent.emplace(hostPutToken_, std::move(hmsp));
 

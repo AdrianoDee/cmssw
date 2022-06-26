@@ -56,10 +56,10 @@ namespace gpuPixelDoublets {
   struct CellCutsT<pixelTopology::Phase2> : public CellCutsCommon {};
 
   template<typename TrackerTraits>
-  __device__ __forceinline__ bool zSizeCut(Hits<TrackerTraits> const& hh, int i, int o, CellCutsT<TrackerTraits> cuts, bool debug) { return false; }
+  __device__ __forceinline__ bool zSizeCut(Hits<TrackerTraits> const& hh, int i, int o, CellCutsT<TrackerTraits> const &cuts, bool debug) { return false; }
 
   template<>
-  __device__ __forceinline__ bool zSizeCut<pixelTopology::Phase1>(Hits<pixelTopology::Phase1> const& hh, int i, int o, CellCutsT<pixelTopology::Phase1> cuts, bool debug)
+  __device__ __forceinline__ bool zSizeCut<pixelTopology::Phase1>(Hits<pixelTopology::Phase1> const& hh, int i, int o, CellCutsT<pixelTopology::Phase1> const &cuts, bool debug)
   {
     auto dz = hh.zGlobal(i)-hh.zGlobal(o);
     auto dr = hh.rGlobal(i)-hh.rGlobal(o);
