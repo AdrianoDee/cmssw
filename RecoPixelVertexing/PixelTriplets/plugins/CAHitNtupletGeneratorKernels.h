@@ -1,61 +1,105 @@
 #ifndef RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h
 #define RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "GPUCACell.h"
-
+#include "gpuPixelDoublets.h"
 // #define DUMP_GPU_TK_TUPLES
 
-namespace cAHitNtupletGenerator {
+namespace caHitNtupletGenerator {
 
-  // counters
-  struct Counters {
-    unsigned long long nEvents;
-    unsigned long long nHits;
-    unsigned long long nCells;
-    unsigned long long nTuples;
-    unsigned long long nFitTracks;
-    unsigned long long nLooseTracks;
-    unsigned long long nGoodTracks;
-    unsigned long long nUsedHits;
-    unsigned long long nDupHits;
-    unsigned long long nFishCells;
-    unsigned long long nKilledCells;
-    unsigned long long nEmptyCells;
-    unsigned long long nZeroTrackCells;
+  struct ParamsCommon {
+    ParamsCommon(
+           bool onGPU,
+           uint32_t minHitsPerNtuplet,
+           // uint32_t maxNumberOfDoublets,
+           uint16_t minHitsForSharingCuts,
+           bool useRiemannFit,
+           bool fitNas4,
+           bool includeJumpingForwardDoublets,
+           bool earlyFishbone,
+           bool lateFishbone,
+           bool doStats,
+           // bool doClusterCut,
+           // bool doZ0Cut,
+           // bool doPtCut,
+           bool doSharedHitCut,
+           bool dupPassThrough,
+           bool useSimpleTripletCleaner,
+           float ptmin,
+           float CAThetaCutBarrel,
+           float CAThetaCutForward,
+           float hardCurvCut,
+           float dcaCutInnerTriplet,
+           float dcaCutOuterTriplet)
+        : onGPU_(onGPU),
+          minHitsPerNtuplet_(minHitsPerNtuplet),
+          // maxNumberOfDoublets_(maxNumberOfDoublets),
+          minHitsForSharingCut_(minHitsForSharingCuts),
+          useRiemannFit_(useRiemannFit),
+          fitNas4_(fitNas4),
+          includeJumpingForwardDoublets_(includeJumpingForwardDoublets),
+          earlyFishbone_(earlyFishbone),
+          lateFishbone_(lateFishbone),
+          doStats_(doStats),
+          // doClusterCut_(doClusterCut),
+          // doZ0Cut_(doZ0Cut),
+          // doPtCut_(doPtCut),
+          doSharedHitCut_(doSharedHitCut),
+          dupPassThrough_(dupPassThrough),
+          useSimpleTripletCleaner_(useSimpleTripletCleaner),
+          ptmin_(ptmin),
+          CAThetaCutBarrel_(CAThetaCutBarrel),
+          CAThetaCutForward_(CAThetaCutForward),
+          hardCurvCut_(hardCurvCut),
+          dcaCutInnerTriplet_(dcaCutInnerTriplet),
+          dcaCutOuterTriplet_(dcaCutOuterTriplet)
+          {}
+
+    const bool onGPU_;
+    const uint32_t minHitsPerNtuplet_;
+    // const uint32_t maxNumberOfDoublets_;
+    const uint16_t minHitsForSharingCut_;
+    const bool useRiemannFit_;
+    const bool fitNas4_;
+    const bool includeJumpingForwardDoublets_;
+    const bool earlyFishbone_;
+    const bool lateFishbone_;
+    const bool doStats_;
+    // const bool doClusterCut_;
+    // const bool doZ0Cut_;
+    // const bool doPtCut_;
+    const bool doSharedHitCut_;
+    const bool dupPassThrough_;
+    const bool useSimpleTripletCleaner_;
+    const float ptmin_;
+    const float CAThetaCutBarrel_;
+    const float CAThetaCutForward_;
+    const float hardCurvCut_;
+    const float dcaCutInnerTriplet_;
+    const float dcaCutOuterTriplet_;
+
+    /// Compute the number of pairs
+    inline uint32_t nPairs() const {
+      return 0;
+    }
   };
 
-  using HitsView = TrackingRecHit2DSOAView;
-  using HitsOnGPU = TrackingRecHit2DSOAView;
-
-  using HitToTuple = caConstants::HitToTuple;
-  using TupleMultiplicity = caConstants::TupleMultiplicity;
-
-  using Quality = pixelTrack::Quality;
-  using TkSoA = pixelTrack::TrackSoA;
-  using HitContainer = pixelTrack::HitContainer;
-
-  struct QualityCuts {
-    // chi2 cut = chi2Scale * (chi2Coeff[0] + pT/GeV * (chi2Coeff[1] + pT/GeV * (chi2Coeff[2] + pT/GeV * chi2Coeff[3])))
-    float chi2Coeff[4];
-    float chi2MaxPt;  // GeV
-    float chi2Scale;
-
-    struct Region {
-      float maxTip;  // cm
-      float minPt;   // GeV
-      float maxZip;  // cm
-    };
-
-    Region triplet;
-    Region quadruplet;
+  template<typename TrackerTraits>
+  struct ParamsT : public ParamsCommon {
+    // one should define the params for its own pixelTopology
+    // not defining anything here
   };
 
-  // params (FIXME: thi si a POD: so no constructor no traling _  and no const as params_ is already const)
-  struct Params {
-    Params(bool onGPU,
+  template<>
+  struct ParamsT<pixelTopology::Phase1> : public ParamsCommon {
+
+    using QualityCuts = pixelTrack::QualityCutsT<pixelTopology::Phase1>;
+    using CellCuts = gpuPixelDoublets::CellCutsT<pixelTopology::Phase1>;
+
+    ParamsT(bool onGPU,
            uint32_t minHitsPerNtuplet,
            uint32_t maxNumberOfDoublets,
            uint16_t minHitsForSharingCuts,
@@ -78,59 +122,24 @@ namespace cAHitNtupletGenerator {
            float hardCurvCut,
            float dcaCutInnerTriplet,
            float dcaCutOuterTriplet,
-
            QualityCuts const& cuts)
-        : onGPU_(onGPU),
-          minHitsPerNtuplet_(minHitsPerNtuplet),
-          maxNumberOfDoublets_(maxNumberOfDoublets),
-          minHitsForSharingCut_(minHitsForSharingCuts),
-          useRiemannFit_(useRiemannFit),
-          fitNas4_(fitNas4),
-          includeJumpingForwardDoublets_(includeJumpingForwardDoublets),
-          earlyFishbone_(earlyFishbone),
-          lateFishbone_(lateFishbone),
-          idealConditions_(idealConditions),
-          doStats_(doStats),
-          doClusterCut_(doClusterCut),
-          doZ0Cut_(doZ0Cut),
-          doPtCut_(doPtCut),
-          doSharedHitCut_(doSharedHitCut),
-          dupPassThrough_(dupPassThrough),
-          useSimpleTripletCleaner_(useSimpleTripletCleaner),
-          ptmin_(ptmin),
-          CAThetaCutBarrel_(CAThetaCutBarrel),
-          CAThetaCutForward_(CAThetaCutForward),
-          hardCurvCut_(hardCurvCut),
-          dcaCutInnerTriplet_(dcaCutInnerTriplet),
-          dcaCutOuterTriplet_(dcaCutOuterTriplet),
-          cuts_(cuts) {}
-
-    const bool onGPU_;
-    const uint32_t minHitsPerNtuplet_;
-    const uint32_t maxNumberOfDoublets_;
-    const uint16_t minHitsForSharingCut_;
-    const bool useRiemannFit_;
-    const bool fitNas4_;
-    const bool includeJumpingForwardDoublets_;
-    const bool earlyFishbone_;
-    const bool lateFishbone_;
-    const bool idealConditions_;
-    const bool doStats_;
-    const bool doClusterCut_;
-    const bool doZ0Cut_;
-    const bool doPtCut_;
-    const bool doSharedHitCut_;
-    const bool dupPassThrough_;
-    const bool useSimpleTripletCleaner_;
-    const float ptmin_;
-    const float CAThetaCutBarrel_;
-    const float CAThetaCutForward_;
-    const float hardCurvCut_;
-    const float dcaCutInnerTriplet_;
-    const float dcaCutOuterTriplet_;
+        : ParamsCommon(onGPU, minHitsPerNtuplet, /*maxNumberOfDoublets,*/ minHitsForSharingCuts, useRiemannFit,
+          fitNas4, includeJumpingForwardDoublets, earlyFishbone, lateFishbone,
+          doStats, /*doClusterCut, doZ0Cut, doPtCut,*/
+          doSharedHitCut, dupPassThrough, useSimpleTripletCleaner, ptmin,
+          CAThetaCutBarrel, CAThetaCutForward, hardCurvCut, dcaCutInnerTriplet,
+          dcaCutOuterTriplet),
+          // idealConditions_(idealConditions),
+          cellCuts_(CellCuts{{maxNumberOfDoublets, doClusterCut, doZ0Cut, doPtCut}, idealConditions}),
+          qualityCuts_(cuts)
+          {}
 
     // quality cuts
-    QualityCuts cuts_{// polynomial coefficients for the pT-dependent chi2 cut
+    // const bool idealConditions_;
+
+    CellCuts cellCuts_;
+
+    QualityCuts qualityCuts_{// polynomial coefficients for the pT-dependent chi2 cut
                       {0.68177776, 0.74609577, -0.08035491, 0.00315399},
                       // max pT used to determine the chi2 cut
                       10.,
@@ -149,36 +158,190 @@ namespace cAHitNtupletGenerator {
                           12.0  // |Zip| < 12.0 cm
                       }};
 
-  };  // Params
+      /// Compute the number of pairs
+      inline uint32_t nPairs() const {
+        // take all layer pairs into account
+        uint32_t nActualPairs = pixelTopology::Phase1::nPairs;
+        if (not includeJumpingForwardDoublets_) {
+          // exclude forward "jumping" layer pairs
+          nActualPairs = pixelTopology::Phase1::nPairsForTriplets;
+        }
+        if (minHitsPerNtuplet_ > 3) {
+          // for quadruplets, exclude all "jumping" layer pairs
+          nActualPairs = pixelTopology::Phase1::nPairsForQuadruplets;
+        }
 
-}  // namespace cAHitNtupletGenerator
+        return nActualPairs;
+      }
 
-template <typename TTraits>
-class CAHitNtupletGeneratorKernels {
+      /// Is is a starting layer pair?
+      // #ifdef __CUDA_ARCH__
+      //   __device__
+      // #endif
+      constexpr inline bool startingLayerPair(int16_t pid) const {
+        return minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
+      }
+
+      /// Is this a pair with inner == 0
+      // #ifdef __CUDA_ARCH__
+      //   __device__
+      // #endif
+      constexpr inline bool startAt0(int16_t pid) const {
+        assert((pixelTopology::Phase1::layerPairs[pid*2] == 0) == (pid < 3));
+        return pixelTopology::Phase1::layerPairs[pid*2] == 0;
+      }
+
+  };  // Params Phase1
+
+  template<>
+  struct ParamsT<pixelTopology::Phase2> : public ParamsCommon {
+
+    using QualityCuts = pixelTrack::QualityCutsT<pixelTopology::Phase2>;
+    using CellCuts = gpuPixelDoublets::CellCutsT<pixelTopology::Phase2>;
+
+    ParamsT(bool onGPU,
+           uint32_t minHitsPerNtuplet,
+           uint32_t maxNumberOfDoublets,
+           uint16_t minHitsForSharingCuts,
+           bool useRiemannFit,
+           bool fitNas4,
+           bool includeJumpingForwardDoublets,
+           bool includeFarForwards,
+           bool earlyFishbone,
+           bool lateFishbone,
+           bool doStats,
+           bool doClusterCut,
+           bool doZ0Cut,
+           bool doPtCut,
+           bool doSharedHitCut,
+           bool dupPassThrough,
+           bool useSimpleTripletCleaner,
+           float ptmin,
+           float CAThetaCutBarrel,
+           float CAThetaCutForward,
+           float hardCurvCut,
+           float dcaCutInnerTriplet,
+           float dcaCutOuterTriplet,
+           QualityCuts const& cuts)
+        : ParamsCommon(onGPU, minHitsPerNtuplet, /*maxNumberOfDoublets,*/ minHitsForSharingCuts, useRiemannFit,
+          fitNas4, includeJumpingForwardDoublets, earlyFishbone, lateFishbone,
+          doStats, /*doClusterCut, doZ0Cut, doPtCut,*/
+          doSharedHitCut, dupPassThrough, useSimpleTripletCleaner, ptmin,
+          CAThetaCutBarrel, CAThetaCutForward, hardCurvCut, dcaCutInnerTriplet,
+          dcaCutOuterTriplet),
+          includeFarForwards_(includeFarForwards),
+          cellCuts_(CellCuts{{maxNumberOfDoublets, doClusterCut, doZ0Cut, doPtCut}}),
+          qualityCuts_(cuts)
+          {}
+
+
+    const bool includeFarForwards_;
+    // quality cuts
+    CellCuts cellCuts_;
+
+    QualityCuts qualityCuts_{ 50.0f, /*chi2*/ 0.9f, /* pT in Gev*/  0.4f, /*zip in cm*/ 12.0f /*tip in cm*/};
+
+    inline uint32_t nPairs() const {
+      // take all layer pairs into account
+      uint32_t nActualPairs = pixelTopology::Phase2::nPairs;
+      if (includeFarForwards_) {
+        // considera far forwards (> 11 & > 23)
+        nActualPairs = pixelTopology::Phase2::nPairsFarForwards;
+      }
+      if (includeJumpingForwardDoublets_) {
+        // include jumping forwards
+        nActualPairs = pixelTopology::Phase2::nPairsForJumpingForwards;
+      }
+
+      return nActualPairs;
+    }
+
+    /// Is is a starting layer pair?
+    #ifdef __CUDA_ARCH__
+      __device__
+    #endif
+    constexpr inline bool startingLayerPair(int16_t pid) const {
+      return pid < 33; // in principle one could remove 5,6,7 23, 28 and 29
+    }
+
+    /// Is this a pair with inner == 0
+    #ifdef __CUDA_ARCH__
+      __device__
+    #endif
+    constexpr inline bool startAt0(int16_t pid) const {
+      assert((pixelTopology::Phase2::layerPairs[pid*2] == 0) == ((pid < 3) | (pid>=23 && pid <28)));
+      return pixelTopology::Phase2::layerPairs[pid*2] == 0;
+      // return pid < 3;
+    }
+
+  };  // Params Phase1
+
+  // counters
+  struct Counters {
+    unsigned long long nEvents;
+    unsigned long long nHits;
+    unsigned long long nCells;
+    unsigned long long nTuples;
+    unsigned long long nFitTracks;
+    unsigned long long nLooseTracks;
+    unsigned long long nGoodTracks;
+    unsigned long long nUsedHits;
+    unsigned long long nDupHits;
+    unsigned long long nFishCells;
+    unsigned long long nKilledCells;
+    unsigned long long nEmptyCells;
+    unsigned long long nZeroTrackCells;
+  };
+
+  using Quality = pixelTrack::Quality;
+
+}  // namespace caHitNtupletGenerator
+
+template <typename TTraits, typename TTTraits>
+class CAHitNtupletGeneratorKernelsBaseT {
 public:
   using Traits = TTraits;
-
-  using QualityCuts = cAHitNtupletGenerator::QualityCuts;
-  using Params = cAHitNtupletGenerator::Params;
-  using Counters = cAHitNtupletGenerator::Counters;
+  using TrackerTraits = TTTraits;
+  using QualityCuts = pixelTrack::QualityCutsT<TrackerTraits>;
+  using Params = caHitNtupletGenerator::ParamsT<TrackerTraits>;
+  using Counters = caHitNtupletGenerator::Counters;
 
   template <typename T>
   using unique_ptr = typename Traits::template unique_ptr<T>;
 
-  using HitsView = TrackingRecHit2DSOAView;
-  using HitsOnGPU = TrackingRecHit2DSOAView;
-  using HitsOnCPU = TrackingRecHit2DHeterogeneous<Traits>;
+  using HitsView = TrackingRecHit2DSOAViewT<TrackerTraits>;
+  using HitsOnCPU = TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>;
 
-  using HitToTuple = caConstants::HitToTuple;
-  using TupleMultiplicity = caConstants::TupleMultiplicity;
+  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using CellNeighbors = caStructures::CellNeighborsT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+  using CellTracks = caStructures::CellTracksT<TrackerTraits>;
+  using OuterHitOfCellContainer = caStructures::OuterHitOfCellContainerT<TrackerTraits>;
+  using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
+
+  using GPUCACell = GPUCACellT<TrackerTraits>;
 
   using Quality = pixelTrack::Quality;
-  using TkSoA = pixelTrack::TrackSoA;
-  using HitContainer = pixelTrack::HitContainer;
+  using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
+  using HitContainer = pixelTrack::HitContainerT<TrackerTraits>;
 
-  CAHitNtupletGeneratorKernels(Params const& params)
-      : params_(params), paramsMaxDoubletes3Quarters_(3 * params.maxNumberOfDoublets_ / 4) {}
-  ~CAHitNtupletGeneratorKernels() = default;
+  CAHitNtupletGeneratorKernelsBaseT(Params const& params)
+      : params_(params), paramsMaxDoubletes3Quarters_(3 * params.cellCuts_.maxNumberOfDoublets_ / 4) {}
+      // {
+      //   if(params.onGPU_)
+      //   {
+      //     cudaCheck(cudaMalloc(&params_, sizeof(Params)));
+      //     cudaCheck(cudaMemcpyToSymbol(params_, &params, sizeof(Params),cudaMemcpyDefault));
+      //   }
+      //   else
+      //   {
+      //     params_ = &params;
+      //   }
+      //
+      // }
+  ~CAHitNtupletGeneratorKernelsBaseT() = default;
 
   TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.get(); }
 
@@ -193,23 +356,23 @@ public:
   static void printCounters(Counters const* counters);
   void setCounters(Counters* counters) { counters_ = counters; }
 
-private:
+protected:
   Counters* counters_ = nullptr;
-
   // workspace
   unique_ptr<unsigned char[]> cellStorage_;
-  unique_ptr<caConstants::CellNeighborsVector> device_theCellNeighbors_;
-  caConstants::CellNeighbors* device_theCellNeighborsContainer_;
-  unique_ptr<caConstants::CellTracksVector> device_theCellTracks_;
-  caConstants::CellTracks* device_theCellTracksContainer_;
+  unique_ptr<CellNeighborsVector> device_theCellNeighbors_;
+  CellNeighbors* device_theCellNeighborsContainer_;
+  unique_ptr<CellTracksVector> device_theCellTracks_;
+  CellTracks* device_theCellTracksContainer_;
 
   unique_ptr<GPUCACell[]> device_theCells_;
-  unique_ptr<GPUCACell::OuterHitOfCellContainer[]> device_isOuterHitOfCell_;
-  GPUCACell::OuterHitOfCell isOuterHitOfCell_;
+  unique_ptr<OuterHitOfCellContainer[]> device_isOuterHitOfCell_;
+  OuterHitOfCell isOuterHitOfCell_;
   uint32_t* device_nCells_ = nullptr;
 
   unique_ptr<HitToTuple> device_hitToTuple_;
-  unique_ptr<HitToTuple::Counter[]> device_hitToTupleStorage_;
+  unique_ptr<uint32_t[]> device_hitToTupleStorage_;
+  typename
   HitToTuple::View hitToTupleView_;
 
   cms::cuda::AtomicPairCounter* device_hitToTuple_apc_ = nullptr;
@@ -219,8 +382,9 @@ private:
   unique_ptr<TupleMultiplicity> device_tupleMultiplicity_;
 
   unique_ptr<cms::cuda::AtomicPairCounter::c_type[]> device_storage_;
+
   // params
-  Params const& params_;
+  Params params_;
   /// Intermediate result avoiding repeated computations.
   const uint32_t paramsMaxDoubletes3Quarters_;
   /// Compute the number of doublet blocks for block size
@@ -229,14 +393,73 @@ private:
     return (paramsMaxDoubletes3Quarters_ + blockSize - 1) / blockSize;
   }
 
+  // params
+  const Params* params_ = nullptr;
+
   /// Compute the number of quadruplet blocks for block size
   inline uint32_t nQuadrupletBlocks(uint32_t blockSize) {
-    // caConstants::maxNumberOfQuadruplets is a constexpr, so the compiler will pre compute the 3*max/4
-    return (3 * caConstants::maxNumberOfQuadruplets / 4 + blockSize - 1) / blockSize;
+    // pixelTopology::maxNumberOfQuadruplets is a constexpr, so the compiler will pre compute the 3*max/4
+    return (3 * TrackerTraits::maxNumberOfQuadruplets / 4 + blockSize - 1) / blockSize;
   }
+
 };
 
-using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernels<cms::cudacompat::GPUTraits>;
-using CAHitNtupletGeneratorKernelsCPU = CAHitNtupletGeneratorKernels<cms::cudacompat::CPUTraits>;
+template <typename Traits,typename TrackerTraits>
+class CAHitNtupletGeneratorKernelsGPUT : public CAHitNtupletGeneratorKernelsBaseT<Traits,TrackerTraits>{};
+
+template <typename TrackerTraits>
+class CAHitNtupletGeneratorKernelsGPUT<cms::cudacompat::GPUTraits,TrackerTraits> : public CAHitNtupletGeneratorKernelsBaseT<cms::cudacompat::GPUTraits,TrackerTraits>
+{
+  using CAHitNtupletGeneratorKernelsBaseT<cms::cudacompat::GPUTraits,TrackerTraits>::CAHitNtupletGeneratorKernelsBaseT;
+  using HitsOnCPU = TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits,TrackerTraits>;
+  using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
+  using Counters = caHitNtupletGenerator::Counters;
+  using HitContainer = pixelTrack::HitContainerT<TrackerTraits>;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
+
+  public:
+
+    void launchKernels(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
+    void classifyTuples(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
+    void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
+    void allocateOnGPU(int32_t nHits, cudaStream_t stream);
+    static void printCounters(Counters const* counters);
+
+};
+
+
+template <typename Traits,typename TrackerTraits>
+class CAHitNtupletGeneratorKernelsCPUT : public CAHitNtupletGeneratorKernelsBaseT<Traits,TrackerTraits> {};
+
+template <typename TrackerTraits>
+class CAHitNtupletGeneratorKernelsCPUT<cms::cudacompat::CPUTraits,TrackerTraits> : public CAHitNtupletGeneratorKernelsBaseT<cms::cudacompat::CPUTraits,TrackerTraits>
+{
+  using CAHitNtupletGeneratorKernelsBaseT<cms::cudacompat::CPUTraits,TrackerTraits>::CAHitNtupletGeneratorKernelsBaseT;
+  using HitsOnCPU = TrackingRecHit2DHeterogeneousT<cms::cudacompat::CPUTraits,TrackerTraits>;
+  using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
+  using Counters = caHitNtupletGenerator::Counters;
+  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
+  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
+
+  public:
+
+    void launchKernels(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
+    void classifyTuples(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
+    void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
+    void allocateOnGPU(int32_t nHits, cudaStream_t stream);
+    static void printCounters(Counters const* counters);
+
+};
+
+template<typename TrackerTraits>
+using CAHitNtupletGeneratorKernelsGPU = CAHitNtupletGeneratorKernelsGPUT<cms::cudacompat::GPUTraits,TrackerTraits>;
+
+template<typename TrackerTraits>
+using CAHitNtupletGeneratorKernelsCPU = CAHitNtupletGeneratorKernelsCPUT<cms::cudacompat::CPUTraits,TrackerTraits>;
 
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorKernels_h
