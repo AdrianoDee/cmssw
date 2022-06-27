@@ -17,8 +17,7 @@
 #include "HeterogeneousCore/CUDACore/interface/ScopedContext.h"
 
 // Switch on to enable checks and printout for found tracks
-#define PIXEL_DEBUG_PRODUCE
-
+// #define PIXEL_DEBUG_PRODUCE
 
 template<typename TrackerTraits>
 class PixelTrackSoAFromCUDAT : public edm::stream::EDProducer<edm::ExternalWork> {

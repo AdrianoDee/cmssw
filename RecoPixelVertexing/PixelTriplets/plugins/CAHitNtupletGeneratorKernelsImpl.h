@@ -2,8 +2,8 @@
 // Original Author: Felice Pantaleo, CERN
 //
 
-#define NTUPLE_DEBUG
-#define GPU_DEBUG
+// #define NTUPLE_DEBUG
+// #define GPU_DEBUG
 
 #include <cmath>
 #include <cstdint>
@@ -27,6 +27,7 @@ namespace caHitNtupletGeneratorKernels {
   constexpr float maxScore = std::numeric_limits<float>::max();
   constexpr float nSigma2 = 25.f;
 
+  //all of these below are mostly to avoid brining around the relative namespace
   template <typename TrackerTraits>
   using HitsView = TrackingRecHit2DSOAViewT<TrackerTraits>;
 
@@ -60,30 +61,30 @@ namespace caHitNtupletGeneratorKernels {
   using QualityCuts = pixelTrack::QualityCutsT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using Params = caHitNtupletGenerator::ParamsT<TrackerTraits>;
+  using CAParams = caHitNtupletGenerator::CAParamsT<TrackerTraits>;
 
   using Counters = caHitNtupletGenerator::Counters;
 
-template <typename TrackerTraits>
-__global__ constexpr inline bool startingLayerPair(int16_t pid, Params<TrackerTraits> p) const {
-  return false;
-}
-
-template <>
-__global__ constexpr inline bool startingLayerPair<pixelTopology::Phase1>(int16_t pid, Params<pixelTopology::Phase1> p) const {
-  return p.minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
-}
-
-template <>
-__global__ constexpr inline bool startingLayerPair<pixelTopology::Phase2>(int16_t pid) const {
-  return pid < 33; // in principle one could remove 5,6,7 23, 28 and 29
-}
-
-template <typename TrackerTraits>
-__global__  constexpr inline bool startAt0(int16_t pid) const {
-  // assert((TrackerTraits::layerPairs[pid*2] == 0) == (pid < 3));
-  return TrackerTraits::layerPairs[pid*2] == 0;
-}
+// template <typename TrackerTraits>
+// __device__ __forceinline__ bool startingLayerPair(int16_t pid, CAParams const& params) {
+//   return false;
+// }
+//
+// template <>
+// __device__ inline bool startingLayerPair<pixelTopology::Phase1>(int16_t pid, CAParams const& params) {
+//   return params.minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
+// }
+//
+// template <>
+// __device__ __forceinline__ bool startingLayerPair<pixelTopology::Phase2>(int16_t pid, CAParams const& params) {
+//   return pid < 33; // in principle one could remove 5,6,7 23, 28 and 29
+// }
+//
+// template <typename TrackerTraits>
+// __device__  __forceinline__ bool startAt0(int16_t pid) {
+//   // assert((TrackerTraits::layerPairs[pid*2] == 0) == (pid < 3));
+//   return TrackerTraits::layerPairs[pid*2] == 0;
+// }
 
 template <typename TrackerTraits>
 __global__ void kernel_checkOverflows(HitContainer<TrackerTraits> const *foundNtuplets,
@@ -332,12 +333,13 @@ __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
                                uint32_t const *__restrict__ nCells,
                                CellNeighborsVector<TrackerTraits> *cellNeighbors,
                                OuterHitOfCell<TrackerTraits> const isOuterHitOfCell,
-                               float hardCurvCut,
-                               float ptmin,
-                               float CAThetaCutBarrel,
-                               float CAThetaCutForward,
-                               float dcaCutInnerTriplet,
-                               float dcaCutOuterTriplet) {
+                               CAParams<TrackerTraits> const *params) {
+                               // float hardCurvCut,
+                               // float ptmin,
+                               // float CAThetaCutBarrel,
+                               // float CAThetaCutForward,
+                               // float dcaCutInnerTriplet,
+                               // float dcaCutOuterTriplet) {
 
   using Cell = GPUCACellT<TrackerTraits>;
   auto const &hh = *hhp;
@@ -381,13 +383,13 @@ __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
           zi,
           ro,
           zo,
-          ptmin,
-          isBarrel ? CAThetaCutBarrel : CAThetaCutForward);  // 2.f*thetaCut); // FIXME tune cuts
+          params->ptmin_,
+          isBarrel ? params->CAThetaCutBarrel_ : params->CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
       if (aligned && thisCell.dcaCut(hh,
                                      oc,
-                                     oc.inner_detIndex(hh) < last_bpix1_detIndex ? dcaCutInnerTriplet
-                                                                                              : dcaCutOuterTriplet,
-                                     hardCurvCut)) {  // FIXME tune cuts
+                                     oc.inner_detIndex(hh) < last_bpix1_detIndex ? params->dcaCutInnerTriplet_
+                                                                                              : params->dcaCutOuterTriplet_,
+                                     params->hardCurvCut_)) {  // FIXME tune cuts
         oc.addOuterNeighbor(cellIndex, *cellNeighbors);
         thisCell.setStatusBits(Cell::StatusBit::kUsed);
         oc.setStatusBits(Cell::StatusBit::kUsed);
@@ -404,52 +406,50 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
                                      HitContainer<TrackerTraits> *foundNtuplets,
                                      cms::cuda::AtomicPairCounter *apc,
                                      Quality *__restrict__ quality,
-                                     Params<TrackerTraits> params) {
+                                     CAParams<TrackerTraits> const *params) {
   // recursive: not obvious to widen
   auto const &hh = *hhp;
 
-  // #ifdef GPU_DEBUG
+  #ifdef GPU_DEBUG
   printf("starting producing ntuplets from %d cells \n",*nCells);
-  // #endif
+  #endif
+
   using Cell = GPUCACellT<TrackerTraits>;
 
   auto first = threadIdx.x + blockIdx.x * blockDim.x;
   for (int idx = first, nt = (*nCells); idx < nt; idx += gridDim.x * blockDim.x) {
 
-    printf(" %d %d \n",first,__LINE__);
     auto const &thisCell = cells[idx];
-    printf(" %d %d \n",first,__LINE__);
+
     if (thisCell.isKilled())
       continue;  // cut by earlyFishbone
 
     // we require at least three hits...
     if (thisCell.outerNeighbors().empty())
       continue;
-    printf(" %d %d \n",first,__LINE__);
+
     auto pid = thisCell.layerPairId();
-    printf(" %d %d \n",first,__LINE__);
-    auto doit = startingLayerPair<TrackerTraits(pid,params);
-    printf(" %d %d \n",first,__LINE__);
+    bool doit = params->startingLayerPair(pid);
 
     constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
     if (doit) {
-      printf(" %d %d \n",first,__LINE__);
+
       typename Cell::TmpTuple stack;
       stack.reset();
-      printf(" %d %d \n",first,__LINE__);
-      auto startAt0 = startAt0<TrackerTraits>(pid);
-      printf(" %d %d \n",first,__LINE__);
+
+      bool bpix1Start = params->startAt0(pid);
+
       thisCell.template find_ntuplets<maxDepth>(
-          hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params->minHitsPerNtuplet_, startAt0);
-      printf(" %d %d \n",first,__LINE__);
+          hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params->minHitsPerNtuplet_, bpix1Start);
+
       assert(stack.empty());
-      printf(" %d %d \n",first,__LINE__);
+
     }
   }
 }
 template <typename TrackerTraits>
 __global__ void kernel_mark_used(GPUCACellT<TrackerTraits> *__restrict__ cells, uint32_t const *nCells) {
-  printf("nCells = %d \n",*nCells);
+
   auto first = threadIdx.x + blockIdx.x * blockDim.x;
   using Cell = GPUCACellT<TrackerTraits>;
   for (int idx = first, nt = (*nCells); idx < nt; idx += gridDim.x * blockDim.x) {

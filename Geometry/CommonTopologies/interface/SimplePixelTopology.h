@@ -205,7 +205,10 @@ DEVICECONST float maxr[nPairs] = {
 namespace phase2PixelTopology
 {
 
+  using pixelTopology::phi0p05;
+  using pixelTopology::phi0p06;
   using pixelTopology::phi0p07;
+
   constexpr uint32_t numberOfLayers = 28;
   constexpr int nPairs = 23 + 6 + 14 + 8 + 4;  // include far forward layer pairs
   constexpr uint16_t numberOfModules = 3892;
@@ -259,14 +262,14 @@ namespace phase2PixelTopology
                                                        numberOfModules};
 
      DEVICECONST int16_t phicuts[nPairs]{
+                        phi0p05,phi0p05,phi0p05,phi0p06,phi0p07,phi0p07,phi0p06,
+                        phi0p07,phi0p07,phi0p05,phi0p05,phi0p05,phi0p05,phi0p05,
+                        phi0p05,phi0p05,phi0p05,phi0p05,phi0p05,phi0p05,
+                        phi0p05,phi0p05,phi0p05,phi0p05,phi0p05,phi0p05,phi0p05,
+                        phi0p05,phi0p05,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
                         phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
-                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
-                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
-                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
-                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
-                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
-                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,
-                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07};
+                        phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p07,phi0p05,
+                        phi0p05,phi0p05,phi0p05,phi0p05,phi0p05,phi0p05,phi0p05};
 
      DEVICECONST float minz[nPairs] = {
         -18.0,-3.0,-22.0,-18.0,4.0,-22.0,-19.0,
@@ -293,27 +296,6 @@ namespace phase2PixelTopology
        7.0,7.0,7.0,7.0,12.0,12.0,11.0,11.0,11.0,10.0,
        16.0,12.0,12.0,11.0,11.0,11.0,11.0,17.0,17.0,
        23.0,23.0,22.0,16.0,23.0,22.0,22.0 };
-
-     //  DEVICECONST float const minzPhase2[nPairs] = {
-     //      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
-     //      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
-     //      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
-     //      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999.,
-     //      -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999., -9999.,-9999., -9999.};
-     //
-     //
-     //  DEVICECONST float const maxzPhase2[nPairs] = {
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999., 9999.};
-     //  DEVICECONST float const maxrPhase2[nPairs] = {
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999.,
-     //    9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999., 9999.,9999., 9999.};
 }
 
 
@@ -422,7 +404,7 @@ namespace pixelTopology{
 
      static constexpr uint32_t maxCellNeighbors = 64;
      static constexpr uint32_t maxCellTracks = 128;
-     static constexpr uint32_t maxHitsOnTrack = 18;
+     static constexpr uint32_t maxHitsOnTrack = 15;
      static constexpr uint32_t avgHitsPerTrack = 12;
      static constexpr uint32_t maxCellsPerHit = 2 * 256;
      static constexpr uint32_t avgTracksPerHit = 12;
@@ -462,16 +444,16 @@ namespace pixelTopology{
      static constexpr float z0Cut = 8.f;
      static constexpr float doubletHardPt = 0.85f;
 
-     static constexpr int minYsizeB1 = 36;
-     static constexpr int minYsizeB2 = 28;
+     static constexpr int minYsizeB1 = 25;
+     static constexpr int minYsizeB2 = 15;
 
      static constexpr int nPairsForJumpingForwards = phase2PixelTopology::nPairs;                            // doublets only from contigous layers
      static constexpr int nPairsFarForwards = phase2PixelTopology::nPairs; //nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
      static constexpr int nPairs = phase2PixelTopology::nPairs; //nPairsForTriplets + 8;  // include far forward layer pairs
 
-     static constexpr int maxDYsize12 = 28;
-     static constexpr int maxDYsize = 20;
-     static constexpr int maxDYPred = 20;
+     static constexpr int maxDYsize12 = 18;
+     static constexpr int maxDYsize = 18;
+     static constexpr int maxDYPred = 18;
 
      static constexpr uint16_t numberOfModules = 3892;
 

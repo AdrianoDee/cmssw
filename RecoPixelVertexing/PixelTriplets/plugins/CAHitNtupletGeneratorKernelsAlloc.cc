@@ -2,13 +2,13 @@
 
 #include "CAHitNtupletGeneratorKernels.h"
 
-#define GPU_DEBUG
+//#define GPU_DEBUG
 template <typename TrackerTraits>
 #ifdef __CUDACC__
-void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::allocateOnGPU(int32_t nHits, cudaStream_t stream) {
+void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::allocateOnGPU(int32_t nHits,  CAParams const& params, cudaStream_t stream) {
   using Traits = cms::cudacompat::GPUTraits;
 #else
-void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits, cudaStream_t stream) {
+void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits,  CAParams const& params, cudaStream_t stream) {
   using Traits = cms::cudacompat::CPUTraits;
 #endif
   //////////////////////////////////////////////////////////
@@ -17,6 +17,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits
 
   this->device_theCellNeighbors_ = Traits::template make_unique<CellNeighborsVector>(stream);
   this->device_theCellTracks_ = Traits::template make_unique<CellTracksVector>(stream);
+  // this->params_ = Traits::template make_unique<caHitNtupletGenerator::ParamsT<TrackerTraits>>(stream);
 
 #ifdef GPU_DEBUG
   std::cout << "Allocation for tuple building. N hits " << nHits << std::endl;
@@ -41,8 +42,11 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits
   // FIXME: consider collapsing these 3 in one adhoc kernel
   if constexpr (std::is_same<Traits, cms::cudacompat::GPUTraits>::value) {
     cudaCheck(cudaMemsetAsync(this->device_nCells_, 0, sizeof(uint32_t), stream));
+    cudaCheck(cudaMalloc((void**)&(this->caParams_), sizeof(CAParams)));
+    cudaCheck(cudaMemcpyAsync(this->caParams_, &params, sizeof(CAParams), cudaMemcpyDefault, stream));
   } else {
     *(this->device_nCells_) = 0;
+    this->caParams_ = new CAParams(params);
   }
   cms::cuda::launchZero(this->device_tupleMultiplicity_.get(), stream);
   cms::cuda::launchZero(this->hitToTupleView_, stream);  // we may wish to keep it in the edm

@@ -96,12 +96,9 @@ void CAHitNtupletCUDAT<TrackerTraits>::produce(edm::StreamID streamID, edm::Even
   auto bf = 1. / es.getData(tokenField_).inverseBzAtOriginInGeV();
 
   if (onGPU_) {
-    std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
     auto hHits = iEvent.getHandle(tokenHitGPU_);
-    std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
     cms::cuda::ScopedContextProduce ctx{*hHits};
     auto const& hits = ctx.get(*hHits);
-    std::cout << "CAHitNtupletCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
     ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits, bf, ctx.stream()));
   } else {
     auto const& hits = iEvent.get(tokenHitCPU_);

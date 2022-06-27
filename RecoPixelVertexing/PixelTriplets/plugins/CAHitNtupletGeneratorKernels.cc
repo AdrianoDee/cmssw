@@ -110,8 +110,11 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::launchKernels(HitsOnCPU con
 
   auto nhits = hh.nHits();
 
-  // std::cout << "N hits " << nhits << std::endl;
-  // if (nhits<2) std::cout << "too few hits " << nhits << std::endl;
+  #ifdef NTUPLE_DEBUG
+    std::cout << "start tuple building. N hits " << nhits << std::endl;
+    if (nhits < 2)
+      std::cout << "too few hits " << nhits << std::endl;
+  #endif
 
   //
   // applying conbinatoric cleaning such as fishbone at this stage is too expensive
@@ -124,12 +127,14 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::launchKernels(HitsOnCPU con
                    this->device_nCells_,
                    this->device_theCellNeighbors_.get(),
                    this->isOuterHitOfCell_,
-                   this->params_.hardCurvCut_,
-                   this->params_.ptmin_,
-                   this->params_.CAThetaCutBarrel_,
-                   this->params_.CAThetaCutForward_,
-                   this->params_.dcaCutInnerTriplet_,
-                   this->params_.dcaCutOuterTriplet_);
+                   this->caParams_);
+                   //
+                   // this->params_.hardCurvCut_,
+                   // this->params_.ptmin_,
+                   // this->params_.CAThetaCutBarrel_,
+                   // this->params_.CAThetaCutForward_,
+                   // this->params_.dcaCutInnerTriplet_,
+                   // this->params_.dcaCutOuterTriplet_);
 
   if (nhits > 1 && this->params_.earlyFishbone_) {
     gpuPixelDoublets::fishbone<TrackerTraits>(hh.view(), this->device_theCells_.get(), this->device_nCells_, this->isOuterHitOfCell_, nhits, false);
@@ -142,7 +147,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::launchKernels(HitsOnCPU con
                        tuples_d,
                        this->device_hitTuple_apc_,
                        quality_d,
-                       this->params_);
+                       this->caParams_);
   if (this->params_.doStats_)
     kernel_mark_used(this->device_theCells_.get(), this->device_nCells_);
 

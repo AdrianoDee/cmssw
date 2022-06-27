@@ -24,7 +24,7 @@ namespace gpuClustering {
                                int numElements) {
     int first = blockDim.x * blockIdx.x + threadIdx.x;
     constexpr int nMaxModules = TrackerTraits::numberOfModules;
-    assert(nMaxModules < maxNumModules);
+    // assert(nMaxModules < maxNumModules);
     for (int i = first; i < numElements; i += gridDim.x * blockDim.x) {
       clusterId[i] = i;
       if (invalidModuleId == id[i])
@@ -54,13 +54,13 @@ namespace gpuClustering {
     auto firstModule = blockIdx.x;
     auto endModule = moduleStart[0];
 
-    constexpr int nMaxModules = TrackerTraits::numberOfModules;
-    assert(nMaxModules < maxNumModules);
+    // constexpr int nMaxModules = TrackerTraits::numberOfModules;
+    // assert(nMaxModules < maxNumModules);
 
     for (auto module = firstModule; module < endModule; module += gridDim.x) {
       auto firstPixel = moduleStart[1 + module];
       auto thisModuleId = id[firstPixel];
-      assert(thisModuleId < nMaxModules);
+      // assert(thisModuleId < nMaxModules);
 
 #ifdef GPU_DEBUG
       if (thisModuleId % 100 == 1)

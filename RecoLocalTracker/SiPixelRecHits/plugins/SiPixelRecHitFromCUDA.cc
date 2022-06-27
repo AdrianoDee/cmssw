@@ -76,22 +76,22 @@ template<typename TrackerTraits>
 void SiPixelRecHitFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
                                     edm::EventSetup const& iSetup,
                                     edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
-  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+  
   cms::cuda::Product<HitsOnGPU> const& inputDataWrapped = iEvent.get(hitsToken_);
-  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
   cms::cuda::ScopedContextAcquire ctx{inputDataWrapped, std::move(waitingTaskHolder)};
-  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
   auto const& inputData = ctx.get(inputDataWrapped);
-  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
   nHits_ = inputData.nHits();
   LogDebug("SiPixelRecHitFromCUDA") << "converting " << nHits_ << " Hits";
-  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
   if (0 == nHits_)
     return;
   store32_ = inputData.localCoordToHostAsync(ctx.stream());
-  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
   hitsModuleStart_ = inputData.hitsModuleStartToHostAsync(ctx.stream());
-  std::cout << "SiPixelRecHitFromCUDA" << TrackerTraits::nameModifier << __LINE__ << std::endl;
+
 }
 
 template<typename TrackerTraits>
@@ -143,8 +143,6 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
     if (lc <= fc)
      std::cout << "assertion is going to fail!" << std::endl;
 
-std::cout << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
-                                      << " legacy clusters" << ' ' << fc << ',' << lc << std::endl;
     assert(lc > fc);
     LogDebug("SiPixelRecHitFromCUDA") << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
                                       << " legacy clusters" << ' ' << fc << ',' << lc;

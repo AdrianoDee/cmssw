@@ -88,18 +88,13 @@ void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
 
 template<typename TrackerTraits>
 void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::EventSetup const& es) {
-  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
   auto hmsp = std::make_unique<uint32_t[]>(TrackerTraits::numberOfModules + 1);
 
-  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
   if (nHits_ > 0)
     std::copy(hitsModuleStart_.get(), hitsModuleStart_.get() + TrackerTraits::numberOfModules + 1, hmsp.get());
 
-  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
   iEvent.emplace(hostPutToken_, std::move(hmsp));
-  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
   iEvent.emplace(hitsPutTokenCPU_, store32_.get(), store16_.get(), hitsModuleStart_.get(), nHits_);
-  std::cout << "SiPixelRecHitSoAFromCUDAT" << __LINE__ << std::endl;
 }
 
 using SiPixelRecHitSoAFromCUDA = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase1>;
