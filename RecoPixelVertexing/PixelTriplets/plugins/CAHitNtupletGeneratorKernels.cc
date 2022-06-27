@@ -64,19 +64,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::buildDoublets(HitsOnCPU con
   // take all layer pairs into account
   auto nActualPairs = this->params_.nPairs();
 
-  // TrackerTraits::nPairs;
-  // if (not this->params_.includeJumpingForwardDoublets_) {
-  //   // exclude forward "jumping" layer pairs
-  //   nActualPairs = TrackerTraits::nPairsForTriplets;
-  // }
-  // if (this->params_.minHitsPerNtuplet_ > 3) {
-  //   // for quadruplets, exclude all "jumping" layer pairs
-  //   nActualPairs = TrackerTraits::nPairsForQuadruplets;
-  // }
-
   assert(nActualPairs <= TrackerTraits::nPairs);
-  // nActualPairs = TrackerTraits::nPairs;
-  // std::cout << "nActualPairs CPU -> " << nActualPairs << std::endl;
 
   getDoubletsFromHisto<TrackerTraits>(this->device_theCells_.get(),
                                          this->device_nCells_,
@@ -86,12 +74,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::buildDoublets(HitsOnCPU con
                                          this->isOuterHitOfCell_,
                                          nActualPairs,
                                          this->params_.cellCuts_);
-                                         //
-                                         // this->params_.idealConditions_,
-                                         // this->params_.doClusterCut_,
-                                         // this->params_.doZ0Cut_,
-                                         // this->params_.doPtCut_,
-                                         // this->params_.cellCuts_.maxNumberOfDoublets_);
+
 }
 
 template <typename TrackerTraits>
@@ -128,13 +111,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::launchKernels(HitsOnCPU con
                    this->device_theCellNeighbors_.get(),
                    this->isOuterHitOfCell_,
                    this->caParams_);
-                   //
-                   // this->params_.hardCurvCut_,
-                   // this->params_.ptmin_,
-                   // this->params_.CAThetaCutBarrel_,
-                   // this->params_.CAThetaCutForward_,
-                   // this->params_.dcaCutInnerTriplet_,
-                   // this->params_.dcaCutOuterTriplet_);
+  
 
   if (nhits > 1 && this->params_.earlyFishbone_) {
     gpuPixelDoublets::fishbone<TrackerTraits>(hh.view(), this->device_theCells_.get(), this->device_nCells_, this->isOuterHitOfCell_, nhits, false);

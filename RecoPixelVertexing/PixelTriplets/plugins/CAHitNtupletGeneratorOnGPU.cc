@@ -34,27 +34,18 @@ namespace {
   template<typename TrakterTraits>
   caHitNtupletGenerator::AlgoParams makeCommonParams(edm::ParameterSet const& cfg)
   {
-    return caHitNtupletGenerator::AlgoParams({cfg.getParameter<bool>("onGPU"),
-               // cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
-
+    return caHitNtupletGenerator::AlgoParams({
+               cfg.getParameter<bool>("onGPU"),
                cfg.getParameter<unsigned int>("minHitsForSharingCut"),
                cfg.getParameter<bool>("useRiemannFit"),
                cfg.getParameter<bool>("fitNas4"),
                cfg.getParameter<bool>("includeJumpingForwardDoublets"),
                cfg.getParameter<bool>("earlyFishbone"),
                cfg.getParameter<bool>("lateFishbone"),
-               // cfg.getParameter<bool>("idealConditions"),
                cfg.getParameter<bool>("fillStatistics"),
-
                cfg.getParameter<bool>("doSharedHitCut"),
                cfg.getParameter<bool>("dupPassThrough"),
                cfg.getParameter<bool>("useSimpleTripletCleaner")
-               // cfg.getParameter<double>("ptmin"),
-               // cfg.getParameter<double>("CAThetaCutBarrel"),
-               // cfg.getParameter<double>("CAThetaCutForward"),
-               // cfg.getParameter<double>("hardCurvCut"),
-               // cfg.getParameter<double>("dcaCutInnerTriplet"),
-               // cfg.getParameter<double>("dcaCutOuterTriplet")
              }) ;
   }
 
@@ -102,7 +93,6 @@ namespace {
     cfg.getParameter<bool>("doZ0Cut"),
     cfg.getParameter<bool>("doPtCut")}};
   }
-
 
   //Track Quality Cuts
   template<typename TrakterTraits>
@@ -155,63 +145,14 @@ using namespace std;
 //Base one, not really used
 template<typename TrackerTraits>
 CAHitNtupletGeneratorOnGPUT<TrackerTraits>::CAHitNtupletGeneratorOnGPUT(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC)
-    : m_params(
-        // cfg.getParameter<bool>("onGPU"),
-    //            cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
-    //            cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
-    //            cfg.getParameter<unsigned int>("minHitsForSharingCut"),
-    //            cfg.getParameter<bool>("useRiemannFit"),
-    //            cfg.getParameter<bool>("fitNas4"),
-    //            // cfg.getParameter<bool>("includeJumpingForwardDoublets"),
-    //            cfg.getParameter<bool>("earlyFishbone"),
-    //            cfg.getParameter<bool>("lateFishbone"),
-    //            // cfg.getParameter<bool>("idealConditions"),
-    //            cfg.getParameter<bool>("fillStatistics"),
-    //            cfg.getParameter<bool>("doClusterCut"),
-    //            cfg.getParameter<bool>("doZ0Cut"),
-    //            cfg.getParameter<bool>("doPtCut"),
-    //            cfg.getParameter<bool>("doSharedHitCut"),
-    //            cfg.getParameter<bool>("dupPassThrough"),
-    //            cfg.getParameter<bool>("useSimpleTripletCleaner"),
-    //            cfg.getParameter<double>("ptmin"),
-    //            cfg.getParameter<double>("CAThetaCutBarrel"),
-    //            cfg.getParameter<double>("CAThetaCutForward"),
-    //            cfg.getParameter<double>("hardCurvCut"),
-    //            cfg.getParameter<double>("dcaCutInnerTriplet"),
-    //            cfg.getParameter<double>("dcaCutOuterTriplet"),
-               makeCommonParams<TrackerTraits>(cfg),
+    : m_params(makeCommonParams<TrackerTraits>(cfg),
                makeCellCuts<TrackerTraits>(cfg),
                makeQualityCuts<TrackerTraits>(cfg.getParameterSet("trackQualityCuts")),
-               makeCACuts<TrackerTraits>(cfg)) {
-}
+               makeCACuts<TrackerTraits>(cfg)) {}
 
 template< >
 CAHitNtupletGeneratorOnGPUT<pixelTopology::Phase1>::CAHitNtupletGeneratorOnGPUT(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC)
-    : m_params(
-              // cfg.getParameter<bool>("onGPU"),
-              //  cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
-              //  cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
-              //  cfg.getParameter<unsigned int>("minHitsForSharingCut"),
-              //  cfg.getParameter<bool>("useRiemannFit"),
-              //  cfg.getParameter<bool>("fitNas4"),
-              //  cfg.getParameter<bool>("includeJumpingForwardDoublets"),
-              //  cfg.getParameter<bool>("earlyFishbone"),
-              //  cfg.getParameter<bool>("lateFishbone"),
-              //  cfg.getParameter<bool>("idealConditions"),
-              //  cfg.getParameter<bool>("fillStatistics"),
-              //  cfg.getParameter<bool>("doClusterCut"),
-              //  cfg.getParameter<bool>("doZ0Cut"),
-              //  cfg.getParameter<bool>("doPtCut"),
-              //  cfg.getParameter<bool>("doSharedHitCut"),
-              //  cfg.getParameter<bool>("dupPassThrough"),
-              //  cfg.getParameter<bool>("useSimpleTripletCleaner"),
-              //  cfg.getParameter<double>("ptmin"),
-              //  cfg.getParameter<double>("CAThetaCutBarrel"),
-              //  cfg.getParameter<double>("CAThetaCutForward"),
-              //  cfg.getParameter<double>("hardCurvCut"),
-              //  cfg.getParameter<double>("dcaCutInnerTriplet"),
-              //  cfg.getParameter<double>("dcaCutOuterTriplet"),
-               makeCommonParams<pixelTopology::Phase1>(cfg),
+    : m_params(makeCommonParams<pixelTopology::Phase1>(cfg),
                makeCellCuts<pixelTopology::Phase1>(cfg),
                makeQualityCuts<pixelTopology::Phase1>(cfg.getParameterSet("trackQualityCuts")),
                makeCACuts<pixelTopology::Phase1>(cfg)) {
@@ -239,31 +180,7 @@ CAHitNtupletGeneratorOnGPUT<pixelTopology::Phase1>::CAHitNtupletGeneratorOnGPUT(
 
 template< >
 CAHitNtupletGeneratorOnGPUT<pixelTopology::Phase2>::CAHitNtupletGeneratorOnGPUT(const edm::ParameterSet& cfg, edm::ConsumesCollector& iC)
-    : m_params(
-      // cfg.getParameter<bool>("onGPU"),
-      //          cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
-      //          cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
-      //          cfg.getParameter<unsigned int>("minHitsForSharingCut"),
-      //          cfg.getParameter<bool>("useRiemannFit"),
-      //          cfg.getParameter<bool>("fitNas4"),
-      //          cfg.getParameter<bool>("includeJumpingForwardDoublets"),
-      //          cfg.getParameter<bool>("includeFarForwards"),
-      //          cfg.getParameter<bool>("earlyFishbone"),
-      //          cfg.getParameter<bool>("lateFishbone"),
-      //          cfg.getParameter<bool>("fillStatistics"),
-      //          cfg.getParameter<bool>("doClusterCut"),
-      //          cfg.getParameter<bool>("doZ0Cut"),
-      //          cfg.getParameter<bool>("doPtCut"),
-      //          cfg.getParameter<bool>("doSharedHitCut"),
-      //          cfg.getParameter<bool>("dupPassThrough"),
-      //          cfg.getParameter<bool>("useSimpleTripletCleaner"),
-      //          cfg.getParameter<double>("ptmin"),
-      //          cfg.getParameter<double>("CAThetaCutBarrel"),
-      //          cfg.getParameter<double>("CAThetaCutForward"),
-      //          cfg.getParameter<double>("hardCurvCut"),
-      //          cfg.getParameter<double>("dcaCutInnerTriplet"),
-      //          cfg.getParameter<double>("dcaCutOuterTriplet"),
-               makeCommonParams<pixelTopology::Phase2>(cfg),
+    : m_params(makeCommonParams<pixelTopology::Phase2>(cfg),
                makeCellCuts<pixelTopology::Phase2>(cfg),
                makeQualityCuts<pixelTopology::Phase2>(cfg.getParameterSet("trackQualityCuts")),
                makeCACuts<pixelTopology::Phase2>(cfg),

@@ -78,7 +78,6 @@ void CAHitNtupletCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescri
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
 
   GPUAlgo::fillDescriptions(desc);
-  //descriptions.add("pixelTracksCUDA", desc);
   std::string label = "pixelTracksCUDA";
   label += TrackerTraits::nameModifier;
   descriptions.add(label,desc);

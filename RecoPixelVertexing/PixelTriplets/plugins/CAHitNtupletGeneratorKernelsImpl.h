@@ -65,27 +65,6 @@ namespace caHitNtupletGeneratorKernels {
 
   using Counters = caHitNtupletGenerator::Counters;
 
-// template <typename TrackerTraits>
-// __device__ __forceinline__ bool startingLayerPair(int16_t pid, CAParams const& params) {
-//   return false;
-// }
-//
-// template <>
-// __device__ inline bool startingLayerPair<pixelTopology::Phase1>(int16_t pid, CAParams const& params) {
-//   return params.minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
-// }
-//
-// template <>
-// __device__ __forceinline__ bool startingLayerPair<pixelTopology::Phase2>(int16_t pid, CAParams const& params) {
-//   return pid < 33; // in principle one could remove 5,6,7 23, 28 and 29
-// }
-//
-// template <typename TrackerTraits>
-// __device__  __forceinline__ bool startAt0(int16_t pid) {
-//   // assert((TrackerTraits::layerPairs[pid*2] == 0) == (pid < 3));
-//   return TrackerTraits::layerPairs[pid*2] == 0;
-// }
-
 template <typename TrackerTraits>
 __global__ void kernel_checkOverflows(HitContainer<TrackerTraits> const *foundNtuplets,
                                       TupleMultiplicity<TrackerTraits> const *tupleMultiplicity,
@@ -334,12 +313,7 @@ __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
                                CellNeighborsVector<TrackerTraits> *cellNeighbors,
                                OuterHitOfCell<TrackerTraits> const isOuterHitOfCell,
                                CAParams<TrackerTraits> const *params) {
-                               // float hardCurvCut,
-                               // float ptmin,
-                               // float CAThetaCutBarrel,
-                               // float CAThetaCutForward,
-                               // float dcaCutInnerTriplet,
-                               // float dcaCutOuterTriplet) {
+
 
   using Cell = GPUCACellT<TrackerTraits>;
   auto const &hh = *hhp;
@@ -717,8 +691,7 @@ __global__ void kernel_fillHitDetIndices(HitContainer<TrackerTraits> const *__re
   for (int idx = first, ntot = tuples->totOnes(); idx < ntot; idx += gridDim.x * blockDim.x) {
 
     hitDetIndices->off[idx] = tuples->off[idx];
-      // if(idx<500)
-      // printf("OFF %d - %d - %d - %d\n",idx,tuples->totOnes(),tuples->off[idx],  hitDetIndices->off[idx]);
+    
   }
   // fill hit indices
   auto const &hh = *hhp;
@@ -727,13 +700,9 @@ __global__ void kernel_fillHitDetIndices(HitContainer<TrackerTraits> const *__re
   for (int idx = first, ntot = tuples->size(); idx < ntot; idx += gridDim.x * blockDim.x) {
     assert(tuples->content[idx] < nhits);
     hitDetIndices->content[idx] = hh.detectorIndex(tuples->content[idx]);
-    // if(idx<100)
-    //   printf("CONT %d - %d - %d - %d - %d \n",idx,nhits,hh.detectorIndex(tuples->content[idx]),hitDetIndices->content[idx],tuples->size());
-  }
-    // for (int idx = first, nt = TkSoA<TrackerTraits>::stride(); idx < nt; idx += gridDim.x * blockDim.x) {
-    //   if(idx<100)
-    //   printf("SIZE %d - %d \n",idx,hitDetIndices->size(idx));
-    // }
+
+      }
+
 }
 
 

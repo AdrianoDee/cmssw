@@ -442,7 +442,7 @@ namespace pixelTopology{
 
      static constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
      static constexpr float z0Cut = 8.f;
-     static constexpr float doubletHardPt = 0.85f;
+     static constexpr float doubletHardPt = 0.7f;
 
      static constexpr int minYsizeB1 = 25;
      static constexpr int minYsizeB2 = 15;

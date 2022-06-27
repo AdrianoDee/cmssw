@@ -14,105 +14,7 @@ namespace caHitNtupletGenerator {
   //Configuration params common to all topologies, for the algorithm
   struct AlgoParams {
 
-    // AlgoParams(
-    //        bool onGPU,
-    //        // uint32_t minHitsPerNtuplet,
-    //        // uint32_t maxNumberOfDoublets,
-    //        uint32_t minHitsForSharingCut,
-    //        bool useRiemannFit,
-    //        bool fitNas4,
-    //        bool includeJumpingForwardDoublets,
-    //        bool earlyFishbone,
-    //        bool lateFishbone,
-    //        bool doStats,
-    //        // bool doClusterCut,
-    //        // bool doZ0Cut,
-    //        // bool doPtCut,
-    //        bool doSharedHitCut,
-    //        bool dupPassThrough,
-    //        bool useSimpleTripletCleaner
-    //        // float ptmin,
-    //        // float CAThetaCutBarrel,
-    //        // float CAThetaCutForward,
-    //        // float hardCurvCut,
-    //        // float dcaCutInnerTriplet,
-    //        // float dcaCutOuterTriplet
-    //      )
-    //     : onGPU_(onGPU),
-    //       // minHitsPerNtuplet_(minHitsPerNtuplet),
-    //       // maxNumberOfDoublets_(maxNumberOfDoublets),
-    //       minHitsForSharingCut_(minHitsForSharingCut),
-    //       useRiemannFit_(useRiemannFit),
-    //       fitNas4_(fitNas4),
-    //       includeJumpingForwardDoublets_(includeJumpingForwardDoublets),
-    //       earlyFishbone_(earlyFishbone),
-    //       lateFishbone_(lateFishbone),
-    //       doStats_(doStats),
-    //       // doClusterCut_(doClusterCut),
-    //       // doZ0Cut_(doZ0Cut),
-    //       // doPtCut_(doPtCut),
-    //       doSharedHitCut_(doSharedHitCut),
-    //       dupPassThrough_(dupPassThrough),
-    //       useSimpleTripletCleaner_(useSimpleTripletCleaner)
-    //       // ptmin_(ptmin),
-    //       // CAThetaCutBarrel_(CAThetaCutBarrel),
-    //       // CAThetaCutForward_(CAThetaCutForward),
-    //       // hardCurvCut_(hardCurvCut),
-    //       // dcaCutInnerTriplet_(dcaCutInnerTriplet),
-    //       // dcaCutOuterTriplet_(dcaCutOuterTriplet)
-    //       {}
-
-     //
-    // AlgoParams(AlgoParams const &p)
-    //        // bool onGPU,
-    //        // uint32_t minHitsPerNtuplet,
-    //        // // uint32_t maxNumberOfDoublets,
-    //        // uint16_t minHitsForSharingCut,
-    //        // bool useRiemannFit,
-    //        // bool fitNas4,
-    //        // bool includeJumpingForwardDoublets,
-    //        // bool earlyFishbone,
-    //        // bool lateFishbone,
-    //        // bool doStats,
-    //        // // bool doClusterCut,
-    //        // // bool doZ0Cut,
-    //        // // bool doPtCut,
-    //        // bool doSharedHitCut,
-    //        // bool dupPassThrough,
-    //        // bool useSimpleTripletCleaner,
-    //        // float ptmin,
-    //        // float CAThetaCutBarrel,
-    //        // float CAThetaCutForward,
-    //        // float hardCurvCut,
-    //        // float dcaCutInnerTriplet,
-    //        // float dcaCutOuterTriplet)
-    //     : onGPU_(p.onGPU_),
-    //       minHitsPerNtuplet_(p.minHitsPerNtuplet_),
-    //       // maxNumberOfDoublets_(p.maxNumberOfDoublets_),
-    //       minHitsForSharingCut_(p.minHitsForSharingCut_),
-    //       useRiemannFit_(p.useRiemannFit_),
-    //       fitNas4_(p.fitNas4_),
-    //       includeJumpingForwardDoublets_(p.includeJumpingForwardDoublets_),
-    //       earlyFishbone_(p.earlyFishbone_),
-    //       lateFishbone_(p.lateFishbone_),
-    //       doStats_(p.doStats_),
-    //       // doClusterCut_(p.doClusterCut_),
-    //       // doZ0Cut_(p.doZ0Cut_),
-    //       // doPtCut_(p.doPtCut_),
-    //       doSharedHitCut_(p.doSharedHitCut_),
-    //       dupPassThrough_(p.dupPassThrough_),
-    //       useSimpleTripletCleaner_(p.useSimpleTripletCleaner_),
-    //       ptmin_(p.ptmin_),
-    //       CAThetaCutBarrel_(p.CAThetaCutBarrel_),
-    //       CAThetaCutForward_(p.CAThetaCutForward_),
-    //       hardCurvCut_(p.hardCurvCut_),
-    //       dcaCutInnerTriplet_(p.dcaCutInnerTriplet_),
-    //       dcaCutOuterTriplet_(p.dcaCutOuterTriplet_)
-    //       {}
-
     const bool onGPU_;
-    // const uint32_t minHitsPerNtuplet_;
-    // const uint32_t maxNumberOfDoublets_;
     const uint32_t minHitsForSharingCut_;
     const bool useRiemannFit_;
     const bool fitNas4_;
@@ -120,18 +22,9 @@ namespace caHitNtupletGenerator {
     const bool earlyFishbone_;
     const bool lateFishbone_;
     const bool doStats_;
-    // const bool doClusterCut_;
-    // const bool doZ0Cut_;
-    // const bool doPtCut_;
     const bool doSharedHitCut_;
     const bool dupPassThrough_;
     const bool useSimpleTripletCleaner_;
-    // const float ptmin_;
-    // const float CAThetaCutBarrel_;
-    // const float CAThetaCutForward_;
-    // const float hardCurvCut_;
-    // const float dcaCutInnerTriplet_;
-    // const float dcaCutOuterTriplet_;
 
   };
 
@@ -211,49 +104,15 @@ namespace caHitNtupletGenerator {
     using CellCuts = gpuPixelDoublets::CellCutsT<pixelTopology::Phase1>; //cell building cuts
     using CAParams = CAParamsT<pixelTopology::Phase1>; //params to be used on device
 
-    ParamsT(
-    // ParamsT(bool onGPU,
-    //        uint32_t minHitsPerNtuplet,
-    //        uint32_t maxNumberOfDoublets,
-    //        uint16_t minHitsForSharingCut,
-    //        bool useRiemannFit,
-    //        bool fitNas4,
-    //        bool includeJumpingForwardDoublets,
-    //        bool earlyFishbone,
-    //        bool lateFishbone,
-    //        bool idealConditions,
-    //        bool doStats,
-    //        bool doClusterCut,
-    //        bool doZ0Cut,
-    //        bool doPtCut,
-    //        bool doSharedHitCut,
-    //        bool dupPassThrough,
-    //        bool useSimpleTripletCleaner,
-    //        float ptmin,
-    //        float CAThetaCutBarrel,
-    //        float CAThetaCutForward,
-    //        float hardCurvCut,
-    //        float dcaCutInnerTriplet,
-    //        float dcaCutOuterTriplet,
-           AlgoParams const& commonCuts,
+    ParamsT(AlgoParams const& commonCuts,
            CellCuts const & cellCuts,
            QualityCuts const& cutsCuts,
            CAParams const& caParams)
         : AlgoParams(commonCuts),
-          // onGPU, minHitsPerNtuplet, /*maxNumberOfDoublets,*/ minHitsForSharingCut, useRiemannFit,
-          // fitNas4, includeJumpingForwardDoublets, earlyFishbone, lateFishbone,
-          // doStats, /*doClusterCut, doZ0Cut, doPtCut,*/
-          // doSharedHitCut, dupPassThrough, useSimpleTripletCleaner, ptmin,
-          // CAThetaCutBarrel, CAThetaCutForward, hardCurvCut, dcaCutInnerTriplet,
-          // dcaCutOuterTriplet),
-          // idealConditions_(idealConditions),
           cellCuts_(cellCuts),
           qualityCuts_(cutsCuts),
           caParams_(caParams)
           {}
-
-    // quality cuts
-    // const bool idealConditions_;
 
     CellCuts cellCuts_;
     QualityCuts qualityCuts_{// polynomial coefficients for the pT-dependent chi2 cut
@@ -301,38 +160,7 @@ namespace caHitNtupletGenerator {
     using CellCuts = gpuPixelDoublets::CellCutsT<pixelTopology::Phase2>;
     using CAParams = CAParamsT<pixelTopology::Phase2>;
 
-    ParamsT(
-        //   bool onGPU,
-        //    uint32_t minHitsPerNtuplet,
-        //    uint32_t maxNumberOfDoublets,
-        //    uint16_t minHitsForSharingCut,
-        //    bool useRiemannFit,
-        //    bool fitNas4,
-        //    bool includeJumpingForwardDoublets,
-        //    bool includeFarForwards,
-        //    bool earlyFishbone,
-        //    bool lateFishbone,
-        //    bool doStats,
-        //    bool doClusterCut,
-        //    bool doZ0Cut,
-        //    bool doPtCut,
-        //    bool doSharedHitCut,
-        //    bool dupPassThrough,
-        //    bool useSimpleTripletCleaner,
-        //    float ptmin,
-        //    float CAThetaCutBarrel,
-        //    float CAThetaCutForward,
-        //    float hardCurvCut,
-        //    float dcaCutInnerTriplet,
-        //    float dcaCutOuterTriplet,
-        //    QualityCuts const& cuts)
-        // : AlgoParams(onGPU, minHitsPerNtuplet, /*maxNumberOfDoublets,*/ minHitsForSharingCut, useRiemannFit,
-        //   fitNas4, includeJumpingForwardDoublets, earlyFishbone, lateFishbone,
-        //   doStats, /*doClusterCut, doZ0Cut, doPtCut,*/
-        //   doSharedHitCut, dupPassThrough, useSimpleTripletCleaner, ptmin,
-        //   CAThetaCutBarrel, CAThetaCutForward, hardCurvCut, dcaCutInnerTriplet,
-        //   dcaCutOuterTriplet),
-            AlgoParams const& commonCuts,
+    ParamsT(AlgoParams const& commonCuts,
             CellCuts const& cellCuts,
             QualityCuts const& qualityCuts,
             CAParams const& caParams,
@@ -344,7 +172,6 @@ namespace caHitNtupletGenerator {
           caParams_(caParams),
           includeFarForwards_(includeFarForwards) //extra for phase2
           {}
-
 
 
     // quality cuts
@@ -427,18 +254,7 @@ public:
 
   CAHitNtupletGeneratorKernelsBaseT(Params const& params)
       : params_(params), paramsMaxDoubletes3Quarters_(3 * params.cellCuts_.maxNumberOfDoublets_ / 4) {}
-      // {
-      //   if(params.onGPU_)
-      //   {
-      //     cudaCheck(cudaMalloc(&params_, sizeof(Params)));
-      //     cudaCheck(cudaMemcpyToSymbol(params_, &params, sizeof(Params),cudaMemcpyDefault));
-      //   }
-      //   else
-      //   {
-      //     params_ = &params;
-      //   }
-      //
-      // }
+
   ~CAHitNtupletGeneratorKernelsBaseT() = default;
 
   TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.get(); }

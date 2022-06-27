@@ -50,13 +50,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
       this->device_theCellNeighbors_.get(),
       this->isOuterHitOfCell_,
       this->caParams_);
-      //
-      // this->params_.hardCurvCut_,
-      // this->params_.ptmin_,
-      // this->params_.CAThetaCutBarrel_,
-      // this->params_.CAThetaCutForward_,
-      // this->params_.dcaCutInnerTriplet_,
-      // this->params_.dcaCutOuterTriplet_);
+
   cudaCheck(cudaGetLastError());
 
 
@@ -231,16 +225,6 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::buildDoublets(HitsOnCPU con
 
   // take all layer pairs into account
   auto nActualPairs = this->params_.nPairs();
-
-  // TrackerTraits::nPairs;
-  // if (not this->params_.includeJumpingForwardDoublets_) {
-  //   // exclude forward "jumping" layer pairs
-  //   nActualPairs = TrackerTraits::nPairsForTriplets;
-  // }
-  // if (this->params_.minHitsPerNtuplet_ > 3) {
-  //   // for quadruplets, exclude all "jumping" layer pairs
-  //   nActualPairs = TrackerTraits::nPairsForQuadruplets;
-  // }
 
   assert(nActualPairs <= TrackerTraits::nPairs);
   nActualPairs = TrackerTraits::nPairs;
