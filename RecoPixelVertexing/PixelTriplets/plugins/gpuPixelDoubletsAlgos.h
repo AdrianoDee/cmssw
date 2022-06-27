@@ -95,7 +95,7 @@ namespace gpuPixelDoublets {
       auto mi = hh.detectorIndex(i);
       auto mo = hh.detectorIndex(o);
       bool innerB1 = mi < T::last_bpix1_detIndex;
-      bool outerFwd = (mo > T::last_barrel_detIndex);
+      bool outerFwd = (mo >= T::last_barrel_detIndex);
       auto mes = hh.clusterSizeY(i);
 
       if(debug)
