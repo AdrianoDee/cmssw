@@ -212,10 +212,10 @@ namespace gpuPixelDoublets {
     const bool doPtCut = cuts.doPtCut_;
     const uint32_t maxNumOfDoublets = cuts.maxNumberOfDoublets_;
 
-    constexpr int maxDYsize12 = 28;
-    constexpr int maxDYsize = 20;
-    constexpr int maxDYPred = 20;
-    constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
+    // constexpr int maxDYsize12 = 28;
+    // constexpr int maxDYsize = 20;
+    // constexpr int maxDYPred = 20;
+    // constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
 
     bool isOuterLadder = true;//ideal_cond;
 
@@ -310,34 +310,34 @@ namespace gpuPixelDoublets {
     //   //     isOuterLadder = ideal_cond ? true : 0 == (mi / 8) % 2;  // only for B1/B2/B3 B4 is opposite, FPIX:noclue...
     //   //   mes = inner > 0 || isOuterLadder ? hh.clusterSizeY(i) : -1;
     //   // }
-      constexpr int minYsizeB1 = 36;
-    constexpr int minYsizeB2 = 28;
-    // // bool prevCut = clusterCut<TrackerTraits>(mes,mi);
-      bool clusterCutOld = false;
-      if (doClusterCut) {
-        bool ideal_cond = true;
-        // if ideal treat inner ladder as outer
-        if (inner == 0)
-          assert(mi < 96);
-        isOuterLadder = ideal_cond ? true : 0 == (mi / 8) % 2;  // only for B1/B2/B3 B4 is opposite, FPIX:noclue...
-
-        // in any case we always test mes>0 ...
-        mes = inner > 0 || isOuterLadder ? hh.clusterSizeY(i) : -1;
-
-        if (inner == 0 && outer > 3)  // B1 and F1
-          if (mes > 0 && mes < minYsizeB1)
-            clusterCutOld=true;                 // only long cluster  (5*8)
-        if (inner == 1 && outer > 3)  // B2 and F1
-          if (mes > 0 && mes < minYsizeB2)
-            clusterCutOld=true;
-      }
+    // constexpr int minYsizeB1 = 36;
+    // constexpr int minYsizeB2 = 28;
+    // // // bool prevCut = clusterCut<TrackerTraits>(mes,mi);
+    //   bool clusterCutOld = false;
+    //   if (doClusterCut) {
+    //     bool ideal_cond = true;
+    //     // if ideal treat inner ladder as outer
+    //     if (inner == 0)
+    //       assert(mi < 96);
+    //     isOuterLadder = ideal_cond ? true : 0 == (mi / 8) % 2;  // only for B1/B2/B3 B4 is opposite, FPIX:noclue...
+    //
+    //     // in any case we always test mes>0 ...
+    //     mes = inner > 0 || isOuterLadder ? hh.clusterSizeY(i) : -1;
+    //
+    //     if (inner == 0 && outer > 3)  // B1 and F1
+    //       if (mes > 0 && mes < minYsizeB1)
+    //         clusterCutOld=true;                 // only long cluster  (5*8)
+    //     if (inner == 1 && outer > 3)  // B2 and F1
+    //       if (mes > 0 && mes < minYsizeB2)
+    //         clusterCutOld=true;
+    //   }
 
       // if (doClusterCut && clusterCut<TrackerTraits>(mes,mi))
-      if(clusterCutOld != cuts.clusterCut(hh,i,fo,false))
-        {
-          cuts.clusterCut(hh,i,fo,true);
-          printf("%d %d %d %d %d %d \n", inner, outer, i, mes, mi,hh.clusterSizeY(i));
-        }
+      // if(clusterCutOld != cuts.clusterCut(hh,i,fo,false))
+      //   {
+      //     cuts.clusterCut(hh,i,fo,true);
+      //     printf("%d %d %d %d %d %d \n", inner, outer, i, mes, mi,hh.clusterSizeY(i));
+      //   }
     //   assert(clusterCutOld == clusterCut<TrackerTraits>(hh,i,fo,false));
     //   // assert(prevCut== hh.clusterCut(i,fo));
       if (doClusterCut && cuts.clusterCut(hh,i,fo,false))
@@ -368,26 +368,26 @@ namespace gpuPixelDoublets {
         return dr > TrackerTraits::maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
       };
 
-      auto zsizeCutOld = [&](int j,bool debug) {
-        auto onlyBarrel = outer < 4;
-        auto so = hh.clusterSizeY(j);
-        auto dy = inner == 0 ? maxDYsize12 : maxDYsize;
-        // in the barrel cut on difference in size
-        // in the endcap on the prediction on the first layer (actually in the barrel only: happen to be safe for endcap as well)
-        // FIXME move pred cut to z0cutoff to optmize loading of and computaiton ...
-        auto zo = hh.zGlobal(j);
-        auto ro = hh.rGlobal(j);
-
-        auto dz = zo - mez;
-        auto dr = ro - mer;
-        auto mo = hh.detectorIndex(j);
-        if(debug)
-          printf("%d %d %d %d  - %.2f %.2f %d - %d %d \n",mi,mo,mes,so,dz,dr,dy, std::abs(so - mes), std::abs(mes - int(std::abs(dz / dr) * pixelTopology::Phase1::dzdrFact + 0.5f)));
-
-        return onlyBarrel ? mes > 0 && so > 0 && std::abs(so - mes) > dy
-                          : (inner < 3) && mes > 0 &&
-                                std::abs(mes - int(std::abs((mez - zo) / (mer - ro)) * dzdrFact + 0.5f)) > maxDYPred;
-      };
+      // auto zsizeCutOld = [&](int j,bool debug) {
+      //   auto onlyBarrel = outer < 4;
+      //   auto so = hh.clusterSizeY(j);
+      //   auto dy = inner == 0 ? maxDYsize12 : maxDYsize;
+      //   // in the barrel cut on difference in size
+      //   // in the endcap on the prediction on the first layer (actually in the barrel only: happen to be safe for endcap as well)
+      //   // FIXME move pred cut to z0cutoff to optmize loading of and computaiton ...
+      //   auto zo = hh.zGlobal(j);
+      //   auto ro = hh.rGlobal(j);
+      //
+      //   auto dz = zo - mez;
+      //   auto dr = ro - mer;
+      //   auto mo = hh.detectorIndex(j);
+      //   if(debug)
+      //     printf("%d %d %d %d  - %.2f %.2f %d - %d %d \n",mi,mo,mes,so,dz,dr,dy, std::abs(so - mes), std::abs(mes - int(std::abs(dz / dr) * pixelTopology::Phase1::dzdrFact + 0.5f)));
+      //
+      //   return onlyBarrel ? mes > 0 && so > 0 && std::abs(so - mes) > dy
+      //                     : (inner < 3) && mes > 0 &&
+      //                           std::abs(mes - int(std::abs((mez - zo) / (mer - ro)) * dzdrFact + 0.5f)) > maxDYPred;
+      // };
 
 
       auto iphicut = TrackerTraits::phicuts[pairLayerId];
@@ -445,17 +445,17 @@ namespace gpuPixelDoublets {
            {nPhi[pairLayerId]++;no=true;}
           #endif
           // // bool doCut = zsizeCut<TrackerTraits>(mez-hh.zGlobal(oi), mer-hh.rGlobal(oi), inner, outer, mes, hh.clusterSizeY(oi));
-          bool doCut = cuts.zSizeCut(hh,i,oi,false);
+          // bool doCut = cuts.zSizeCut(hh,i,oi,false);
           //
-          bool oldCut = zsizeCutOld(oi,false);
-          //
-          //
-          if(doCut != oldCut)
-            {
-              cuts.zSizeCut(hh,i,oi,true);
-              zsizeCutOld(oi,true);
-            }
-            assert(oldCut == doCut);
+          // bool oldCut = zsizeCutOld(oi,false);
+          // //
+          // //
+          // if(doCut != oldCut)
+          //   {
+          //     cuts.zSizeCut(hh,i,oi,true);
+          //     zsizeCutOld(oi,true);
+          //   }
+          //   assert(oldCut == doCut);
 
           // if (doClusterCut && zSizeCut<TrackerTraits>(hh,i,oi,cuts,false))
           if (doClusterCut && cuts.zSizeCut(hh,i,oi,false))
