@@ -8,6 +8,6 @@
 template <typename TrackerTraits>
 using PixelTrackHeterogeneousT = HeterogeneousSoA<pixelTrack::TrackSoAT<TrackerTraits>>;
 
-using PixelTrackHeterogeneous = HeterogeneousSoA<pixelTrack::TrackSoA>;
+// using PixelTrackHeterogeneous = HeterogeneousSoA<pixelTrack::TrackSoA>;
 
 #endif  // #ifndef CUDADataFormats_Track_PixelTrackHeterogeneous_h
