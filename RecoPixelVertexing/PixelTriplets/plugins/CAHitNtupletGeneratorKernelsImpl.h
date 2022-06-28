@@ -312,7 +312,7 @@ __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
                                uint32_t const *__restrict__ nCells,
                                CellNeighborsVector<TrackerTraits> *cellNeighbors,
                                OuterHitOfCell<TrackerTraits> const isOuterHitOfCell,
-                               CAParams<TrackerTraits> const *params) {
+                               CAParams<TrackerTraits> params) {
 
 
   using Cell = GPUCACellT<TrackerTraits>;
@@ -357,13 +357,13 @@ __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
           zi,
           ro,
           zo,
-          params->ptmin_,
-          isBarrel ? params->CAThetaCutBarrel_ : params->CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
+          params.ptmin_,
+          isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
       if (aligned && thisCell.dcaCut(hh,
                                      oc,
-                                     oc.inner_detIndex(hh) < last_bpix1_detIndex ? params->dcaCutInnerTriplet_
-                                                                                              : params->dcaCutOuterTriplet_,
-                                     params->hardCurvCut_)) {  // FIXME tune cuts
+                                     oc.inner_detIndex(hh) < last_bpix1_detIndex ? params.dcaCutInnerTriplet_
+                                                                                              : params.dcaCutOuterTriplet_,
+                                     params.hardCurvCut_)) {  // FIXME tune cuts
         oc.addOuterNeighbor(cellIndex, *cellNeighbors);
         thisCell.setStatusBits(Cell::StatusBit::kUsed);
         oc.setStatusBits(Cell::StatusBit::kUsed);
@@ -380,7 +380,7 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
                                      HitContainer<TrackerTraits> *foundNtuplets,
                                      cms::cuda::AtomicPairCounter *apc,
                                      Quality *__restrict__ quality,
-                                     CAParams<TrackerTraits> const *params) {
+                                     CAParams<TrackerTraits> params) {
   // recursive: not obvious to widen
   auto const &hh = *hhp;
 
@@ -403,7 +403,7 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
       continue;
 
     auto pid = thisCell.layerPairId();
-    bool doit = params->startingLayerPair(pid);
+    bool doit = params.startingLayerPair(pid);
 
     constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
     if (doit) {
@@ -411,10 +411,10 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
       typename Cell::TmpTuple stack;
       stack.reset();
 
-      bool bpix1Start = params->startAt0(pid);
+      bool bpix1Start = params.startAt0(pid);
 
       thisCell.template find_ntuplets<maxDepth>(
-          hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params->minHitsPerNtuplet_, bpix1Start);
+          hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params.minHitsPerNtuplet_, bpix1Start);
 
       assert(stack.empty());
 

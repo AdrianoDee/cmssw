@@ -49,7 +49,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
       this->device_nCells_,
       this->device_theCellNeighbors_.get(),
       this->isOuterHitOfCell_,
-      this->caParams_);
+      this->params_.caParams_);
 
   cudaCheck(cudaGetLastError());
 
@@ -77,7 +77,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
                                                                      tuples_d,
                                                                      this->device_hitTuple_apc_,
                                                                      quality_d,
-                                                                     this->caParams_);
+                                                                     this->params_.caParams_);
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
 
@@ -225,9 +225,6 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::buildDoublets(HitsOnCPU con
 
   // take all layer pairs into account
   auto nActualPairs = this->params_.nPairs();
-
-  assert(nActualPairs <= TrackerTraits::nPairs);
-  nActualPairs = TrackerTraits::nPairs;
 
   int stride = 4;
   int threadsPerBlock = TrackerTraits::getDoubletsFromHistoMaxBlockSize / stride;

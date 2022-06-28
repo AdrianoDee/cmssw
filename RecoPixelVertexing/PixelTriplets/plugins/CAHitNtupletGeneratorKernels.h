@@ -48,8 +48,8 @@ namespace caHitNtupletGenerator {
   struct CAParamsT : public CACommon
   {
 
-    constexpr inline bool startingLayerPair(int16_t pid) const { return false; };
-    constexpr inline bool startAt0(int16_t pid) const { return false; };
+    __device__ __forceinline__ bool startingLayerPair(int16_t pid) const { return false; };
+    __device__ __forceinline__ bool startAt0(int16_t pid) const { return false; };
 
   };
 
@@ -58,12 +58,12 @@ namespace caHitNtupletGenerator {
   {
 
     /// Is is a starting layer pair?
-    constexpr inline bool startingLayerPair(int16_t pid) const {
+    __device__ __forceinline__ bool startingLayerPair(int16_t pid) const {
       return minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
     }
 
     /// Is this a pair with inner == 0?
-    constexpr inline bool startAt0(int16_t pid) const {
+    __device__ __forceinline__ bool startAt0(int16_t pid) const {
       assert((pixelTopology::Phase1::layerPairs[pid*2] == 0) == (pid < 3));
       return pixelTopology::Phase1::layerPairs[pid*2] == 0;
     }
@@ -75,12 +75,12 @@ namespace caHitNtupletGenerator {
   {
 
     /// Is is a starting layer pair?
-    constexpr inline bool startingLayerPair(int16_t pid) const {
+    __device__ __forceinline__ bool startingLayerPair(int16_t pid) const {
       return pid < 33; // in principle one could remove 5,6,7 23, 28 and 29
     }
 
     /// Is this a pair with inner == 0
-    constexpr inline bool startAt0(int16_t pid) const {
+    __device__ __forceinline__ bool startAt0(int16_t pid) const {
       assert((pixelTopology::Phase2::layerPairs[pid*2] == 0) == ((pid < 3) | (pid>=23 && pid <28)));
       return pixelTopology::Phase2::layerPairs[pid*2] == 0;
     }

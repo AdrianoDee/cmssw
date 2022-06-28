@@ -232,8 +232,15 @@ namespace pixelTrack {
     float maxTip;
     float maxZip;
 
-    __device__ __forceinline__ bool isHP(PixelTrackSoAT<pixelTopology::Phase2> const *__restrict__ tracks, int nHits , int it) const {return false;}
-    __device__ __forceinline__ bool strictCut(PixelTrackSoAT<pixelTopology::Phase2> const *__restrict__ tracks, int it) const {return true;}
+    __device__ __forceinline__ bool isHP(PixelTrackSoAT<pixelTopology::Phase2> const *__restrict__ tracks, int nHits , int it) const {
+
+        return (std::abs(tracks->tip(it)) < maxTip) and (tracks->pt(it) > minPt) and
+                    (std::abs(tracks->zip(it)) < maxZip);
+    }
+    __device__ __forceinline__ bool strictCut(PixelTrackSoAT<pixelTopology::Phase2> const *__restrict__ tracks, int it) const
+    {
+      return tracks->chi2(it) >= maxChi2;
+    }
   };
 
 }  // namespace pixelTrack

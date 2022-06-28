@@ -110,8 +110,8 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::launchKernels(HitsOnCPU con
                    this->device_nCells_,
                    this->device_theCellNeighbors_.get(),
                    this->isOuterHitOfCell_,
-                   this->caParams_);
-  
+                   this->params_.caParams_);
+
 
   if (nhits > 1 && this->params_.earlyFishbone_) {
     gpuPixelDoublets::fishbone<TrackerTraits>(hh.view(), this->device_theCells_.get(), this->device_nCells_, this->isOuterHitOfCell_, nhits, false);
@@ -124,7 +124,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::launchKernels(HitsOnCPU con
                        tuples_d,
                        this->device_hitTuple_apc_,
                        quality_d,
-                       this->caParams_);
+                       this->params_.caParams_);
   if (this->params_.doStats_)
     kernel_mark_used(this->device_theCells_.get(), this->device_nCells_);
 
