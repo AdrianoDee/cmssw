@@ -80,8 +80,8 @@ namespace {
       {cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
     cfg.getParameter<bool>("doClusterCut"),
     cfg.getParameter<bool>("doZ0Cut"),
-    cfg.getParameter<bool>("doPtCut")},
-    cfg.getParameter<bool>("idealConditions")};
+    cfg.getParameter<bool>("doPtCut"),
+    cfg.getParameter<bool>("idealConditions")}};
   }
 
   template<>

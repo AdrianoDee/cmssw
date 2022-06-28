@@ -184,14 +184,14 @@ namespace caHitNtupletGenerator {
 
     inline uint32_t nPairs() const {
       // take all layer pairs into account
-      uint32_t nActualPairs = pixelTopology::Phase2::nPairs;
+      uint32_t nActualPairs = pixelTopology::Phase2::nPairsMinimal;
       if (includeFarForwards_) {
         // considera far forwards (> 11 & > 23)
         nActualPairs = pixelTopology::Phase2::nPairsFarForwards;
       }
       if (includeJumpingForwardDoublets_) {
         // include jumping forwards
-        nActualPairs = pixelTopology::Phase2::nPairsForJumpingForwards;
+        nActualPairs = pixelTopology::Phase2::nPairs;
       }
 
       return nActualPairs;

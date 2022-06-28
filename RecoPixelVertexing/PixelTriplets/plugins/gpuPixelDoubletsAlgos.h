@@ -38,27 +38,14 @@ namespace gpuPixelDoublets {
   template <typename TrackerTraits>
   struct CellCutsCommon
   {
-    uint32_t maxNumberOfDoublets_;
-    bool doClusterCut_;
-    bool doZ0Cut_;
-    bool doPtCut_;
 
-    __device__ __forceinline__ bool zSizeCut(Hits<TrackerTraits> const& hh, int i, int o) const { return false; }
-    __device__ __forceinline__ bool clusterCut(Hits<TrackerTraits> const& hh, int i, int o) const { return false; }
+    using H = Hits<TrackerTraits>;
+    using T = TrackerTraits;
 
-  };
-
-  template <typename TrackerTraits>
-  struct CellCutsT : public CellCutsCommon<TrackerTraits>
-  {
-  };
-
-  template<>
-  struct CellCutsT<pixelTopology::Phase1> : public CellCutsCommon<pixelTopology::Phase1>
-  {
-    using H = Hits<pixelTopology::Phase1>;
-    using T = pixelTopology::Phase1;
-
+    const uint32_t maxNumberOfDoublets_;
+    const bool doClusterCut_;
+    const bool doZ0Cut_;
+    const bool doPtCut_;
     const bool idealConditions_;
 
     __device__ __forceinline__ bool zSizeCut(H const& hh, int i, int o) const
@@ -108,10 +95,14 @@ namespace gpuPixelDoublets {
 
   };
 
+  template <typename TrackerTraits>
+  struct CellCutsT : public CellCutsCommon<TrackerTraits>
+  {};
+
   template<>
   struct CellCutsT<pixelTopology::Phase2> : public CellCutsCommon<pixelTopology::Phase2>
   {
-
+    const bool idealConditions_ = true;
   };
 
   template <typename TrackerTraits>

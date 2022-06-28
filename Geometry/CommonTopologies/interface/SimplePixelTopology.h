@@ -230,6 +230,22 @@ namespace phase2PixelTopology
 
      11,12,12,13,13,14,14,15, //Late POS (47+4)
      23,24,24,25,25,26,26,27, //Late NEG (51+4)
+
+     /*     0, 1, 0, 4, 0, 16, //BPIX1 (3)
+     1, 2, 1, 4, 1, 16, //BPIX2 (6)
+     2, 3, 2, 4, 2, 16, //BPIX3 & Forward (9)
+
+     4 ,5 ,5 ,6 ,6 ,7 ,7 ,8 ,8 ,9 ,9 ,10,10,11, //POS (16)
+     16,17,17,18,18,19,19,20,20,21,21,22,22,23, //NEG (23)
+
+     0, 2, 0, 5, 0, 17, 0, 6, 0, 18,// BPIX1 Jump (28)
+     1, 3, 1, 5, 1, 17, 1, 6, 1, 18,// BPIX2 Jump (33)
+
+     11,12,12,13,13,14,14,15, //Late POS (37)
+     23,24,24,25,25,26,26,27, //Late NEG (41)
+
+     4, 6, 5, 7, 6, 8, 7, 9, 8, 10,9 ,11,10,12, //POS Jump (48)
+     16,18,17,19,18,20,19,21,20,22,21,23,22,24, //NEG Jump (55)*/
 };
   DEVICECONST uint32_t layerStart[numberOfLayers + 1] = {0,
                                                        108,
@@ -444,16 +460,16 @@ namespace pixelTopology{
      static constexpr float z0Cut = 8.f;
      static constexpr float doubletHardPt = 0.7f;
 
-     static constexpr int minYsizeB1 = 25;
-     static constexpr int minYsizeB2 = 15;
+     static constexpr int minYsizeB1 = 20;
+     static constexpr int minYsizeB2 = 18;
 
-     static constexpr int nPairsForJumpingForwards = phase2PixelTopology::nPairs;                            // doublets only from contigous layers
+     static constexpr int nPairsMinimal = 33;
      static constexpr int nPairsFarForwards = phase2PixelTopology::nPairs; //nPairsForQuadruplets + 6 + 14;  // include barrel "jumping" layer pairs
      static constexpr int nPairs = phase2PixelTopology::nPairs; //nPairsForTriplets + 8;  // include far forward layer pairs
 
      static constexpr int maxDYsize12 = 18;
-     static constexpr int maxDYsize = 18;
-     static constexpr int maxDYPred = 18;
+     static constexpr int maxDYsize = 12;
+     static constexpr int maxDYPred = 22;
 
      static constexpr uint16_t numberOfModules = 3892;
 

@@ -46,5 +46,5 @@ template class TrackingRecHit2DCPUBaseT<cms::cudacompat::CPUTraits,pixelTopology
 template class TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits,pixelTopology::Phase1>;
 template class TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits,pixelTopology::Phase2>;
 
-template class TrackingRecHit2DHostBaseT<cms::cudacompat::GPUTraits,pixelTopology::Phase1>;
-template class TrackingRecHit2DHostBaseT<cms::cudacompat::GPUTraits,pixelTopology::Phase2>;
+template class TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits,pixelTopology::Phase1>;
+template class TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits,pixelTopology::Phase2>;
