@@ -116,20 +116,6 @@ class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Trai
   CMS_CLASS_VERSION(10); //TODO re-check if useful
 };
 
-// using TrackingRecHit2DCPU = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
-// using TrackingRecHit2DGPU = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
-// using TrackingRecHit2DHost = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
-
-// template <typename Traits,typename TrackerTraits>
-// class TrackingRecHit2DHeterogeneousBase : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
-//
-// template <typename Traits>
-// class TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1> : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{};
-//
-// template <typename Traits>
-// using TrackingRecHit2DHeterogeneous = TrackingRecHit2DHeterogeneousBase<Traits,pixelTopology::Phase1>;
-//
-
 //Classes definition for "Legacy" Phase1, to make the classes_def lighter. Not actually used in the code.
 using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
 using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;

@@ -78,12 +78,6 @@ namespace gpuPixelDoublets {
       auto onlyBarrel = mo < T::last_barrel_detIndex;
       auto dy = innerB1 ? T::maxDYsize12 : T::maxDYsize;
 
-      if (debug) {
-
-          printf("%d %d %d %d  - %.2f %.2f %d- %d %d",mi,mo,mes,so,dz,dr,dy, std::abs(so - mes), std::abs(mes - int(std::abs(dz / dr) * T::dzdrFact + 0.5f)));
-          printf(" <- %d %d %d \n",T::last_bpix1_detIndex,T::last_barrel_detIndex,T::last_bpix2_detIndex);
-      }
-
       return onlyBarrel ? mes > 0 && so > 0 && std::abs(so - mes) > dy
                         : innerBarrel && mes > 0 &&
                               std::abs(mes - int(std::abs(dz / dr) * T::dzdrFact + 0.5f)) > T::maxDYPred;
@@ -191,7 +185,7 @@ namespace gpuPixelDoublets {
       assert(i < offsets[inner + 1]);
 
       // found hit corresponding to our cuda thread, now do the job
-      auto mi = hh.detectorIndex(i);
+
       if (hh.detectorIndex(i) > gpuClustering::maxNumModules)
         continue;  // invalid
 
@@ -206,7 +200,7 @@ namespace gpuPixelDoublets {
       if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
         continue;
 
-      if (doClusterCut && cuts.clusterCut(hh,i,fo,false))
+      if (doClusterCut && cuts.clusterCut(hh,i,fo))
         continue;
 
       auto mep = hh.iphi(i);
@@ -274,7 +268,7 @@ namespace gpuPixelDoublets {
           if (idphi > iphicut)
           continue;
 
-          if (doClusterCut && cuts.zSizeCut(hh,i,oi,false))
+          if (doClusterCut && cuts.zSizeCut(hh,i,oi))
           continue;
           if (doPtCut && ptcut(oi, idphi))
           continue;

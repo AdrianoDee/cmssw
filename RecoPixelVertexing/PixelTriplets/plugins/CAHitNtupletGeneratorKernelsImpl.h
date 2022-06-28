@@ -476,27 +476,6 @@ __global__ void kernel_classifyTracks(HitContainer<TrackerTraits> const *__restr
                                     TkSoA<TrackerTraits> const *__restrict__ tracks,
                                     QualityCuts<TrackerTraits> cuts,
                                     Quality *__restrict__ quality) {
-
- int first = blockDim.x * blockIdx.x + threadIdx.x;
- for (int it = first, nt = tuples->nOnes(); it < nt; it += gridDim.x * blockDim.x) {
-   auto nhits = tuples->size(it);
-   if (nhits == 0)
-     break;
-
-   // if duplicate: not even fit
-   if (quality[it] == pixelTrack::Quality::edup)
-     continue;
-
-   assert(quality[it] == pixelTrack::Quality::bad);
-
-   }
-}
-
-  template <>
-__global__ void kernel_classifyTracks<pixelTopology::Phase1>(HitContainer<pixelTopology::Phase1> const *__restrict__ tuples,
-                                      TkSoA<pixelTopology::Phase1> const *__restrict__ tracks,
-                                      QualityCuts<pixelTopology::Phase1> cuts,
-                                      Quality *__restrict__ quality) {
   int first = blockDim.x * blockIdx.x + threadIdx.x;
   for (int it = first, nt = tuples->nOnes(); it < nt; it += gridDim.x * blockDim.x) {
     auto nhits = tuples->size(it);
@@ -527,117 +506,17 @@ __global__ void kernel_classifyTracks<pixelTopology::Phase1>(HitContainer<pixelT
 
     quality[it] = pixelTrack::Quality::strict;
 
-    auto roughLog = [](float x) {
-      // max diff [0.5,12] at 1.25 0.16143
-      // average diff  0.0662998
-      union IF {
-        uint32_t i;
-        float f;
-      };
-      IF z;
-      z.f = x;
-      uint32_t lsb = 1 < 21;
-      z.i += lsb;
-      z.i >>= 21;
-      auto f = z.i & 3;
-      int ex = int(z.i >> 2) - 127;
-
-      // log2(1+0.25*f)
-      // averaged over bins
-      const float frac[4] = {0.160497f, 0.452172f, 0.694562f, 0.901964f};
-      return float(ex) + frac[f];
-    };
-
-    // (see CAHitNtupletGeneratorGPU.cc)
-    float pt = std::min<float>(tracks->pt(it), cuts.chi2MaxPt);
-    float chi2Cut = cuts.chi2Scale * (cuts.chi2Coeff[0] + roughLog(pt) * cuts.chi2Coeff[1]);
-    if (tracks->chi2(it) >= chi2Cut) {
-#ifdef NTUPLE_FIT_DEBUG
-      printf("Bad chi2 %d size %d pt %f eta %f chi2 %f\n",
-             it,
-             tuples->size(it),
-             tracks->pt(it),
-             tracks->eta(it),
-             tracks->chi2(it));
-#endif
+    if(cuts.strictCut(tracks,it))
       continue;
-    }
 
     quality[it] = pixelTrack::Quality::tight;
 
-    // impose "region cuts" based on the fit results (phi, Tip, pt, cotan(theta)), Zip)
-    // default cuts:
-    //   - for triplets:    |Tip| < 0.3 cm, pT > 0.5 GeV, |Zip| < 12.0 cm
-    //   - for quadruplets: |Tip| < 0.5 cm, pT > 0.3 GeV, |Zip| < 12.0 cm
-    // (see CAHitNtupletGeneratorGPU.cc)
-    auto const &region = (nhits > 3) ? cuts.quadruplet : cuts.triplet;
-    bool isHP = (std::abs(tracks->tip(it)) < region.maxTip) and (tracks->pt(it) > region.minPt) and
-                (std::abs(tracks->zip(it)) < region.maxZip);
-
-    if (isHP)
+    if (cuts.isHP(tracks,nhits,it))
       quality[it] = pixelTrack::Quality::highPurity;
   }
 }
 
 
-
-template <>
-__global__ void kernel_classifyTracks<pixelTopology::Phase2>(HitContainer<pixelTopology::Phase2> const *__restrict__ tuples,
-                                    TkSoA<pixelTopology::Phase2> const *__restrict__ tracks,
-                                    QualityCuts<pixelTopology::Phase2> cuts,
-                                    Quality *__restrict__ quality) {
-int first = blockDim.x * blockIdx.x + threadIdx.x;
-for (int it = first, nt = tuples->nOnes(); it < nt; it += gridDim.x * blockDim.x) {
-  auto nhits = tuples->size(it);
-  if (nhits == 0)
-    break;  // guard
-
-  // if duplicate: not even fit
-  if (quality[it] == pixelTrack::Quality::edup)
-    continue;
-
-  assert(quality[it] == pixelTrack::Quality::bad);
-
-  // mark doublets as bad
-  if (nhits < 3)
-    continue;
-
-  // if the fit has any invalid parameters, mark it as bad
-  bool isNaN = false;
-  for (int i = 0; i < 5; ++i) {
-    isNaN |= std::isnan(tracks->stateAtBS.state(it)(i));
-  }
-  if (isNaN) {
-#ifdef NTUPLE_DEBUG
-    printf("NaN in fit %d size %d chi2 %f\n", it, tuples->size(it), tracks->chi2(it));
-#endif
-    continue;
-  }
-
-  quality[it] = pixelTrack::Quality::strict;
-
-  float chi2Cut = cuts.maxChi2;// * (cuts.chi2Coeff[0] + roughLog(pt) * cuts.chi2Coeff[1]);
-  if (tracks->chi2(it) >= chi2Cut) {
-#ifdef NTUPLE_FIT_DEBUG
-    printf("Bad chi2 %d size %d pt %f eta %f chi2 %f\n",
-           it,
-           tuples->size(it),
-           tracks->pt(it),
-           tracks->eta(it),
-           tracks->chi2(it));
-#endif
-    continue;
-  }
-
-  quality[it] = pixelTrack::Quality::tight;
-
-  bool isHP = (std::abs(tracks->tip(it)) < cuts.maxTip) and (tracks->pt(it) > cuts.minPt) and
-              (std::abs(tracks->zip(it)) < cuts.maxZip);
-
-  if (isHP)
-    quality[it] = pixelTrack::Quality::highPurity;
-}
-}
 
 template <typename TrackerTraits>
 __global__ void kernel_doStatsForTracks(HitContainer<TrackerTraits> const *__restrict__ tuples,
@@ -691,7 +570,7 @@ __global__ void kernel_fillHitDetIndices(HitContainer<TrackerTraits> const *__re
   for (int idx = first, ntot = tuples->totOnes(); idx < ntot; idx += gridDim.x * blockDim.x) {
 
     hitDetIndices->off[idx] = tuples->off[idx];
-    
+
   }
   // fill hit indices
   auto const &hh = *hhp;
