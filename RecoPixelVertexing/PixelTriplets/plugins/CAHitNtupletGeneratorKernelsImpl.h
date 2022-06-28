@@ -124,8 +124,19 @@ __global__ void kernel_checkOverflows(HitContainer<TrackerTraits> const *foundNt
       printf("cellTracks overflow\n");
     if (int(hitToTuple->nOnes()) < nHits)
       printf("ERROR hitToTuple  overflow %d %d\n", hitToTuple->nOnes(), nHits);
-    #ifdef NTUPLE_DEBUG
+    #ifdef GPU_DEBUG
     printf("size of cellNeighbors %d \n cellTracks %d \n hitToTuple %d \n",cellNeighbors->size(),cellTracks->size(),hitToTuple->size());
+    // printf("cellTracksSizes;");
+    // for (int i = 0; i < cellTracks->size(); i++) {
+    //   printf("%d;",cellTracks[i].size());
+    // }
+    //
+    // printf("\n");
+    // printf("cellNeighborsSizes;");
+    // for (int i = 0; i < cellNeighbors->size(); i++) {
+    //   printf("%d;",cellNeighbors[i].size());
+    // }
+    // printf("\n");
     #endif
   }
 
@@ -384,13 +395,16 @@ __global__ void kernel_find_ntuplets(Hits<TrackerTraits> const *__restrict__ hhp
   // recursive: not obvious to widen
   auto const &hh = *hhp;
 
-  #ifdef GPU_DEBUG
-  printf("starting producing ntuplets from %d cells \n",*nCells);
-  #endif
+
 
   using Cell = GPUCACellT<TrackerTraits>;
 
   auto first = threadIdx.x + blockIdx.x * blockDim.x;
+
+  #ifdef GPU_DEBUG
+  if(first==0)
+  printf("starting producing ntuplets from %d cells \n",*nCells);
+  #endif
   for (int idx = first, nt = (*nCells); idx < nt; idx += gridDim.x * blockDim.x) {
 
     auto const &thisCell = cells[idx];
