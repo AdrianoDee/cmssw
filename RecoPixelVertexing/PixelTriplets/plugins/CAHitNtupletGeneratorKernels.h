@@ -264,7 +264,7 @@ public:
   void classifyTuples(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
 
   void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
-  void allocateOnGPU(int32_t nHits, CAParams const& params, cudaStream_t stream);
+  void allocateOnGPU(int32_t nHits, cudaStream_t stream);
   void cleanup(cudaStream_t cudaStream);
 
   static void printCounters(Counters const* counters);
@@ -307,9 +307,6 @@ protected:
     return (paramsMaxDoubletes3Quarters_ + blockSize - 1) / blockSize;
   }
 
-  // caParams
-  CAParams* caParams_ = nullptr;
-
   /// Compute the number of quadruplet blocks for block size
   inline uint32_t nQuadrupletBlocks(uint32_t blockSize) {
     // pixelTopology::maxNumberOfQuadruplets is a constexpr, so the compiler will pre compute the 3*max/4
@@ -340,7 +337,7 @@ class CAHitNtupletGeneratorKernelsGPUT<cms::cudacompat::GPUTraits,TrackerTraits>
     void launchKernels(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
     void classifyTuples(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
     void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
-    void allocateOnGPU(int32_t nHits, CAParams const& params, cudaStream_t stream);
+    void allocateOnGPU(int32_t nHits, cudaStream_t stream);
     static void printCounters(Counters const* counters);
 
 };
@@ -367,7 +364,7 @@ class CAHitNtupletGeneratorKernelsCPUT<cms::cudacompat::CPUTraits,TrackerTraits>
     void launchKernels(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
     void classifyTuples(HitsOnCPU const& hh, TkSoA* tuples_d, cudaStream_t cudaStream);
     void buildDoublets(HitsOnCPU const& hh, cudaStream_t stream);
-    void allocateOnGPU(int32_t nHits, CAParams const& params, cudaStream_t stream);
+    void allocateOnGPU(int32_t nHits, cudaStream_t stream);
     static void printCounters(Counters const* counters);
 
 };

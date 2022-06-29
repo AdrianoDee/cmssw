@@ -340,7 +340,7 @@ PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPUT<TrackerTrait
 
   GPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
-  kernels.allocateOnGPU(hits_d.nHits(), m_params.caParams_, stream);
+  kernels.allocateOnGPU(hits_d.nHits(), stream);
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
 
@@ -383,7 +383,7 @@ PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPUT<TrackerTrait
 
   CPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
-  kernels.allocateOnGPU(hits_d.nHits(), m_params.caParams_, nullptr);
+  kernels.allocateOnGPU(hits_d.nHits(), nullptr);
 
   kernels.buildDoublets(hits_d, nullptr);
   kernels.launchKernels(hits_d, soa, nullptr);
