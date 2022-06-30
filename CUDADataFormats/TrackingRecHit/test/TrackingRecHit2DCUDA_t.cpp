@@ -21,24 +21,25 @@ int main() {
   auto nHits = 200;
   // inner scope to deallocate memory before destroying the stream
   {
+/*
+    TrackingRecHit2DGPUT<pixelTopology::Phase1> tkhit(nHits, 0, nullptr, nullptr, stream);
+    testTrackingRecHit2D::runKernels(tkhit.view());
 
-    // TrackingRecHit2DGPUT<pixelTopology::Phase1> tkhit(nHits, 0, nullptr, nullptr, stream);
-    // testTrackingRecHit2D::runKernels(tkhit.view());
-    //
-    // TrackingRecHit2DGPUT<pixelTopology::Phase2> tkhitPhase2(nHits, 0, nullptr, nullptr, stream);
-    // testTrackingRecHit2D::runKernelsPhase2(tkhitPhase2.view());
-    //
-    // TrackingRecHit2DHostT<pixelTopology::Phase1> tkhitH(nHits, 0, nullptr, nullptr, stream, &tkhit);
-    // cudaStreamSynchronize(stream);
-    // assert(tkhitH.view());
-    // assert(tkhitH.view()->nHits() == unsigned(nHits));
-    // assert(tkhitH.view()->nMaxModules() == pixelTopology::Phase1::numberOfModules);
-    //
-    // TrackingRecHit2DHostT<pixelTopology::Phase2> tkhitHPhase2(nHits, 0, nullptr, nullptr, stream, &tkhitPhase2);
-    // cudaStreamSynchronize(stream);
-    // assert(tkhitHPhase2.view());
-    // assert(tkhitHPhase2.view()->nHits() == unsigned(nHits));
-    // assert(tkhitHPhase2.view()->nMaxModules() == pixelTopology::Phase2::numberOfModules);
+    TrackingRecHit2DGPUT<pixelTopology::Phase2> tkhitPhase2(nHits, 0, nullptr, nullptr, stream);
+    testTrackingRecHit2D::runKernelsPhase2(tkhitPhase2.view());
+
+    TrackingRecHit2DHostT<pixelTopology::Phase1> tkhitH(nHits, 0, nullptr, nullptr, stream, &tkhit);
+    cudaStreamSynchronize(stream);
+    assert(tkhitH.view());
+    assert(tkhitH.view()->nHits() == unsigned(nHits));
+    assert(tkhitH.view()->nMaxModules() == pixelTopology::Phase1::numberOfModules);
+
+    TrackingRecHit2DHostT<pixelTopology::Phase2> tkhitHPhase2(nHits, 0, nullptr, nullptr, stream, &tkhitPhase2);
+    cudaStreamSynchronize(stream);
+    assert(tkhitHPhase2.view());
+    assert(tkhitHPhase2.view()->nHits() == unsigned(nHits));
+    assert(tkhitHPhase2.view()->nMaxModules() == pixelTopology::Phase2::numberOfModules);
+*/
   }
 
   cudaCheck(cudaStreamDestroy(stream));

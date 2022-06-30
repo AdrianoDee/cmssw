@@ -269,7 +269,7 @@ void CAHitNtupletGeneratorOnGPUT<TrackerTraits>::fillDescriptionsCommon(edm::Par
   desc.add<double>("dcaCutOuterTriplet", 0.25f)->setComment("Cut on origin radius when the outer hit is on BPix1");
   desc.add<bool>("earlyFishbone", true);
   desc.add<bool>("lateFishbone", false);
-  desc.add<bool>("fillStatistics", true);
+  desc.add<bool>("fillStatistics", false);
   desc.add<bool>("includeJumpingForwardDoublets", false);
   desc.add<unsigned int>("minHitsPerNtuplet", 4);
   desc.add<unsigned int>("maxNumberOfDoublets", TrackerTraits::maxNumberOfDoublets);
