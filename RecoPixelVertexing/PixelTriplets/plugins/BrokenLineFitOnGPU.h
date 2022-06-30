@@ -25,8 +25,8 @@ using OutputSoA = pixelTrack::TrackSoAT<TrackerTraits>;
 template <typename TrackerTraits>
 using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
-using tindex_type = caStructures::tindex_type;
-constexpr auto invalidTkId = std::numeric_limits<tindex_type>::max();
+// using tindex_type = typename TrackerTraits::tindex_type;
+// constexpr auto invalidTkId = std::numeric_limits<tindex_type>::max();
 
 // #define BL_DUMP_HITS
 
@@ -34,7 +34,7 @@ template <int N, typename TrackerTraits>
 __global__ void kernel_BLFastFit(Tuples<TrackerTraits> const *__restrict__ foundNtuplets,
                                  TupleMultiplicity<TrackerTraits> const *__restrict__ tupleMultiplicity,
                                  HitsOnGPU<TrackerTraits> const *__restrict__ hhp,
-                                 tindex_type *__restrict__ ptkids,
+                                 typename TrackerTraits::tindex_type *__restrict__ ptkids,
                                  double *__restrict__ phits,
                                  float *__restrict__ phits_ge,
                                  double *__restrict__ pfast_fit,
@@ -42,6 +42,7 @@ __global__ void kernel_BLFastFit(Tuples<TrackerTraits> const *__restrict__ found
                                  uint32_t nHitsH,
                                  int32_t offset) {
   constexpr uint32_t hitsInFit = N;
+  constexpr auto invalidTkId = std::numeric_limits<typename TrackerTraits::tindex_type>::max();
 
   assert(hitsInFit <= nHitsL);
   assert(nHitsL <= nHitsH);
@@ -178,12 +179,13 @@ template <int N, typename TrackerTraits>
 __global__ void kernel_BLFit(TupleMultiplicity<TrackerTraits> const *__restrict__ tupleMultiplicity,
                              double bField,
                              OutputSoA<TrackerTraits> *results,
-                             tindex_type const *__restrict__ ptkids,
+                             typename TrackerTraits::tindex_type const *__restrict__ ptkids,
                              double *__restrict__ phits,
                              float *__restrict__ phits_ge,
                              double *__restrict__ pfast_fit) {
   assert(results);
   assert(pfast_fit);
+  constexpr auto invalidTkId = std::numeric_limits<typename TrackerTraits::tindex_type>::max();
 
   // same as above...
   // look in bin for this hit multiplicity

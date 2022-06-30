@@ -20,7 +20,7 @@ public:
   using Status = SiPixelHitStatus;
   static_assert(sizeof(Status) == sizeof(uint8_t));
 
-  using hindex_type = uint32_t;  // if above is <=2^32
+  using hindex_type = typename TrackerTraits::hindex_type;  // if above is <=2^32
   using PhiBinner = cms::cuda::HistoContainer<int16_t, 256, -1, 8 * sizeof(int16_t), hindex_type, TrackerTraits::numberOfLayers>;  //28 for phase2 geometry
   using AverageGeometry = pixelTopology::AverageGeometryT<TrackerTraits>;
   using ParamsOnGPU = pixelCPEforGPU::ParamsOnGPUT<TrackerTraits>;

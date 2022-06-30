@@ -98,7 +98,7 @@ public:
 
   static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
   static constexpr int32_t H = TrackerTraits::maxHitsOnTrack;
-  using hindex_type = uint32_t;
+  using hindex_type = uint32_t; //TrackerTraits::hindex_type;
 
   using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>; // TODO plot for average number of hits
   using Quality = pixelTrack::Quality;

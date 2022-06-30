@@ -33,7 +33,8 @@ public:
 
 
   using Hits = TrackingRecHit2DSOAViewT<TrackerTraits>;
-  using hindex_type = typename Hits::hindex_type;
+  using hindex_type = typename TrackerTraits::hindex_type;
+  using tindex_type = typename TrackerTraits::tindex_type;
   static constexpr auto invalidHitId = std::numeric_limits<hindex_type>::max();
 
   using TmpTuple = cms::cuda::VecArray<uint32_t, TrackerTraits::maxDepth>;
@@ -70,7 +71,7 @@ public:
   }
 
 
-  __device__ __forceinline__ int addOuterNeighbor(caStructures::cindex_type t, CellNeighborsVector& cellNeighbors) {
+  __device__ __forceinline__ int addOuterNeighbor(typename TrackerTraits::cindex_type t, CellNeighborsVector& cellNeighbors) {
     // use smart cache
     if (outerNeighbors().empty()) {
       auto i = cellNeighbors.extend();  // maybe wasted....
@@ -92,7 +93,7 @@ public:
     return outerNeighbors().push_back(t);
   }
 
-  __device__ __forceinline__ int addTrack(caStructures::tindex_type t, CellTracksVector& cellTracks) {
+  __device__ __forceinline__ int addTrack(tindex_type t, CellTracksVector& cellTracks) {
     if (tracks().empty()) {
       auto i = cellTracks.extend();  // maybe wasted....
       if (i > 0) {

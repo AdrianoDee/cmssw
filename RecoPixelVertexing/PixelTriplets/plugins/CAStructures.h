@@ -8,37 +8,37 @@
 namespace caStructures {
 
   // types
-  using hindex_type = uint32_t;  // FIXME from siPixelRecHitsHeterogeneousProduct
-  using tindex_type = uint32_t;  // for tuples
-  using cindex_type = uint32_t;  // for cells
+  // using typename TrackerTraits::hindex_type = uint32_t;  // FIXME from siPixelRecHitsHeterogeneousProduct
+  // using typename TrackerTraits::tindex_type = uint32_t;  // for tuples
+  // using typename TrackerTraits::cindex_type = uint32_t;  // for cells
 
-  template<typename Tracker>
-  using CellNeighborsT = cms::cuda::VecArray<cindex_type, Tracker::maxCellNeighbors>;
+  template<typename TrackerTraits>
+  using CellNeighborsT = cms::cuda::VecArray<typename TrackerTraits::cindex_type, TrackerTraits::maxCellNeighbors>;
 
-  template<typename Tracker>
-  using CellTracksT = cms::cuda::VecArray<tindex_type, Tracker::maxCellTracks>;
+  template<typename TrackerTraits>
+  using CellTracksT = cms::cuda::VecArray<typename TrackerTraits::tindex_type, TrackerTraits::maxCellTracks>;
 
-  template<typename Tracker>
-  using CellNeighborsVectorT = cms::cuda::SimpleVector<CellNeighborsT<Tracker>>;
+  template<typename TrackerTraits>
+  using CellNeighborsVectorT = cms::cuda::SimpleVector<CellNeighborsT<TrackerTraits>>;
 
-  template<typename Tracker>
-  using CellTracksVectorT = cms::cuda::SimpleVector<CellTracksT<Tracker>>;
+  template<typename TrackerTraits>
+  using CellTracksVectorT = cms::cuda::SimpleVector<CellTracksT<TrackerTraits>>;
 
-  template<typename Tracker>
-  using OuterHitOfCellContainerT = cms::cuda::VecArray<uint32_t, Tracker::maxCellsPerHit>;
+  template<typename TrackerTraits>
+  using OuterHitOfCellContainerT = cms::cuda::VecArray<uint32_t, TrackerTraits::maxCellsPerHit>;
 
-  template <typename Tracker>
-  using TupleMultiplicityT = cms::cuda::OneToManyAssoc<tindex_type, Tracker::maxHitsOnTrack + 1, Tracker::maxNumberOfTuples>;
+  template <typename TrackerTraits>
+  using TupleMultiplicityT = cms::cuda::OneToManyAssoc<typename TrackerTraits::tindex_type, TrackerTraits::maxHitsOnTrack + 1, TrackerTraits::maxNumberOfTuples>;
 
-  template <typename Tracker>
-  using HitToTupleT = cms::cuda::OneToManyAssoc<tindex_type, -1, Tracker::maxHitsForContainers>;  // 3.5 should be enough
+  template <typename TrackerTraits>
+  using HitToTupleT = cms::cuda::OneToManyAssoc<typename TrackerTraits::tindex_type, -1, TrackerTraits::maxHitsForContainers>;  // 3.5 should be enough
 
-  template<typename Tracker>
-  using TuplesContainerT = cms::cuda::OneToManyAssoc<hindex_type, Tracker::maxNumberOfTuples, Tracker::maxHitsForContainers>;
+  template<typename TrackerTraits>
+  using TuplesContainerT = cms::cuda::OneToManyAssoc<typename TrackerTraits::hindex_type, TrackerTraits::maxNumberOfTuples, TrackerTraits::maxHitsForContainers>;
 
-  template<typename Tracker>
+  template<typename TrackerTraits>
   struct OuterHitOfCellT {
-    OuterHitOfCellContainerT<Tracker>* container;
+    OuterHitOfCellContainerT<TrackerTraits>* container;
     int32_t offset;
     constexpr auto& operator[](int i) { return container[i - offset]; }
     constexpr auto const& operator[](int i) const { return container[i - offset]; }
