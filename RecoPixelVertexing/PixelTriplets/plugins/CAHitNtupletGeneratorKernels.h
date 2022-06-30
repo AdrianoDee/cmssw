@@ -64,7 +64,7 @@ namespace caHitNtupletGenerator {
 
     /// Is this a pair with inner == 0?
     __device__ __forceinline__ bool startAt0(int16_t pid) const {
-      assert((pixelTopology::Phase1::layerPairs[pid*2] == 0) == (pid < 3));
+      assert((pixelTopology::Phase1::layerPairs[pid*2] == 0) == (pid < 3 || pid == 13 || pid == 15 || pid == 16));
       return pixelTopology::Phase1::layerPairs[pid*2] == 0;
     }
 
