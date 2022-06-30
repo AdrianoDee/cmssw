@@ -45,6 +45,7 @@ _phase1LayerList = [
     ]
 from Configuration.Eras.Modifier_trackingPhase1_cff import trackingPhase1
 trackingPhase1.toModify(detachedTripletStepSeedLayers, layerList=_phase1LayerList)
+from Configuration.Eras.Modifier_trackingPhase2PU140_cff import trackingPhase2PU140
 
 # TrackingRegion
 from RecoTracker.TkTrackingRegions.globalTrackingRegionFromBeamSpotFixedZ_cfi import globalTrackingRegionFromBeamSpotFixedZ as _globalTrackingRegionFromBeamSpotFixedZ
@@ -58,7 +59,7 @@ trackingPhase1.toModify(detachedTripletStepTrackingRegions, RegionPSet = dict(pt
 from Configuration.Eras.Modifier_pp_on_XeXe_2017_cff import pp_on_XeXe_2017
 from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
 from RecoTracker.TkTrackingRegions.globalTrackingRegionWithVertices_cff import globalTrackingRegionWithVertices as _globalTrackingRegionWithVertices
-(pp_on_XeXe_2017 | pp_on_AA).toReplaceWith(detachedTripletStepTrackingRegions, 
+(pp_on_XeXe_2017 | pp_on_AA).toReplaceWith(detachedTripletStepTrackingRegions,
                 _globalTrackingRegionWithVertices.clone(RegionPSet=dict(
                     fixedError   = 2.5,
                     ptMin        = 0.9,
@@ -106,10 +107,12 @@ trackingPhase1.toReplaceWith(detachedTripletStepHitTriplets, _caHitTripletEDProd
     ),
     useBendingCorrection = True,
     CAThetaCut           = 0.001,
-    CAPhiCut             = 0,
-    CAHardPtCut          = 0.2,
+    CAPhiCut             = 0.0,
+    CAHardPtCut          = 0.2, CAcellsPerOuterHit   = 35
 ))
-highBetaStar_2018.toModify(detachedTripletStepHitTriplets,CAThetaCut = 0.002,CAPhiCut = 0.1,CAHardPtCut = 0)
+
+# trackingPhase2PU140.toModify(detachedTripletStepHitTriplets, CAcellsPerOuterHit = 600)
+highBetaStar_2018.toModify(detachedTripletStepHitTriplets,CAThetaCut = 0.002,CAPhiCut = 0.104,CAHardPtCut = 0, )
 
 import FastSimulation.Tracking.TrajectorySeedProducer_cfi
 _fastSim_detachedTripletStepSeeds = FastSimulation.Tracking.TrajectorySeedProducer_cfi.trajectorySeedProducer.clone(
@@ -300,7 +303,7 @@ trackdnn.toReplaceWith(detachedTripletStep, trackTfClassifier.clone(
 (trackdnn & fastSim).toModify(detachedTripletStep,vertices = 'firstStepPrimaryVerticesBeforeMixing')
 
 highBetaStar_2018.toModify(detachedTripletStep,qualityCuts = [-0.5,0.0,0.5])
-pp_on_AA.toModify(detachedTripletStep, 
+pp_on_AA.toModify(detachedTripletStep,
         mva = dict(GBRForestLabel = 'HIMVASelectorDetachedTripletStep_Phase1'),
         qualityCuts = [-0.2, 0.4, 0.85],
 )

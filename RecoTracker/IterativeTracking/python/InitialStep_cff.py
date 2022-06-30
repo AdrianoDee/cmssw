@@ -76,7 +76,8 @@ _initialStepCAHitQuadruplets = _caHitQuadrupletEDProducer.clone(
     fitFastCircle        = True,
     fitFastCircleChi2Cut = True,
     CAThetaCut           = 0.0012,
-    CAPhiCut             = 0.2,
+    CAPhiCut             = 0.202,
+    CAcellsPerOuterHit   = 60
 )
 highBetaStar_2018.toModify(_initialStepCAHitQuadruplets,
     CAThetaCut = 0.0024,
@@ -89,7 +90,9 @@ trackingPhase1.toModify(initialStepHitDoublets, layerPairs = [0,1,2]) # layer pa
 trackingPhase2PU140.toModify(initialStepHitDoublets, layerPairs = [0,1,2]) # layer pairs (0,1), (1,2), (2,3)
 trackingPhase2PU140.toModify(initialStepHitQuadruplets,
     CAThetaCut = 0.0010,
-    CAPhiCut   = 0.175,
+    CAPhiCut   = 0.17501,
+    CAcellsPerOuterHit   = 1000
+
 )
 
 from RecoTracker.TkSeedGenerator.seedCreatorFromRegionConsecutiveHitsTripletOnlyEDProducer_cff import seedCreatorFromRegionConsecutiveHitsTripletOnlyEDProducer as _seedCreatorFromRegionConsecutiveHitsTripletOnlyEDProducer
@@ -350,7 +353,7 @@ trackdnn.toReplaceWith(initialStep, trackTfClassifier.clone(
 (trackdnn & fastSim).toModify(initialStep,vertices = 'firstStepPrimaryVerticesBeforeMixing')
 
 
-pp_on_AA.toModify(initialStep, 
+pp_on_AA.toModify(initialStep,
         mva         = dict(GBRForestLabel = 'HIMVASelectorInitialStep_Phase1'),
         qualityCuts = [-0.9, -0.5, 0.2],
 )
@@ -408,7 +411,7 @@ trackingPhase2PU140.toModify(initialStepSelector,
             name = 'initialStep',
             preFilterName = 'initialStepTight',
             min_eta = -4.1,
-            max_eta = 4.1,            
+            max_eta = 4.1,
             chi2n_par = 1.2,
             res_par = ( 0.003, 0.001 ),
             minNumberLayers = 3,

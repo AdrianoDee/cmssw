@@ -35,7 +35,8 @@ CAHitTripletGenerator::CAHitTripletGenerator(const edm::ParameterSet& cfg, edm::
                  cfg.getParameter<std::vector<edm::ParameterSet>>("CAThetaCut_byTriplets")),
       caPhiCut(cfg.getParameter<double>("CAPhiCut"),
                cfg.getParameter<std::vector<edm::ParameterSet>>("CAPhiCut_byTriplets")),
-      caHardPtCut(cfg.getParameter<double>("CAHardPtCut")) {
+      caHardPtCut(cfg.getParameter<double>("CAHardPtCut")),
+      cellsPerOuterHit(cfg.getParameter<int>("CAcellsPerOuterHit")) {
   edm::ParameterSet comparitorPSet = cfg.getParameter<edm::ParameterSet>("SeedComparitorPSet");
   std::string comparitorName = comparitorPSet.getParameter<std::string>("ComponentName");
   if (comparitorName != "none") {
@@ -61,6 +62,7 @@ void CAHitTripletGenerator::fillDescriptions(edm::ParameterSetDescription& desc)
   desc.addVPSet("CAPhiCut_byTriplets", validatorCACut, defaultCACutVector);
 
   desc.add<double>("CAHardPtCut", 0);
+  desc.add<int>("CAcellsPerOuterHit", 100)->setComment("Expected number of cells per hit used to reserve the vector.");
 
   edm::ParameterSetDescription descMaxChi2;
   descMaxChi2.add<double>("pt1", 0.8);
@@ -111,7 +113,10 @@ namespace {
       g.theLayers[i].theOuterLayers.clear();
       g.theLayers[i].theOuterLayerPairs.clear();
       for (auto& v : g.theLayers[i].isOuterHitOfCell)
+      {
         v.clear();
+        // v.reserve(cellsPerOuterHit_);
+      }
     }
   }
 

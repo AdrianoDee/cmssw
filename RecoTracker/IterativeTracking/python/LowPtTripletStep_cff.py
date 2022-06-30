@@ -68,7 +68,7 @@ trackingPhase2PU140.toModify(lowPtTripletStepTrackingRegions, RegionPSet = dict(
 from Configuration.Eras.Modifier_pp_on_XeXe_2017_cff import pp_on_XeXe_2017
 from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
 from RecoTracker.TkTrackingRegions.globalTrackingRegionWithVertices_cff import globalTrackingRegionWithVertices as _globalTrackingRegionWithVertices
-(pp_on_XeXe_2017 | pp_on_AA).toReplaceWith(lowPtTripletStepTrackingRegions, 
+(pp_on_XeXe_2017 | pp_on_AA).toReplaceWith(lowPtTripletStepTrackingRegions,
                 _globalTrackingRegionWithVertices.clone(RegionPSet=dict(
                     useFixedError = False,
                     ptMin         = 0.49,
@@ -114,8 +114,9 @@ trackingPhase1.toReplaceWith(lowPtTripletStepHitTriplets, _caHitTripletEDProduce
     ),
     useBendingCorrection = True,
     CAThetaCut           = 0.002,
-    CAPhiCut             = 0.05 )
-)
+    CAPhiCut             = 0.0501,
+    CAcellsPerOuterHit   = 35
+))
 
 trackingPhase2PU140.toModify(lowPtTripletStepHitDoublets, layerPairs = [0,1]) # layer pairs (0,1), (1,2)
 trackingPhase2PU140.toReplaceWith(lowPtTripletStepHitTriplets, _caHitTripletEDProducer.clone(
@@ -128,10 +129,11 @@ trackingPhase2PU140.toReplaceWith(lowPtTripletStepHitTriplets, _caHitTripletEDPr
     ),
     useBendingCorrection = True,
     CAThetaCut           = 0.002,
-    CAPhiCut             = 0.05 )
-)
+    CAPhiCut             = 0.0502,
+    CAcellsPerOuterHit   = 600
+))
 highBetaStar_2018.toModify(lowPtTripletStepHitTriplets,CAThetaCut = 0.004,CAPhiCut = 0.1)
- 
+
 import FastSimulation.Tracking.TrajectorySeedProducer_cfi
 from FastSimulation.Tracking.SeedingMigration import _hitSetProducerToFactoryPSet
 _fastSim_lowPtTripletStepSeeds = FastSimulation.Tracking.TrajectorySeedProducer_cfi.trajectorySeedProducer.clone(
@@ -221,7 +223,7 @@ lowPtTripletStepTrajectoryBuilder = RecoTracker.CkfPattern.GroupedCkfTrajectoryB
 trackingNoLoopers.toModify(lowPtTripletStepTrajectoryBuilder,
                            maxPtForLooperReconstruction = 0.0)
 trackingLowPU.toModify(lowPtTripletStepTrajectoryBuilder, maxCand = 3)
-trackingPhase2PU140.toModify(lowPtTripletStepTrajectoryBuilder, 
+trackingPhase2PU140.toModify(lowPtTripletStepTrajectoryBuilder,
     inOutTrajectoryFilter = dict(refToPSet_ = 'lowPtTripletStepTrajectoryFilterInOut'),
     useSameTrajFilter     = False,
     maxCand               = 3,
@@ -321,7 +323,7 @@ trackdnn.toReplaceWith(lowPtTripletStep, trackTfClassifier.clone(
     qualityCuts = qualityCutDictionary.LowPtTripletStep.value()
 ))
 highBetaStar_2018.toModify(lowPtTripletStep,qualityCuts = [-0.7,-0.3,-0.1])
-pp_on_AA.toModify(lowPtTripletStep, 
+pp_on_AA.toModify(lowPtTripletStep,
         mva         = dict(GBRForestLabel = 'HIMVASelectorLowPtTripletStep_Phase1'),
         qualityCuts = [-0.8, -0.4, 0.5],
 )
@@ -429,6 +431,6 @@ fastSim.toReplaceWith(LowPtTripletStepTask,
                                    ,lowPtTripletStepTrackingRegions
                                    ,lowPtTripletStepSeeds
                                    ,lowPtTripletStepTrackCandidates
-                                   ,lowPtTripletStepTracks  
-                                   ,lowPtTripletStep   
+                                   ,lowPtTripletStepTracks
+                                   ,lowPtTripletStep
                                    ))
