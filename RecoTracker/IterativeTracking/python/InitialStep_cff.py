@@ -91,7 +91,7 @@ trackingPhase2PU140.toModify(initialStepHitDoublets, layerPairs = [0,1,2]) # lay
 trackingPhase2PU140.toModify(initialStepHitQuadruplets,
     CAThetaCut = 0.0010,
     CAPhiCut   = 0.17501,
-    CAcellsPerOuterHit   = 1000
+    CAcellsPerOuterHit   = 2000
 
 )
 

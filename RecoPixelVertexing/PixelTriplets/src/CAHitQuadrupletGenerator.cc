@@ -91,13 +91,14 @@ void CAHitQuadrupletGenerator::initEvent(const edm::Event& ev, const edm::EventS
   theField = &es.getData(theFieldToken);
 }
 namespace {
-  void createGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g) {
+ 
+  void createGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g, int outerSize) {
     for (unsigned int i = 0; i < layers.size(); i++) {
       for (unsigned int j = 0; j < 4; ++j) {
         auto vertexIndex = 0;
         auto foundVertex = std::find(g.theLayers.begin(), g.theLayers.end(), layers[i][j].name());
         if (foundVertex == g.theLayers.end()) {
-          g.theLayers.emplace_back(layers[i][j].name(), layers[i][j].detLayer()->seqNum(), layers[i][j].hits().size());
+          g.theLayers.emplace_back(layers[i][j].name(), layers[i][j].detLayer()->seqNum(), layers[i][j].hits().size(),outerSize);
           vertexIndex = g.theLayers.size() - 1;
         } else {
           vertexIndex = foundVertex - g.theLayers.begin();
@@ -110,7 +111,8 @@ namespace {
       }
     }
   }
-  void clearGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g) {
+
+  void clearGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g, int outerSize) {
     g.theLayerPairs.clear();
     for (unsigned int i = 0; i < g.theLayers.size(); i++) {
       g.theLayers[i].theInnerLayers.clear();
@@ -118,8 +120,9 @@ namespace {
       g.theLayers[i].theOuterLayers.clear();
       g.theLayers[i].theOuterLayerPairs.clear();
       for (auto& v : g.theLayers[i].isOuterHitOfCell)
-      {  v.clear();
-        // v.reserve(cellsPerOuterHit_);
+      {
+        v.clear();
+        v.reserve(outerSize);
       }
     }
   }
@@ -180,11 +183,11 @@ void CAHitQuadrupletGenerator::hitNtuplets(const IntermediateHitDoublets& region
     hitDoublets.clear();
     foundQuadruplets.clear();
     if (index == 0) {
-      createGraphStructure(layers, g);
+      createGraphStructure(layers, g, cellsPerOuterHit);
       caThetaCut.setCutValuesByLayerIds(g);
       caPhiCut.setCutValuesByLayerIds(g);
     } else {
-      clearGraphStructure(layers, g);
+      clearGraphStructure(layers, g, cellsPerOuterHit);
     }
 
     fillGraph(layers, regionLayerPairs, g, hitDoublets);

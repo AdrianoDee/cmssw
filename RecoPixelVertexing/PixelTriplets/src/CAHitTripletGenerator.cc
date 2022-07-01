@@ -85,13 +85,13 @@ void CAHitTripletGenerator::initEvent(const edm::Event& ev, const edm::EventSetu
 }
 
 namespace {
-  void createGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g) {
+  void createGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g, int outerSize) {
     for (unsigned int i = 0; i < layers.size(); i++) {
       for (unsigned int j = 0; j < 3; ++j) {
         auto vertexIndex = 0;
         auto foundVertex = std::find(g.theLayers.begin(), g.theLayers.end(), layers[i][j].name());
         if (foundVertex == g.theLayers.end()) {
-          g.theLayers.emplace_back(layers[i][j].name(), layers[i][j].detLayer()->seqNum(), layers[i][j].hits().size());
+          g.theLayers.emplace_back(layers[i][j].name(), layers[i][j].detLayer()->seqNum(), layers[i][j].hits().size(),outerSize);
           vertexIndex = g.theLayers.size() - 1;
         } else {
           vertexIndex = foundVertex - g.theLayers.begin();
@@ -105,7 +105,7 @@ namespace {
     }
   }
 
-  void clearGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g) {
+  void clearGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g, int outerSize) {
     g.theLayerPairs.clear();
     for (unsigned int i = 0; i < g.theLayers.size(); i++) {
       g.theLayers[i].theInnerLayers.clear();
@@ -115,7 +115,7 @@ namespace {
       for (auto& v : g.theLayers[i].isOuterHitOfCell)
       {
         v.clear();
-        // v.reserve(cellsPerOuterHit_);
+        v.reserve(outerSize);
       }
     }
   }
@@ -178,11 +178,11 @@ void CAHitTripletGenerator::hitNtuplets(const IntermediateHitDoublets& regionDou
     foundTriplets.clear();
 
     if (index == 0) {
-      createGraphStructure(layers, g);
+      createGraphStructure(layers, g, cellsPerOuterHit);
       caThetaCut.setCutValuesByLayerIds(g);
       caPhiCut.setCutValuesByLayerIds(g);
     } else {
-      clearGraphStructure(layers, g);
+      clearGraphStructure(layers, g, cellsPerOuterHit);
     }
     fillGraph(layers, regionLayerPairs, g, hitDoublets);
     CellularAutomaton ca(g);

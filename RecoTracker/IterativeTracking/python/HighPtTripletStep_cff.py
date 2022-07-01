@@ -116,7 +116,7 @@ highPtTripletStepHitTriplets = _caHitTripletEDProducer.clone(
     CAcellsPerOuterHit   = 35
 )
 
-trackingPhase2PU140.toModify(highPtTripletStepHitTriplets,CAThetaCut = 0.003,CAPhiCut = 0.0606,CAHardPtCut = 0.5,CAcellsPerOuterHit   = 600)
+trackingPhase2PU140.toModify(highPtTripletStepHitTriplets,CAThetaCut = 0.003,CAPhiCut = 0.0606,CAHardPtCut = 0.5,CAcellsPerOuterHit   = 1200)
 highBetaStar_2018.toModify(highPtTripletStepHitTriplets,CAThetaCut = 0.008,CAPhiCut = 0.14,CAHardPtCut = 0)
 
 from RecoTracker.TkSeedGenerator.seedCreatorFromRegionConsecutiveHitsEDProducer_cff import seedCreatorFromRegionConsecutiveHitsEDProducer as _seedCreatorFromRegionConsecutiveHitsEDProducer

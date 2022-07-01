@@ -67,7 +67,7 @@ initialStepHitQuadrupletsPreSplitting = _caHitQuadrupletEDProducer.clone(
     fitFastCircleChi2Cut = True,
     CAThetaCut           = 0.0012,
     CAPhiCut             = 0.203,
-    CAcellsPerOuterHit   = 60
+#    CAcellsPerOuterHit   = 60
 )
 from RecoTracker.TkSeedGenerator.seedCreatorFromRegionConsecutiveHitsEDProducer_cff import seedCreatorFromRegionConsecutiveHitsEDProducer as _seedCreatorFromRegionConsecutiveHitsEDProducer
 initialStepSeedsPreSplitting = _seedCreatorFromRegionConsecutiveHitsEDProducer.clone(

@@ -6,12 +6,12 @@
 #include <vector>
 
 struct CALayer {
-  CALayer(const std::string &layerName, const int seqNum, std::size_t numberOfHits)
+  CALayer(const std::string &layerName, const int seqNum, std::size_t numberOfHits, int outerSize = 1)
       : theName(layerName), theSeqNum(seqNum) {
     isOuterHitOfCell.resize(numberOfHits);
-    // for(auto& v : isOuterHitOfCell) {
-    //     v.reserve(128);
-    // }
+    for(auto& v : isOuterHitOfCell) {
+         v.reserve(outerSize);
+     }
   }
 
   bool operator==(const std::string &otherString) const { return otherString == theName; }

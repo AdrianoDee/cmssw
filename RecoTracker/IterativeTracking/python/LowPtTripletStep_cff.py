@@ -130,7 +130,7 @@ trackingPhase2PU140.toReplaceWith(lowPtTripletStepHitTriplets, _caHitTripletEDPr
     useBendingCorrection = True,
     CAThetaCut           = 0.002,
     CAPhiCut             = 0.0502,
-    CAcellsPerOuterHit   = 600
+    CAcellsPerOuterHit   = 1200
 ))
 highBetaStar_2018.toModify(lowPtTripletStepHitTriplets,CAThetaCut = 0.004,CAPhiCut = 0.1)
 
