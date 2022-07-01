@@ -446,7 +446,7 @@ namespace pixelTopology{
      static constexpr uint32_t maxCellNeighbors = 64;
      static constexpr uint32_t maxCellTracks = 96;
      static constexpr uint32_t maxHitsOnTrack = 15;
-     static constexpr uint32_t maxHitsOnTrackForFullFit = 15;
+     static constexpr uint32_t maxHitsOnTrackForFullFit = 7;
      static constexpr uint32_t avgHitsPerTrack = 7;
      static constexpr uint32_t maxCellsPerHit = 256;
      static constexpr uint32_t avgTracksPerHit = 10;
@@ -673,8 +673,8 @@ namespace pixelTopology{
 
   };
 
-  struct HIonPhase1 : public Phase1 {
-      static constexpr uint32_t maxNumberOfDoublets=3*1024*1024;};
+  // struct HIonPhase1 : public Phase1 {
+  //     static constexpr uint32_t maxNumberOfDoublets=3*1024*1024;};
 
 }  // namespace trackerTopology
 
