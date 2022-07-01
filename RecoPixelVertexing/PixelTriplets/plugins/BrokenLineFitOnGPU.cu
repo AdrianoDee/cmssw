@@ -46,17 +46,20 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernels(HitsView const *hv,
 
     if (fitNas4_) {
       // fit all as 4
-      kernel_BLFastFit<4,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tuples_,
-                                                                        tupleMultiplicity_,
-                                                                        hv,
-                                                                        tkidGPU.get(),
-                                                                        hitsGPU.get(),
-                                                                        hits_geGPU.get(),
-                                                                        fast_fit_resultsGPU.get(),
-                                                                        4,
-                                                                        8,
-                                                                        offset);
-      cudaCheck(cudaGetLastError());
+      riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrack,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset,&numberOfBlocks,&blockSize,&stream](auto i) {
+
+        kernel_BLFastFit<4,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tuples_,
+                                                                          tupleMultiplicity_,
+                                                                          hv,
+                                                                          tkidGPU.get(),
+                                                                          hitsGPU.get(),
+                                                                          hits_geGPU.get(),
+                                                                          fast_fit_resultsGPU.get(),
+                                                                          4,
+                                                                          4,
+                                                                          offset);
+
+                                                                          cudaCheck(cudaGetLastError());
 
       kernel_BLFit<4,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tupleMultiplicity_,
                                                                     bField_,
@@ -65,69 +68,38 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernels(HitsView const *hv,
                                                                     hitsGPU.get(),
                                                                     hits_geGPU.get(),
                                                                     fast_fit_resultsGPU.get());
+
+                                                                    cudaCheck(cudaGetLastError());
+
+                        });
+
     } else {
-      // fit quads
-      kernel_BLFastFit<4,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tuples_,
-                                                                        tupleMultiplicity_,
-                                                                        hv,
-                                                                        tkidGPU.get(),
-                                                                        hitsGPU.get(),
-                                                                        hits_geGPU.get(),
-                                                                        fast_fit_resultsGPU.get(),
-                                                                        4,
-                                                                        4,
-                                                                        offset);
-      cudaCheck(cudaGetLastError());
 
-      kernel_BLFit<4,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tupleMultiplicity_,
-                                                                    bField_,
-                                                                    outputSoa_,
-                                                                    tkidGPU.get(),
-                                                                    hitsGPU.get(),
-                                                                    hits_geGPU.get(),
-                                                                    fast_fit_resultsGPU.get());
-      // fit penta (all 5)
-      kernel_BLFastFit<5,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tuples_,
-                                                                        tupleMultiplicity_,
-                                                                        hv,
-                                                                        tkidGPU.get(),
-                                                                        hitsGPU.get(),
-                                                                        hits_geGPU.get(),
-                                                                        fast_fit_resultsGPU.get(),
-                                                                        5,
-                                                                        5,
-                                                                        offset);
-      cudaCheck(cudaGetLastError());
 
-      kernel_BLFit<5,TrackerTraits><<<8, blockSize, 0, stream>>>(tupleMultiplicity_,
-                                                   bField_,
-                                                   outputSoa_,
-                                                   tkidGPU.get(),
-                                                   hitsGPU.get(),
-                                                   hits_geGPU.get(),
-                                                   fast_fit_resultsGPU.get());
-      cudaCheck(cudaGetLastError());
-      // fit sexta and above (as 6)
-      kernel_BLFastFit<6,TrackerTraits><<<4, blockSize, 0, stream>>>(tuples_,
-                                                       tupleMultiplicity_,
-                                                       hv,
-                                                       tkidGPU.get(),
-                                                       hitsGPU.get(),
-                                                       hits_geGPU.get(),
-                                                       fast_fit_resultsGPU.get(),
-                                                       6,
-                                                       8,
-                                                       offset);
-      cudaCheck(cudaGetLastError());
+      riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrack,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset,&numberOfBlocks,&blockSize,&stream](auto i)
+      {
 
-      kernel_BLFit<6,TrackerTraits><<<4, blockSize, 0, stream>>>(tupleMultiplicity_,
-                                                   bField_,
-                                                   outputSoa_,
-                                                   tkidGPU.get(),
-                                                   hitsGPU.get(),
-                                                   hits_geGPU.get(),
-                                                   fast_fit_resultsGPU.get());
-      cudaCheck(cudaGetLastError());
+        kernel_BLFastFit<i,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tuples_,
+                          tupleMultiplicity_,
+                          hv,
+                          tkidGPU.get(),
+                          hitsGPU.get(),
+                          hits_geGPU.get(),
+                          fast_fit_resultsGPU.get(),
+                          i,
+                          i,
+                          offset);
+
+        kernel_BLFit<i,TrackerTraits><<<8, blockSize, 0, stream>>>(tupleMultiplicity_,
+                            bField_,
+                            outputSoa_,
+                            tkidGPU.get(),
+                            hitsGPU.get(),
+                            hits_geGPU.get(),
+                            fast_fit_resultsGPU.get());
+                          }
+                        );
+
     }
 
   }  // loop on concurrent fits
