@@ -78,9 +78,10 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
                                                                      this->device_hitTuple_apc_,
                                                                      quality_d,
                                                                      this->params_.caParams_);
+#ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
-
+#endif
   if (this->params_.doStats_)
     kernel_mark_used<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(this->device_theCells_.get(), this->device_nCells_);
   cudaCheck(cudaGetLastError());
@@ -95,8 +96,10 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(HitsOnCPU con
 
   cms::cuda::finalizeBulk<<<numberOfBlocks, blockSize, 0, cudaStream>>>(this->device_hitTuple_apc_, tuples_d);
 
-  cudaDeviceSynchronize();
-  cudaCheck(cudaGetLastError());
+  #ifdef GPU_DEBUG
+    cudaDeviceSynchronize();
+    cudaCheck(cudaGetLastError());
+  #endif
 
   kernel_fillHitDetIndices<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tuples_d, hh.view(), detId_d);
   cudaCheck(cudaGetLastError());

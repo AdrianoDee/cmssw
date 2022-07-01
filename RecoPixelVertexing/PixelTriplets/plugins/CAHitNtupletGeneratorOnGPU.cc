@@ -269,7 +269,7 @@ void CAHitNtupletGeneratorOnGPUT<TrackerTraits>::fillDescriptionsCommon(edm::Par
   desc.add<double>("dcaCutOuterTriplet", 0.25f)->setComment("Cut on origin radius when the outer hit is on BPix1");
   desc.add<bool>("earlyFishbone", true);
   desc.add<bool>("lateFishbone", false);
-  desc.add<bool>("fillStatistics", false);
+  desc.add<bool>("fillStatistics", true);
   desc.add<bool>("includeJumpingForwardDoublets", false);
   desc.add<unsigned int>("minHitsPerNtuplet", 4);
   desc.add<unsigned int>("maxNumberOfDoublets", TrackerTraits::maxNumberOfDoublets);
@@ -335,21 +335,17 @@ PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPUT<TrackerTrait
 
   auto* soa = tracks.get();
   assert(soa);
-  cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
 
   GPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_d.nHits(), stream);
-  cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
 
   kernels.buildDoublets(hits_d, stream);
-  cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
 
   kernels.launchKernels(hits_d, soa, stream);
-  cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
 
   HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
