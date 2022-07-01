@@ -342,6 +342,7 @@ namespace pixelTopology{
     const uint32_t maxCellNeighbors;
     const uint32_t maxCellTracks;
     const uint32_t maxHitsOnTrack;
+    const uint32_t maxHitsOnTrackForFullFit;
     const uint32_t avgHitsPerTrack;
     const uint32_t maxCellsPerHit;
     const uint32_t avgTracksPerHit;
@@ -435,7 +436,7 @@ namespace pixelTopology{
 
   };
 
-   struct Phase2 : public topology
+   struct Phase2
    {
      // types
      using hindex_type = uint32_t;  // FIXME from siPixelRecHitsHeterogeneousProduct
@@ -445,6 +446,7 @@ namespace pixelTopology{
      static constexpr uint32_t maxCellNeighbors = 64;
      static constexpr uint32_t maxCellTracks = 96;
      static constexpr uint32_t maxHitsOnTrack = 15;
+     static constexpr uint32_t maxHitsOnTrackForFullFit = 15;
      static constexpr uint32_t avgHitsPerTrack = 7;
      static constexpr uint32_t maxCellsPerHit = 256;
      static constexpr uint32_t avgTracksPerHit = 10;
@@ -538,7 +540,7 @@ namespace pixelTopology{
 
   };
 
-   struct Phase1 : public topology
+   struct Phase1
    {
       // types
       using hindex_type = uint32_t;  // FIXME from siPixelRecHitsHeterogeneousProduct
@@ -548,6 +550,7 @@ namespace pixelTopology{
       static constexpr uint32_t maxCellNeighbors = 36;
       static constexpr uint32_t maxCellTracks = 48;
       static constexpr uint32_t maxHitsOnTrack = 10;
+      static constexpr uint32_t maxHitsOnTrackForFullFit = 5;
       static constexpr uint32_t avgHitsPerTrack = 4;
       static constexpr uint32_t maxCellsPerHit = 256;
       static constexpr uint32_t avgTracksPerHit = 5;

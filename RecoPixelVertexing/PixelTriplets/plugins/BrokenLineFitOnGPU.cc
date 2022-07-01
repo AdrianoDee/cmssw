@@ -66,7 +66,8 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernelsOnCPU(HitsView const*
     else
       {
 
-        riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrack,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset](auto i)
+        //Fit these using all the hits they have
+        riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrackForFullFit+1,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset](auto i)
         {
 
           kernel_BLFastFit<i,TrackerTraits>(tuples_,
@@ -89,7 +90,40 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernelsOnCPU(HitsView const*
                               fast_fit_resultsGPU.get());
                             }
                           );
-                          }
+          }
+
+          static_assert(TrackerTraits::maxHitsOnTrackForFullFit<=TrackerTraits::maxHitsOnTrack);
+
+          if constexpr (TrackerTraits::maxHitsOnTrackForFullFit!=TrackerTraits::maxHitsOnTrack)
+          {
+            //Fit all the rest using the maximum from previous call
+            riemannFit::rolling_fits<TrackerTraits::maxHitsOnTrackForFullFit+1,TrackerTraits::maxHitsOnTrack+1,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset](auto i)
+            {
+
+              kernel_BLFastFit<i,TrackerTraits>(tuples_,
+                                tupleMultiplicity_,
+                                hv,
+                                tkidGPU.get(),
+                                hitsGPU.get(),
+                                hits_geGPU.get(),
+                                fast_fit_resultsGPU.get(),
+                                i,
+                                i,
+                                offset);
+
+              kernel_BLFit<i,TrackerTraits>(tupleMultiplicity_,
+                                  bField_,
+                                  outputSoa_,
+                                  tkidGPU.get(),
+                                  hitsGPU.get(),
+                                  hits_geGPU.get(),
+                                  fast_fit_resultsGPU.get());
+                                }
+                              );
+              }
+          }
+
+
 
     // // fit triplets
     // kernel_BLFastFit<3,TrackerTraits>(tuples_,
