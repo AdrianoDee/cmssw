@@ -21,7 +21,7 @@ int main() {
   auto nHits = 200;
   // inner scope to deallocate memory before destroying the stream
   {
-/*
+
     TrackingRecHit2DGPUT<pixelTopology::Phase1> tkhit(nHits, 0, nullptr, nullptr, stream);
     testTrackingRecHit2D::runKernels(tkhit.view());
 
@@ -39,7 +39,7 @@ int main() {
     assert(tkhitHPhase2.view());
     assert(tkhitHPhase2.view()->nHits() == unsigned(nHits));
     assert(tkhitHPhase2.view()->nMaxModules() == pixelTopology::Phase2::numberOfModules);
-*/
+
   }
 
   cudaCheck(cudaStreamDestroy(stream));
