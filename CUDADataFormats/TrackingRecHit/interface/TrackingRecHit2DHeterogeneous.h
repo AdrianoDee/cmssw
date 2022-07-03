@@ -77,6 +77,9 @@ public:
   cms::cuda::host::unique_ptr<uint16_t[]> store16ToHostAsync(cudaStream_t stream) const;
   cms::cuda::host::unique_ptr<float[]> store32ToHostAsync(cudaStream_t stream) const;
 
+  // unique_ptr<uint16_t[]> store16Ptr() const {return std::move(m_store16);};
+  // unique_ptr<float[]> store32Ptr() const {return std::move(m_store32);};
+
   // needs specialization for Host
   void copyFromGPU(TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits,TrackerTraits> const* input, cudaStream_t stream);
 
@@ -106,22 +109,7 @@ protected:
 };
 
 
-// This mess seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous
-// in RAW samples on which the Run3 HLT has been run. Without this those samples are useless beacuse of ROOT dictionary error
-
-template <typename Traits>
-class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{
-
-  public:
-  CMS_CLASS_VERSION(10); //TODO re-check if useful
-};
-
-//Classes definition for "Legacy" Phase1, to make the classes_def lighter. Not actually used in the code.
-using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
-using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
-using TrackingRecHit2DHostLegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
-
-//TrackingRecHit2DGPU/CPU/Host workaround to avoid partial specialization (forbidden?)
+//TrackingRecHit2DGPU/CPU/Host derived classes workaround to have "partial specialization"
 template <typename Traits,typename TrackerTraits>
 class TrackingRecHit2DGPUBaseT : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits,TrackerTraits>{};
 
@@ -132,7 +120,7 @@ template <typename Traits,typename TrackerTraits>
 class TrackingRecHit2DHostBaseT : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits,TrackerTraits>{};
 
 
-//Specilize and overload only what we need to overload, remember to use this->
+//Specialize and overload only what we need to overload, remember to use this->
 //GPU
 template <typename TrackerTraits>
 class TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits,TrackerTraits> : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits,TrackerTraits> {
@@ -143,7 +131,8 @@ class TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits,TrackerTraits> : publi
     cms::cuda::host::unique_ptr<uint16_t[]> store16ToHostAsync(cudaStream_t stream) const;
     cms::cuda::host::unique_ptr<float[]> store32ToHostAsync(cudaStream_t stream) const;
 };
-// Alias to avoid bringing GPUTraits around
+
+// An alias to avoid bringing Host/CPU/GPU traits around
 template<typename TrackerTraits>
 using TrackingRecHit2DGPUT = TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits,TrackerTraits>;
 
@@ -157,7 +146,6 @@ public:
   cms::cuda::host::unique_ptr<float[]> store32ToHostAsync(cudaStream_t stream) const;
 };
 
-// Alias to avoid bringing GPUTraits around
 template<typename TrackerTraits>
 using TrackingRecHit2DCPUT = TrackingRecHit2DCPUBaseT<cms::cudacompat::CPUTraits,TrackerTraits>;
 
@@ -168,18 +156,9 @@ class TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits,TrackerTraits> : pub
     using TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits,TrackerTraits>::TrackingRecHit2DHeterogeneousT;
     void copyFromGPU(TrackingRecHit2DGPUT<TrackerTraits> const* input, cudaStream_t stream);
 };
-// Alias to avoid bringing HostTraits around
+
 template<typename TrackerTraits>
 using TrackingRecHit2DHostT = TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits,TrackerTraits>;
-
-//Classes definition for Phase1, to make the classes_def lighter. Not actually used in the code.
-using TrackingRecHit2DGPUPhase1 = TrackingRecHit2DGPUT<pixelTopology::Phase1>;
-using TrackingRecHit2DCPUPhase1 = TrackingRecHit2DCPUT<pixelTopology::Phase1>;
-using TrackingRecHit2DHostPhase1 = TrackingRecHit2DHostT<pixelTopology::Phase1>;
-//Classes definition for Phase2, to make the classes_def lighter. Not actually used in the code.
-using TrackingRecHit2DGPUPhase2 = TrackingRecHit2DGPUT<pixelTopology::Phase2>;
-using TrackingRecHit2DCPUPhase2 = TrackingRecHit2DCPUT<pixelTopology::Phase2>;
-using TrackingRecHit2DHostPhase2 = TrackingRecHit2DHostT<pixelTopology::Phase2>;
 
 #include "HeterogeneousCore/CUDAUtilities/interface/copyAsync.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cudaCheck.h"
@@ -225,10 +204,9 @@ TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>::TrackingRecHit2DHeterogene
   if constexpr (std::is_same_v<Traits, cms::cudacompat::HostTraits>) {
     // it has to compile for ALL cases
     copyFromGPU(input, stream);
+
   } else {
     assert(input == nullptr);
-
-    //auto nL = isPhase2 ? phase2PixelTopology::numberOfLayers : phase1PixelTopology::numberOfLayers;
 
     m_store16 = Traits::template make_unique<uint16_t[]>(nHits * n16, stream);
     m_store32 = Traits::template make_unique<float[]>(nHits * n32 + TrackerTraits::numberOfLayers + 1, stream);
@@ -308,8 +286,8 @@ TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>::TrackingRecHit2DHeterogene
 
   //store transfer
   if constexpr (std::is_same_v<Traits, cms::cudacompat::GPUTraits>) {
-    cms::cuda::copyAsync(m_store16, store16, stream);
-    cms::cuda::copyAsync(m_store32, store32, stream);
+    cudaCheck(cudaMemcpyAsync(m_store16.get(), store16, sizeof(uint16_t) * static_cast<int>(n16 * nHits), cudaMemcpyDefault, stream));
+    cudaCheck(cudaMemcpyAsync(m_store32.get(), store32, sizeof(float) * static_cast<int>(n32 * nHits), cudaMemcpyDefault, stream));
   } else {
     std::copy(store32, store32 + nHits * n32, m_store32.get());  // want to copy it
     std::copy(store16, store16 + nHits * n16, m_store16.get());
@@ -347,5 +325,32 @@ TrackingRecHit2DHeterogeneousT<Traits,TrackerTraits>::TrackingRecHit2DHeterogene
     m_view = std::move(view);
   }
 }
+
+
+// This mess below seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous
+// in RAW samples on which the Run3 HLT has been run. Without this those samples are useless beacuse of the abovementioned
+// ROOT dictionary error.
+
+template <typename Traits>
+class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Traits,pixelTopology::Phase1>{
+
+  public:
+  CMS_CLASS_VERSION(10); //TODO re-check if useful
+};
+
+
+
+//Classes definition for Phase1/Phase2, to make the classes_def lighter. Not actually used in the code.
+using TrackingRecHit2DGPUPhase1 = TrackingRecHit2DGPUT<pixelTopology::Phase1>;
+using TrackingRecHit2DCPUPhase1 = TrackingRecHit2DCPUT<pixelTopology::Phase1>;
+using TrackingRecHit2DHostPhase1 = TrackingRecHit2DHostT<pixelTopology::Phase1>;
+
+using TrackingRecHit2DGPUPhase2 = TrackingRecHit2DGPUT<pixelTopology::Phase2>;
+using TrackingRecHit2DCPUPhase2 = TrackingRecHit2DCPUT<pixelTopology::Phase2>;
+using TrackingRecHit2DHostPhase2 = TrackingRecHit2DHostT<pixelTopology::Phase2>;
+
+using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
+using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
+using TrackingRecHit2DHostLegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
 
 #endif  // CUDADataFormats_TrackingRecHit_interface_TrackingRecHit2DHeterogeneousT_h

@@ -76,7 +76,7 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernels(HitsView const *hv,
     } else {
 
 
-      riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrackForFullFit-2,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset,&numberOfBlocks,&blockSize,&stream](auto i)
+      riemannFit::rolling_fits<4,TrackerTraits::maxHitsOnTrackForFullFit,1>([this,&hv,&tkidGPU,&hitsGPU,&hits_geGPU,&fast_fit_resultsGPU,&offset,&numberOfBlocks,&blockSize,&stream](auto i)
       {
 
         kernel_BLFastFit<i,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tuples_,
@@ -100,21 +100,21 @@ void HelixFitOnGPUT<TrackerTraits>::launchBrokenLineKernels(HitsView const *hv,
                           }
                         );
 
-      static_assert(TrackerTraits::maxHitsOnTrackForFullFit<=TrackerTraits::maxHitsOnTrack);
+      static_assert(TrackerTraits::maxHitsOnTrackForFullFit<TrackerTraits::maxHitsOnTrack);
 
       //Fit all the rest using the maximum from previous call
-      kernel_BLFastFit<TrackerTraits::maxHitsOnTrackForFullFit-1,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tuples_,
+      kernel_BLFastFit<TrackerTraits::maxHitsOnTrackForFullFit,TrackerTraits><<<numberOfBlocks / 4, blockSize, 0, stream>>>(tuples_,
                         tupleMultiplicity_,
                         hv,
                         tkidGPU.get(),
                         hitsGPU.get(),
                         hits_geGPU.get(),
                         fast_fit_resultsGPU.get(),
-                        TrackerTraits::maxHitsOnTrackForFullFit-1,
+                        TrackerTraits::maxHitsOnTrackForFullFit,
                         TrackerTraits::maxHitsOnTrack-1,
                         offset);
 
-      kernel_BLFit<TrackerTraits::maxHitsOnTrackForFullFit-1,TrackerTraits><<<8, blockSize, 0, stream>>>(tupleMultiplicity_,
+      kernel_BLFit<TrackerTraits::maxHitsOnTrackForFullFit,TrackerTraits><<<8, blockSize, 0, stream>>>(tupleMultiplicity_,
                           bField_,
                           outputSoa_,
                           tkidGPU.get(),
