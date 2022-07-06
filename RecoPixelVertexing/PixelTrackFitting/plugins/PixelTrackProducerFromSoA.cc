@@ -35,11 +35,12 @@
 
 /**
  * This class creates "leagcy"  reco::Track
- * objects from the output of SoA CA. 
+ * objects from the output of SoA CA.
  */
 class PixelTrackProducerFromSoA : public edm::global::EDProducer<> {
 public:
   using IndToEdm = std::vector<uint16_t>;
+  using HitMask = std::vector<uint32_t>;
 
   explicit PixelTrackProducerFromSoA(const edm::ParameterSet &iConfig);
   ~PixelTrackProducerFromSoA() override = default;
@@ -63,6 +64,7 @@ private:
 
   int32_t const minNumberOfHits_;
   pixelTrack::Quality const minQuality_;
+  const bool addHitMask_;
 };
 
 PixelTrackProducerFromSoA::PixelTrackProducerFromSoA(const edm::ParameterSet &iConfig)
@@ -73,7 +75,8 @@ PixelTrackProducerFromSoA::PixelTrackProducerFromSoA(const edm::ParameterSet &iC
       idealMagneticFieldToken_(esConsumes()),
       ttTopoToken_(esConsumes()),
       minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
-      minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))) {
+      minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))),
+      addHitMask_(iConfig.getParameter<bool>("addHitMask")) {
   if (minQuality_ == pixelTrack::Quality::notQuality) {
     throw cms::Exception("PixelTrackConfiguration")
         << iConfig.getParameter<std::string>("minQuality") + " is not a pixelTrack::Quality";
@@ -86,6 +89,8 @@ PixelTrackProducerFromSoA::PixelTrackProducerFromSoA(const edm::ParameterSet &iC
   produces<TrackingRecHitCollection>();
   produces<reco::TrackExtraCollection>();
   produces<IndToEdm>();
+  if(addHitMask_)
+    produces<HitMask>();
 }
 
 void PixelTrackProducerFromSoA::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
@@ -95,6 +100,7 @@ void PixelTrackProducerFromSoA::fillDescriptions(edm::ConfigurationDescriptions 
   desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplittingLegacy"));
   desc.add<int>("minNumberOfHits", 0);
   desc.add<std::string>("minQuality", "loose");
+  desc.add<bool>("addHitMask", false);
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -115,6 +121,9 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
 
   auto indToEdmP = std::make_unique<IndToEdm>();
   auto &indToEdm = *indToEdmP;
+
+  auto hitMaskP = std::make_unique<HitMask>();
+  auto &hitMask = *hitMaskP;
 
   auto const &idealField = iSetup.getData(idealMagneticFieldToken_);
 
@@ -182,7 +191,11 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
     hits.resize(nHits);
     auto b = hitIndices.begin(it);
     for (int iHit = 0; iHit < nHits; ++iHit)
+    {
+      if(addHitMask_)
+        hitMask.push_back(*(b + iHit));
       hits[iHit] = hitmap[*(b + iHit)];
+    }
 
     // mind: this values are respect the beamspot!
 
@@ -239,6 +252,8 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
   // store tracks
   storeTracks(iEvent, tracks, httopo);
   iEvent.put(std::move(indToEdmP));
+  if(addHitMask_)
+    iEvent.put(std::move(hitMaskP));
 }
 
 DEFINE_FWK_MODULE(PixelTrackProducerFromSoA);

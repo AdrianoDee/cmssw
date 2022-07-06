@@ -1,6 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.pixelNtupletFromHits_cff import pixelNtupletFromHits
 
 # legacy pixel rechit producer
 siPixelRecHits = cms.EDProducer("SiPixelRecHitConverter",
@@ -16,6 +17,9 @@ siPixelRecHitsPreSplitting = SwitchProducerCUDA(
     )
 )
 
+pixelNtupletFromHits.toModify( siPixelRecHitsPreSplitting, cuda = siPixelRecHits.clone(
+    src = 'siPixelClustersPreSplitting'
+))
 # convert the pixel rechits from legacy to SoA format
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromLegacy_cfi import siPixelRecHitSoAFromLegacy as _siPixelRecHitsPreSplittingSoA
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromCUDA_cfi import siPixelRecHitSoAFromCUDA as _siPixelRecHitSoAFromCUDA
@@ -64,6 +68,10 @@ siPixelRecHitsPreSplittingSoA = SwitchProducerCUDA(
 (gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplittingSoA,cuda = _siPixelRecHitSoAFromCUDA.clone())
 
 (gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDA.clone())
+
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAProducer_cfi import siPixelRecHitSoAProducer as _siPixelRecHitSoAProducer
+pixelNtupletFromHits.toModify(siPixelRecHitsPreSplittingSoA, cpu = _siPixelRecHitSoAProducer.clone(onGPU=False))
+(gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplittingSoA, cuda = _siPixelRecHitSoAProducer.clone(onGPU=True))
 
 pixelNtupletFit.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     cms.Task(

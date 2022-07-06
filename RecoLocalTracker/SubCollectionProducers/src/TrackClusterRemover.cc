@@ -24,6 +24,8 @@
 
 #include "RecoTracker/TransientTrackingRecHit/interface/Traj2TrackHits.h"
 
+#include "CUDADataFormats/Common/interface/HostProduct.h"
+
 #include <limits>
 
 namespace {
@@ -34,6 +36,8 @@ namespace {
     ~TrackClusterRemover() override {}
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
+    using HitMask = std::vector<uint32_t>;
+    using HMSstorage = HostProduct<uint32_t[]>;
   private:
     void produce(edm::StreamID, edm::Event& evt, const edm::EventSetup&) const override;
 
@@ -42,6 +46,7 @@ namespace {
 
     using QualityMaskCollection = std::vector<unsigned char>;
 
+    const bool doSoaMasking_;
     const unsigned char maxChi2x5_;
     const int minNumberOfLayersWithMeasBeforeFiltering_;
     const reco::TrackBase::TrackQuality trackQuality_;
@@ -50,6 +55,7 @@ namespace {
     edm::EDGetTokenT<QualityMaskCollection> srcQuals;
 
     edm::EDGetTokenT<edmNew::DetSetVector<SiPixelCluster>> pixelClusters_;
+    edm::EDGetTokenT<HMSstorage> hmsToken_;
     edm::EDGetTokenT<edmNew::DetSetVector<SiStripCluster>> stripClusters_;
 
     edm::EDGetTokenT<PixelMaskContainer> oldPxlMaskToken_;
@@ -67,9 +73,12 @@ namespace {
     desc.add<edm::InputTag>("stripClusters", edm::InputTag("siStripClusters"));
     desc.add<edm::InputTag>("oldClusterRemovalInfo", edm::InputTag());
 
+    desc.add<bool>("doSoaMasking",false);
     desc.add<std::string>("TrackQuality", "highPurity");
     desc.add<double>("maxChi2", 30.);
     desc.add<int>("minNumberOfLayersWithMeasBeforeFiltering", 0);
+    //soa mask
+    desc.add<edm::InputTag>("moduleSoAMap",edm::InputTag("siPixelRecHits"));
     // old mode
     desc.add<edm::InputTag>("overrideTrkQuals", edm::InputTag());
 
@@ -77,7 +86,8 @@ namespace {
   }
 
   TrackClusterRemover::TrackClusterRemover(const edm::ParameterSet& iConfig)
-      : maxChi2x5_(Traj2TrackHits::toChi2x5(iConfig.getParameter<double>("maxChi2"))),
+      : doSoaMasking_(iConfig.getParameter<bool>("doSoaMasking")),
+        maxChi2x5_(Traj2TrackHits::toChi2x5(iConfig.getParameter<double>("maxChi2"))),
         minNumberOfLayersWithMeasBeforeFiltering_(
             iConfig.getParameter<int>("minNumberOfLayersWithMeasBeforeFiltering")),
         trackQuality_(reco::TrackBase::qualityByName(iConfig.getParameter<std::string>("TrackQuality"))),
@@ -87,6 +97,7 @@ namespace {
   {
     auto const& pixelClusters = iConfig.getParameter<edm::InputTag>("pixelClusters");
     auto const& stripClusters = iConfig.getParameter<edm::InputTag>("stripClusters");
+    auto const& moduleSoAMap = iConfig.getParameter<edm::InputTag>("moduleSoAMap");
 
     if (pixelClusters.label().empty() && stripClusters.label().empty())
       throw edm::Exception(edm::errors::Configuration)
@@ -94,6 +105,14 @@ namespace {
     if (!pixelClusters.label().empty()) {
       pixelClusters_ = consumes<edmNew::DetSetVector<SiPixelCluster>>(pixelClusters);
       produces<edm::ContainerMask<edmNew::DetSetVector<SiPixelCluster>>>();
+
+      if(doSoaMasking_ && !moduleSoAMap.label().empty())
+      {
+        produces<HitMask>();
+        hmsToken_ = consumes<HMSstorage>(moduleSoAMap);
+      } else if (doSoaMasking_)
+        throw edm::Exception(edm::errors::Configuration)
+            << "Configuration Error: TrackClusterRemover used with doSoaMasking==True and no valid moduleSoAMap input.";
     }
     if (!stripClusters.label().empty()) {
       stripClusters_ = consumes<edmNew::DetSetVector<SiStripCluster>>(stripClusters);
@@ -125,6 +144,18 @@ namespace {
 
     std::vector<bool> collectedStrips;
     std::vector<bool> collectedPixels;
+
+    edm::Handle<HMSstorage> hms;
+    uint32_t const* hitsModuleStart = nullptr;
+    if(!hmsToken_.isUninitialized())
+    {
+      iEvent.getByToken(hmsToken_,hms);
+      hitsModuleStart = hms.product()->get();
+    }
+    auto fc = hitsModuleStart;
+
+    auto hitMaskP = std::make_unique<HitMask>();
+    auto &hitMask = *hitMaskP;
 
     if (!oldPxlMaskToken_.isUninitialized()) {
       edm::Handle<PixelMaskContainer> oldPxlMask;
@@ -202,10 +233,23 @@ namespace {
           continue;  // skip outliers
         auto const& thit = reinterpret_cast<BaseTrackerRecHit const&>(hit);
         auto const& cluster = thit.firstClusterRef();
+
+
+
         if (!stripClusters_.isUninitialized() && cluster.isStrip())
           collectedStrips[cluster.key()] = true;
         if (!pixelClusters_.isUninitialized() && cluster.isPixel())
+        {
           collectedPixels[cluster.key()] = true;
+          if(doSoaMasking_)
+          {
+
+            auto detI = thit.det()->index();
+            assert(cluster.isPixel());
+            auto i = fc[detI] + cluster.pixelCluster().originalId();
+            hitMask.push_back(i);
+          }
+        }
         if (trackerHitRTTI::isMatched(thit))
           collectedStrips[reinterpret_cast<SiStripMatchedRecHit2D const&>(hit).stereoClusterRef().key()] = true;
       }
@@ -226,6 +270,8 @@ namespace {
       LogDebug("TrackClusterRemover") << "total pxl to skip: "
                                       << std::count(collectedPixels.begin(), collectedPixels.end(), true);
       iEvent.put(std::move(removedPixelClusterMask));
+      if(doSoaMasking_)
+        iEvent.put(std::move(hitMaskP));
     }
   }
 
