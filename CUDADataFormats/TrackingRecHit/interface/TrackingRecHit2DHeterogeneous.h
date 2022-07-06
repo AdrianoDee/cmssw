@@ -373,6 +373,7 @@ TrackingRecHit2DHeterogeneous<Traits>::TrackingRecHit2DHeterogeneous(
   m_phiBinner = view->m_phiBinner = m_PhiBinnerStore.get();
   m_phiBinnerStorage = view->m_phiBinnerStorage =
       reinterpret_cast<TrackingRecHit2DSOAView::PhiBinner::index_type*>(get32(Storage32::kPhiStorage));
+  m_hitsLayerStart = view->m_hitsLayerStart = reinterpret_cast<uint32_t*>(get32(Storage32::kLayers));
 
   //Store 16
   view->m_detInd = get16(Storage16::kDetId);

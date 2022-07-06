@@ -26,22 +26,25 @@
 
 #include "SiPixelRecHitSoAProducerOnGPU.h"
 
+#define GPU_DEBUG
 
 namespace {
 
-  constexpr int L[11] = {0, 96, 320, 672, 1184, 1296, 1408,  1520, 1632, 1744, 1856};
+
 
   __global__ void setHitsLayerStart(uint32_t const* __restrict__ hitsModuleStart,
                                     uint32_t* hitsLayerStart) {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     constexpr auto m = 10;
 
+    constexpr int L[11] = {0, 96, 320, 672, 1184, 1296, 1408,  1520, 1632, 1744, 1856};
+
     assert(0 == hitsModuleStart[0]);
 
     if (i <= m) {
       hitsLayerStart[i] = hitsModuleStart[L[i]];
 #ifdef GPU_DEBUG
-      printf("LayerStart %d/%d at module %d: %d\n", i, m, cpeParams->layerGeometry().layerStart[i], hitsLayerStart[i]);
+      printf("LayerStart %d/%d at module %d: %d\n", i, m, L[i], hitsLayerStart[i]);
 #endif
     }
   }
@@ -54,16 +57,15 @@ namespace pixelhitconverter {
   TrackingRecHit2DGPU SiPixelRecHitSoAProducerOnGPU::convertHitsAsync(float* store32,
                                     uint16_t* store16,
                                     uint32_t* moduleStart,
-                                    int nHits,
-                                    int startBPIX2,
-                                    bool isPhase2,
                                     cudaStream_t stream) const
     {
 
-  TrackingRecHit2DGPU hits(store32,store16, moduleStart, nHits, moduleStart[startBPIX2], isPhase2, stream);
-
-
-  if (nHits) {
+  printf("%d \n",__LINE__);
+  TrackingRecHit2DGPU hits(store32,store16, moduleStart, nHits_, moduleStart[startBPIX2_], isPhase2_, stream);
+  printf("%d \n",__LINE__);
+  printf("%d \n",__LINE__);
+  if (nHits_) {
+    printf("%d \n",__LINE__);
     setHitsLayerStart<<<1, 32, 0, stream>>>(moduleStart, hits.hitsLayerStart());
     cudaCheck(cudaGetLastError());
     constexpr auto nLayers = 10;
@@ -71,7 +73,7 @@ namespace pixelhitconverter {
                                   nLayers,
                                   hits.iphi(),
                                   hits.hitsLayerStart(),
-                                  nHits,
+                                  nHits_,
                                   256,
                                   hits.phiBinnerStorage(),
                                   stream);

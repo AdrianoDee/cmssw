@@ -23,21 +23,22 @@ namespace pixelhitconverter {
     SiPixelRecHitSoAProducerAlgo& operator=(const SiPixelRecHitSoAProducerAlgo&) = delete;
     SiPixelRecHitSoAProducerAlgo& operator=(SiPixelRecHitSoAProducerAlgo&&) = delete;
 
+    SiPixelRecHitSoAProducerAlgo(int const& nHits, int const& startBPIX2, bool const& isPhase2)
+        : nHits_(nHits_), startBPIX2_(startBPIX2_), isPhase2_(isPhase2) {}
+
     TrackingRecHit2DGPU convertHitsAsync(float* store32,
                                       uint16_t* store16,
                                       uint32_t* moduleStart,
-                                      int nHits,
-                                      int startBPIX2,
-                                      bool isPhase2,
                                       cudaStream_t stream) const;
 
     TrackingRecHit2DCPU convertHits(float* store32,
                                       uint16_t* store16,
-                                      uint32_t* moduleStart,
-                                      int nHits,
-                                      int startBPIX2,
-                                      bool isPhase2) const;
+                                      uint32_t* moduleStart) const;
 
+  private:
+    const int nHits_;
+    const int startBPIX2_;
+    const bool isPhase2_;
 
   };
 
