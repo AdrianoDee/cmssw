@@ -340,7 +340,7 @@ namespace pixelTopology {
 
     static constexpr int nPairsMinimal = 33;
     static constexpr int nPairsFarForwards = nPairsMinimal + 8;  // include barrel "jumping" layer pairs
-    static constexpr int nPairs = phase2PixelTopology::nPairs;  // include far forward layer pairs
+    static constexpr int nPairs = phase2PixelTopology::nPairs;   // include far forward layer pairs
 
     static constexpr int maxDYsize12 = 12;
     static constexpr int maxDYsize = 10;
@@ -517,12 +517,11 @@ namespace pixelTopology {
     }
   };
 
+  template <typename T>
+  using isPhase1Topology = typename std::enable_if<std::is_base_of<Phase1, T>::value>::type;
 
   template <typename T>
-  using isPhase1Topology = typename std::enable_if<std::is_base_of<Phase1,T>::value>::type;
-
-  template <typename T>
-  using isPhase2Topology = typename std::enable_if<std::is_base_of<Phase2,T>::value>::type;
+  using isPhase2Topology = typename std::enable_if<std::is_base_of<Phase2, T>::value>::type;
 
   // struct HIonPhase1 : public Phase1 {
   //     static constexpr uint32_t maxNumberOfDoublets=3*1024*1024;};

@@ -53,14 +53,14 @@ namespace caHitNtupletGenerator {
 
     /// Is this a pair with inner == 0?
     __device__ __forceinline__ bool startAt0(int16_t pid) const {
-      assert((Phase1::layerPairs[pid * 2] == 0) == (pid < 3 || pid == 13 || pid == 15 || pid == 16)); // to be 100% sure it's working, may be removed
+      assert((Phase1::layerPairs[pid * 2] == 0) ==
+             (pid < 3 || pid == 13 || pid == 15 || pid == 16));  // to be 100% sure it's working, may be removed
       return Phase1::layerPairs[pid * 2] == 0;
     }
   };
 
   template <typename TrackerTraits>
   struct CAParamsT<TrackerTraits, isPhase2Topology<TrackerTraits>> : public CACommon {
-
     const bool includeFarForwards_;
     /// Is is a starting layer pair?
     __device__ __forceinline__ bool startingLayerPair(int16_t pid) const {
@@ -86,7 +86,6 @@ namespace caHitNtupletGenerator {
 
   template <typename TrackerTraits>
   struct ParamsT<TrackerTraits, isPhase1Topology<TrackerTraits>> : public AlgoParams {
-
     using TT = TrackerTraits;
     using QualityCuts = pixelTrack::QualityCutsT<TT>;  //track quality cuts
     using CellCuts = gpuPixelDoublets::CellCutsT<TT>;  //cell building cuts
@@ -138,7 +137,6 @@ namespace caHitNtupletGenerator {
 
   template <typename TrackerTraits>
   struct ParamsT<TrackerTraits, isPhase2Topology<TrackerTraits>> : public AlgoParams {
-
     using TT = TrackerTraits;
     using QualityCuts = pixelTrack::QualityCutsT<TT>;
     using CellCuts = gpuPixelDoublets::CellCutsT<TT>;
@@ -148,11 +146,7 @@ namespace caHitNtupletGenerator {
             CellCuts const& cellCuts,
             QualityCuts const& qualityCuts,
             CAParams const& caParams)
-        : AlgoParams(commonCuts),
-          cellCuts_(cellCuts),
-          qualityCuts_(qualityCuts),
-          caParams_(caParams)
-    {}
+        : AlgoParams(commonCuts), cellCuts_(cellCuts), qualityCuts_(qualityCuts), caParams_(caParams) {}
 
     // quality cuts
     CellCuts cellCuts_;

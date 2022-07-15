@@ -108,7 +108,24 @@ protected:
   int16_t* m_iphi;
 };
 
-//TrackingRecHit2DGPU/CPU/Host derived classes workaround to have partial specialization without having to redefine every method
+
+
+
+
+// TrackingRecHit2DGPU/CPU/Host derived classes workaround to have partial specialization.
+// This is neeeded since one could not partially specialize a single method without specializing the whole class.
+// So simply having an alias such as
+//
+// template <typename TrackerTraits>
+// using TrackingRecHit2DGPUT = TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits, TrackerTraits>;
+//
+// wouldn't work (giving some "invalid use of incomplete type" error). The alternative would be to have the whole class specialized. But this would mean we need
+// to rewrite every method (specialzed don't see primary methods). This is overcome with inheritance.
+// Thus with this workaround, i.e. using inheritance+specialization, we keep under control code duplication.
+// Another solution would be to have an extra accessor struct in the class to partially specialize only that
+// (as described here https://stackoverflow.com/questions/165101/invalid-use-of-incomplete-type-error-with-partial-template-specialization)
+// but it seems to me more messy than this.
+// The same reasoning applies to CAHitNtupletGeneratorKernels.
 
 template <typename Traits, typename TrackerTraits>
 class TrackingRecHit2DGPUBaseT : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits, TrackerTraits> {};
@@ -132,9 +149,6 @@ public:
   cms::cuda::host::unique_ptr<float[]> store32ToHostAsync(cudaStream_t stream) const;
 };
 
-// An alias to avoid bringing Host/CPU/GPU traits around
-template <typename TrackerTraits>
-using TrackingRecHit2DGPUT = TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits, TrackerTraits>;
 
 //CPU
 template <typename TrackerTraits>
@@ -147,8 +161,6 @@ public:
   cms::cuda::host::unique_ptr<float[]> store32ToHostAsync(cudaStream_t stream) const;
 };
 
-template <typename TrackerTraits>
-using TrackingRecHit2DCPUT = TrackingRecHit2DCPUBaseT<cms::cudacompat::CPUTraits, TrackerTraits>;
 
 //HOST
 template <typename TrackerTraits>
@@ -156,8 +168,15 @@ class TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits, TrackerTraits>
     : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits, TrackerTraits> {
 public:
   using TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits, TrackerTraits>::TrackingRecHit2DHeterogeneousT;
-  void copyFromGPU(TrackingRecHit2DGPUT<TrackerTraits> const* input, cudaStream_t stream);
+  void copyFromGPU(TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits,TrackerTraits> const* input, cudaStream_t stream);
 };
+
+// Aliases to avoid bringing Host/CPU/GPU traits around
+template <typename TrackerTraits>
+using TrackingRecHit2DGPUT = TrackingRecHit2DGPUBaseT<cms::cudacompat::GPUTraits, TrackerTraits>;
+
+template <typename TrackerTraits>
+using TrackingRecHit2DCPUT = TrackingRecHit2DCPUBaseT<cms::cudacompat::CPUTraits, TrackerTraits>;
 
 template <typename TrackerTraits>
 using TrackingRecHit2DHostT = TrackingRecHit2DHostBaseT<cms::cudacompat::HostTraits, TrackerTraits>;
@@ -330,9 +349,10 @@ TrackingRecHit2DHeterogeneousT<Traits, TrackerTraits>::TrackingRecHit2DHeterogen
   }
 }
 
-// This mess below seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous
-// in RAW samples on which the Run3 HLT has been run. Without this those samples are useless beacuse of the abovementioned
-// ROOT dictionary error.
+// This definition below seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous
+// in RAW samples in which the Run3 HLT has already been run. Without this those samples are useless beacuse of the abovementioned
+// ROOT dictionary error. Alternative solution would be to impose a drop of HLT collections in RECO step, but seems not reasonable.
+// Same reasoning applies to PixelTrackHeterogeneous.
 
 template <typename Traits>
 class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Traits, pixelTopology::Phase1> {

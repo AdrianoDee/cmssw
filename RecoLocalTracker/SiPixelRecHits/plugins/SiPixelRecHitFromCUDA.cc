@@ -142,7 +142,7 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
 
     assert(lc > fc);
     LogDebug("SiPixelRecHitFromCUDA") << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
-                                      << " legacy clusters" << ' ' << fc << ',' << lc<<"\n";
+                                      << " legacy clusters" << ' ' << fc << ',' << lc << "\n";
     if (nhits > maxHitsInModule)
       edm::LogWarning("SiPixelRecHitFromCUDA") << fmt::sprintf(
           "Too many clusters %d in module %d. Only the first %d hits will be converted", nhits, gind, maxHitsInModule);

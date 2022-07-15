@@ -35,95 +35,84 @@ namespace {
     return x * x;
   }
 
-
   //Common Params
   AlgoParams makeCommonParams(edm::ParameterSet const& cfg) {
     return AlgoParams({cfg.getParameter<bool>("onGPU"),
-                                              cfg.getParameter<unsigned int>("minHitsForSharingCut"),
-                                              cfg.getParameter<bool>("useRiemannFit"),
-                                              cfg.getParameter<bool>("fitNas4"),
-                                              cfg.getParameter<bool>("includeJumpingForwardDoublets"),
-                                              cfg.getParameter<bool>("earlyFishbone"),
-                                              cfg.getParameter<bool>("lateFishbone"),
-                                              cfg.getParameter<bool>("fillStatistics"),
-                                              cfg.getParameter<bool>("doSharedHitCut"),
-                                              cfg.getParameter<bool>("dupPassThrough"),
-                                              cfg.getParameter<bool>("useSimpleTripletCleaner")});
+                       cfg.getParameter<unsigned int>("minHitsForSharingCut"),
+                       cfg.getParameter<bool>("useRiemannFit"),
+                       cfg.getParameter<bool>("fitNas4"),
+                       cfg.getParameter<bool>("includeJumpingForwardDoublets"),
+                       cfg.getParameter<bool>("earlyFishbone"),
+                       cfg.getParameter<bool>("lateFishbone"),
+                       cfg.getParameter<bool>("fillStatistics"),
+                       cfg.getParameter<bool>("doSharedHitCut"),
+                       cfg.getParameter<bool>("dupPassThrough"),
+                       cfg.getParameter<bool>("useSimpleTripletCleaner")});
   }
 
   //This is needed to have the partial specialization for  isPhase1Topology/isPhase2Topology
-  template < typename TrackerTraits, typename Enable = void >
+  template <typename TrackerTraits, typename Enable = void>
   struct topologyCuts {};
 
-  template < typename TrackerTraits>
-  struct topologyCuts<TrackerTraits, isPhase1Topology<TrackerTraits>>
-  {
-
+  template <typename TrackerTraits>
+  struct topologyCuts<TrackerTraits, isPhase1Topology<TrackerTraits>> {
     static constexpr CAParamsT<TrackerTraits> makeCACuts(edm::ParameterSet const& cfg) {
       return CAParamsT<TrackerTraits>{{cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
-                                                              (float)cfg.getParameter<double>("ptmin"),
-                                                              (float)cfg.getParameter<double>("CAThetaCutBarrel"),
-                                                              (float)cfg.getParameter<double>("CAThetaCutForward"),
-                                                              (float)cfg.getParameter<double>("hardCurvCut"),
-                                                              (float)cfg.getParameter<double>("dcaCutInnerTriplet"),
-                                                              (float)cfg.getParameter<double>("dcaCutOuterTriplet")}};
+                                       (float)cfg.getParameter<double>("ptmin"),
+                                       (float)cfg.getParameter<double>("CAThetaCutBarrel"),
+                                       (float)cfg.getParameter<double>("CAThetaCutForward"),
+                                       (float)cfg.getParameter<double>("hardCurvCut"),
+                                       (float)cfg.getParameter<double>("dcaCutInnerTriplet"),
+                                       (float)cfg.getParameter<double>("dcaCutOuterTriplet")}};
+    };
 
-                                                            };
-
-      static constexpr QualityCutsT<TrackerTraits> makeQualityCuts(edm::ParameterSet const& pset) {
-        auto coeff = pset.getParameter<std::vector<double>>("chi2Coeff");
-        auto ptMax = pset.getParameter<double>("chi2MaxPt");
-        if (coeff.size() != 2) {
-          throw edm::Exception(edm::errors::Configuration,
-                               "CAHitNtupletGeneratorOnGPUT.trackQualityCuts.chi2Coeff must have 2 elements");
-        }
-        coeff[1] = (coeff[1] - coeff[0]) / log2(ptMax);
-        return QualityCutsT<TrackerTraits>{
-            // polynomial coefficients for the pT-dependent chi2 cut
-            {(float)coeff[0], (float)coeff[1], 0.f, 0.f},
-            // max pT used to determine the chi2 cut
-            (float)ptMax,
-            // chi2 scale factor: 8 for broken line fit, ?? for Riemann fit
-            (float)pset.getParameter<double>("chi2Scale"),
-            // regional cuts for triplets
-            {(float)pset.getParameter<double>("tripletMaxTip"),
-             (float)pset.getParameter<double>("tripletMinPt"),
-             (float)pset.getParameter<double>("tripletMaxZip")},
-            // regional cuts for quadruplets
-            {(float)pset.getParameter<double>("quadrupletMaxTip"),
-             (float)pset.getParameter<double>("quadrupletMinPt"),
-             (float)pset.getParameter<double>("quadrupletMaxZip")}};
-      }
-
+    static constexpr QualityCutsT<TrackerTraits> makeQualityCuts(edm::ParameterSet const& pset) {
+      auto coeff = pset.getParameter<std::array<double,2>>("chi2Coeff");
+      auto ptMax = pset.getParameter<double>("chi2MaxPt");
+      // if (coeff.size() != 2) {
+      //   throw edm::Exception(edm::errors::Configuration,
+      //                        "CAHitNtupletGeneratorOnGPUT.trackQualityCuts.chi2Coeff must have 2 elements");
+      // }
+      coeff[1] = (coeff[1] - coeff[0]) / log2(ptMax);
+      return QualityCutsT<TrackerTraits>{// polynomial coefficients for the pT-dependent chi2 cut
+                                         {(float)coeff[0], (float)coeff[1], 0.f, 0.f},
+                                         // max pT used to determine the chi2 cut
+                                         (float)ptMax,
+                                         // chi2 scale factor: 8 for broken line fit, ?? for Riemann fit
+                                         (float)pset.getParameter<double>("chi2Scale"),
+                                         // regional cuts for triplets
+                                         {(float)pset.getParameter<double>("tripletMaxTip"),
+                                          (float)pset.getParameter<double>("tripletMinPt"),
+                                          (float)pset.getParameter<double>("tripletMaxZip")},
+                                         // regional cuts for quadruplets
+                                         {(float)pset.getParameter<double>("quadrupletMaxTip"),
+                                          (float)pset.getParameter<double>("quadrupletMinPt"),
+                                          (float)pset.getParameter<double>("quadrupletMaxZip")}};
+    }
   };
 
-  template < typename TrackerTraits>
-  struct topologyCuts<TrackerTraits, isPhase2Topology<TrackerTraits>>
-  {
-
+  template <typename TrackerTraits>
+  struct topologyCuts<TrackerTraits, isPhase2Topology<TrackerTraits>> {
     static constexpr CAParamsT<TrackerTraits> makeCACuts(edm::ParameterSet const& cfg) {
       return CAParamsT<TrackerTraits>{{cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
-                                                              (float)cfg.getParameter<double>("ptmin"),
-                                                              (float)cfg.getParameter<double>("CAThetaCutBarrel"),
-                                                              (float)cfg.getParameter<double>("CAThetaCutForward"),
-                                                              (float)cfg.getParameter<double>("hardCurvCut"),
-                                                              (float)cfg.getParameter<double>("dcaCutInnerTriplet"),
-                                                              (float)cfg.getParameter<double>("dcaCutOuterTriplet")},
-                                                              {(bool) cfg.getParameter<bool>("includeFarForwards")}};
-                                                            }
+                                       (float)cfg.getParameter<double>("ptmin"),
+                                       (float)cfg.getParameter<double>("CAThetaCutBarrel"),
+                                       (float)cfg.getParameter<double>("CAThetaCutForward"),
+                                       (float)cfg.getParameter<double>("hardCurvCut"),
+                                       (float)cfg.getParameter<double>("dcaCutInnerTriplet"),
+                                       (float)cfg.getParameter<double>("dcaCutOuterTriplet")},
+                                      {(bool)cfg.getParameter<bool>("includeFarForwards")}};
+    }
 
-      static constexpr QualityCutsT<TrackerTraits> makeQualityCuts(edm::ParameterSet const& pset) {
-        return QualityCutsT<TrackerTraits>{
-            (float)pset.getParameter<double>("maxChi2"),
-            (float)pset.getParameter<double>("minPt"),
-            (float)pset.getParameter<double>("maxTip"),
-            (float)pset.getParameter<double>("maxZip"),
-        };
-      }
-
-
+    static constexpr QualityCutsT<TrackerTraits> makeQualityCuts(edm::ParameterSet const& pset) {
+      return QualityCutsT<TrackerTraits>{
+          (float)pset.getParameter<double>("maxChi2"),
+          (float)pset.getParameter<double>("minPt"),
+          (float)pset.getParameter<double>("maxTip"),
+          (float)pset.getParameter<double>("maxZip"),
+      };
+    }
   };
-
 
   //Cell Cuts, as they are the cuts have the same logic for Phase2 and Phase1
   //keeping them separate would allow further differentiation in the future
@@ -131,10 +120,10 @@ namespace {
   template <typename TrakterTraits>
   CellCutsT<TrakterTraits> makeCellCuts(edm::ParameterSet const& cfg) {
     return CellCutsT<TrakterTraits>{cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
-                                                               cfg.getParameter<bool>("doClusterCut"),
-                                                               cfg.getParameter<bool>("doZ0Cut"),
-                                                               cfg.getParameter<bool>("doPtCut"),
-                                                               cfg.getParameter<bool>("idealConditions")};
+                                    cfg.getParameter<bool>("doClusterCut"),
+                                    cfg.getParameter<bool>("doZ0Cut"),
+                                    cfg.getParameter<bool>("doPtCut"),
+                                    cfg.getParameter<bool>("idealConditions")};
   }
 
   // //CAParams
@@ -208,7 +197,6 @@ namespace {
 
 }  // namespace
 
-//Given the params may be changed when adding a new topology one should define it's own constructor
 using namespace std;
 
 template <typename TrackerTraits>
@@ -218,35 +206,34 @@ CAHitNtupletGeneratorOnGPUT<TrackerTraits>::CAHitNtupletGeneratorOnGPUT(const ed
                makeCellCuts<TrackerTraits>(cfg),
                topologyCuts<TrackerTraits>::makeQualityCuts(cfg.getParameterSet("trackQualityCuts")),
                topologyCuts<TrackerTraits>::makeCACuts(cfg)) {
-
-                 #ifdef DUMP_GPU_TK_TUPLES
-                   printf("TK: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
-                          "tid",
-                          "qual",
-                          "nh",
-                          "nl",
-                          "charge",
-                          "pt",
-                          "eta",
-                          "phi",
-                          "tip",
-                          "zip",
-                          "chi2",
-                          "h1",
-                          "h2",
-                          "h3",
-                          "h4",
-                          "h5",
-                          "hn");
-                 #endif
-
-               }
+#ifdef DUMP_GPU_TK_TUPLES
+  printf("TK: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
+         "tid",
+         "qual",
+         "nh",
+         "nl",
+         "charge",
+         "pt",
+         "eta",
+         "phi",
+         "tip",
+         "zip",
+         "chi2",
+         "h1",
+         "h2",
+         "h3",
+         "h4",
+         "h5",
+         "hn");
+#endif
+}
 
 template <typename TrackerTraits>
 void CAHitNtupletGeneratorOnGPUT<TrackerTraits>::fillDescriptions(edm::ParameterSetDescription& desc) {
   fillDescriptionsCommon(desc);
-  edm::LogWarning("CAHitNtupletGeneratorOnGPUT::fillDescriptions") << "Note: this fillDescriptions is a dummy one. Most probably you are missing some parameters. \n"
-                                                                       "please implement your TrackerTraits descriptions in CAHitNtupletGeneratorOnGPUT. \n";
+  edm::LogWarning("CAHitNtupletGeneratorOnGPUT::fillDescriptions")
+      << "Note: this fillDescriptions is a dummy one. Most probably you are missing some parameters. \n"
+         "please implement your TrackerTraits descriptions in CAHitNtupletGeneratorOnGPUT. \n";
 }
 
 template <>

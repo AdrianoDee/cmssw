@@ -36,7 +36,6 @@ namespace gpuPixelDoublets {
 
   template <typename TrackerTraits>
   struct CellCutsT {
-
     using H = Hits<TrackerTraits>;
     using T = TrackerTraits;
 
@@ -44,7 +43,7 @@ namespace gpuPixelDoublets {
     const bool doClusterCut_;
     const bool doZ0Cut_;
     const bool doPtCut_;
-    const bool idealConditions_; //this is actually not used by phase2
+    const bool idealConditions_;  //this is actually not used by phase2
 
     __device__ __forceinline__ bool zSizeCut(H const& hh, int i, int o) const {
       auto dz = hh.zGlobal(i) - hh.zGlobal(o);
@@ -268,10 +267,18 @@ namespace gpuPixelDoublets {
 //      #endif
 #ifdef GPU_DEBUG
       if (tooMany > 0)
-        printf("OuterHitOfCell full for %d in layer %d/%d, %d,%d %d, %d %.3f %.3f\n", i, inner, outer, nmin, tot, tooMany,iphicut,TrackerTraits::minz[pairLayerId],TrackerTraits::maxz[pairLayerId]);
+        printf("OuterHitOfCell full for %d in layer %d/%d, %d,%d %d, %d %.3f %.3f\n",
+               i,
+               inner,
+               outer,
+               nmin,
+               tot,
+               tooMany,
+               iphicut,
+               TrackerTraits::minz[pairLayerId],
+               TrackerTraits::maxz[pairLayerId]);
 #endif
     }  // loop in block...
-
   }
 
 }  // namespace gpuPixelDoublets
