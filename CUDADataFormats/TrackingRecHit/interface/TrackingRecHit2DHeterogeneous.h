@@ -355,7 +355,7 @@ TrackingRecHit2DHeterogeneousT<Traits, TrackerTraits>::TrackingRecHit2DHeterogen
 // Same reasoning applies to PixelTrackHeterogeneous.
 
 template <typename Traits>
-class TrackingRecHit2DHeterogeneous : public TrackingRecHit2DHeterogeneousT<Traits, pixelTopology::Phase1> {
+class TrackingRecHit2DHeterogeneous {
 public:
   CMS_CLASS_VERSION(10);
 };

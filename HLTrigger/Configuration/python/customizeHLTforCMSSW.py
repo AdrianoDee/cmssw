@@ -233,10 +233,13 @@ def customizeHLTfor99999(process):
      for producer in esproducers_by_type(process, "PixelCPEFastESProducer"):
          if hasattr(producer, "isPhase2"):
              delattr(producer, "isPhase2")
-     # for producer in esproducers_by_type(process, "PixelCPEGenericESProducer"):
-     #     if hasattr(producer, "Upgrade"):
-     #         setattr(producer,"isPhase2",getattr(producer,"Upgrade"))
-     #         delattr(producer, "Upgrade")
+     for producer in esproducers_by_type(process, "PixelCPEGenericESProducer"):
+         if hasattr(producer, "Upgrade"):
+             setattr(producer,"isPhase2",getattr(producer,"Upgrade"))
+             delattr(producer, "Upgrade")
+         #else:
+             #setattr(producer,"isPhase2",False)
+             
      # for producer insproducers_by_type(process, "PixelCPEGeneric"):
      #     if hasattr(producer, "Upgrade"):
      #         setattr(producer,"isPhase2",getattr(producer,"Upgrade"))

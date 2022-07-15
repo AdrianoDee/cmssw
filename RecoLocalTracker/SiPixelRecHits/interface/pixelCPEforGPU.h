@@ -408,7 +408,7 @@ namespace pixelCPEforGPU {
     // return estimated bin value truncated to [0, 15]
     int jx = std::clamp(bin_value, low_value, high_value);
 
-    auto toCM = [](uint8_t x) { return float(x) * 1.e-4; };
+    auto toCM = [](uint8_t x) { return float(x) * 1.e-4f; };
 
     if (not isEdgeX) {
       cp.xerr[ic] = isOneX ? toCM(isBigX ? detParams.sx2 : detParams.sigmax1[jx])

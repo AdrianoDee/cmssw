@@ -8,6 +8,7 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/HistoContainer.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
+#include "DataFormats/Common/interface/CMS_CLASS_VERSION.h"
 
 namespace pixelTrack {
 
@@ -21,15 +22,28 @@ namespace pixelTrack {
 
 }  // namespace pixelTrack
 
+// This definition below seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous
+// in RAW samples in which the Run3 HLT has already been run. Without this those samples are useless beacuse of the abovementioned
+// ROOT dictionary error. Alternative solution would be to impose a drop of HLT collections in RECO step, but seems not reasonable.
+// Same reasoning applies to TrackingRecHit2DHeterogeneous.
 template <int32_t S>
 class TrackSoAHeterogeneousT {
 public:
-  static constexpr int32_t H = 5;
+  CMS_CLASS_VERSION(10);
+};
+
+template <typename TrackerTraits>
+class PixelTrackSoAT{
+public:
+
+  static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
+  static constexpr int32_t H = TrackerTraits::maxHitsOnTrack; // Average hits rather than max?
   static constexpr int32_t stride() { return S; }
 
+  using hindex_type = uint32_t;  //TrackerTraits::hindex_type ?
+
   using Quality = pixelTrack::Quality;
-  using hindex_type = uint32_t;
-  using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>;  // TODO plot for average number of hits
+  using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>;
 
   // Always check quality is at least loose!
   // CUDA does not support enums  in __lgc ...
@@ -56,11 +70,11 @@ public:
 
   constexpr int computeNumberOfLayers(int32_t i) const {
     // layers are in order and we assume tracks are either forward or backward
-    auto pdet = detIndices.begin(i);
+    auto pdet = this->detIndices.begin(i);
     int nl = 1;
-    auto ol = pixelTopology::getLayer<pixelTopology::Phase1>(*pdet);
-    for (; pdet < detIndices.end(i); ++pdet) {
-      auto il = pixelTopology::getLayer<pixelTopology::Phase1>(*pdet);
+    auto ol = pixelTopology::getLayer<TrackerTraits>(*pdet);
+    for (; pdet < this->detIndices.end(i); ++pdet) {
+      auto il = pixelTopology::getLayer<TrackerTraits>(*pdet);
       if (il != ol)
         ++nl;
       ol = il;
@@ -88,44 +102,13 @@ public:
 
 private:
   int nTracks_;
-};
 
-// This mess seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackSoAHeterogeneousT
-// in RAW samples on which the Run3 HLT has been run. Without this those samples are useless beacuse of ROOT dictionary error
-template <typename TrackerTraits>
-class PixelTrackSoAT : public TrackSoAHeterogeneousT<TrackerTraits::maxNumberOfTuples> {
-public:
-  static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
-  static constexpr int32_t H = TrackerTraits::maxHitsOnTrack;
-  using hindex_type = uint32_t;  //TrackerTraits::hindex_type;
-
-  using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>;  // TODO plot for average number of hits
-  using Quality = pixelTrack::Quality;
-
-  constexpr int computeNumberOfLayers(int32_t i) const {
-    // layers are in order and we assume tracks are either forward or backward
-    auto pdet = this->detIndices.begin(i);
-    int nl = 1;
-    auto ol = pixelTopology::getLayer<TrackerTraits>(*pdet);
-    for (; pdet < this->detIndices.end(i); ++pdet) {
-      auto il = pixelTopology::getLayer<TrackerTraits>(*pdet);
-      if (il != ol)
-        ++nl;
-      ol = il;
-    }
-    return nl;
-  }
-
-  constexpr int nHits(int i) const { return this->detIndices.size(i); }
-  // inline bool tightCut(int i, pixelTrack::QualityCutsT<TrackerTraits> cuts) const { return false; } //false if tight, a cut
-  // constexpr inline bool isHighPurity(int i, pixelTrack::QualityCutsT<TrackerTraits> cuts) const { return true; } //false if not HP, a flag
-
-  HitContainer hitIndices;
-  HitContainer detIndices;
 };
 
 namespace pixelTrack {
 
+  using namespace pixelTopology;
+  
 #ifdef GPU_SMALL_EVENTS
   // kept for testing and debugging
   constexpr uint32_t maxNumber() { return 2 * 1024; }
@@ -136,7 +119,7 @@ namespace pixelTrack {
 
   using TrackSoA = TrackSoAHeterogeneousT<maxNumber()>;
   using TrajectoryState = TrajectoryStateSoAT<maxNumber()>;
-  using HitContainer = TrackSoA::HitContainer;
+  // using HitContainer = TrackSoA::HitContainer;
 
   template <typename TrackerTraits>
   using TrackSoAT = PixelTrackSoAT<TrackerTraits>;
@@ -147,11 +130,11 @@ namespace pixelTrack {
   using TrackSoAPhase1 = TrackSoAT<pixelTopology::Phase1>;
   using TrackSoAPhase2 = TrackSoAT<pixelTopology::Phase2>;
 
-  template <typename TrackerTraits>
+  template <typename TrackerTraits, typename Enable = void>
   struct QualityCutsT {};
 
-  template <>
-  struct QualityCutsT<pixelTopology::Phase1> {
+  template <typename TrackerTraits>
+  struct QualityCutsT<TrackerTraits, isPhase1Topology<TrackerTraits>>{
     // chi2 cut = chi2Scale * (chi2Coeff[0] + pT/GeV * (chi2Coeff[1] + pT/GeV * (chi2Coeff[2] + pT/GeV * chi2Coeff[3])))
     float chi2Coeff[4];
     float chi2MaxPt;  // GeV
@@ -166,7 +149,7 @@ namespace pixelTrack {
     Region triplet;
     Region quadruplet;
 
-    __device__ __forceinline__ bool isHP(PixelTrackSoAT<pixelTopology::Phase1> const *__restrict__ tracks,
+    __device__ __forceinline__ bool isHP(PixelTrackSoAT<TrackerTraits> const *__restrict__ tracks,
                                          int nHits,
                                          int it) const {
       // impose "region cuts" based on the fit results (phi, Tip, pt, cotan(theta)), Zip)
@@ -179,7 +162,7 @@ namespace pixelTrack {
              (std::abs(tracks->zip(it)) < region.maxZip);
     }
 
-    __device__ __forceinline__ bool strictCut(PixelTrackSoAT<pixelTopology::Phase1> const *__restrict__ tracks,
+    __device__ __forceinline__ bool strictCut(PixelTrackSoAT<TrackerTraits> const *__restrict__ tracks,
                                               int it) const {
       auto roughLog = [](float x) {
         // max diff [0.5,12] at 1.25 0.16143
@@ -214,19 +197,19 @@ namespace pixelTrack {
     }
   };
 
-  template <>
-  struct QualityCutsT<pixelTopology::Phase2> {
+  template <typename TrackerTraits>
+  struct QualityCutsT<TrackerTraits, isPhase2Topology<TrackerTraits>>{
     float maxChi2;
     float minPt;
     float maxTip;
     float maxZip;
 
-    __device__ __forceinline__ bool isHP(PixelTrackSoAT<pixelTopology::Phase2> const *__restrict__ tracks,
+    __device__ __forceinline__ bool isHP(PixelTrackSoAT<TrackerTraits> const *__restrict__ tracks,
                                          int nHits,
                                          int it) const {
       return (std::abs(tracks->tip(it)) < maxTip) and (tracks->pt(it) > minPt) and (std::abs(tracks->zip(it)) < maxZip);
     }
-    __device__ __forceinline__ bool strictCut(PixelTrackSoAT<pixelTopology::Phase2> const *__restrict__ tracks,
+    __device__ __forceinline__ bool strictCut(PixelTrackSoAT<TrackerTraits> const *__restrict__ tracks,
                                               int it) const {
       return tracks->chi2(it) >= maxChi2;
     }
