@@ -10,6 +10,8 @@
 
 #include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
 
+//#include "DataFormats/Common/interface/CMS_CLASS_VERSION.h"
+
 namespace pixelTrack {
   enum class Quality : uint8_t { bad = 0, edup, dup, loose, strict, tight, highPurity, notQuality };
   constexpr uint32_t qualitySize{uint8_t(Quality::notQuality)};
@@ -23,6 +25,7 @@ namespace pixelTrack {
 template <int32_t S>
 class TrackSoAHeterogeneousT {
 public:
+  //CMS_CLASS_VERSION(10);
   static constexpr int32_t stride() { return S; }
 
   using Quality = pixelTrack::Quality;
@@ -95,7 +98,7 @@ namespace pixelTrack {
   constexpr uint32_t maxNumber() { return 2 * 1024; }
 #else
   // tested on MC events with 55-75 pileup events
-  constexpr uint32_t maxNumber() { return 32 * 1024; }
+  constexpr uint32_t maxNumber() { return 64 * 1024; }
 #endif
 
   using TrackSoA = TrackSoAHeterogeneousT<maxNumber()>;
