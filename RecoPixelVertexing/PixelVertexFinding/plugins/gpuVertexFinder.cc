@@ -99,7 +99,7 @@ namespace gpuVertexFinder {
 
   template <typename TrackerTraits>
 #ifdef __CUDACC__
-  ZVertexHeterogeneous ProducerT<TrackerTraits>::makeAsync(cudaStream_t stream,
+  ZVertexHeterogeneous Producer<TrackerTraits>::makeAsync(cudaStream_t stream,
                                                            pixelTrack::TrackSoAT<TrackerTraits> const* tksoa,
                                                            float ptMin,
                                                            float ptMax) const {
@@ -109,7 +109,7 @@ namespace gpuVertexFinder {
     ZVertexHeterogeneous vertices(cms::cuda::make_device_unique<ZVertexSoA>(stream));
 #else
 
-  ZVertexHeterogeneous ProducerT<TrackerTraits>::make(pixelTrack::TrackSoAT<TrackerTraits> const* tksoa,
+  ZVertexHeterogeneous Producer<TrackerTraits>::make(pixelTrack::TrackSoAT<TrackerTraits> const* tksoa,
                                                       float ptMin,
                                                       float ptMax) const {
 
@@ -197,7 +197,7 @@ namespace gpuVertexFinder {
     return vertices;
   }
 
-  template class ProducerT<pixelTopology::Phase1>;
-  template class ProducerT<pixelTopology::Phase2>;
+  template class Producer<pixelTopology::Phase1>;
+  template class Producer<pixelTopology::Phase2>;
 
 }  // namespace gpuVertexFinder

@@ -37,13 +37,13 @@ namespace gpuVertexFinder {
   }
 
   template <typename TrackerTraits>
-  class ProducerT {
+  class Producer {
   public:
     using ZVertices = ZVertexSoA;
     using WorkSpace = gpuVertexFinder::WorkSpace;
     using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
 
-    ProducerT(bool oneKernel,
+    Producer(bool oneKernel,
               bool useDensity,
               bool useDBSCAN,
               bool useIterative,
@@ -61,7 +61,7 @@ namespace gpuVertexFinder {
           errmax(ierrmax),
           chi2max(ichi2max) {}
 
-    ~ProducerT() = default;
+    ~Producer() = default;
 
     ZVertexHeterogeneous makeAsync(cudaStream_t stream, TkSoA const* tksoa, float ptMin, float ptMax) const;
     ZVertexHeterogeneous make(TkSoA const* tksoa, float ptMin, float ptMax) const;

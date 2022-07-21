@@ -13,9 +13,9 @@
 
 class MagneticField;
 template <typename TrackerTraits>
-class PixelCPEFastT final : public PixelCPEGenericBase {
+class PixelCPEFast final : public PixelCPEGenericBase {
 public:
-  PixelCPEFastT(edm::ParameterSet const &conf,
+  PixelCPEFast(edm::ParameterSet const &conf,
                 const MagneticField *,
                 const TrackerGeometry &,
                 const TrackerTopology &,
@@ -23,7 +23,7 @@ public:
                 const SiPixelGenErrorDBObject *,
                 const SiPixelLorentzAngle *);
 
-  ~PixelCPEFastT() override = default;
+  ~PixelCPEFast() override = default;
 
   static void fillPSetDescription(edm::ParameterSetDescription &desc);
 

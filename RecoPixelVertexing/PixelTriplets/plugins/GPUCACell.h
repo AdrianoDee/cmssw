@@ -1,5 +1,5 @@
-#ifndef RecoPixelVertexing_PixelTriplets_plugins_GPUCACell_h
-#define RecoPixelVertexing_PixelTriplets_plugins_GPUCACell_h
+#ifndef RecoPixelVertexing_PixelTriplets_plugins_GPUCACellT_h
+#define RecoPixelVertexing_PixelTriplets_plugins_GPUCACellT_h
 
 //
 // Author: Felice Pantaleo, CERN
@@ -299,7 +299,7 @@ public:
     } else {
       auto doubletId = this - cells;
       tmpNtuplet.push_back_unsafe(doubletId);
-      assert(tmpNtuplet.size() <= 16);  //TODO make a constant
+      assert(tmpNtuplet.size() <= int(TrackerTraits::maxHitsOnTrack-3));
 
       bool last = true;
       for (unsigned int otherCell : outerNeighbors()) {
@@ -341,7 +341,7 @@ public:
         }
       }
       tmpNtuplet.pop_back();
-      assert(tmpNtuplet.size() < 20);
+      assert(tmpNtuplet.size() < int(TrackerTraits::maxHitsOnTrack - 1));
     }
   }
 
@@ -381,4 +381,4 @@ private:
   hindex_type theFishboneId;
 };
 
-#endif  // RecoPixelVertexing_PixelTriplets_plugins_GPUCACell_h
+#endif  // RecoPixelVertexing_PixelTriplets_plugins_GPUCACellT_h
