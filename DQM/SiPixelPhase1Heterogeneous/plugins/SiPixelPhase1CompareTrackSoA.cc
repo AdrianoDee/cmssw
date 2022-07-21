@@ -64,8 +64,7 @@ namespace {
 
 class SiPixelPhase1CompareTrackSoA : public DQMEDAnalyzer {
 public:
-
-  using PixelTrackSoAPhase1 =  PixelTrackHeterogeneousT<pixelTopology::Phase1>;
+  using PixelTrackSoAPhase1 = PixelTrackHeterogeneousT<pixelTopology::Phase1>;
 
   explicit SiPixelPhase1CompareTrackSoA(const edm::ParameterSet&);
   ~SiPixelPhase1CompareTrackSoA() override = default;

@@ -76,13 +76,13 @@ void SiPixelRecHitSoAFromLegacy<TrackerTraits>::fillDescriptions(edm::Configurat
 
   std::string label = "siPixelRecHitSoAFromLegacy";
   label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);  
+  descriptions.add(label, desc);
 }
 
 template <typename TrackerTraits>
 void SiPixelRecHitSoAFromLegacy<TrackerTraits>::produce(edm::StreamID streamID,
-                                                         edm::Event& iEvent,
-                                                         const edm::EventSetup& es) const {
+                                                        edm::Event& iEvent,
+                                                        const edm::EventSetup& es) const {
   const TrackerGeometry* geom_ = &es.getData(geomToken_);
   PixelCPEFast<TrackerTraits> const* fcpe = dynamic_cast<const PixelCPEFast<TrackerTraits>*>(&es.getData(cpeToken_));
   if (not fcpe) {
@@ -194,7 +194,7 @@ void SiPixelRecHitSoAFromLegacy<TrackerTraits>::produce(edm::StreamID streamID,
     auto const lc = hitsModuleStart[gind + 1];
     assert(lc > fc);
     LogDebug("SiPixelRecHitSoAFromLegacy") << "in det " << gind << ": conv " << nclus << " hits from " << dsv.size()
-                                            << " legacy clusters" << ' ' << fc << ',' << lc;
+                                           << " legacy clusters" << ' ' << fc << ',' << lc;
     assert((lc - fc) == nclus);
     if (nclus > maxHitsInModule)
       printf(
@@ -282,8 +282,8 @@ void SiPixelRecHitSoAFromLegacy<TrackerTraits>::produce(edm::StreamID streamID,
                                 256,
                                 output->phiBinnerStorage());
 
-  LogDebug("SiPixelRecHitSoAFromLegacy")
-      << "created HitSoa for " << numberOfClusters << " clusters in " << numberOfDetUnits << " Dets";
+  LogDebug("SiPixelRecHitSoAFromLegacy") << "created HitSoa for " << numberOfClusters << " clusters in "
+                                         << numberOfDetUnits << " Dets";
   iEvent.put(std::move(output));
   if (convert2Legacy_)
     iEvent.put(std::move(legacyOutput));

@@ -70,12 +70,12 @@ std::unique_ptr<PixelClusterParameterEstimator> PixelCPEFastESProducer<TrackerTr
     //std::cout<<" pass an empty GenError pointer"<<std::endl;
   }
   return std::make_unique<PixelCPEFast<TrackerTraits>>(pset_,
-                                                        &iRecord.get(magfieldToken_),
-                                                        iRecord.get(pDDToken_),
-                                                        iRecord.get(hTTToken_),
-                                                        &iRecord.get(lorentzAngleToken_),
-                                                        genErrorDBObjectProduct,
-                                                        lorentzAngleWidthProduct);
+                                                       &iRecord.get(magfieldToken_),
+                                                       iRecord.get(pDDToken_),
+                                                       iRecord.get(hTTToken_),
+                                                       &iRecord.get(lorentzAngleToken_),
+                                                       genErrorDBObjectProduct,
+                                                       lorentzAngleWidthProduct);
 }
 
 template <typename TrackerTraits>
@@ -94,16 +94,14 @@ void PixelCPEFastESProducer<TrackerTraits>::fillDescriptions(edm::ConfigurationD
   desc.add<bool>("UseErrorsFromTemplates", true);
   desc.add<bool>("TruncatePixelCharge", true);
 
+  std::string name = "PixelCPEFast";
+  name += TrackerTraits::nameModifier;
+  desc.add<std::string>("ComponentName", name);
+  desc.add<edm::ESInputTag>("MagneticFieldRecord", edm::ESInputTag());
 
-   std::string name = "PixelCPEFast";
-   name += TrackerTraits::nameModifier;
-   desc.add<std::string>("ComponentName", name);
-   desc.add<edm::ESInputTag>("MagneticFieldRecord", edm::ESInputTag());
- 
-   name = "PixelCPEFastESProducer";
-   name += TrackerTraits::nameModifier;
-   descriptions.add(name, desc);
- 
+  name = "PixelCPEFastESProducer";
+  name += TrackerTraits::nameModifier;
+  descriptions.add(name, desc);
 }
 
 using PixelCPEFastESProducerPhase1 = PixelCPEFastESProducer<pixelTopology::Phase1>;

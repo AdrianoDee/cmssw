@@ -20,7 +20,7 @@ int main() {
   // inner scope to deallocate memory before destroying the stream
   {
     TrackingRecHit2DGPUT<pixelTopology::Phase1> tkhit(nHits, 0, nullptr, nullptr, stream);
-    testTrackingRecHit2D::runKernels<pixelTopology::Phase1> (tkhit.view());
+    testTrackingRecHit2D::runKernels<pixelTopology::Phase1>(tkhit.view());
 
     TrackingRecHit2DGPUT<pixelTopology::Phase2> tkhitPhase2(nHits, 0, nullptr, nullptr, stream);
     testTrackingRecHit2D::runKernels<pixelTopology::Phase2>(tkhitPhase2.view());

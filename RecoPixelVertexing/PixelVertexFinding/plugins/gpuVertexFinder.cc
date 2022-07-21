@@ -100,9 +100,9 @@ namespace gpuVertexFinder {
   template <typename TrackerTraits>
 #ifdef __CUDACC__
   ZVertexHeterogeneous Producer<TrackerTraits>::makeAsync(cudaStream_t stream,
-                                                           pixelTrack::TrackSoAT<TrackerTraits> const* tksoa,
-                                                           float ptMin,
-                                                           float ptMax) const {
+                                                          pixelTrack::TrackSoAT<TrackerTraits> const* tksoa,
+                                                          float ptMin,
+                                                          float ptMax) const {
 #ifdef PIXVERTEX_DEBUG_PRODUCE
     std::cout << "producing Vertices on GPU" << std::endl;
 #endif  // PIXVERTEX_DEBUG_PRODUCE
@@ -110,8 +110,8 @@ namespace gpuVertexFinder {
 #else
 
   ZVertexHeterogeneous Producer<TrackerTraits>::make(pixelTrack::TrackSoAT<TrackerTraits> const* tksoa,
-                                                      float ptMin,
-                                                      float ptMax) const {
+                                                     float ptMin,
+                                                     float ptMax) const {
 
 #ifdef PIXVERTEX_DEBUG_PRODUCE
     std::cout << "producing Vertices on  CPU" << std::endl;

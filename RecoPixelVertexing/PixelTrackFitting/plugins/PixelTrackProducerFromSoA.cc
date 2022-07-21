@@ -108,8 +108,8 @@ void PixelTrackProducerFromSoA<TrackerTraits>::fillDescriptions(edm::Configurati
 
 template <typename TrackerTraits>
 void PixelTrackProducerFromSoA<TrackerTraits>::produce(edm::StreamID streamID,
-                                                        edm::Event &iEvent,
-                                                        const edm::EventSetup &iSetup) const {
+                                                       edm::Event &iEvent,
+                                                       const edm::EventSetup &iSetup) const {
   // enum class Quality : uint8_t { bad = 0, edup, dup, loose, strict, tight, highPurity };
   reco::TrackBase::TrackQuality recoQuality[] = {reco::TrackBase::undefQuality,
                                                  reco::TrackBase::undefQuality,

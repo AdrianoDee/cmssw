@@ -66,8 +66,8 @@ void PixelTrackDumpCUDA<TrackerTraits>::fillDescriptions(edm::ConfigurationDescr
 
 template <typename TrackerTraits>
 void PixelTrackDumpCUDA<TrackerTraits>::analyze(edm::StreamID streamID,
-                                                 edm::Event const& iEvent,
-                                                 const edm::EventSetup& iSetup) const {
+                                                edm::Event const& iEvent,
+                                                const edm::EventSetup& iSetup) const {
   if (m_onGPU) {
     auto const& hTracks = iEvent.get(tokenGPUTrack_);
     cms::cuda::ScopedContextProduce ctx{hTracks};

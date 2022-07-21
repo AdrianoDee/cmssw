@@ -68,13 +68,13 @@ void SiPixelRecHitFromCUDA<TrackerTraits>::fillDescriptions(edm::ConfigurationDe
 
   std::string label = "siPixelRecHitFromCUDA";
   label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc); 
+  descriptions.add(label, desc);
 }
 
 template <typename TrackerTraits>
 void SiPixelRecHitFromCUDA<TrackerTraits>::acquire(edm::Event const& iEvent,
-                                                    edm::EventSetup const& iSetup,
-                                                    edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
+                                                   edm::EventSetup const& iSetup,
+                                                   edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
   cms::cuda::Product<HitsOnGPU> const& inputDataWrapped = iEvent.get(hitsToken_);
 
   cms::cuda::ScopedContextAcquire ctx{inputDataWrapped, std::move(waitingTaskHolder)};

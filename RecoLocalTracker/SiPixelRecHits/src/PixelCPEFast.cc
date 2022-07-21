@@ -22,12 +22,12 @@ namespace {
 //-----------------------------------------------------------------------------
 template <typename TrackerTraits>
 PixelCPEFast<TrackerTraits>::PixelCPEFast(edm::ParameterSet const& conf,
-                                            const MagneticField* mag,
-                                            const TrackerGeometry& geom,
-                                            const TrackerTopology& ttopo,
-                                            const SiPixelLorentzAngle* lorentzAngle,
-                                            const SiPixelGenErrorDBObject* genErrorDBObject,
-                                            const SiPixelLorentzAngle* lorentzAngleWidth)
+                                          const MagneticField* mag,
+                                          const TrackerGeometry& geom,
+                                          const TrackerTopology& ttopo,
+                                          const SiPixelLorentzAngle* lorentzAngle,
+                                          const SiPixelGenErrorDBObject* genErrorDBObject,
+                                          const SiPixelLorentzAngle* lorentzAngleWidth)
     : PixelCPEGenericBase(conf, mag, geom, ttopo, lorentzAngle, genErrorDBObject, lorentzAngleWidth) {
   // Use errors from templates or from GenError
   if (useErrorsFromTemplates_) {
@@ -389,8 +389,8 @@ PixelCPEFast<TrackerTraits>::GPUData::~GPUData() {
 
 template <typename TrackerTraits>
 void PixelCPEFast<TrackerTraits>::errorFromTemplates(DetParam const& theDetParam,
-                                                      ClusterParamGeneric& theClusterParam,
-                                                      float qclus) const {
+                                                     ClusterParamGeneric& theClusterParam,
+                                                     float qclus) const {
   float locBz = theDetParam.bz;
   float locBx = theDetParam.bx;
   LogDebug("PixelCPEFast") << "PixelCPEFast::localPosition(...) : locBz = " << locBz;
@@ -441,8 +441,8 @@ void PixelCPEFast<TrackerTraits>::errorFromTemplates(DetParam const& theDetParam
 
 template <>
 void PixelCPEFast<pixelTopology::Phase2>::errorFromTemplates(DetParam const& theDetParam,
-                                                              ClusterParamGeneric& theClusterParam,
-                                                              float qclus) const {
+                                                             ClusterParamGeneric& theClusterParam,
+                                                             float qclus) const {
   theClusterParam.qBin_ = 0.0f;
 }
 
@@ -453,7 +453,7 @@ void PixelCPEFast<pixelTopology::Phase2>::errorFromTemplates(DetParam const& the
 //-----------------------------------------------------------------------------
 template <typename TrackerTraits>
 LocalPoint PixelCPEFast<TrackerTraits>::localPosition(DetParam const& theDetParam,
-                                                       ClusterParam& theClusterParamBase) const {
+                                                      ClusterParam& theClusterParamBase) const {
   ClusterParamGeneric& theClusterParam = static_cast<ClusterParamGeneric&>(theClusterParamBase);
 
   assert(!theClusterParam.with_track_angle);
@@ -510,7 +510,7 @@ LocalPoint PixelCPEFast<TrackerTraits>::localPosition(DetParam const& theDetPara
 //-------------------------------------------------------------------------
 template <typename TrackerTraits>
 LocalError PixelCPEFast<TrackerTraits>::localError(DetParam const& theDetParam,
-                                                    ClusterParam& theClusterParamBase) const {
+                                                   ClusterParam& theClusterParamBase) const {
   ClusterParamGeneric& theClusterParam = static_cast<ClusterParamGeneric&>(theClusterParamBase);
 
   auto xerr = theClusterParam.sigmax;

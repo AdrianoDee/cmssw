@@ -59,8 +59,8 @@ void PixelTrackSoAFromCUDA<TrackerTraits>::fillDescriptions(edm::ConfigurationDe
 
 template <typename TrackerTraits>
 void PixelTrackSoAFromCUDA<TrackerTraits>::acquire(edm::Event const& iEvent,
-                                                    edm::EventSetup const& iSetup,
-                                                    edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
+                                                   edm::EventSetup const& iSetup,
+                                                   edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
   cms::cuda::Product<PixelTrackHeterogeneous> const& inputDataWrapped = iEvent.get(tokenCUDA_);
   cms::cuda::ScopedContextAcquire ctx{inputDataWrapped, std::move(waitingTaskHolder)};
   auto const& inputData = ctx.get(inputDataWrapped);

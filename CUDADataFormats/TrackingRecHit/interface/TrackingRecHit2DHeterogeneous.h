@@ -156,8 +156,7 @@ template <typename TrackerTraits>
 class TrackingRecHit2DHostT : public TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits, TrackerTraits> {
 public:
   using TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits, TrackerTraits>::TrackingRecHit2DHeterogeneousT;
-  void copyFromGPU(TrackingRecHit2DGPUT<TrackerTraits> const* input,
-                   cudaStream_t stream);
+  void copyFromGPU(TrackingRecHit2DGPUT<TrackerTraits> const* input, cudaStream_t stream);
 };
 
 // Aliases to avoid bringing Host/CPU/GPU traits around

@@ -44,14 +44,14 @@ namespace gpuVertexFinder {
     using TkSoA = pixelTrack::TrackSoAT<TrackerTraits>;
 
     Producer(bool oneKernel,
-              bool useDensity,
-              bool useDBSCAN,
-              bool useIterative,
-              int iminT,      // min number of neighbours to be "core"
-              float ieps,     // max absolute distance to cluster
-              float ierrmax,  // max error to be "seed"
-              float ichi2max  // max normalized distance to cluster
-              )
+             bool useDensity,
+             bool useDBSCAN,
+             bool useIterative,
+             int iminT,      // min number of neighbours to be "core"
+             float ieps,     // max absolute distance to cluster
+             float ierrmax,  // max error to be "seed"
+             float ichi2max  // max normalized distance to cluster
+             )
         : oneKernel_(oneKernel && !(useDBSCAN || useIterative)),
           useDensity_(useDensity),
           useDBSCAN_(useDBSCAN),

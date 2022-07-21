@@ -2,8 +2,8 @@
 
 template <typename TrackerTraits>
 void HelixFitOnGPU<TrackerTraits>::launchBrokenLineKernelsOnCPU(HitsView const* hv,
-                                                                 uint32_t hitsInFit,
-                                                                 uint32_t maxNumberOfTuples) {
+                                                                uint32_t hitsInFit,
+                                                                uint32_t maxNumberOfTuples) {
   assert(tuples_);
 
 #ifdef BROKENLINE_DEBUG

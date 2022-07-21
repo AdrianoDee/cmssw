@@ -93,8 +93,8 @@ void CAHitNtupletCUDA<TrackerTraits>::endJob() {
 
 template <typename TrackerTraits>
 void CAHitNtupletCUDA<TrackerTraits>::produce(edm::StreamID streamID,
-                                               edm::Event& iEvent,
-                                               const edm::EventSetup& es) const {
+                                              edm::Event& iEvent,
+                                              const edm::EventSetup& es) const {
   auto bf = 1. / es.getData(tokenField_).inverseBzAtOriginInGeV();
 
   if (onGPU_) {

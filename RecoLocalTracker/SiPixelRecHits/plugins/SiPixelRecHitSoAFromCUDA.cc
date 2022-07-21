@@ -70,8 +70,8 @@ void SiPixelRecHitSoAFromCUDA<TrackerTraits>::fillDescriptions(edm::Configuratio
 
 template <typename TrackerTraits>
 void SiPixelRecHitSoAFromCUDA<TrackerTraits>::acquire(edm::Event const& iEvent,
-                                                       edm::EventSetup const& iSetup,
-                                                       edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
+                                                      edm::EventSetup const& iSetup,
+                                                      edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
   cms::cuda::Product<TrackingRecHit2DGPUT<TrackerTraits>> const& inputDataWrapped = iEvent.get(hitsTokenGPU_);
   cms::cuda::ScopedContextAcquire ctx{inputDataWrapped, std::move(waitingTaskHolder)};
   auto const& inputData = ctx.get(inputDataWrapped);

@@ -55,23 +55,23 @@ SiPixelRecHitCUDA<TrackerTraits>::SiPixelRecHitCUDA(const edm::ParameterSet& iCo
 template <typename TrackerTraits>
 void SiPixelRecHitCUDA<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
- 
+
   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpotCUDA"));
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplittingCUDA"));
 
   std::string cpe = "PixelCPEFast";
   cpe += TrackerTraits::nameModifier;
   desc.add<std::string>("CPE", cpe);
-  
+
   std::string label = "siPixelRecHitCUDA";
   label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc); 
+  descriptions.add(label, desc);
 }
 
 template <typename TrackerTraits>
 void SiPixelRecHitCUDA<TrackerTraits>::produce(edm::StreamID streamID,
-                                                edm::Event& iEvent,
-                                                const edm::EventSetup& es) const {
+                                               edm::Event& iEvent,
+                                               const edm::EventSetup& es) const {
   PixelCPEFast<TrackerTraits> const* fcpe = dynamic_cast<const PixelCPEFast<TrackerTraits>*>(&es.getData(cpeToken_));
   if (not fcpe) {
     throw cms::Exception("Configuration") << "SiPixelRecHitCUDA can only use a CPE of type PixelCPEFast";

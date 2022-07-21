@@ -281,7 +281,6 @@ protected:
   }
 };
 
-
 template <typename TrackerTraits>
 class CAHitNtupletGeneratorKernelsGPU : public CAHitNtupletGeneratorKernels<cms::cudacompat::GPUTraits, TrackerTraits> {
   using CAHitNtupletGeneratorKernels<cms::cudacompat::GPUTraits, TrackerTraits>::CAHitNtupletGeneratorKernels;

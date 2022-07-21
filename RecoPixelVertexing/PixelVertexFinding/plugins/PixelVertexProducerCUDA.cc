@@ -104,8 +104,8 @@ void PixelVertexProducerCUDA<TrackerTraits>::fillDescriptions(edm::Configuration
 
 template <typename TrackerTraits>
 void PixelVertexProducerCUDA<TrackerTraits>::produceOnGPU(edm::StreamID streamID,
-                                                           edm::Event& iEvent,
-                                                           const edm::EventSetup& iSetup) const {
+                                                          edm::Event& iEvent,
+                                                          const edm::EventSetup& iSetup) const {
   edm::Handle<cms::cuda::Product<PixelTrackHeterogeneous>> hTracks;
   iEvent.getByToken(tokenGPUTrack_, hTracks);
 
@@ -119,8 +119,8 @@ void PixelVertexProducerCUDA<TrackerTraits>::produceOnGPU(edm::StreamID streamID
 
 template <typename TrackerTraits>
 void PixelVertexProducerCUDA<TrackerTraits>::produceOnCPU(edm::StreamID streamID,
-                                                           edm::Event& iEvent,
-                                                           const edm::EventSetup& iSetup) const {
+                                                          edm::Event& iEvent,
+                                                          const edm::EventSetup& iSetup) const {
   auto const* tracks = iEvent.get(tokenCPUTrack_).get();
   assert(tracks);
 
@@ -145,8 +145,8 @@ void PixelVertexProducerCUDA<TrackerTraits>::produceOnCPU(edm::StreamID streamID
 
 template <typename TrackerTraits>
 void PixelVertexProducerCUDA<TrackerTraits>::produce(edm::StreamID streamID,
-                                                      edm::Event& iEvent,
-                                                      const edm::EventSetup& iSetup) const {
+                                                     edm::Event& iEvent,
+                                                     const edm::EventSetup& iSetup) const {
   if (onGPU_) {
     produceOnGPU(streamID, iEvent, iSetup);
   } else {

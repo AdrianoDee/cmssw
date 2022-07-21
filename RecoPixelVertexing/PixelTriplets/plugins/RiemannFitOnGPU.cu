@@ -3,9 +3,9 @@
 
 template <typename TrackerTraits>
 void HelixFitOnGPU<TrackerTraits>::launchRiemannKernels(HitsView const *hv,
-                                                         uint32_t nhits,
-                                                         uint32_t maxNumberOfTuples,
-                                                         cudaStream_t stream) {
+                                                        uint32_t nhits,
+                                                        uint32_t maxNumberOfTuples,
+                                                        cudaStream_t stream) {
   assert(tuples_);
 
   auto blockSize = 64;

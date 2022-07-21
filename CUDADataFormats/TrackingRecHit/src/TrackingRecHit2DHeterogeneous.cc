@@ -75,7 +75,6 @@ template class TrackingRecHit2DCPUT<pixelTopology::Phase2>;
 template class TrackingRecHit2DHostT<pixelTopology::Phase1>;
 template class TrackingRecHit2DHostT<pixelTopology::Phase2>;
 
-
 //Base class instantiation
 template class TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits, pixelTopology::Phase1>;
 template class TrackingRecHit2DHeterogeneousT<cms::cudacompat::GPUTraits, pixelTopology::Phase2>;

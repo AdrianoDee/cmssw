@@ -123,14 +123,13 @@ namespace {
                                     cfg.getParameter<bool>("idealConditions")};
   }
 
-
 }  // namespace
 
 using namespace std;
 
 template <typename TrackerTraits>
 CAHitNtupletGeneratorOnGPU<TrackerTraits>::CAHitNtupletGeneratorOnGPU(const edm::ParameterSet& cfg,
-                                                                        edm::ConsumesCollector& iC)
+                                                                      edm::ConsumesCollector& iC)
     : m_params(makeCommonParams(cfg),
                makeCellCuts<TrackerTraits>(cfg),
                topologyCuts<TrackerTraits>::makeQualityCuts(cfg.getParameterSet("trackQualityCuts")),
@@ -316,7 +315,7 @@ PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits
 
 template <typename TrackerTraits>
 PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits>::makeTuples(HitsOnCPU const& hits_d,
-                                                                                               float bfield) const {
+                                                                                              float bfield) const {
   using HelixFitOnGPU = HelixFitOnGPU<TrackerTraits>;
   using PixelTrackHeterogeneous = PixelTrackHeterogeneousT<TrackerTraits>;
   using CPUKernels = CAHitNtupletGeneratorKernelsCPU<TrackerTraits>;

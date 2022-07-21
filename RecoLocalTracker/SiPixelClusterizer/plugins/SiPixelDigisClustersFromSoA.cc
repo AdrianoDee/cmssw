@@ -74,8 +74,8 @@ void SiPixelDigisClustersFromSoA<TrackerTraits>::fillDescriptions(edm::Configura
 
 template <typename TrackerTraits>
 void SiPixelDigisClustersFromSoA<TrackerTraits>::produce(edm::StreamID,
-                                                          edm::Event& iEvent,
-                                                          const edm::EventSetup& iSetup) const {
+                                                         edm::Event& iEvent,
+                                                         const edm::EventSetup& iSetup) const {
   const auto& digis = iEvent.get(digiGetToken_);
   const uint32_t nDigis = digis.size();
   const auto& ttopo = iSetup.getData(topoToken_);

@@ -16,12 +16,12 @@ template <typename TrackerTraits>
 class PixelCPEFast final : public PixelCPEGenericBase {
 public:
   PixelCPEFast(edm::ParameterSet const &conf,
-                const MagneticField *,
-                const TrackerGeometry &,
-                const TrackerTopology &,
-                const SiPixelLorentzAngle *,
-                const SiPixelGenErrorDBObject *,
-                const SiPixelLorentzAngle *);
+               const MagneticField *,
+               const TrackerGeometry &,
+               const TrackerTopology &,
+               const SiPixelLorentzAngle *,
+               const SiPixelGenErrorDBObject *,
+               const SiPixelLorentzAngle *);
 
   ~PixelCPEFast() override = default;
 

@@ -76,13 +76,13 @@ void SeedProducerFromSoA<TrackerTraits>::fillDescriptions(edm::ConfigurationDesc
 
   std::string label = "seedProducerFromSoA";
   label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc); 
+  descriptions.add(label, desc);
 }
 
 template <typename TrackerTraits>
 void SeedProducerFromSoA<TrackerTraits>::produce(edm::StreamID streamID,
-                                                  edm::Event& iEvent,
-                                                  const edm::EventSetup& iSetup) const {
+                                                 edm::Event& iEvent,
+                                                 const edm::EventSetup& iSetup) const {
   // std::cout << "Converting gpu helix to trajectory seed" << std::endl;
   auto result = std::make_unique<TrajectorySeedCollection>();
 
