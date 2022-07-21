@@ -95,8 +95,8 @@ namespace caHitNtupletGenerator {
             CAParams const& caParams)
         : AlgoParams(commonCuts), cellCuts_(cellCuts), qualityCuts_(cutsCuts), caParams_(caParams) {}
 
-    CellCuts cellCuts_;
-    QualityCuts qualityCuts_{// polynomial coefficients for the pT-dependent chi2 cut
+    const CellCuts cellCuts_;
+    const QualityCuts qualityCuts_{// polynomial coefficients for the pT-dependent chi2 cut
                              {0.68177776, 0.74609577, -0.08035491, 0.00315399},
                              // max pT used to determine the chi2 cut
                              10.,
@@ -114,7 +114,7 @@ namespace caHitNtupletGenerator {
                                  0.3,  // pT > 0.3 GeV
                                  12.0  // |Zip| < 12.0 cm
                              }};
-    CAParams caParams_;
+    const CAParams caParams_;
     /// Compute the number of pairs
     inline uint32_t nPairs() const {
       // take all layer pairs into account
@@ -147,9 +147,9 @@ namespace caHitNtupletGenerator {
         : AlgoParams(commonCuts), cellCuts_(cellCuts), qualityCuts_(qualityCuts), caParams_(caParams) {}
 
     // quality cuts
-    CellCuts cellCuts_;
-    QualityCuts qualityCuts_{5.0f, /*chi2*/ 0.9f, /* pT in Gev*/ 0.4f, /*zip in cm*/ 12.0f /*tip in cm*/};
-    CAParams caParams_;
+    const CellCuts cellCuts_;
+    const QualityCuts qualityCuts_{5.0f, /*chi2*/ 0.9f, /* pT in Gev*/ 0.4f, /*zip in cm*/ 12.0f /*tip in cm*/};
+    const CAParams caParams_;
 
     inline uint32_t nPairs() const {
       // take all layer pairs into account

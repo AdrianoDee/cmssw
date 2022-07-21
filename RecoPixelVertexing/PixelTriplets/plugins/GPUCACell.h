@@ -299,7 +299,7 @@ public:
     } else {
       auto doubletId = this - cells;
       tmpNtuplet.push_back_unsafe(doubletId);
-      assert(tmpNtuplet.size() <= int(TrackerTraits::maxHitsOnTrack - 3));
+      assert(tmpNtuplet.size() <= int(TrackerTraits::maxHitsOnTrack - 3)); //1 for the container, 1 because these are doublets, 1 because we may push another
 
       bool last = true;
       for (unsigned int otherCell : outerNeighbors()) {
