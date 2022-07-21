@@ -31,7 +31,7 @@ namespace gpuClustering {
 
     constexpr int startBPIX2 = TrackerTraits::layerStart[1];
 
-    assert(TrackerTraits::numberOfModules < maxNumModules); 
+    assert(TrackerTraits::numberOfModules < maxNumModules);
 
     auto firstModule = blockIdx.x;
     auto endModule = moduleStart[0];
