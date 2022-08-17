@@ -214,11 +214,11 @@ def customiseForOffline(process):
 def customizeHLTfor38761(process):
 
      for producer in producers_by_type(process, "SiPixelRecHitSoAFromLegacy"):
-         producer._TypedParameterizable__type = "SiPixelRecHitSoAFromLegacyPhase1"
+         # producer._TypedParameterizable__type = "SiPixelRecHitSoAFromLegacyPhase1"
          if hasattr(producer, "isPhase2"):
              delattr(producer, "isPhase2")
      for producer in producers_by_type(process, "SiPixelDigisClustersFromSoA"):
-         producer._TypedParameterizable__type = "SiPixelDigisClustersFromSoAPhase1"
+         # producer._TypedParameterizable__type = "SiPixelDigisClustersFromSoAPhase1"
          if hasattr(producer, "isPhase2"):
              delattr(producer, "isPhase2")
      for producer in producers_by_type(process, "SiPixelDigisClustersFromSoA"):
@@ -233,16 +233,15 @@ def customizeHLTfor38761(process):
                 type = cms.string('uintAsHostProduct')
             )))
 
-     producer_tochange =  ["SiPixelRecHitCUDA","SiPixelRecHitFromCUDA","SiPixelRecHitSoAFromCUDA","PixelTrackProducerFromSoA"]
-     producer_tochange = producer_tochange + ["PixelTrackDumpCUDA","PixelTrackSoAFromCUDA","CAHitNtupletCUDA"]
-     producer_tochange = producer_tochange + ["PixelVertexProducerCUDA","SeedProducerFromSoA"]
-
-     for thiproducer in producer_tochange:
-         for producer in producers_by_type(process, thiproducer):
-             producer._TypedParameterizable__type = thiproducer + "Phase1"
+     # producer_tochange =  ["SiPixelRecHitCUDA","SiPixelRecHitFromCUDA","SiPixelRecHitSoAFromCUDA","PixelTrackProducerFromSoA"]
+     # producer_tochange = producer_tochange + ["PixelTrackDumpCUDA","PixelTrackSoAFromCUDA","CAHitNtupletCUDA"]
+     # producer_tochange = producer_tochange + ["PixelVertexProducerCUDA","SeedProducerFromSoA"]
+     #
+     # for thiproducer in producer_tochange:
+     #     for producer in producers_by_type(process, thiproducer):
+     #         producer._TypedParameterizable__type = thiproducer + "Phase1"
 
      for producer in esproducers_by_type(process, "PixelCPEFastESProducer"):
-         producer._TypedParameterizable__type = "PixelCPEFastESProducerPhase1"
          if hasattr(producer, "isPhase2"):
              delattr(producer, "isPhase2")
      for producer in esproducers_by_type(process, "PixelCPEGenericESProducer"):

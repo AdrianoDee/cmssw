@@ -104,7 +104,7 @@ void PixelCPEFastESProducerT<TrackerTraits>::fillDescriptions(edm::Configuration
   descriptions.add(name, desc);
 }
 
-using PixelCPEFastESProducerPhase1 = PixelCPEFastESProducerT<pixelTopology::Phase1>;
-DEFINE_FWK_EVENTSETUP_MODULE(PixelCPEFastESProducerPhase1);
+using PixelCPEFastESProducer = PixelCPEFastESProducerT<pixelTopology::Phase1>;
+DEFINE_FWK_EVENTSETUP_MODULE(PixelCPEFastESProducer);
 using PixelCPEFastESProducerPhase2 = PixelCPEFastESProducerT<pixelTopology::Phase2>;
 DEFINE_FWK_EVENTSETUP_MODULE(PixelCPEFastESProducerPhase2);

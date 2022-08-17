@@ -289,7 +289,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
     iEvent.put(std::move(legacyOutput));
 }
 
-using SiPixelRecHitSoAFromLegacyPhase1 = SiPixelRecHitSoAFromLegacyT<pixelTopology::Phase1>;
-DEFINE_FWK_MODULE(SiPixelRecHitSoAFromLegacyPhase1);
+using SiPixelRecHitSoAFromLegacy = SiPixelRecHitSoAFromLegacyT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiPixelRecHitSoAFromLegacy);
 using SiPixelRecHitSoAFromLegacyPhase2 = SiPixelRecHitSoAFromLegacyT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelRecHitSoAFromLegacyPhase2);

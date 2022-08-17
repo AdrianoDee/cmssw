@@ -74,8 +74,8 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::fillDescriptions(edm::Configur
 
 template <typename TrackerTraits>
 void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
-                                                         edm::Event& iEvent,
-                                                         const edm::EventSetup& iSetup) const {
+                                                          edm::Event& iEvent,
+                                                          const edm::EventSetup& iSetup) const {
   const auto& digis = iEvent.get(digiGetToken_);
   const uint32_t nDigis = digis.size();
   const auto& ttopo = iSetup.getData(topoToken_);
@@ -207,7 +207,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
   iEvent.put(clusterPutToken_, std::move(outputClusters));
 }
 
-using SiPixelDigisClustersFromSoAPhase1 = SiPixelDigisClustersFromSoAT<pixelTopology::Phase1>;
-DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoAPhase1);
+using SiPixelDigisClustersFromSoA = SiPixelDigisClustersFromSoAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoA);
 using SiPixelDigisClustersFromSoAPhase2 = SiPixelDigisClustersFromSoAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoAPhase2);

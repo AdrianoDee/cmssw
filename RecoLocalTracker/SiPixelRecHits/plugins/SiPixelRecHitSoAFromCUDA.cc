@@ -97,7 +97,7 @@ void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::
   iEvent.emplace(hitsPutTokenCPU_, store32_, store16_, hitsModuleStart_.get(), nHits_);
 }
 
-using SiPixelRecHitSoAFromCUDAPhase1 = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase1>;
-DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDAPhase1);
+using SiPixelRecHitSoAFromCUDA = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDA);
 using SiPixelRecHitSoAFromCUDAPhase2 = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDAPhase2);
