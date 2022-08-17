@@ -81,8 +81,8 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::fillDescriptions(edm::Configura
 
 template <typename TrackerTraits>
 void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
-                                                        edm::Event& iEvent,
-                                                        const edm::EventSetup& es) const {
+                                                         edm::Event& iEvent,
+                                                         const edm::EventSetup& es) const {
   const TrackerGeometry* geom_ = &es.getData(geomToken_);
   PixelCPEFast<TrackerTraits> const* fcpe = dynamic_cast<const PixelCPEFast<TrackerTraits>*>(&es.getData(cpeToken_));
   if (not fcpe) {

@@ -70,7 +70,6 @@ void PixelTrackSoAFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
 
 template <typename TrackerTraits>
 void PixelTrackSoAFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::EventSetup const& iSetup) {
-
   auto const& tsoa = *soa_;
   auto maxTracks = tsoa.stride();
 

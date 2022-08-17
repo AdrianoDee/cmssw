@@ -255,37 +255,37 @@ namespace caHitNtupletGeneratorKernels {
 
       // full crazy combinatorics
       // full crazy combinatorics
-          int ntr = thisCell.tracks().size();
-          for (int i = 0; i < ntr - 1; ++i) {
-            auto it = thisCell.tracks()[i];
-            auto qi = tracks->quality(it);
-            if (qi <= reject)
-              continue;
-            auto opi = tracks->stateAtBS.state(it)(2);
-            auto e2opi = tracks->stateAtBS.covariance(it)(9);
-            auto cti = tracks->stateAtBS.state(it)(3);
-            auto e2cti = tracks->stateAtBS.covariance(it)(12);
-            for (auto j = i + 1; j < ntr; ++j) {
-              auto jt = thisCell.tracks()[j];
-              auto qj = tracks->quality(jt);
-              if (qj <= reject)
-                continue;
-              auto opj = tracks->stateAtBS.state(jt)(2);
-              auto ctj = tracks->stateAtBS.state(jt)(3);
-              auto dct = nSigma2 * (tracks->stateAtBS.covariance(jt)(12) + e2cti);
-              if ((cti - ctj) * (cti - ctj) > dct)
-                continue;
-              auto dop = nSigma2 * (tracks->stateAtBS.covariance(jt)(9) + e2opi);
-              if ((opi - opj) * (opi - opj) > dop)
-                continue;
-              if ((qj < qi) || (qj == qi && score(it) < score(jt)))
-                tracks->quality(jt) = reject;
-              else {
-                tracks->quality(it) = reject;
-                break;
-              }
-            }
+      int ntr = thisCell.tracks().size();
+      for (int i = 0; i < ntr - 1; ++i) {
+        auto it = thisCell.tracks()[i];
+        auto qi = tracks->quality(it);
+        if (qi <= reject)
+          continue;
+        auto opi = tracks->stateAtBS.state(it)(2);
+        auto e2opi = tracks->stateAtBS.covariance(it)(9);
+        auto cti = tracks->stateAtBS.state(it)(3);
+        auto e2cti = tracks->stateAtBS.covariance(it)(12);
+        for (auto j = i + 1; j < ntr; ++j) {
+          auto jt = thisCell.tracks()[j];
+          auto qj = tracks->quality(jt);
+          if (qj <= reject)
+            continue;
+          auto opj = tracks->stateAtBS.state(jt)(2);
+          auto ctj = tracks->stateAtBS.state(jt)(3);
+          auto dct = nSigma2 * (tracks->stateAtBS.covariance(jt)(12) + e2cti);
+          if ((cti - ctj) * (cti - ctj) > dct)
+            continue;
+          auto dop = nSigma2 * (tracks->stateAtBS.covariance(jt)(9) + e2opi);
+          if ((opi - opj) * (opi - opj) > dop)
+            continue;
+          if ((qj < qi) || (qj == qi && score(it) < score(jt)))
+            tracks->quality(jt) = reject;
+          else {
+            tracks->quality(it) = reject;
+            break;
           }
+        }
+      }
 
       // find maxQual
       auto maxQual = reject;  // no duplicate!

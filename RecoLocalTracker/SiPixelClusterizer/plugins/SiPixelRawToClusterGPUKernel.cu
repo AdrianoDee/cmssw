@@ -637,7 +637,6 @@ namespace pixelgpudetails {
       std::cout << "CUDA findClus kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";
 #endif
 
-
       findClus<Phase1><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().rawIdArr(),
                                                                digis_d.view().moduleInd(),
                                                                digis_d.view().xx(),
@@ -746,15 +745,14 @@ namespace pixelgpudetails {
     blocks = Phase2::numberOfModules;
 
     findClus<Phase2><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().rawIdArr(),
-                                                           digis_d.view().moduleInd(),
-                                                           digis_d.view().xx(),
-                                                           digis_d.view().yy(),
-                                                           clusters_d.moduleStart(),
-                                                           clusters_d.clusInModule(),
-                                                           clusters_d.moduleId(),
-                                                           digis_d.view().clus(),
-                                                           numDigis);
-
+                                                             digis_d.view().moduleInd(),
+                                                             digis_d.view().xx(),
+                                                             digis_d.view().yy(),
+                                                             clusters_d.moduleStart(),
+                                                             clusters_d.clusInModule(),
+                                                             clusters_d.moduleId(),
+                                                             digis_d.view().clus(),
+                                                             numDigis);
 
     cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG

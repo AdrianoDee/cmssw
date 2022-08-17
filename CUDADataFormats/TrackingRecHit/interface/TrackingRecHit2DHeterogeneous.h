@@ -51,8 +51,11 @@ public:
                                           uint32_t const* hitsModuleStart,
                                           cudaStream_t stream = nullptr);
 
-  explicit TrackingRecHit2DHeterogeneousT(
-      cms::cuda::host::unique_ptr<float[]> &store32, cms::cuda::host::unique_ptr<uint16_t[]> &store16, uint32_t* modules, int nHits, cudaStream_t stream = nullptr);
+  explicit TrackingRecHit2DHeterogeneousT(cms::cuda::host::unique_ptr<float[]>& store32,
+                                          cms::cuda::host::unique_ptr<uint16_t[]>& store16,
+                                          uint32_t* modules,
+                                          int nHits,
+                                          cudaStream_t stream = nullptr);
   ~TrackingRecHit2DHeterogeneousT() = default;
 
   TrackingRecHit2DHeterogeneousT(const TrackingRecHit2DHeterogeneousT&) = delete;
@@ -156,8 +159,11 @@ public:
       : TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits, TrackerTraits>(
             nHits, offsetBPIX2, cpeParams, hitsModuleStart, stream) {}
 
-  explicit TrackingRecHit2DHostT(
-      cms::cuda::host::unique_ptr<float[]> &store32, cms::cuda::host::unique_ptr<uint16_t[]> &store16, uint32_t* modules, int nHits, cudaStream_t stream = nullptr)
+  explicit TrackingRecHit2DHostT(cms::cuda::host::unique_ptr<float[]>& store32,
+                                 cms::cuda::host::unique_ptr<uint16_t[]>& store16,
+                                 uint32_t* modules,
+                                 int nHits,
+                                 cudaStream_t stream = nullptr)
       : TrackingRecHit2DHeterogeneousT<cms::cudacompat::HostTraits, TrackerTraits>(
             store32, store16, modules, nHits, stream) {}
 
@@ -307,7 +313,11 @@ TrackingRecHit2DHostT<TrackerTraits>::TrackingRecHit2DHostT(
 //this is intended to be used only for CPU SoA but doesn't hurt to have it for all cases
 template <typename Traits, typename TrackerTraits>
 TrackingRecHit2DHeterogeneousT<Traits, TrackerTraits>::TrackingRecHit2DHeterogeneousT(
-    cms::cuda::host::unique_ptr<float[]> &store32, cms::cuda::host::unique_ptr<uint16_t[]> &store16, uint32_t* modules, int nHits, cudaStream_t stream)
+    cms::cuda::host::unique_ptr<float[]>& store32,
+    cms::cuda::host::unique_ptr<uint16_t[]>& store16,
+    uint32_t* modules,
+    int nHits,
+    cudaStream_t stream)
     : m_nHits(nHits), m_hitsModuleStart(modules) {
   auto view = Traits::template make_host_unique<TrackingRecHit2DSOAView>(stream);
 

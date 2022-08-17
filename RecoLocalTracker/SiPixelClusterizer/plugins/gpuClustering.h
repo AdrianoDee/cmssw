@@ -94,7 +94,7 @@ namespace gpuClustering {
 
   template <typename TrackerTraits>
   __global__ void findClus(uint32_t* __restrict__ rawIdArr,
-                           uint16_t* __restrict__ id,           // module id of each pixel
+                           uint16_t* __restrict__ id,                 // module id of each pixel
                            uint16_t const* __restrict__ x,            // local coordinates of each pixel
                            uint16_t const* __restrict__ y,            //
                            uint32_t const* __restrict__ moduleStart,  // index of the first pixel of each module
@@ -104,7 +104,7 @@ namespace gpuClustering {
                            int numElements) {
     // status is only used for Phase-1, but it cannot be declared conditionally only if isPhase2 is false;
     // to minimize the impact on Phase-2 reconstruction it is declared with a very small size.
-    constexpr bool isPhase2 =  std::is_same_v<TrackerTraits, pixelTopology::Phase1>;
+    constexpr bool isPhase2 = std::is_same_v<TrackerTraits, pixelTopology::Phase1>;
     constexpr const uint32_t pixelStatusSize = isPhase2 ? 1 : pixelStatus::size;
     __shared__ uint32_t status[pixelStatusSize];  // packed words array used to store the PixelStatus of each pixel
     __shared__ int msize;

@@ -70,8 +70,8 @@ void SiPixelRecHitCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescr
 
 template <typename TrackerTraits>
 void SiPixelRecHitCUDAT<TrackerTraits>::produce(edm::StreamID streamID,
-                                               edm::Event& iEvent,
-                                               const edm::EventSetup& es) const {
+                                                edm::Event& iEvent,
+                                                const edm::EventSetup& es) const {
   PixelCPEFast<TrackerTraits> const* fcpe = dynamic_cast<const PixelCPEFast<TrackerTraits>*>(&es.getData(cpeToken_));
   if (not fcpe) {
     throw cms::Exception("Configuration") << "SiPixelRecHitCUDA can only use a CPE of type PixelCPEFast";
