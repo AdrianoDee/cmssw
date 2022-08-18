@@ -14,7 +14,7 @@
 
 namespace gpuClustering {
 
-  template <bool isPhase2>
+  template <typename TrackerTraits>
   __global__ void clusterChargeCut(
       SiPixelClusterThresholds
           clusterThresholds,             // charge cut on cluster in electrons (for layer 1 and for other layers)
@@ -29,18 +29,17 @@ namespace gpuClustering {
     __shared__ uint8_t ok[maxNumClustersPerModules];
     __shared__ uint16_t newclusId[maxNumClustersPerModules];
 
-    constexpr int startBPIX2 = isPhase2 ? phase2PixelTopology::layerStart[1] : phase1PixelTopology::layerStart[1];
-    [[maybe_unused]] constexpr int nMaxModules =
-        isPhase2 ? phase2PixelTopology::numberOfModules : phase1PixelTopology::numberOfModules;
+    [[maybe_unused]] constexpr int nMaxModules = TrackerTraits::numberOfModules;
+    constexpr int startBPIX2 = TrackerTraits::layerStart[1];
 
-    assert(nMaxModules < maxNumModules);
-    assert(startBPIX2 < nMaxModules);
+    assert(TrackerTraits::numberOfModules < maxNumModules);
 
     auto firstModule = blockIdx.x;
     auto endModule = moduleStart[0];
     for (auto module = firstModule; module < endModule; module += gridDim.x) {
       auto firstPixel = moduleStart[1 + module];
       auto thisModuleId = id[firstPixel];
+
       while (thisModuleId == invalidModuleId and firstPixel < numElements) {
         // skip invalid or duplicate pixels
         ++firstPixel;
@@ -54,7 +53,8 @@ namespace gpuClustering {
         // reached the end of the module while skipping the invalid pixels, skip this module
         continue;
       }
-      assert(thisModuleId < nMaxModules);
+
+      assert(thisModuleId < TrackerTraits::numberOfModules);
 
       auto nclus = nClustersInModule[thisModuleId];
       if (nclus == 0)
