@@ -63,9 +63,7 @@ void SiPixelRecHitCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescr
   cpe += TrackerTraits::nameModifier;
   desc.add<std::string>("CPE", cpe);
 
-  std::string label = "siPixelRecHitCUDA";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -98,5 +96,9 @@ void SiPixelRecHitCUDAT<TrackerTraits>::produce(edm::StreamID streamID,
 
 using SiPixelRecHitCUDA = SiPixelRecHitCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SiPixelRecHitCUDA);
+
+using SiPixelRecHitCUDAPhase1 = SiPixelRecHitCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiPixelRecHitCUDAPhase1);
+
 using SiPixelRecHitCUDAPhase2 = SiPixelRecHitCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelRecHitCUDAPhase2);

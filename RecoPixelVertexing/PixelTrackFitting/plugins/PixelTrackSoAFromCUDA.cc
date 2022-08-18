@@ -52,9 +52,7 @@ void PixelTrackSoAFromCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationD
   edm::ParameterSetDescription desc;
 
   desc.add<edm::InputTag>("src", edm::InputTag("pixelTracksCUDA"));
-  std::string label = "pixelTracksSoA";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -103,6 +101,9 @@ void PixelTrackSoAFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
 
 using PixelTrackSoAFromCUDA = PixelTrackSoAFromCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(PixelTrackSoAFromCUDA);
+
+using PixelTrackSoAFromCUDAPhase1 = PixelTrackSoAFromCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(PixelTrackSoAFromCUDAPhase1);
 
 using PixelTrackSoAFromCUDAPhase2 = PixelTrackSoAFromCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(PixelTrackSoAFromCUDAPhase2);

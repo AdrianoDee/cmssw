@@ -99,12 +99,13 @@ void PixelCPEFastESProducerT<TrackerTraits>::fillDescriptions(edm::Configuration
   desc.add<std::string>("ComponentName", name);
   desc.add<edm::ESInputTag>("MagneticFieldRecord", edm::ESInputTag());
 
-  name = "PixelCPEFastESProducer";
-  name += TrackerTraits::nameModifier;
-  descriptions.add(name, desc);
+  descriptions.addWithDefaultLabel(desc);
+
 }
 
 using PixelCPEFastESProducer = PixelCPEFastESProducerT<pixelTopology::Phase1>;
 DEFINE_FWK_EVENTSETUP_MODULE(PixelCPEFastESProducer);
+using PixelCPEFastESProducerPhase1 = PixelCPEFastESProducerT<pixelTopology::Phase1>;
+DEFINE_FWK_EVENTSETUP_MODULE(PixelCPEFastESProducerPhase1);
 using PixelCPEFastESProducerPhase2 = PixelCPEFastESProducerT<pixelTopology::Phase2>;
 DEFINE_FWK_EVENTSETUP_MODULE(PixelCPEFastESProducerPhase2);

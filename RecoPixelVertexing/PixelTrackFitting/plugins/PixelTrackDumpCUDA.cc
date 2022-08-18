@@ -59,9 +59,7 @@ void PixelTrackDumpCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDesc
   desc.add<bool>("onGPU", true);
   desc.add<edm::InputTag>("pixelTrackSrc", edm::InputTag("pixelTracksCUDA"));
   desc.add<edm::InputTag>("pixelVertexSrc", edm::InputTag("pixelVerticesCUDA"));
-  std::string label = "PixelTrackDumpCUDA";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -91,5 +89,9 @@ void PixelTrackDumpCUDAT<TrackerTraits>::analyze(edm::StreamID streamID,
 
 using PixelTrackDumpCUDA = PixelTrackDumpCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(PixelTrackDumpCUDA);
+
+using PixelTrackDumpCUDAPhase1 = PixelTrackDumpCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(PixelTrackDumpCUDAPhase1);
+
 using PixelTrackDumpCUDAPhase2 = PixelTrackDumpCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(PixelTrackDumpCUDAPhase2);

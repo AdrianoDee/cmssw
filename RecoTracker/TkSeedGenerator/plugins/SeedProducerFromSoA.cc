@@ -74,9 +74,7 @@ void SeedProducerFromSoAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDes
   desc.add<edm::InputTag>("src", edm::InputTag("pixelTrackSoA"));
   desc.add<int>("minNumberOfHits", 0);
 
-  std::string label = "seedProducerFromSoA";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -177,6 +175,9 @@ void SeedProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
 
 using SeedProducerFromSoA = SeedProducerFromSoAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SeedProducerFromSoA);
+
+using SeedProducerFromSoAPhase1 = SeedProducerFromSoAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SeedProducerFromSoAPhase1);
 
 using SeedProducerFromSoAPhase2 = SeedProducerFromSoAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SeedProducerFromSoAPhase2);

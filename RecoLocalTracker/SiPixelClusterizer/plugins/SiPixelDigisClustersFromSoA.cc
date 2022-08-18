@@ -67,9 +67,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::fillDescriptions(edm::Configur
   desc.add<bool>("produceDigis", true);
   desc.add<bool>("storeDigis", true);
 
-  std::string label = "siPixelDigisClustersFromSoA";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -209,5 +207,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
 
 using SiPixelDigisClustersFromSoA = SiPixelDigisClustersFromSoAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoA);
+using SiPixelDigisClustersFromSoAPhase1 = SiPixelDigisClustersFromSoAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoAPhase1);
 using SiPixelDigisClustersFromSoAPhase2 = SiPixelDigisClustersFromSoAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoAPhase2);

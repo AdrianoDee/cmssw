@@ -74,9 +74,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::fillDescriptions(edm::Configura
   desc.add<std::string>("CPE", cpeName);
   desc.add<bool>("convertToLegacy", false);
 
-  std::string label = "siPixelRecHitSoAFromLegacy";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -291,5 +289,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
 
 using SiPixelRecHitSoAFromLegacy = SiPixelRecHitSoAFromLegacyT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SiPixelRecHitSoAFromLegacy);
+
+using SiPixelRecHitSoAFromLegacyPhase1 = SiPixelRecHitSoAFromLegacyT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiPixelRecHitSoAFromLegacyPhase1);
+
 using SiPixelRecHitSoAFromLegacyPhase2 = SiPixelRecHitSoAFromLegacyT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelRecHitSoAFromLegacyPhase2);

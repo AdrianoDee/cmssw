@@ -76,9 +76,7 @@ void CAHitNtupletCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescri
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
 
   GPUAlgo::fillDescriptions(desc);
-  std::string label = "pixelTracksCUDA";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -110,5 +108,9 @@ void CAHitNtupletCUDAT<TrackerTraits>::produce(edm::StreamID streamID,
 
 using CAHitNtupletCUDA = CAHitNtupletCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(CAHitNtupletCUDA);
+
+using CAHitNtupletCUDAPhase1 = CAHitNtupletCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(CAHitNtupletCUDAPhase1);
+
 using CAHitNtupletCUDAPhase2 = CAHitNtupletCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(CAHitNtupletCUDAPhase2);

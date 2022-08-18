@@ -101,9 +101,7 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::fillDescriptions(edm::Configurat
   desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplittingLegacy"));
   desc.add<int>("minNumberOfHits", 0);
   desc.add<std::string>("minQuality", "loose");
-  std::string label = "pixelTrackProducerFromSoA";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -252,6 +250,9 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
 
 using PixelTrackProducerFromSoA = PixelTrackProducerFromSoAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(PixelTrackProducerFromSoA);
+
+using PixelTrackProducerFromSoAPhase1 = PixelTrackProducerFromSoAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(PixelTrackProducerFromSoAPhase1);
 
 using PixelTrackProducerFromSoAPhase2 = PixelTrackProducerFromSoAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(PixelTrackProducerFromSoAPhase2);

@@ -97,9 +97,7 @@ void PixelVertexProducerCUDAT<TrackerTraits>::fillDescriptions(edm::Configuratio
   desc.add<double>("PtMax", 75.);
   desc.add<edm::InputTag>("pixelTrackSrc", edm::InputTag("pixelTracksCUDA"));
 
-  std::string label = "pixelVerticesCUDA";
-  label += TrackerTraits::nameModifier;
-  descriptions.add(label, desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -156,6 +154,9 @@ void PixelVertexProducerCUDAT<TrackerTraits>::produce(edm::StreamID streamID,
 
 using PixelVertexProducerCUDA = PixelVertexProducerCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(PixelVertexProducerCUDA);
+
+using PixelVertexProducerCUDAPhase1 = PixelVertexProducerCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(PixelVertexProducerCUDAPhase1);
 
 using PixelVertexProducerCUDAPhase2 = PixelVertexProducerCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(PixelVertexProducerCUDAPhase2);

@@ -62,10 +62,8 @@ template <typename TrackerTraits>
 void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
-
-  std::string name = "siPixelRecHitSoAFromCUDA";
-  name += TrackerTraits::nameModifier;
-  descriptions.add(name, desc);
+   
+  descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
@@ -99,5 +97,9 @@ void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::
 
 using SiPixelRecHitSoAFromCUDA = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDA);
+
+using SiPixelRecHitSoAFromCUDAPhase1 = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDAPhase1);
+
 using SiPixelRecHitSoAFromCUDAPhase2 = SiPixelRecHitSoAFromCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelRecHitSoAFromCUDAPhase2);
