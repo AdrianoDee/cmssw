@@ -219,9 +219,7 @@ def customizeHLTfor38761(process):
      for producer in producers_by_type(process, "SiPixelDigisClustersFromSoA"):
          if hasattr(producer, "isPhase2"):
              delattr(producer, "isPhase2")
-     for producer in producers_by_type(process, "SiPixelDigisClustersFromSoA"):
-         if hasattr(producer, "isPhase2"):
-             delattr(producer, "isPhase2")
+
      if 'hltSiPixelRecHitsSoA' in process.__dict__:
          process.hltSiPixelRecHitsSoA.cpu =  cms.EDAlias(hltSiPixelRecHitsFromLegacy = cms.VPSet(
             cms.PSet(
