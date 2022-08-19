@@ -122,7 +122,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     for (int32_t ic = 0; ic < nclus + 1; ++ic) {
       auto const& acluster = aclusters[ic];
       // in any case we cannot  go out of sync with gpu...
-      if (std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value and acluster.charge < clusterThreshold)
+      if (!std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value and acluster.charge < clusterThreshold)
         edm::LogWarning("SiPixelDigisClustersFromSoA") << "cluster below charge Threshold "
                                                        << "Layer/DetId/clusId " << layer << '/' << detId << '/' << ic
                                                        << " size/charge " << acluster.isize << '/' << acluster.charge;

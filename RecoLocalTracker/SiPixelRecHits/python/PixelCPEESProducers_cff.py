@@ -10,9 +10,9 @@ from RecoLocalTracker.SiPixelRecHits.PixelCPETemplateReco_cfi import *
 # 2. Pixel Generic CPE
 #
 from RecoLocalTracker.SiPixelRecHits.PixelCPEGeneric_cfi import *
-from RecoLocalTracker.SiPixelRecHits.pixelCPEFastESProducer_cfi import pixelCPEFastESProducer_cfi as PixelCPEFastESProducer
-from RecoLocalTracker.SiPixelRecHits.pixelCPEFastESProducerPhase1_cfi import pixelCPEFastESProducerPhase1_cfi as PixelCPEFastESProducerPhase1
-from RecoLocalTracker.SiPixelRecHits.pixelCPEFastESProducerPhase2_cfi import pixelCPEFastESProducerPhase2_cfi as PixelCPEFastESProducerPhase2
+#from RecoLocalTracker.SiPixelRecHits.pixelCPEFastESProducer_cfi import pixelCPEFastESProducer as PixelCPEFastESProducer
+from RecoLocalTracker.SiPixelRecHits.pixelCPEFastESProducerPhase1_cfi import pixelCPEFastESProducerPhase1 as PixelCPEFastESProducerPhase1
+from RecoLocalTracker.SiPixelRecHits.pixelCPEFastESProducerPhase2_cfi import pixelCPEFastESProducerPhase2 as PixelCPEFastESProducerPhase2
 #
 # 3. ESProducer for the Magnetic-field dependent template records
 #
