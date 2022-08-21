@@ -35,46 +35,47 @@ namespace pixelhitconverter {
                                     uint32_t* moduleStart) const
     {
 
-  TrackingRecHit2DCPU hits(store32,store16, moduleStart, nHits_, moduleStart[startBPIX2_], isPhase2_, nullptr);
-
+  auto hits = std::make_unique<TrackingRecHit2DCPU>(
+      store32,store16, moduleStart, nHits_, moduleStart[startBPIX2_], isPhase2_, nullptr);
   constexpr int L[11] = {0, 96, 320, 672, 1184, 1296, 1408,  1520, 1632, 1744, 1856};
 
   for (size_t i = 0; i < 11; i++) {
-    std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << " " << L[i] << std::endl;
+    std::cout << "SiPixelRecHitSoAProducerOnCPU" << __LINE__ << " " << L[i] << std::endl;
     auto start = L[i];
     // auto start = 96;//layerStart[i];//isPhase2_ ? phase2PixelTopology::layerStart[i] : phase1PixelTopology::layerStart[i];
-    std::cout << "SiPixelRecHitSoAProducer" << "- starting at module: " << start << " -> " << moduleStart[start] << std::endl;
-std::cout << hits.iphi()[1] << std::endl;
-    hits.hitsLayerStart()[i] = moduleStart[start];
-
-        std::cout << " - starts ad cluster: " << hits.hitsLayerStart()[i] << " -" << hits.iphi()[i] << "\n";
+    std::cout << "SiPixelRecHitSoAProducerOnCPU" << "- starting at module: " << start << " -> " << moduleStart[start] << std::endl;
+// std::cout << hits->iphi()[1] << std::endl;
+    hits->hitsLayerStart()[i] = moduleStart[start];
+    //
+        std::cout << " - starts ad cluster: " << hits->hitsLayerStart()[i] << " - " << hits->iphi()[i] << "\n";
 
     }
 
-    std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
 
-    cms::cuda::fillManyFromVector(hits.phiBinner(),
+    std::cout << "SiPixelRecHitSoAProducerOnCPU" << __LINE__ << std::endl;
+
+    cms::cuda::fillManyFromVector(hits->phiBinner(),
                                   10,
-                                  hits.iphi(),
-                                  hits.hitsLayerStart(),
+                                  hits->iphi(),
+                                  hits->hitsLayerStart(),
                                   nHits_,
                                   256,
-                                  hits.phiBinnerStorage());
+                                  hits->phiBinnerStorage());
 
 
-    // typename TrackingRecHit2DSOAView::PhiBinner::View view = {hits.phiBinner(), nullptr, hits.phiBinnerStorage(), -1, nHits_};
+    // typename TrackingRecHit2DSOAView::PhiBinner::View view = {hits->phiBinner(), nullptr, hits->phiBinnerStorage(), -1, nHits_};
     // cms::cuda::launchZero(view, theStream);
-    // cms::cuda::countFromVector(hits.phiBinner(), nLayers, hits.iphi(), hits.hitsLayerStart());
-    // hits.phiBinner()->finalize();
-    // std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
-    // cms::cuda::fillFromVector(hits.phiBinner(), nLayers, hits.iphi(), hits.hitsLayerStart());
-    // std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
+    // cms::cuda::countFromVector(hits->phiBinner(), nLayers, hits->iphi(), hits->hitsLayerStart());
+    // hits->phiBinner()->finalize();
+    // std::cout << "SiPixelRecHitSoAProducerOnCPU" << __LINE__ << std::endl;
+    // cms::cuda::fillFromVector(hits->phiBinner(), nLayers, hits->iphi(), hits->hitsLayerStart());
+    // std::cout << "SiPixelRecHitSoAProducerOnCPU" << __LINE__ << std::endl;
 
-    LogDebug("SiPixelRecHitSoAProducer") << "created HitSoa for " << nHits_ << std::endl;
-    std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
+    LogDebug("SiPixelRecHitSoAProducerOnCPU") << "created HitSoa for " << nHits_ << std::endl;
+    std::cout << "SiPixelRecHitSoAProducerOnCPU" << __LINE__ << std::endl;
     // iEvent.emplace(tokenHitCPU_, std::move(output));
 
-    return hits;
+    return TrackingRecHit2DCPU();
 
   }
 

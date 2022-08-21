@@ -129,9 +129,12 @@ assert(nMaxModules < gpuClustering::maxNumModules);
 assert(startBPIX2_ < nMaxModules);
 
 // allocate a buffer for the indices of the clusters
-auto hmsp = std::make_unique<uint32_t[]>(nMaxModules + 1);
+// auto hmsp = std::make_unique<uint32_t[]>(nMaxModules + 1);
+
+modules_ = std::make_unique<uint32_t[]>(nMaxModules+1);
+
 // hitsModuleStart is a non-owning pointer to the buffer
-auto hitsModuleStart = hmsp.get();
+// auto hitsModuleStart = modules_.get();
 
 
 // legacy output
@@ -169,11 +172,10 @@ for (auto const& dsv : hits) {
   std::cout << "SiPixelRecHitSoAProducer - Clusters " << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
                                          << " legacy hits" << std::endl;
 }
-hitsModuleStart[0] = 0;
 
 for (int i = 1, n = nMaxModules + 1; i < n; ++i)
-  hitsModuleStart[i] = hitsModuleStart[i - 1] + hitsInModule_[i - 1];
-
+  moduleStart_[i] = moduleStart_[i - 1] + hitsInModule_[i - 1];
+moduleStart_[nMaxModules] = numberOfHits;
 nHits_ = numberOfHits;
 auto store32 = std::vector<float>(nHits_ * n32);
 auto store16 = std::vector<uint16_t>(nHits_ * n16);
@@ -181,7 +183,7 @@ auto store16 = std::vector<uint16_t>(nHits_ * n16);
 
 store32_ = std::make_unique<float[]>(nHits_ * n32);
 store16_ = std::make_unique<uint16_t[]>(nHits_ * n16);
-modules_ = std::make_unique<uint32_t[]>(nMaxModules);
+
 
 std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << " " << numberOfHits << std::endl;
 //todo beamspot correct //done
@@ -205,13 +207,13 @@ for (auto const& dsv : hits) {
   auto global = h.globalPosition();
   auto clust = h.cluster();
 
-  std::cout << "SiPixelRecHitSoAProducer - Hits " << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size() << " legacy hits" << std::endl;
+
 
   store32[c + numberOfHits*static_cast<int>(TrackingRecHit2DCPU::Storage32::kXLocal)] = local.x();
   store32[c + numberOfHits*static_cast<int>(TrackingRecHit2DCPU::Storage32::kYLocal)] = local.y();
   store32[c + numberOfHits*static_cast<int>(TrackingRecHit2DCPU::Storage32::kXerror)] = localErr.xx();
   store32[c + numberOfHits*static_cast<int>(TrackingRecHit2DCPU::Storage32::kYerror)] = localErr.yy();
-  std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
+  // std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
   //FIXME
 
   SiPixelHitStatus status;
@@ -220,14 +222,14 @@ for (auto const& dsv : hits) {
   auto minInY = clust->minPixelCol();
   auto maxInX = clust->maxPixelRow();
   auto maxInY = clust->maxPixelCol();
-  std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
+  // std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
   auto sx = maxInX - minInX;
   auto sy = maxInY - minInY;
 
   int min_row(0), min_col(0);
   int max_row = theDetParam.theRecTopol->nrows() - 1;
   int max_col = theDetParam.theRecTopol->ncolumns() - 1;
-  std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
+  // std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
   bool isEdgeX = (minInX == min_row) | (maxInX == max_row);
   bool isEdgeY = (minInY == min_col) | (maxInY == max_col);
   bool isOneX = (0 == sx);
@@ -240,7 +242,7 @@ for (auto const& dsv : hits) {
   status.isBigX = (isOneX & isBigX) | isEdgeX;
   status.isOneY = isOneY;
   status.isBigY = (isOneY & isBigY) | isEdgeY;
-  std::cout << "SiPixelRecHitSoAProducer" << __LINE__ <<" - " << c <<std::endl;
+  // std::cout << "SiPixelRecHitSoAProducer" << __LINE__ <<" - " << c <<std::endl;
   uint32_t ich = clust->charge();
   ich = std::min(ich, chargeMask());
   uint32_t w = *reinterpret_cast<uint8_t*>(&status);
@@ -264,16 +266,19 @@ for (auto const& dsv : hits) {
   c++;
 
   }
+
+  std::cout << "SiPixelRecHitSoAProducer - Hits " << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size() << " legacy hits" << std::endl;
+
 }
-std::cout << std::endl;
-std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
-std::cout << store16[0] << std::endl;
-std::cout << store16[1] << std::endl;
-std::cout << store16[2] << std::endl;
-std::cout << store16[3] << std::endl;
+// std::cout << std::endl;
+// // std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
+// std::cout << store16[0] << std::endl;
+// std::cout << store16[1] << std::endl;
+// std::cout << store16[2] << std::endl;
+// std::cout << store16[3] << std::endl;
 assert(numberOfHits==c);
 
-std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
+// std::cout << "SiPixelRecHitSoAProducer" << __LINE__ << std::endl;
 
 
  std::copy(store32.data(), store32.data() + int(nHits_ * n32), store32_.get());  // want to copy it

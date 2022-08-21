@@ -24,7 +24,7 @@ namespace pixelhitconverter {
     SiPixelRecHitSoAProducerAlgo& operator=(SiPixelRecHitSoAProducerAlgo&&) = delete;
 
     SiPixelRecHitSoAProducerAlgo(int const& nHits, int const& startBPIX2, bool const& isPhase2)
-        : nHits_(nHits_), startBPIX2_(startBPIX2_), isPhase2_(isPhase2) {}
+        : nHits_(nHits), startBPIX2_(startBPIX2), isPhase2_(isPhase2) {}
 
     TrackingRecHit2DGPU convertHitsAsync(float* store32,
                                       uint16_t* store16,
