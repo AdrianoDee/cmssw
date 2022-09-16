@@ -35,15 +35,19 @@
 #include "HeterogeneousCore/CUDACore/interface/ScopedContext.h"
 #include "HeterogeneousCore/CUDAServices/interface/CUDAService.h"
 #include "RecoTracker/Record/interface/CkfComponentsRecord.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
 // local includes
 #include "SiPixelClusterThresholds.h"
 #include "SiPixelRawToClusterGPUKernel.h"
 
-class SiPixelRawToClusterCUDA : public edm::stream::EDProducer<edm::ExternalWork> {
+template<typename TrackerTraits>
+class SiPixelRawToClusterCUDAT : public edm::stream::EDProducer<edm::ExternalWork> {
 public:
-  explicit SiPixelRawToClusterCUDA(const edm::ParameterSet& iConfig);
-  ~SiPixelRawToClusterCUDA() override = default;
+  using GPUAlgo = pixelgpudetails::SiPixelRawToClusterGPUKernel<TrackerTraits>;
+
+  explicit SiPixelRawToClusterCUDAT(const edm::ParameterSet& iConfig);
+  ~SiPixelRawToClusterCUDAT() override = default;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -71,7 +75,7 @@ private:
   const SiPixelFedCablingMap* cablingMap_ = nullptr;
   std::unique_ptr<PixelUnpackingRegions> regions_;
 
-  pixelgpudetails::SiPixelRawToClusterGPUKernel gpuAlgo_;
+  GPUAlgo gpuAlgo_;
   PixelDataFormatter::Errors errors_;
 
   const bool isRun2_;
@@ -81,7 +85,8 @@ private:
   const SiPixelClusterThresholds clusterThresholds_;
 };
 
-SiPixelRawToClusterCUDA::SiPixelRawToClusterCUDA(const edm::ParameterSet& iConfig)
+template<typename TrackerTraits>
+SiPixelRawToClusterCUDAT<TrackerTraits>::SiPixelRawToClusterCUDAT(const edm::ParameterSet& iConfig)
     : rawGetToken_(consumes<FEDRawDataCollection>(iConfig.getParameter<edm::InputTag>("InputLabel"))),
       digiPutToken_(produces<cms::cuda::Product<SiPixelDigisCUDA>>()),
       clusterPutToken_(produces<cms::cuda::Product<SiPixelClustersCUDA>>()),
@@ -104,7 +109,8 @@ SiPixelRawToClusterCUDA::SiPixelRawToClusterCUDA(const edm::ParameterSet& iConfi
   }
 }
 
-void SiPixelRawToClusterCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+template<typename TrackerTraits>
+void SiPixelRawToClusterCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<bool>("isRun2", true);
   desc.add<bool>("IncludeErrors", true);
@@ -129,7 +135,8 @@ void SiPixelRawToClusterCUDA::fillDescriptions(edm::ConfigurationDescriptions& d
   descriptions.addWithDefaultLabel(desc);
 }
 
-void SiPixelRawToClusterCUDA::acquire(const edm::Event& iEvent,
+template<typename TrackerTraits>
+void SiPixelRawToClusterCUDAT<TrackerTraits>::acquire(const edm::Event& iEvent,
                                       const edm::EventSetup& iSetup,
                                       edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
   cms::cuda::ScopedContextAcquire ctx{iEvent.streamID(), std::move(waitingTaskHolder), ctxState_};
@@ -248,12 +255,12 @@ void SiPixelRawToClusterCUDA::acquire(const edm::Event& iEvent,
     return;
 
   // copy the FED data to a single cpu buffer
-  pixelgpudetails::SiPixelRawToClusterGPUKernel::WordFedAppender wordFedAppender(nDigis_, ctx.stream());
+  typename GPUAlgo::WordFedAppender wordFedAppender(nDigis_, ctx.stream());
   for (uint32_t i = 0; i < fedIds_.size(); ++i) {
     wordFedAppender.initializeWordFed(fedIds_[i], index[i], start[i], words[i]);
   }
 
-  gpuAlgo_.makeClustersAsync(isRun2_,
+  gpuAlgo_.makePhase1ClustersAsync(isRun2_,
                              clusterThresholds_,
                              gpuMap,
                              gpuModulesToUnpack,
@@ -268,7 +275,8 @@ void SiPixelRawToClusterCUDA::acquire(const edm::Event& iEvent,
                              ctx.stream());
 }
 
-void SiPixelRawToClusterCUDA::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+template<typename TrackerTraits>
+void SiPixelRawToClusterCUDAT<TrackerTraits>::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   cms::cuda::ScopedContextProduce ctx{ctxState_};
 
   if (nDigis_ == 0) {
@@ -290,4 +298,9 @@ void SiPixelRawToClusterCUDA::produce(edm::Event& iEvent, const edm::EventSetup&
 }
 
 // define as framework plugin
+using SiPixelRawToClusterCUDA = SiPixelRawToClusterCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SiPixelRawToClusterCUDA);
+using SiPixelRawToClusterCUDAPhase1 = SiPixelRawToClusterCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiPixelRawToClusterCUDAPhase1);
+using SiPixelRawToClusterCUDAHIonPhase1 = SiPixelRawToClusterCUDAT<pixelTopology::HIonPhase1>;
+DEFINE_FWK_MODULE(SiPixelRawToClusterCUDAHIonPhase1);

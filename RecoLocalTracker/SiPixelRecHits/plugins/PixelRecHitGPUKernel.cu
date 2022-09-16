@@ -12,7 +12,7 @@
 
 #include "PixelRecHitGPUKernel.h"
 #include "gpuPixelRecHits.h"
-// #define GPU_DEBUG 1
+#define GPU_DEBUG 1
 
 namespace {
   template <typename TrackerTraits>
@@ -98,4 +98,5 @@ namespace pixelgpudetails {
 
   template class PixelRecHitGPUKernel<pixelTopology::Phase1>;
   template class PixelRecHitGPUKernel<pixelTopology::Phase2>;
+  template class PixelRecHitGPUKernel<pixelTopology::HIonPhase1>;
 }  // namespace pixelgpudetails

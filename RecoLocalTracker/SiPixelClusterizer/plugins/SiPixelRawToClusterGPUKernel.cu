@@ -526,7 +526,8 @@ namespace pixelgpudetails {
   }
 
   // Interface to outside
-  void SiPixelRawToClusterGPUKernel::makeClustersAsync(bool isRun2,
+  template <typename TrackerTraits>
+  void SiPixelRawToClusterGPUKernel<TrackerTraits>::makePhase1ClustersAsync(bool isRun2,
                                                        const SiPixelClusterThresholds clusterThresholds,
                                                        const SiPixelROCsStatusAndMapping *cablingMap,
                                                        const unsigned char *modToUnp,
@@ -539,7 +540,6 @@ namespace pixelgpudetails {
                                                        bool includeErrors,
                                                        bool debug,
                                                        cudaStream_t stream) {
-    using pixelTopology::Phase1;
     // we're not opting for calling this function in case of early events
     assert(wordCounter != 0);
     nDigis = wordCounter;
@@ -553,7 +553,7 @@ namespace pixelgpudetails {
     if (includeErrors) {
       digiErrors_d = SiPixelDigiErrorsCUDA(wordCounter, std::move(errors), stream);
     }
-    clusters_d = SiPixelClustersCUDA(Phase1::numberOfModules, stream);
+    clusters_d = SiPixelClustersCUDA(TrackerTraits::numberOfModules, stream);
 
     // Begin Raw2Digi block
     {
@@ -618,7 +618,7 @@ namespace pixelgpudetails {
       // clusterizer ...
       using namespace gpuClustering;
       int threadsPerBlock = 256;
-      int blocks = (std::max(int(wordCounter), int(Phase1::numberOfModules)) + threadsPerBlock - 1) / threadsPerBlock;
+      int blocks = (std::max(int(wordCounter), int(TrackerTraits::numberOfModules)) + threadsPerBlock - 1) / threadsPerBlock;
 
       if (isRun2)
         gpuCalibPixel::calibDigis<true><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().moduleInd(),
@@ -651,17 +651,17 @@ namespace pixelgpudetails {
                 << " threads\n";
 #endif
 
-      countModules<Phase1><<<blocks, threadsPerBlock, 0, stream>>>(
+      countModules<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(
           digis_d.view().moduleInd(), clusters_d.moduleStart(), digis_d.view().clus(), wordCounter);
       cudaCheck(cudaGetLastError());
 
       threadsPerBlock = 256 + 128;  /// should be larger than 6000/16 aka (maxPixInModule/maxiter in the kernel)
-      blocks = phase1PixelTopology::numberOfModules;
+      blocks = TrackerTraits::numberOfModules;
 #ifdef GPU_DEBUG
       std::cout << "CUDA findClus kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";
 #endif
 
-      findClus<Phase1><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().rawIdArr(),
+      findClus<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().rawIdArr(),
                                                                digis_d.view().moduleInd(),
                                                                digis_d.view().xx(),
                                                                digis_d.view().yy(),
@@ -677,7 +677,7 @@ namespace pixelgpudetails {
 #endif
 
       // apply charge cut
-      clusterChargeCut<Phase1><<<blocks, threadsPerBlock, 0, stream>>>(clusterThresholds,
+      clusterChargeCut<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(clusterThresholds,
                                                                        digis_d.view().moduleInd(),
                                                                        digis_d.view().adc(),
                                                                        clusters_d.moduleStart(),
@@ -694,7 +694,7 @@ namespace pixelgpudetails {
       // synchronization/ExternalWork
       auto nModules_Clusters_d = cms::cuda::make_device_unique<uint32_t[]>(3, stream);
       // MUST be ONE block
-      fillHitsModuleStart<Phase1><<<1, 1024, 0, stream>>>(
+      fillHitsModuleStart<TrackerTraits><<<1, 1024, 0, stream>>>(
           clusters_d.clusInModule(), clusters_d.clusModuleStart(), clusters_d.moduleStart(), nModules_Clusters_d.get());
 
       // copy to host
@@ -709,7 +709,8 @@ namespace pixelgpudetails {
     }  // end clusterizer scope
   }
 
-  void SiPixelRawToClusterGPUKernel::makePhase2ClustersAsync(const SiPixelClusterThresholds clusterThresholds,
+  template <typename TrackerTraits>
+  void SiPixelRawToClusterGPUKernel<TrackerTraits>::makePhase2ClustersAsync(const SiPixelClusterThresholds clusterThresholds,
                                                              const uint16_t *moduleIds,
                                                              const uint16_t *xDigis,
                                                              const uint16_t *yDigis,
@@ -718,6 +719,8 @@ namespace pixelgpudetails {
                                                              const uint32_t *rawIds,
                                                              const uint32_t numDigis,
                                                              cudaStream_t stream) {
+
+                                                               
     using namespace gpuClustering;
     using pixelTopology::Phase2;
     nDigis = numDigis;
@@ -733,7 +736,7 @@ namespace pixelgpudetails {
     cudaCheck(
         cudaMemcpyAsync(digis_d.view().rawIdArr(), rawIds, sizeof(uint32_t) * numDigis, cudaMemcpyDefault, stream));
 
-    clusters_d = SiPixelClustersCUDA(Phase2::numberOfModules, stream);
+    clusters_d = SiPixelClustersCUDA(TrackerTraits::numberOfModules, stream);
 
     nModules_Clusters_h = cms::cuda::make_host_unique<uint32_t[]>(2, stream);
 
@@ -754,7 +757,7 @@ namespace pixelgpudetails {
     std::cout << "CUDA countModules kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";
 #endif
 
-    countModules<Phase2><<<blocks, threadsPerBlock, 0, stream>>>(
+    countModules<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(
         digis_d.view().moduleInd(), clusters_d.moduleStart(), digis_d.view().clus(), numDigis);
     cudaCheck(cudaGetLastError());
 
@@ -763,13 +766,13 @@ namespace pixelgpudetails {
         &(nModules_Clusters_h[0]), clusters_d.moduleStart(), sizeof(uint32_t), cudaMemcpyDefault, stream));
 
     threadsPerBlock = 256;
-    blocks = Phase2::numberOfModules;
+    blocks = TrackerTraits::numberOfModules;
 
 #ifdef GPU_DEBUG
     cudaCheck(cudaStreamSynchronize(stream));
     std::cout << "CUDA findClus kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";
 #endif
-    findClus<Phase2><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().rawIdArr(),
+    findClus<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().rawIdArr(),
                                                              digis_d.view().moduleInd(),
                                                              digis_d.view().xx(),
                                                              digis_d.view().yy(),
@@ -787,7 +790,7 @@ namespace pixelgpudetails {
 #endif
 
     // apply charge cut
-    clusterChargeCut<Phase2><<<blocks, threadsPerBlock, 0, stream>>>(clusterThresholds,
+    clusterChargeCut<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(clusterThresholds,
                                                                      digis_d.view().moduleInd(),
                                                                      digis_d.view().adc(),
                                                                      clusters_d.moduleStart(),
@@ -805,7 +808,7 @@ namespace pixelgpudetails {
     std::cout << "CUDA fillHitsModuleStart kernel launch \n";
 #endif
 
-    fillHitsModuleStart<Phase2><<<1, 1024, 0, stream>>>(
+    fillHitsModuleStart<TrackerTraits><<<1, 1024, 0, stream>>>(
         clusters_d.clusInModule(), clusters_d.clusModuleStart(), clusters_d.moduleStart(), nModules_Clusters_d.get());
 
     nModules_Clusters_h = cms::cuda::make_host_unique<uint32_t[]>(3, stream);
@@ -816,4 +819,9 @@ namespace pixelgpudetails {
     cudaCheck(cudaStreamSynchronize(stream));
 #endif
   }  //
+
+  template class SiPixelRawToClusterGPUKernel<pixelTopology::Phase1>;
+  template class SiPixelRawToClusterGPUKernel<pixelTopology::Phase2>;
+  template class SiPixelRawToClusterGPUKernel<pixelTopology::HIonPhase1>;
+
 }  // namespace pixelgpudetails

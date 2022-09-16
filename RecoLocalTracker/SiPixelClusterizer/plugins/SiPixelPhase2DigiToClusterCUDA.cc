@@ -36,6 +36,7 @@
 #include "HeterogeneousCore/CUDACore/interface/ScopedContext.h"
 #include "HeterogeneousCore/CUDAServices/interface/CUDAService.h"
 #include "RecoTracker/Record/interface/CkfComponentsRecord.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
 // local includes
 #include "SiPixelClusterThresholds.h"
@@ -43,6 +44,7 @@
 
 class SiPixelPhase2DigiToClusterCUDA : public edm::stream::EDProducer<edm::ExternalWork> {
 public:
+  using GPUAlgo = pixelgpudetails::SiPixelRawToClusterGPUKernel<pixelTopology::Phase2>;
   explicit SiPixelPhase2DigiToClusterCUDA(const edm::ParameterSet& iConfig);
   ~SiPixelPhase2DigiToClusterCUDA() override = default;
 
@@ -63,8 +65,7 @@ private:
 
   cms::cuda::ContextState ctxState_;
 
-  pixelgpudetails::SiPixelRawToClusterGPUKernel gpuAlgo_;
-  std::unique_ptr<pixelgpudetails::SiPixelRawToClusterGPUKernel::WordFedAppender> wordFedAppender_;
+  GPUAlgo gpuAlgo_;
 
   const bool includeErrors_;
   const SiPixelClusterThresholds clusterThresholds_;

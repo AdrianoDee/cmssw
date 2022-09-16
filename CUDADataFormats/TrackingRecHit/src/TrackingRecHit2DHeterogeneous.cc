@@ -41,9 +41,12 @@ cms::cuda::host::unique_ptr<uint32_t[]> TrackingRecHit2DGPUT<TrackerTraits>::hit
 
 template class TrackingRecHit2DGPUT<pixelTopology::Phase1>;
 template class TrackingRecHit2DGPUT<pixelTopology::Phase2>;
+template class TrackingRecHit2DGPUT<pixelTopology::HIonPhase1>;
 
 template class TrackingRecHit2DCPUT<pixelTopology::Phase1>;
 template class TrackingRecHit2DCPUT<pixelTopology::Phase2>;
+template class TrackingRecHit2DCPUT<pixelTopology::HIonPhase1>;
 
 template class TrackingRecHit2DHostT<pixelTopology::Phase1>;
 template class TrackingRecHit2DHostT<pixelTopology::Phase2>;
+template class TrackingRecHit2DHostT<pixelTopology::HIonPhase1>;

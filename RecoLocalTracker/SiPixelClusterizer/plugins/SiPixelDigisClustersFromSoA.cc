@@ -86,7 +86,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     collection->reserve(maxModules);
   auto outputClusters = std::make_unique<SiPixelClusterCollectionNew>();
   outputClusters->reserve(maxModules, nDigis / 2);
-
+//std::cout << __LINE__<<std::endl;
   edm::DetSet<PixelDigi>* detDigis = nullptr;
   uint32_t detId = 0;
   for (uint32_t i = 0; i < nDigis; i++) {
@@ -97,7 +97,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     // check for noisy/dead pixels (electrons set to 0)
     if (digis.adc(i) == 0)
       continue;
-
+//std::cout << __LINE__<<std::endl;
     detId = digis.rawIdArr(i);
     if (storeDigis_) {
       detDigis = &collection->find_or_insert(detId);
@@ -106,7 +106,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     }
     break;
   }
-
+//std::cout << __LINE__<<std::endl;
   int32_t nclus = -1;
   PixelClusterizerBase::AccretionCluster aclusters[gpuClustering::maxNumClustersPerModules];
 #ifdef EDM_ML_DEBUG
@@ -119,13 +119,18 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     edmNew::DetSetVector<SiPixelCluster>::FastFiller spc(*outputClusters, detId);
     auto layer = (DetId(detId).subdetId() == 1) ? ttopo.pxbLayer(detId) : 0;
     auto clusterThreshold = clusterThresholds_.getThresholdForLayerOnCondition(layer == 1);
+
+    //std::cout << __LINE__<<std::endl;
+    if(nclus> 1000)
+    std::cout << "detId:" << detId << " " << nclus << std::endl;
     for (int32_t ic = 0; ic < nclus + 1; ++ic) {
       auto const& acluster = aclusters[ic];
       // in any case we cannot  go out of sync with gpu...
       if (!std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value and acluster.charge < clusterThreshold)
-        edm::LogWarning("SiPixelDigisClustersFromSoA") << "cluster below charge Threshold "
+        // edm::LogWarning("SiPixelDigisClustersFromSoA")
+        std::cout << "cluster below charge Threshold "
                                                        << "Layer/DetId/clusId " << layer << '/' << detId << '/' << ic
-                                                       << " size/charge " << acluster.isize << '/' << acluster.charge;
+                                                       << " size/charge " << acluster.isize << '/' << acluster.charge << "/n";
       // sort by row (x)
       spc.emplace_back(acluster.isize, acluster.adc, acluster.x, acluster.y, acluster.xmin, acluster.ymin, ic);
       aclusters[ic].clear();
@@ -147,11 +152,12 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     if (spc.empty())
       spc.abort();
   };
-
+//std::cout << __LINE__<<std::endl;
   for (uint32_t i = 0; i < nDigis; i++) {
     // check for uninitialized digis
     if (digis.rawIdArr(i) == 0)
       continue;
+      //std::cout << __LINE__<<std::endl;
     // check for noisy/dead pixels (electrons set to 0)
     if (digis.adc(i) == 0)
       continue;
@@ -161,6 +167,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     assert(digis.rawIdArr(i) > 109999);
 #endif
     if (detId != digis.rawIdArr(i)) {
+      //std::cout << __LINE__<<std::endl;
       // new module
       fillClusters(detId);
 #ifdef EDM_ML_DEBUG
@@ -177,6 +184,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
         }
       }
     }
+    //std::cout << __LINE__<<std::endl;
     PixelDigi dig(digis.pdigi(i));
     if (storeDigis_)
       (*detDigis).data.emplace_back(dig);
@@ -185,17 +193,18 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     assert(digis.clus(i) >= 0);
     assert(digis.clus(i) < gpuClustering::maxNumClustersPerModules);
 #endif
+
     nclus = std::max(digis.clus(i), nclus);
     auto row = dig.row();
     auto col = dig.column();
     SiPixelCluster::PixelPos pix(row, col);
     aclusters[digis.clus(i)].add(pix, digis.adc(i));
   }
-
+//std::cout << __LINE__<<std::endl;
   // fill final clusters
   if (detId > 0)
     fillClusters(detId);
-
+//std::cout << __LINE__<<std::endl;
 #ifdef EDM_ML_DEBUG
   LogDebug("SiPixelDigisClustersFromSoA") << "filled " << totClustersFilled << " clusters";
 #endif
@@ -207,7 +216,12 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
 
 using SiPixelDigisClustersFromSoA = SiPixelDigisClustersFromSoAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoA);
+
 using SiPixelDigisClustersFromSoAPhase1 = SiPixelDigisClustersFromSoAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoAPhase1);
+
 using SiPixelDigisClustersFromSoAPhase2 = SiPixelDigisClustersFromSoAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoAPhase2);
+
+using SiPixelDigisClustersFromSoAHIonPhase1 = SiPixelDigisClustersFromSoAT<pixelTopology::HIonPhase1>;
+DEFINE_FWK_MODULE(SiPixelDigisClustersFromSoAHIonPhase1);

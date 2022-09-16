@@ -136,6 +136,9 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
     auto lc = hitsModuleStart_[gind + 1];
     auto nhits = lc - fc;
 
+    std::cout << "SiPixelRecHitFromCUDA" << " in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
+                                      << " legacy clusters" << ' ' << fc << ',' << lc << "\n";
+
     assert(lc > fc);
     LogDebug("SiPixelRecHitFromCUDA") << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
                                       << " legacy clusters" << ' ' << fc << ',' << lc << "\n";
@@ -201,3 +204,6 @@ DEFINE_FWK_MODULE(SiPixelRecHitFromCUDAPhase1);
 
 using SiPixelRecHitFromCUDAPhase2 = SiPixelRecHitFromCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SiPixelRecHitFromCUDAPhase2);
+
+using SiPixelRecHitFromCUDAHIonPhase1 = SiPixelRecHitFromCUDAT<pixelTopology::HIonPhase1>;
+DEFINE_FWK_MODULE(SiPixelRecHitFromCUDAHIonPhase1);

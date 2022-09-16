@@ -181,3 +181,6 @@ DEFINE_FWK_MODULE(SeedProducerFromSoAPhase1);
 
 using SeedProducerFromSoAPhase2 = SeedProducerFromSoAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(SeedProducerFromSoAPhase2);
+
+using SeedProducerFromSoAHIonPhase1 = SeedProducerFromSoAT<pixelTopology::HIonPhase1>;
+DEFINE_FWK_MODULE(SeedProducerFromSoAHIonPhase1);
