@@ -142,3 +142,4 @@ void HelixFitOnGPU<TrackerTraits>::launchBrokenLineKernels(HitsView const *hv,
 
 template class HelixFitOnGPU<pixelTopology::Phase1>;
 template class HelixFitOnGPU<pixelTopology::Phase2>;
+template class HelixFitOnGPU<pixelTopology::HIonPhase1>;

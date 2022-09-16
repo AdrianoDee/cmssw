@@ -133,6 +133,8 @@ namespace phase1PixelTopology {
   constexpr int nPairs = 13 + 2 + 4;
   constexpr uint16_t numberOfModules = 1856;
 
+  constexpr uint32_t maxNumClustersPerModules = 1024;
+
   constexpr uint32_t max_ladder_bpx0 = 12;
   constexpr uint32_t first_ladder_bpx0 = 0;
   constexpr float module_length_bpx0 = 6.7f;
@@ -195,6 +197,33 @@ namespace phase1PixelTopology {
                                                               numberOfModules};
 }  // namespace phase1PixelTopology
 
+namespace phase1HIonPixelTopology
+{
+  using pixelTopology::phi0p09;
+
+  constexpr uint32_t maxNumClustersPerModules = 2048;
+
+  HOST_DEVICE_CONSTANT int16_t phicuts[phase1PixelTopology::nPairs]{phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09,
+                                               phi0p09};
+
+}
 namespace phase2PixelTopology {
 
   using pixelTopology::phi0p05;
@@ -205,6 +234,8 @@ namespace phase2PixelTopology {
   constexpr uint32_t numberOfLayers = 28;
   constexpr int nPairs = 23 + 6 + 14 + 8 + 4;  // include far forward layer pairs
   constexpr uint16_t numberOfModules = 3892;
+
+  constexpr uint32_t maxNumClustersPerModules = 1024;
 
   HOST_DEVICE_CONSTANT uint8_t layerPairs[2 * nPairs] = {
 
@@ -314,6 +345,8 @@ namespace pixelTopology {
 
     static constexpr uint32_t maxPixInModule = 6000;
 
+    static constexpr uint32_t maxNumClustersPerModules = phase2PixelTopology::maxNumClustersPerModules;
+
     static constexpr float moduleLength = 4.345f;
     static constexpr float endcapCorrection = 0.0f;
 
@@ -344,6 +377,16 @@ namespace pixelTopology {
 
     static constexpr uint16_t numberOfModules = 3892;
 
+    static constexpr uint16_t numRowsInRoc = 80;
+    static constexpr uint16_t numColsInRoc = 52;
+    static constexpr uint16_t lastRowInRoc = numRowsInRoc - 1;
+    static constexpr uint16_t lastColInRoc = numColsInRoc - 1;
+
+    static constexpr uint16_t numRowsInModule = 2 * numRowsInRoc;
+    static constexpr uint16_t numColsInModule = 8 * numColsInRoc;
+    static constexpr uint16_t lastRowInModule = numRowsInModule - 1;
+    static constexpr uint16_t lastColInModule = numColsInModule - 1;
+
     static constexpr uint16_t clusterBinning = 1024;
     static constexpr uint16_t clusterBits = 10;
 
@@ -354,7 +397,7 @@ namespace pixelTopology {
     static constexpr uint16_t firstEndcapPos = 4;
     static constexpr uint16_t firstEndcapNeg = 16;
 
-    static constexpr int16_t xOffset = -1e4;  //not used actually, to suppress static analyzer warnings
+    static constexpr int16_t xOffset = -81;
 
     static constexpr char const *nameModifier = "Phase2";
 
@@ -404,6 +447,8 @@ namespace pixelTopology {
     static constexpr uint32_t last_barrel_detIndex = 1184;
 
     static constexpr uint32_t maxPixInModule = 6000;
+
+    static constexpr uint32_t maxNumClustersPerModules = phase1PixelTopology::maxNumClustersPerModules;
 
     static constexpr float moduleLength = 6.7f;
     static constexpr float endcapCorrection = 1.5f;
@@ -509,8 +554,25 @@ namespace pixelTopology {
   template <typename T>
   using isPhase2Topology = typename std::enable_if<std::is_base_of<Phase2, T>::value>::type;
 
-  // struct HIonPhase1 : public Phase1 {
-  //     static constexpr uint32_t maxNumberOfDoublets=3*1024*1024;};
+  struct HIonPhase1 : public Phase1 {
+
+    using tindex_type = uint32_t;  // for tuples
+
+    static constexpr uint32_t maxCellNeighbors = 90;
+    static constexpr uint32_t maxCellTracks = 90;
+    static constexpr uint32_t maxNumberOfTuples = 256 * 1024;
+    static constexpr uint32_t maxNumberOfDoublets = 6 * 512 * 1024;
+    static constexpr uint32_t maxCellsPerHit = 256;
+
+    static constexpr uint16_t clusterBinning = 2048;
+    static constexpr uint16_t clusterBits = 10;
+
+    static constexpr uint32_t maxNumClustersPerModules = phase1HIonPixelTopology::maxNumClustersPerModules;
+
+    static constexpr int16_t const *phicuts = phase1HIonPixelTopology::phicuts;
+
+    static constexpr char const *nameModifier = "HIonPhase1";
+  };
 
 }  // namespace pixelTopology
 

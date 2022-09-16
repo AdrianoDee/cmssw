@@ -160,3 +160,6 @@ DEFINE_FWK_MODULE(PixelVertexProducerCUDAPhase1);
 
 using PixelVertexProducerCUDAPhase2 = PixelVertexProducerCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(PixelVertexProducerCUDAPhase2);
+
+using PixelVertexProducerCUDAHIonPhase1 = PixelVertexProducerCUDAT<pixelTopology::HIonPhase1>;
+DEFINE_FWK_MODULE(PixelVertexProducerCUDAHIonPhase1);

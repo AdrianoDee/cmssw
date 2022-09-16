@@ -29,7 +29,7 @@ public:
   static constexpr int32_t H = TrackerTraits::maxHitsOnTrack;  // Average hits rather than max?
   static constexpr int32_t stride() { return S; }
 
-  using hindex_type = uint32_t;  //TrackerTraits::hindex_type ?
+  using hindex_type = typename TrackerTraits::hindex_type;
 
   using Quality = pixelTrack::Quality;
   using HitContainer = cms::cuda::OneToManyAssoc<hindex_type, S + 1, H * S>;
@@ -104,6 +104,7 @@ namespace pixelTrack {
   //Used only to ease classes definitions
   using TrackSoAPhase1 = TrackSoAHeterogeneousT<pixelTopology::Phase1>;
   using TrackSoAPhase2 = TrackSoAHeterogeneousT<pixelTopology::Phase2>;
+  using TrackSoAHIonPhase1 = TrackSoAHeterogeneousT<pixelTopology::HIonPhase1>;
 
   template <typename TrackerTraits, typename Enable = void>
   struct QualityCutsT {};

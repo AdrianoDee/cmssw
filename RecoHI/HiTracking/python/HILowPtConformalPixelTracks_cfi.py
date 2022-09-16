@@ -32,7 +32,7 @@ hiConformalPixelTracks = _mod.pixelTracks.clone(
     # Fitter
     Fitter = 'pixelFitterByConformalMappingAndLine',
     # Filter
-    Filter = "hiConformalPixelFilter",   
+    Filter = "hiConformalPixelFilter",
     # Cleaner
     Cleaner = "trackCleaner"
 )
@@ -54,7 +54,7 @@ hiConformalPixelTracksPhase1TrackingRegions = globalTrackingRegionWithVertices.c
 	VertexCollection = "offlinePrimaryVertices",
 	ptMin            = 0.3,
 	useFoundVertices = True,
-	originRadius     = 0.2 
+	originRadius     = 0.2
     )
 )
 
@@ -62,11 +62,11 @@ hiConformalPixelTracksPhase1TrackingRegions = globalTrackingRegionWithVertices.c
 # Using 4 layers layerlist
 from RecoTracker.IterativeTracking.LowPtQuadStep_cff import lowPtQuadStepSeedLayers
 hiConformalPixelTracksPhase1SeedLayers = lowPtQuadStepSeedLayers.clone(
-    BPix = cms.PSet( 
+    BPix = cms.PSet(
 	HitProducer = cms.string('siPixelRecHits'),
         TTRHBuilder = cms.string('WithTrackAngle'),
     ),
-    FPix = cms.PSet( 
+    FPix = cms.PSet(
         HitProducer = cms.string('siPixelRecHits'),
         TTRHBuilder = cms.string('WithTrackAngle'),
     )
@@ -86,7 +86,7 @@ hiConformalPixelTracksPhase1HitQuadrupletsCA = lowPtQuadStepHitQuadruplets.clone
     doublets   = "hiConformalPixelTracksPhase1HitDoubletsCA",
     CAPhiCut   = 0.2,
     CAThetaCut = 0.0012,
-    SeedComparitorPSet = dict( 
+    SeedComparitorPSet = dict(
        ComponentName = 'none'
     ),
     extraHitRPhitolerance = 0.032,
@@ -130,6 +130,56 @@ hiConformalPixelTracksTask = cms.Task(
     hiConformalPixelTracks
 )
 
+from Configuration.ProcessModifiers.gpu_cff import gpu
+from RecoPixelVertexing.PixelTrackFitting.pixelTrackSoAFromCUDAHIonPhase1_cfi import pixelTrackSoAFromCUDAHIonPhase1 as _pixelTracksSoA
+from RecoPixelVertexing.PixelTriplets.caHitNtupletCUDAHIonPhase1_cfi import caHitNtupletCUDAHIonPhase1 as _pixelTracksCUDA
+from RecoPixelVertexing.PixelTrackFitting.pixelTrackProducerFromSoAHIonPhase1_cfi import pixelTrackProducerFromSoAHIonPhase1 as _pixelTrackProducerFromSoA
+
+from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
+
+pixelTracksCUDAHIon = _pixelTracksCUDA.clone(pixelRecHitSrc="siPixelRecHitsPreSplittingCUDA")
+
+# #Pixel tracks in SoA format on the CPU
+# pixelTracksHIonCPU = _pixelTracksCUDA.clone(
+#     pixelRecHitSrc = "siPixelRecHitsPreSplitting",
+#     idealConditions = False,
+#     onGPU = False
+# )
+
+# SwitchProducer providing the pixel tracks in SoA format on the CPU
+pixelTracksSoAHIon = SwitchProducerCUDA(
+    # build pixel ntuplets and pixel tracks in SoA format on the CPU
+    cpu = _pixelTracksCUDA.clone(
+        pixelRecHitSrc = "siPixelRecHitsPreSplitting",
+        idealConditions = False,
+        onGPU = False)
+)
+
+gpu.toModify(pixelTracksSoAHIon,
+    # transfer the pixel tracks in SoA format to the host
+    cuda = _pixelTracksSoA.clone(src="pixelTracksCUDAHIon")
+)
+
+gpu.toReplaceWith(hiConformalPixelTracks,_pixelTrackProducerFromSoA.clone(
+    pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
+    trackSrc = "pixelTracksSoAHIon",
+
+))
+
+# from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDA_cfi import siPixelRecHitFromCUDA as _siPixelRecHitFromCUDA
+#
+# from RecoLocalTracker.SiPixelClusterizer.siPixelRawToClusterCUDA_cfi import siPixelRawToClusterCUDA as _siPixelRawToClusterCUDA
+# siPixelClustersPreSplittingCUDAHIon = _siPixelRawToClusterCUDA.clone(MaxFEDWords = 500000)
+#
+# from RecoLocalTracker.SiPixelClusterizer.siPixelDigisClustersFromSoA_cfi import siPixelDigisClustersFromSoA as _siPixelDigisClustersFromSoA
+# siPixelDigisClustersPreSplittingHIon = _siPixelDigisClustersFromSoA.clone(src = "siPixelDigisSoAHIon")
+
+# from EventFilter.SiPixelRawToDigi.siPixelDigisSoAFromCUDA_cfi import siPixelDigisSoAFromCUDA as _siPixelDigisSoAFromCUDA
+# siPixelDigisSoAHIon = _siPixelDigisSoAFromCUDA.clone(
+#     src = "siPixelClustersPreSplittingCUDAHIon"
+# )
+#
+
 hiConformalPixelTracksTaskPhase1 = cms.Task(
     hiConformalPixelTracksPhase1TrackingRegions ,
     hiConformalPixelTracksPhase1SeedLayers ,
@@ -139,4 +189,19 @@ hiConformalPixelTracksTaskPhase1 = cms.Task(
     hiConformalPixelTracksPhase1Filter ,
     hiConformalPixelTracks
 )
+
+gpu.toReplaceWith(hiConformalPixelTracksTaskPhase1, cms.Task(
+    #pixelTracksTrackingRegions,
+    #siPixelClustersPreSplittingCUDAHIon,
+    #siPixelDigisSoAHIon,
+    #siPixelDigisClustersPreSplittingHIon,
+    #siPixelRecHitsPreSplittingCUDAHIon,
+    #siPixelRecHitFromCUDAHIon,
+    # build the pixel ntuplets and the pixel tracks in SoA format on the GPU
+    pixelTracksCUDAHIon,
+    pixelTracksSoAHIon,
+    # convert the pixel tracks from SoA to legacy format
+    hiConformalPixelTracks
+))
+
 hiConformalPixelTracksSequencePhase1 = cms.Sequence(hiConformalPixelTracksTaskPhase1)

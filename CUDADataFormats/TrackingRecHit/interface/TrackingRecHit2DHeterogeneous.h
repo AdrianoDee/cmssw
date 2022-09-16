@@ -381,4 +381,7 @@ using TrackingRecHit2DGPUPhase2 = TrackingRecHit2DGPUT<pixelTopology::Phase2>;
 using TrackingRecHit2DCPUPhase2 = TrackingRecHit2DCPUT<pixelTopology::Phase2>;
 using TrackingRecHit2DHostPhase2 = TrackingRecHit2DHostT<pixelTopology::Phase2>;
 
+using TrackingRecHit2DGPUHIonPhase1 = TrackingRecHit2DGPUT<pixelTopology::HIonPhase1>;
+using TrackingRecHit2DCPUHIonPhase1 = TrackingRecHit2DCPUT<pixelTopology::HIonPhase1>;
+using TrackingRecHit2DHostHIonPhase1 = TrackingRecHit2DHostT<pixelTopology::HIonPhase1>;
 #endif  // CUDADataFormats_TrackingRecHit_interface_TrackingRecHit2DHeterogeneousT_h

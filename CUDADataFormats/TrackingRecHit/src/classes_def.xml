@@ -6,6 +6,13 @@
   <class name="cms::cuda::Product<TrackingRecHit2DGPUPhase1>" persistent="false"/>
   <class name="edm::Wrapper<cms::cuda::Product<TrackingRecHit2DGPUPhase1>>" persistent="false"/>
 
+  <class name="TrackingRecHit2DCPUHIonPhase1" persistent="false"/>
+  <class name="edm::Wrapper<TrackingRecHit2DCPUHIonPhase1>" persistent="false"/>
+  <class name="TrackingRecHit2DHostHIonPhase1" persistent="false"/>
+  <class name="edm::Wrapper<TrackingRecHit2DHostHIonPhase1>" persistent="false"/>
+  <class name="cms::cuda::Product<TrackingRecHit2DGPUHIonPhase1>" persistent="false"/>
+  <class name="edm::Wrapper<cms::cuda::Product<TrackingRecHit2DGPUHIonPhase1>>" persistent="false"/>
+
   <class name="TrackingRecHit2DCPUPhase2" persistent="false"/>
   <class name="edm::Wrapper<TrackingRecHit2DCPUPhase2>" persistent="false"/>
   <class name="TrackingRecHit2DHostPhase2" persistent="false"/>

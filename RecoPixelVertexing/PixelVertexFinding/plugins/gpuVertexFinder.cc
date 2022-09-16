@@ -199,5 +199,5 @@ namespace gpuVertexFinder {
 
   template class Producer<pixelTopology::Phase1>;
   template class Producer<pixelTopology::Phase2>;
-
+  template class Producer<pixelTopology::HIonPhase1>;
 }  // namespace gpuVertexFinder

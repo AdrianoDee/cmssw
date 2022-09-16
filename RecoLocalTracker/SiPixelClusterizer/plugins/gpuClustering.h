@@ -10,7 +10,7 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/cudaCompat.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 
-//#define GPU_DEBUG
+#define GPU_DEBUG
 
 namespace gpuClustering {
 

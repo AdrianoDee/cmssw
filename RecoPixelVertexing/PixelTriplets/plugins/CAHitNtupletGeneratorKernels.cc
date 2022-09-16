@@ -240,3 +240,4 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::classifyTuples(HitsOnCPU co
 
 template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::Phase1>;
 template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::Phase2>;
+template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::HIonPhase1>;

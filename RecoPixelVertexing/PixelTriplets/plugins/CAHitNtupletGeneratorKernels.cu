@@ -404,3 +404,4 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::printCounters(Counters cons
 
 template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::Phase1>;
 template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::Phase2>;
+template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::HIonPhase1>;

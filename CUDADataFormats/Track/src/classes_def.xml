@@ -6,6 +6,12 @@
   <class name="edm::Wrapper<cms::cuda::Product<HeterogeneousSoA<pixelTrack::TrackSoAPhase1>>>" persistent="false"/>
   <class name="HeterogeneousSoA<pixelTrack::TrackSoAPhase1>" persistent="false" />
 
+  <class name="pixelTrack::TrackSoAHIonPhase1" persistent="false"/>
+  <class name="edm::Wrapper<HeterogeneousSoA<pixelTrack::TrackSoAHIonPhase1>>" persistent="false" />
+  <class name="cms::cuda::Product<HeterogeneousSoA<pixelTrack::TrackSoAHIonPhase1>>" persistent="false"/>
+  <class name="edm::Wrapper<cms::cuda::Product<HeterogeneousSoA<pixelTrack::TrackSoAHIonPhase1>>>" persistent="false"/>
+  <class name="HeterogeneousSoA<pixelTrack::TrackSoAHIonPhase1>" persistent="false" />
+
   <class name="pixelTrack::TrackSoAPhase2" persistent="false"/>
   <class name="edm::Wrapper<HeterogeneousSoA<pixelTrack::TrackSoAPhase2>>" persistent="false" />
   <class name="cms::cuda::Product<HeterogeneousSoA<pixelTrack::TrackSoAPhase2>>" persistent="false"/>
