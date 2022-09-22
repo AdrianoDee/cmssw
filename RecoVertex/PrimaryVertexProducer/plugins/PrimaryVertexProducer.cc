@@ -282,7 +282,7 @@ void PrimaryVertexProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
         }
       }
 
-      if (v.isValid() && (v.degreesOfFreedom() >= algorithm->minNdof) &&
+      if (not weightFit && v.isValid() && (v.degreesOfFreedom() >= algorithm->minNdof) &&
           (!validBS || (*(algorithm->vertexSelector))(v, beamVertexState)))
         pvs.push_back(v);
     }  // end of cluster loop
@@ -346,7 +346,7 @@ void PrimaryVertexProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
         std::cout << std::endl;
       }
     }
-  
+
     iEvent.put(std::move(result), algorithm->label);
   }
 }

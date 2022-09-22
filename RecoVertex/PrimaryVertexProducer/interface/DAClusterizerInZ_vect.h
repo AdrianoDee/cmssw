@@ -178,6 +178,8 @@ public:
   std::vector<TransientVertex> vertices(const std::vector<reco::TransientTrack> &tracks) const;
   std::vector<TransientVertex> vertices_in_blocks(const std::vector<reco::TransientTrack> &tracks) const;
 
+  void run_annealing(track_t& tks, double* b, double* r, vertex_t& y) const;
+
   track_t fill(const std::vector<reco::TransientTrack> &tracks) const;
 
   void set_vtx_range(double beta, track_t &gtracks, vertex_t &gvertices) const;

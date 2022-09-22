@@ -768,162 +768,22 @@ bool DAClusterizerInZ_vect::split(const double beta, track_t& tks, vertex_t& y, 
 }
 
 vector<TransientVertex> DAClusterizerInZ_vect::vertices(const vector<reco::TransientTrack>& tracks) const {
+
+  double beta;
+  double rho0;
+
   track_t&& tks = fill(tracks);
   tks.extractRaw();
 
   unsigned int nt = tks.getSize();
-  double rho0 = 0.0;  // start with no outlier rejection
 
   vector<TransientVertex> clusters;
-  if (tks.getSize() == 0)
-    return clusters;
+  if (nt==0U)
+     return clusters;
 
-  vertex_t y;  // the vertex prototypes
+  vertex_t y;
 
-  // initialize:single vertex at infinite temperature
-  y.addItem(0, 1.0);
-  clear_vtx_range(tks, y);
-
-  // estimate first critical temperature
-  double beta = beta0(betamax_, tks, y);
-#ifdef DEBUG
-  if (DEBUGLEVEL > 0)
-    std::cout << "Beta0 is " << beta << std::endl;
-#endif
-
-  thermalize(beta, tks, y, delta_highT_);
-
-
-  // annealing loop, stop when T<Tmin  (i.e. beta>1/Tmin)
-
-  double betafreeze = betamax_ * sqrt(coolingFactor_);
-  while (beta < betafreeze) {
-    while (merge(y, tks, beta)) {
-      update(beta, tks, y, rho0, false);
-    }
-    split(beta, tks, y);
-
-    beta = beta / coolingFactor_;
-    thermalize(beta, tks, y, delta_highT_);
-
-
-  }
-
-#ifdef DEBUG
-  verify(y, tks);
-
-  if (DEBUGLEVEL > 0) {
-    std::cout << "DAClusterizerInZ_vect::vertices :"
-              << "last round of splitting" << std::endl;
-  }
-#endif
-
-  set_vtx_range(beta, tks, y);
-  update(beta, tks, y, rho0, false);
-
-  while (merge(y, tks, beta)) {
-    set_vtx_range(beta, tks, y);
-    update(beta, tks, y, rho0, false);
-  }
-
-  unsigned int ntry = 0;
-  double threshold = 1.0;
-  while (split(beta, tks, y, threshold) && (ntry++ < 10)) {
-    thermalize(beta, tks, y, delta_highT_, rho0);  // rho0 = 0. here
-    while (merge(y, tks, beta)) {
-      update(beta, tks, y, rho0, false);
-    }
-
-    // relax splitting a bit to reduce multiple split-merge cycles of the same cluster
-    threshold *= 1.1;
-  }
-
-#ifdef DEBUG
-  verify(y, tks);
-  if (DEBUGLEVEL > 0) {
-    std::cout << "DAClusterizerInZ_vect::vertices :"
-              << "turning on outlier rejection at T=" << 1 / beta << std::endl;
-  }
-#endif
-
-  // switch on outlier rejection at T=Tmin
-  if (dzCutOff_ > 0) {
-    rho0 = y.getSize() > 1 ? 1. / y.getSize() : 1.;
-    for (unsigned int a = 0; a < 5; a++) {
-      update(beta, tks, y, a * rho0 / 5.);  // adiabatic turn-on
-    }
-  }
-
-  thermalize(beta, tks, y, delta_lowT_, rho0);
-
-#ifdef DEBUG
-  verify(y, tks);
-  if (DEBUGLEVEL > 0) {
-    std::cout << "DAClusterizerInZ_vect::vertices :"
-              << "merging with outlier rejection at T=" << 1 / beta << std::endl;
-  }
-  if (DEBUGLEVEL > 2)
-    dump(beta, y, tks, 2, rho0);
-#endif
-
-  // merge again  (some cluster split by outliers collapse here)
-  while (merge(y, tks, beta)) {
-    set_vtx_range(beta, tks, y);
-    update(beta, tks, y, rho0, false);
-  }
-
-#ifdef DEBUG
-  verify(y, tks);
-  if (DEBUGLEVEL > 0) {
-    std::cout << "DAClusterizerInZ_vect::vertices :"
-              << "after merging with outlier rejection at T=" << 1 / beta << std::endl;
-  }
-  if (DEBUGLEVEL > 2)
-    dump(beta, y, tks, 2, rho0);
-#endif
-
-  // go down to the purging temperature (if it is lower than tmin)
-  while (beta < betapurge_) {
-    beta = min(beta / coolingFactor_, betapurge_);
-    thermalize(beta, tks, y, delta_lowT_, rho0);
-  }
-
-#ifdef DEBUG
-  verify(y, tks);
-  if (DEBUGLEVEL > 0) {
-    std::cout << "DAClusterizerInZ_vect::vertices :"
-              << "purging at T=" << 1 / beta << std::endl;
-  }
-#endif
-
-  // eliminate insignificant vertices, this is more restrictive at higher T
-  while (purge(y, tks, rho0, beta)) {
-    thermalize(beta, tks, y, delta_lowT_, rho0);
-  }
-
-#ifdef DEBUG
-  verify(y, tks);
-  if (DEBUGLEVEL > 0) {
-    std::cout << "DAClusterizerInZ_vect::vertices :"
-              << "last cooling T=" << 1 / beta << std::endl;
-  }
-#endif
-
-  // optionally cool some more without doing anything, to make the assignment harder
-  while (beta < betastop_) {
-    beta = min(beta / coolingFactor_, betastop_);
-    thermalize(beta, tks, y, delta_lowT_, rho0);
-  }
-
-#ifdef DEBUG
-  verify(y, tks);
-  if (DEBUGLEVEL > 0) {
-    std::cout << "DAClusterizerInZ_vect::vertices :"
-              << "stop cooling at T=" << 1 / beta << std::endl;
-  }
-  if (DEBUGLEVEL > 2)
-    dump(beta, y, tks, 2, rho0);
-#endif
+  run_annealing(tks, &beta, &rho0, y);
 
   // select significant tracks and use a TransientVertex as a container
 
@@ -984,14 +844,173 @@ vector<TransientVertex> DAClusterizerInZ_vect::vertices(const vector<reco::Trans
   return clusters;
 }
 
+void DAClusterizerInZ_vect::run_annealing(track_t& tks, double* b, double* r, vertex_t& y) const {
+
+  double rho0 = 0.0;  // start with no outlier rejection
+
+  // initialize:single vertex at infinite temperature
+  y.addItem(0, 1.0);
+  clear_vtx_range(tks, y);
+
+  // estimate first critical temperature
+  double beta = beta0(betamax_, tks, y);
+#ifdef DEBUG
+  if (DEBUGLEVEL > 0)
+    std::cout << "Beta0 is " << beta << std::endl;
+#endif
+
+  thermalize(beta, tks, y, delta_highT_);
+
+  // annealing loop, stop when T<Tmin  (i.e. beta>1/Tmin)
+
+  double betafreeze = betamax_ * sqrt(coolingFactor_);
+  while (beta < betafreeze) {
+    while (merge(y, tks, beta)) {
+      update(beta, tks, y, rho0, false);
+    }
+    split(beta, tks, y);
+
+    beta = beta / coolingFactor_;
+    thermalize(beta, tks, y, delta_highT_);
+
+
+  }
+
+#ifdef DEBUG
+  verify(y, tks);
+
+  if (DEBUGLEVEL > 0) {
+    std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
+              << "last round of splitting" << std::endl;
+  }
+#endif
+
+  set_vtx_range(beta, tks, y);
+  update(beta, tks, y, rho0, false);
+
+  while (merge(y, tks, beta)) {
+    set_vtx_range(beta, tks, y);
+    update(beta, tks, y, rho0, false);
+  }
+
+  unsigned int ntry = 0;
+  double threshold = 1.0;
+  while (split(beta, tks, y, threshold) && (ntry++ < 10)) {
+    thermalize(beta, tks, y, delta_highT_, rho0);  // rho0 = 0. here
+    while (merge(y, tks, beta)) {
+      update(beta, tks, y, rho0, false);
+    }
+
+    // relax splitting a bit to reduce multiple split-merge cycles of the same cluster
+    threshold *= 1.1;
+  }
+
+#ifdef DEBUG
+  verify(y, tks);
+  if (DEBUGLEVEL > 0) {
+    std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
+              << "turning on outlier rejection at T=" << 1 / beta << std::endl;
+  }
+#endif
+
+  // switch on outlier rejection at T=Tmin
+  if (dzCutOff_ > 0) {
+    rho0 = y.getSize() > 1 ? 1. / y.getSize() : 1.;
+    for (unsigned int a = 0; a < 5; a++) {
+      update(beta, tks, y, a * rho0 / 5.);  // adiabatic turn-on
+    }
+  }
+
+  thermalize(beta, tks, y, delta_lowT_, rho0);
+
+#ifdef DEBUG
+  verify(y, tks);
+  if (DEBUGLEVEL > 0) {
+    std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
+              << "merging with outlier rejection at T=" << 1 / beta << std::endl;
+  }
+  if (DEBUGLEVEL > 2)
+    dump(beta, y, tks, 2, rho0);
+#endif
+
+  // merge again  (some cluster split by outliers collapse here)
+  while (merge(y, tks, beta)) {
+    set_vtx_range(beta, tks, y);
+    update(beta, tks, y, rho0, false);
+  }
+
+#ifdef DEBUG
+  verify(y, tks);
+  if (DEBUGLEVEL > 0) {
+    std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
+              << "after merging with outlier rejection at T=" << 1 / beta << std::endl;
+  }
+  if (DEBUGLEVEL > 2)
+    dump(beta, y, tks, 2, rho0);
+#endif
+
+  // go down to the purging temperature (if it is lower than tmin)
+  while (beta < betapurge_) {
+    beta = min(beta / coolingFactor_, betapurge_);
+    thermalize(beta, tks, y, delta_lowT_, rho0);
+  }
+
+#ifdef DEBUG
+  verify(y, tks);
+  if (DEBUGLEVEL > 0) {
+    std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
+              << "purging at T=" << 1 / beta << std::endl;
+  }
+#endif
+
+  // eliminate insignificant vertices, this is more restrictive at higher T
+  while (purge(y, tks, rho0, beta)) {
+    thermalize(beta, tks, y, delta_lowT_, rho0);
+  }
+
+#ifdef DEBUG
+  verify(y, tks);
+  if (DEBUGLEVEL > 0) {
+    std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
+              << "last cooling T=" << 1 / beta << std::endl;
+  }
+#endif
+
+  // optionally cool some more without doing anything, to make the assignment harder
+  while (beta < betastop_) {
+    beta = min(beta / coolingFactor_, betastop_);
+    thermalize(beta, tks, y, delta_lowT_, rho0);
+  }
+
+#ifdef DEBUG
+  verify(y, tks);
+  if (DEBUGLEVEL > 0) {
+    std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
+              << "stop cooling at T=" << 1 / beta << std::endl;
+  }
+  if (DEBUGLEVEL > 2)
+    dump(beta, y, tks, 2, rho0);
+#endif
+
+b = &beta;
+r = &rho0;
+
+}
 vector<TransientVertex> DAClusterizerInZ_vect::vertices_in_blocks(const vector<reco::TransientTrack>& tracks) const {
-  //unsigned int block_size_ = 512;
+
+  vector<TransientVertex> clusters;
+  if (tracks.size() == 0U)
+     return clusters;
+
   vector<reco::TransientTrack> sorted_tracks;
   vector<pair<float, float>> vertices_tot; // z, rho for each vertex
   for (unsigned int i=0; i< tracks.size();i++){
     sorted_tracks.push_back(tracks[i]);
   }
-  double rho0, beta;
+
+  double beta;
+  double rho0;
+
   std::sort(sorted_tracks.begin(), sorted_tracks.end(),
     [](const reco::TransientTrack & a, const reco::TransientTrack & b) -> bool
     {
@@ -1016,157 +1035,13 @@ vector<TransientVertex> DAClusterizerInZ_vect::vertices_in_blocks(const vector<r
       std::cout<< "- block no." << block << " on " << nBlocks << " blocks "<< std::endl;
       std::cout<< "- block track size: " << sorted_tracks.size() << " - block size: " << block_size_ << std::endl;
     #endif
+
     track_t&& tks = fill(block_tracks);
     tks.extractRaw();
 
-    rho0 = 0.0;  // start with no outlier rejection
+    vertex_t y;
 
-    vertex_t y;  // the vertex prototypes
-
-    // initialize:single vertex at infinite temperature
-    y.addItem(0, 1.0);
-    clear_vtx_range(tks, y);
-
-    // estimate first critical temperature
-    beta = beta0(betamax_, tks, y);
-  #ifdef DEBUG
-    if (DEBUGLEVEL > 0)
-      std::cout << "Beta0 is " << beta << std::endl;
-  #endif
-
-    thermalize(beta, tks, y, delta_highT_);
-
-    // annealing loop, stop when T<Tmin  (i.e. beta>1/Tmin)
-
-    double betafreeze = betamax_ * sqrt(coolingFactor_);
-    while (beta < betafreeze) {
-      while (merge(y, tks, beta)) {
-        update(beta, tks, y, rho0, false);
-      }
-      split(beta, tks, y);
-
-      beta = beta / coolingFactor_;
-      thermalize(beta, tks, y, delta_highT_);
-
-
-    }
-
-  #ifdef DEBUG
-    verify(y, tks);
-
-    if (DEBUGLEVEL > 0) {
-      std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
-                << "last round of splitting" << std::endl;
-    }
-  #endif
-
-    set_vtx_range(beta, tks, y);
-    update(beta, tks, y, rho0, false);
-
-    while (merge(y, tks, beta)) {
-      set_vtx_range(beta, tks, y);
-      update(beta, tks, y, rho0, false);
-    }
-
-    unsigned int ntry = 0;
-    double threshold = 1.0;
-    while (split(beta, tks, y, threshold) && (ntry++ < 10)) {
-      thermalize(beta, tks, y, delta_highT_, rho0);  // rho0 = 0. here
-      while (merge(y, tks, beta)) {
-        update(beta, tks, y, rho0, false);
-      }
-
-      // relax splitting a bit to reduce multiple split-merge cycles of the same cluster
-      threshold *= 1.1;
-    }
-
-  #ifdef DEBUG
-    verify(y, tks);
-    if (DEBUGLEVEL > 0) {
-      std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
-                << "turning on outlier rejection at T=" << 1 / beta << std::endl;
-    }
-  #endif
-
-    // switch on outlier rejection at T=Tmin
-    if (dzCutOff_ > 0) {
-      rho0 = y.getSize() > 1 ? 1. / y.getSize() : 1.;
-      for (unsigned int a = 0; a < 5; a++) {
-        update(beta, tks, y, a * rho0 / 5.);  // adiabatic turn-on
-      }
-    }
-
-    thermalize(beta, tks, y, delta_lowT_, rho0);
-
-  #ifdef DEBUG
-    verify(y, tks);
-    if (DEBUGLEVEL > 0) {
-      std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
-                << "merging with outlier rejection at T=" << 1 / beta << std::endl;
-    }
-    if (DEBUGLEVEL > 2)
-      dump(beta, y, tks, 2, rho0);
-  #endif
-
-    // merge again  (some cluster split by outliers collapse here)
-    while (merge(y, tks, beta)) {
-      set_vtx_range(beta, tks, y);
-      update(beta, tks, y, rho0, false);
-    }
-
-  #ifdef DEBUG
-    verify(y, tks);
-    if (DEBUGLEVEL > 0) {
-      std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
-                << "after merging with outlier rejection at T=" << 1 / beta << std::endl;
-    }
-    if (DEBUGLEVEL > 2)
-      dump(beta, y, tks, 2, rho0);
-  #endif
-
-    // go down to the purging temperature (if it is lower than tmin)
-    while (beta < betapurge_) {
-      beta = min(beta / coolingFactor_, betapurge_);
-      thermalize(beta, tks, y, delta_lowT_, rho0);
-    }
-
-  #ifdef DEBUG
-    verify(y, tks);
-    if (DEBUGLEVEL > 0) {
-      std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
-                << "purging at T=" << 1 / beta << std::endl;
-    }
-  #endif
-
-    // eliminate insignificant vertices, this is more restrictive at higher T
-    while (purge(y, tks, rho0, beta)) {
-      thermalize(beta, tks, y, delta_lowT_, rho0);
-    }
-
-  #ifdef DEBUG
-    verify(y, tks);
-    if (DEBUGLEVEL > 0) {
-      std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
-                << "last cooling T=" << 1 / beta << std::endl;
-    }
-  #endif
-
-    // optionally cool some more without doing anything, to make the assignment harder
-    while (beta < betastop_) {
-      beta = min(beta / coolingFactor_, betastop_);
-      thermalize(beta, tks, y, delta_lowT_, rho0);
-    }
-
-  #ifdef DEBUG
-    verify(y, tks);
-    if (DEBUGLEVEL > 0) {
-      std::cout << "DAClusterizerInZSubCluster_vect::vertices :"
-                << "stop cooling at T=" << 1 / beta << std::endl;
-    }
-    if (DEBUGLEVEL > 2)
-      dump(beta, y, tks, 2, rho0);
-  #endif
-
+    run_annealing(tks, &beta, &rho0, y);
 
     for (unsigned int ivertex = 0; ivertex < y.getSize(); ivertex++) {
       if (y.zvtx_vec[ivertex]!=0 && y.rho_vec[ivertex]!=0) {
@@ -1177,7 +1052,7 @@ vector<TransientVertex> DAClusterizerInZ_vect::vertices_in_blocks(const vector<r
       }
     }
 
-  }
+  } //block_loop
 
   std::sort(vertices_tot.begin(), vertices_tot.end(), [](const pair<float, float> & a, const pair<float, float> & b) -> bool
     {
@@ -1232,7 +1107,7 @@ vector<TransientVertex> DAClusterizerInZ_vect::vertices_in_blocks(const vector<r
 
 
 
-  double mintrkweight_ = 0.5;
+  constexpr double mintrkweight = 0.5;
   rho0 = nv > 1 ? 1./nv : 1.;
   const auto z_sum_init = rho0 * local_exp(-beta * dzCutOff_ * dzCutOff_);
 
@@ -1251,7 +1126,7 @@ vector<TransientVertex> DAClusterizerInZ_vect::vertices_in_blocks(const vector<r
     for (auto k = kmin; k < kmax; k++) {
       float v_exp = local_exp(-beta * Eik(tracks_tot.zpca[i], vertices_tot[k].first, tracks_tot.dz2[i]));
       double p = vertices_tot[k].second * v_exp * invZ;
-      if (p > p_max && p > mintrkweight_) {
+      if (p > p_max && p > mintrkweight) {
         p_max = p;
         iMax = k;
       }
@@ -1264,8 +1139,6 @@ vector<TransientVertex> DAClusterizerInZ_vect::vertices_in_blocks(const vector<r
           std::cout << "itrack " << itrack << " , " << tracks_tot.kmin[itrack] << " , " << tracks_tot.kmax[itrack] << std::endl;
     }
   #endif
-
-  vector<TransientVertex> clusters;
 
   GlobalError dummyError(0.01, 0, 0.01, 0., 0., 0.01);
   for (unsigned int k = 0; k < nv; k++) {
@@ -1292,7 +1165,7 @@ vector<vector<reco::TransientTrack> > DAClusterizerInZ_vect::clusterize(
   // vector<TransientVertex> pv;
 
   vector<TransientVertex> pv;// = vertices_in_blocks(tracks);
-  if(runInBlocks_ and (block_size_ > tracks.size()))
+  if(runInBlocks_ and (block_size_ < tracks.size()))
     pv = vertices_in_blocks(tracks);
   else
     pv = vertices(tracks);
