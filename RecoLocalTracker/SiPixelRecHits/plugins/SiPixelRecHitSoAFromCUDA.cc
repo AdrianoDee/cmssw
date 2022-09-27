@@ -62,7 +62,7 @@ template <typename TrackerTraits>
 void SiPixelRecHitSoAFromCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
-   
+
   descriptions.addWithDefaultLabel(desc);
 }
 

@@ -389,17 +389,6 @@ TrackingRecHit2DHeterogeneousT<Traits, TrackerTraits>::TrackingRecHit2DHeterogen
   }
 }
 
-// This definition below seems to be necessary to ROOT to avoid DictionaryNotFound error for old TrackingRecHit2DHeterogeneous
-// in RAW samples in which the Run3 HLT has already been run. Without this those samples are useless beacuse of the abovementioned
-// ROOT dictionary error. Alternative solution would be to impose a drop of HLT collections in RECO step, but seems not reasonable.
-// Same reasoning applies to PixelTrackHeterogeneous.
-
-template <typename Traits>
-class TrackingRecHit2DHeterogeneous {
-public:
-  CMS_CLASS_VERSION(10);
-};
-
 //Classes definition for Phase1/Phase2, to make the classes_def lighter. Not actually used in the code.
 using TrackingRecHit2DGPUPhase1 = TrackingRecHit2DGPUT<pixelTopology::Phase1>;
 using TrackingRecHit2DCPUPhase1 = TrackingRecHit2DCPUT<pixelTopology::Phase1>;
@@ -408,9 +397,5 @@ using TrackingRecHit2DHostPhase1 = TrackingRecHit2DHostT<pixelTopology::Phase1>;
 using TrackingRecHit2DGPUPhase2 = TrackingRecHit2DGPUT<pixelTopology::Phase2>;
 using TrackingRecHit2DCPUPhase2 = TrackingRecHit2DCPUT<pixelTopology::Phase2>;
 using TrackingRecHit2DHostPhase2 = TrackingRecHit2DHostT<pixelTopology::Phase2>;
-
-using TrackingRecHit2DCPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::CPUTraits>;
-using TrackingRecHit2DGPULegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::GPUTraits>;
-using TrackingRecHit2DHostLegacy = TrackingRecHit2DHeterogeneous<cms::cudacompat::HostTraits>;
 
 #endif  // CUDADataFormats_TrackingRecHit_interface_TrackingRecHit2DHeterogeneousT_h
