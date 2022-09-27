@@ -83,7 +83,6 @@ void PixelThresholdClusterizer::fillPSetDescription(edm::ParameterSetDescription
   desc.add<int>("ClusterThreshold", 4000);
   desc.add<double>("ElectronPerADCGain", 135.);
   desc.add<bool>("Phase2Calibration", false);
-  desc.add<bool>("DropDuplicates", true);
   desc.add<int>("Phase2ReadoutMode", -1);
   desc.add<double>("Phase2DigiBaseline", 1200.);
   desc.add<int>("Phase2KinkADC", 8);
