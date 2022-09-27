@@ -727,9 +727,6 @@ namespace pixelgpudetails {
 
 #ifdef GPU_DEBUG
     cudaCheck(cudaStreamSynchronize(stream));
-#endif
-
-#ifdef GPU_DEBUG
     std::cout << "CUDA countModules kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";
 #endif
 
@@ -744,6 +741,10 @@ namespace pixelgpudetails {
     threadsPerBlock = 256;
     blocks = Phase2::numberOfModules;
 
+#ifdef GPU_DEBUG
+    cudaCheck(cudaStreamSynchronize(stream));
+    std::cout << "CUDA findClus kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";
+#endif
     findClus<Phase2><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().rawIdArr(),
                                                              digis_d.view().moduleInd(),
                                                              digis_d.view().xx(),
@@ -757,6 +758,8 @@ namespace pixelgpudetails {
     cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG
     cudaCheck(cudaStreamSynchronize(stream));
+    std::cout << "CUDA clusterChargeCut kernel launch with " << blocks << " blocks of " << threadsPerBlock
+              << " threads\n";
 #endif
 
     // apply charge cut
@@ -772,6 +775,12 @@ namespace pixelgpudetails {
 
     auto nModules_Clusters_d = cms::cuda::make_device_unique<uint32_t[]>(3, stream);
     // MUST be ONE block
+
+#ifdef GPU_DEBUG
+    cudaCheck(cudaStreamSynchronize(stream));
+    std::cout << "CUDA fillHitsModuleStart kernel launch \n";
+#endif
+
     fillHitsModuleStart<Phase2><<<1, 1024, 0, stream>>>(
         clusters_d.clusInModule(), clusters_d.clusModuleStart(), clusters_d.moduleStart(), nModules_Clusters_d.get());
 

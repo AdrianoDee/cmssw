@@ -100,7 +100,6 @@ void PixelCPEFastESProducerT<TrackerTraits>::fillDescriptions(edm::Configuration
   desc.add<edm::ESInputTag>("MagneticFieldRecord", edm::ESInputTag());
 
   descriptions.addWithDefaultLabel(desc);
-
 }
 
 using PixelCPEFastESProducer = PixelCPEFastESProducerT<pixelTopology::Phase1>;

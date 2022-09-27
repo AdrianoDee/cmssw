@@ -56,7 +56,7 @@ void CAHitNtupletEDProducerT<T_Generator>::fillDescriptions(edm::ConfigurationDe
   T_Generator::fillDescriptions(desc);
 
   auto label = T_Generator::fillDescriptionsLabel() + std::string("EDProducer");
-  descriptions.addWithDefaultLabel(desc);
+  descriptions.add(label, desc);
 }
 
 template <typename T_Generator>
