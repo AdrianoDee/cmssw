@@ -53,6 +53,7 @@ PixelThresholdClusterizer::PixelThresholdClusterizer(edm::ParameterSet const& co
       theOffset_L1(conf.getParameter<int>("VCaltoElectronOffset_L1")),
       theElectronPerADCGain(conf.getParameter<double>("ElectronPerADCGain")),
       doPhase2Calibration(conf.getParameter<bool>("Phase2Calibration")),
+      dropDuplicates(conf.getParameter<bool>("DropDuplicates")),
       thePhase2ReadoutMode(conf.getParameter<int>("Phase2ReadoutMode")),
       thePhase2DigiBaseline(conf.getParameter<double>("Phase2DigiBaseline")),
       thePhase2KinkADC(conf.getParameter<int>("Phase2KinkADC")),
@@ -82,6 +83,7 @@ void PixelThresholdClusterizer::fillPSetDescription(edm::ParameterSetDescription
   desc.add<int>("ClusterThreshold_L1", 4000);
   desc.add<int>("ClusterThreshold", 4000);
   desc.add<double>("ElectronPerADCGain", 135.);
+  desc.add<bool>("DropDuplicates", false);
   desc.add<bool>("Phase2Calibration", false);
   desc.add<int>("Phase2ReadoutMode", -1);
   desc.add<double>("Phase2DigiBaseline", 1200.);
