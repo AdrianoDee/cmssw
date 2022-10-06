@@ -232,7 +232,7 @@ def customizeHLTfor39577(process):
     return process
 
 
-def customizeHLTfor99999(process):
+def customizeHLTfor38761(process):
      for producer in producers_by_type(process, "SiPixelRecHitSoAFromLegacy"):
          if hasattr(producer, "isPhase2"):
              delattr(producer, "isPhase2")
@@ -258,13 +258,7 @@ def customizeHLTfor99999(process):
          if hasattr(producer, "Upgrade"):
              setattr(producer,"isPhase2",getattr(producer,"Upgrade"))
              delattr(producer, "Upgrade")
-         #else:
-             #setattr(producer,"isPhase2",False)
              
-     # for producer insproducers_by_type(process, "PixelCPEGeneric"):
-     #     if hasattr(producer, "Upgrade"):
-     #         setattr(producer,"isPhase2",getattr(producer,"Upgrade"))
-     #         delattr(producer, "Upgrade")
      return process
 
 # CMSSW version specific customizations
@@ -274,7 +268,8 @@ def customizeHLTforCMSSW(process, menuType="GRun"):
 
     # add call to action function in proper order: newest last!
     # process = customiseFor12718(process)
+
     process = customizeHLTfor39577(process)
-    process = customizeHLTfor99999(process)
+    process = customizeHLTfor38761(process)
 
     return process
