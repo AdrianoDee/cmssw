@@ -521,7 +521,8 @@ def miniAOD_customizeCommon(process):
     from Configuration.Eras.Modifier_stage2L1Trigger_2017_cff import stage2L1Trigger_2017
     from Configuration.Eras.Modifier_stage2L1Trigger_2018_cff import stage2L1Trigger_2018
     from Configuration.Eras.Modifier_tracker_apv_vfp30_2016_cff import tracker_apv_vfp30_2016
-    process.load("PhysicsTools.PatUtils.L1PrefiringWeightProducer_cff")
+    if not hasattr(process,'prefiringweight'):
+        process.load("PhysicsTools.PatUtils.L1PrefiringWeightProducer_cff")
     (stage2L1Trigger & tracker_apv_vfp30_2016).toModify(process.prefiringweight, DataEraECAL = "UL2016preVFP", DataEraMuon = "2016preVFP" )
     (stage2L1Trigger & ~tracker_apv_vfp30_2016).toModify(process.prefiringweight, DataEraECAL = "UL2016postVFP", DataEraMuon = "2016postVFP" )
     stage2L1Trigger_2017.toModify(process.prefiringweight, DataEraECAL = "UL2017BtoF", DataEraMuon = "20172018")
@@ -600,6 +601,7 @@ def miniAOD_customizeData(process):
     process.load("Geometry.VeryForwardGeometry.geometryRPFromDB_cfi")
     process.load('L1Trigger.L1TGlobal.simGtExtFakeProd_cfi')
     task = getPatAlgosToolsTask(process)
+    task.add(process.simGtExtUnprefireable)
     from Configuration.Eras.Modifier_ctpps_cff import ctpps
     ctpps.toModify(task, func=lambda t: t.add(process.ctppsLocalTrackLiteProducer))
     ctpps.toModify(task, func=lambda t: t.add(process.ctppsProtons))

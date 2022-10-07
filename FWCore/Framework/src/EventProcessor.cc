@@ -227,7 +227,8 @@ namespace edm {
       ParameterSet* providerPSet = params.getPSetForUpdate(looperName);
       validateLooper(*providerPSet);
       providerPSet->registerIt();
-      vLooper = eventsetup::LooperFactory::get()->addTo(esController, cp, *providerPSet);
+      // Unlikely we would ever need the ModuleTypeResolver in Looper
+      vLooper = eventsetup::LooperFactory::get()->addTo(esController, cp, *providerPSet, nullptr);
     }
     return vLooper;
   }
@@ -447,6 +448,19 @@ namespace edm {
     if (not hasSubProcesses) {
       branchesToDeleteEarly_ = optionsPset.getUntrackedParameter<std::vector<std::string>>("canDeleteEarly");
     }
+    if (not branchesToDeleteEarly_.empty()) {
+      auto referencePSets =
+          optionsPset.getUntrackedParameter<std::vector<edm::ParameterSet>>("holdsReferencesToDeleteEarly");
+      for (auto const& pset : referencePSets) {
+        auto product = pset.getParameter<std::string>("product");
+        auto references = pset.getParameter<std::vector<std::string>>("references");
+        for (auto const& ref : references) {
+          referencesToBranches_.emplace(product, ref);
+        }
+      }
+      modulesToIgnoreForDeleteEarly_ =
+          optionsPset.getUntrackedParameter<std::vector<std::string>>("modulesToIgnoreForDeleteEarly");
+    }
 
     // Now do general initialization
     ScheduleItems items;
@@ -460,7 +474,7 @@ namespace edm {
     ServiceRegistry::Operate operate(serviceToken_);
 
     CMS_SA_ALLOW try {
-      if (nStreams > 1) {
+      if (nThreads > 1) {
         edm::Service<RootHandlers> handler;
         handler->willBeUsingThreads();
       }
@@ -694,8 +708,10 @@ namespace edm {
     // modules to avoid non-consumed non-run modules to keep the
     // products unnecessarily alive
     if (not branchesToDeleteEarly_.empty()) {
-      schedule_->initializeEarlyDelete(branchesToDeleteEarly_, *preg_);
-      decltype(branchesToDeleteEarly_)().swap(branchesToDeleteEarly_);
+      auto modulesToSkip = std::move(modulesToIgnoreForDeleteEarly_);
+      auto branchesToDeleteEarly = std::move(branchesToDeleteEarly_);
+      auto referencesToBranches = std::move(referencesToBranches_);
+      schedule_->initializeEarlyDelete(branchesToDeleteEarly, referencesToBranches, modulesToSkip, *preg_);
     }
 
     actReg_->preBeginJobSignal_(pathsAndConsumesOfModules_, processContext_);

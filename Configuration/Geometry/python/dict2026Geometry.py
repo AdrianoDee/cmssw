@@ -390,7 +390,44 @@ trackerDict = {
             'trackerGeometry.applyAlignment = cms.bool(False)',
         ],
         "era" : "phase2_tracker, trackingPhase2PU140",
-    } 
+    }, 
+    "T31" : {
+        1 : [
+            'Geometry/TrackerCommonData/data/PhaseII/trackerParameters.xml',
+            'Geometry/TrackerCommonData/data/pixfwdCommon.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/pixfwd.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/Tracker_DD4hep_compatible_OT800_IT615_2022_10/pixbar.xml',
+            'Geometry/TrackerCommonData/data/trackermaterial.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/tracker.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/OuterTracker616_2020_04/otst.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/pixel.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/TiltedTracker404/trackerbar.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/TiltedTracker404/trackerfwd.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/trackerStructureTopology.xml',
+            'Geometry/TrackerCommonData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/pixelStructureTopology.xml',
+            'Geometry/TrackerSimData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/trackersens.xml',
+            'Geometry/TrackerSimData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/pixelsens.xml',
+            'Geometry/TrackerRecoData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/trackerRecoMaterial.xml',
+            'SimTracker/TrackerMaterialAnalysis/data/trackingMaterialGroups_ForPhaseII/v1/trackingMaterialGroups_ForPhaseII.xml',
+            'Geometry/TrackerSimData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/trackerProdCuts.xml',
+            'Geometry/TrackerSimData/data/PhaseII/Tracker_DD4hep_compatible_2021_02/pixelProdCuts.xml',
+            'Geometry/TrackerSimData/data/trackerProdCutsBEAM.xml',
+        ],
+        "sim" : [
+            'from Geometry.TrackerNumberingBuilder.trackerNumberingGeometry_cff import *',
+            'from SLHCUpgradeSimulations.Geometry.fakePhase2OuterTrackerConditions_cff import *',
+        ],
+        "reco" : [
+            'from Geometry.CommonTopologies.globalTrackingGeometry_cfi import *',
+            'from RecoTracker.GeometryESProducer.TrackerRecoGeometryESProducer_cfi import *',
+            'from Geometry.TrackerGeometryBuilder.TrackerAdditionalParametersPerDet_cfi import *',
+            'from Geometry.TrackerGeometryBuilder.trackerParameters_cff import *',
+            'from Geometry.TrackerNumberingBuilder.trackerTopology_cfi import *',
+            'from Geometry.TrackerGeometryBuilder.idealForDigiTrackerGeometry_cff import *',
+            'trackerGeometry.applyAlignment = cms.bool(False)',
+        ],
+        "era" : "phase2_tracker, trackingPhase2PU140",
+    }
 }
 
 
@@ -951,8 +988,8 @@ caloDict = {
             'Geometry/HcalCommonData/data/hcalcablealgo/v2/hcalcablealgo.xml',
             'Geometry/HcalCommonData/data/hcalouteralgo.xml',
             'Geometry/HcalCommonData/data/hcalforwardalgo.xml',
-            'Geometry/HcalCommonData/data/hcalSimNumbering/NoHE/hcalSimNumbering.xml',
-            'Geometry/HcalCommonData/data/hcalRecNumbering/NoHE/hcalRecNumbering.xml',
+            'Geometry/HcalCommonData/data/hcalSimNumbering/NoHE/v1/hcalSimNumbering.xml',
+            'Geometry/HcalCommonData/data/hcalRecNumbering/NoHE/v1/hcalRecNumbering.xml',
             'Geometry/HcalCommonData/data/average/hcalforwardmaterial.xml',
             'Geometry/HGCalCommonData/data/hgcalMaterial/v2/hgcalMaterial.xml',
             'Geometry/HGCalCommonData/data/hgcal/v16/hgcal.xml',
@@ -1791,18 +1828,6 @@ timingDict = {
 allDicts = [ commonDict, trackerDict, caloDict, muonDict, forwardDict, timingDict ]
 
 detectorVersionDict = {
-    ("O4","T15","C9","M4","F2","I10") : "D49",
-    ("O4","T15","C10","M4","F3","I10") : "D60",
-    ("O5","T21","C11","M6","F4","I11") : "D68",
-    ("O6","T21","C13","M7","F6","I11") : "D70",
-    ("O7","T21","C14","M9","F6","I13") : "D76",
-    ("O7","T24","C14","M9","F6","I13") : "D77",
-    ("O7","T25","C14","M9","F6","I13") : "D80",
-    ("O7","T26","C14","M9","F6","I13") : "D81",
-    ("O7","T21","C15","M9","F7","I13") : "D82",
-    ("O7","T24","C16","M9","F6","I13") : "D83",
-    ("O6","T24","C13","M7","F6","I11") : "D84",
-    ("O7","T24","C14","M9","F6","I14") : "D85",
     ("O8","T24","C17","M10","F6","I14") : "D86",
     ("O9","T24","C17","M10","F6","I15") : "D88",
     ("O9","T30","C17","M10","F6","I15") : "D91",
@@ -1811,5 +1836,5 @@ detectorVersionDict = {
     ("O9","T24","C20","M10","F8","I15") : "D94",
  }
 
-deprecatedDets = set([ "D1", "D2", "D3", "D5", "D6" , "D7", "D4", "D8" , "D9", "D12", "D13", "D15", "D10", "D11", "D14", "D16", "D17", "D18", "D19", "D20", "D21", "D22", "D23", "D24", "D25", "D26", "D27", "D28", "D29", "D30", "D31", "D32", "D33", "D34", "D36", "D37", "D38", "D39", "D40", "D42", "D35", "D41", "D43", "D44", "D45", "D46", "D48", "D47", "D50", "D51", "D52", "D53", "D54", "D55", "D56", "D57", "D58", "D59", "D61", "D62", "D63", "D64", "D65", "D66", "D67", "D69", "D71", "D72", "D73", "D74", "D75", "D78", "D79", "D87", "D89", "D90"])
-deprecatedSubdets = set([ "T1", "T2" ,"T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12", "T13", "T14", "T16", "T17", "T18", "T19", "T20", "T22", "T23", "T27", "T28", "T29", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C12", "M1", "M2", "M3", "M5", "M8", "I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "I12", "O1", "O2", "O3", "F1", "F5"])
+deprecatedDets = set([ "D1", "D2", "D3", "D5", "D6" , "D7", "D4", "D8" , "D9", "D12", "D13", "D15", "D10", "D11", "D14", "D16", "D17", "D18", "D19", "D20", "D21", "D22", "D23", "D24", "D25", "D26", "D27", "D28", "D29", "D30", "D31", "D32", "D33", "D34", "D36", "D37", "D38", "D39", "D40", "D42", "D35", "D41", "D43", "D44", "D45", "D46", "D48", "D47", "D50", "D51", "D52", "D53", "D54", "D55", "D56", "D57", "D58", "D59", "D61", "D62", "D63", "D64", "D65", "D66", "D67", "D69", "D71", "D72", "D73", "D74", "D75", "D78", "D79", "D87", "D89", "D90", "D49", "D60", "D68", "D70", "D76", "D77", "D80", "D81", "D82", "D83", "D84", "D85"])
+deprecatedSubdets = set([ "T1", "T2" ,"T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19", "T20", "T21", "T22", "T23", "T25", "T26", "T27", "T28", "T29", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13", "C14", "C15", "C16", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9", "I10", "I11", "I12", "I13", "O1", "O2", "O3", "O4", "O5", "O6", "O7", "F1", "F2", "F3", "F4", "F5", "F7"])
