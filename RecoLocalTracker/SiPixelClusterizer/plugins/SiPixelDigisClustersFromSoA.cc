@@ -17,6 +17,8 @@
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
+#include <numeric>
+
 // local include(s)
 #include "PixelClusterizerBase.h"
 #include "SiPixelClusterThresholds.h"
@@ -143,7 +145,13 @@ void SiPixelDigisClustersFromSoA::produce(edm::StreamID, edm::Event& iEvent, con
       spc.abort();
   };
 
-  for (uint32_t i = 0; i < nDigis; i++) {
+  std::vector<uint32_t> sortIdxs(nDigis);
+  std::iota(sortIdxs.begin(), sortIdxs.end(), 0);
+  std::sort(
+      sortIdxs.begin(), sortIdxs.end(), [&](int32_t const i, int32_t const j) { return digis.rawIdArr(i) > digis.rawIdArr(j); });
+
+  for (uint32_t id = 0; id < nDigis; id++) {
+    auto i = sortIdxs[id];
     // check for uninitialized digis
     if (digis.rawIdArr(i) == 0)
       continue;
