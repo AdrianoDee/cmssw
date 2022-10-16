@@ -100,7 +100,6 @@ from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDAPhase2_cfi import siPi
 (gpu & pixelNtupletFit & pp_on_AA).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDAHIonPhase1.clone())
 (gpu & pixelNtupletFit & phase2_tracker).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDAPhase2.clone())
 
-
 pixelNtupletFit.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     cms.Task(
         # reconstruct the pixel rechits on the cpu
@@ -120,6 +119,7 @@ pixelNtupletFit.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     # (normally only one of the two is run because only one is consumed from later stages)
     siPixelRecHitsPreSplittingCUDA,
     siPixelRecHitsPreSplittingCPU,
+    siPixelRecHitFromCUDA,
     # SwitchProducer wrapping an EDAlias on cpu or the converter from SoA to legacy on gpu
     siPixelRecHitsPreSplittingTask.copy(),
     # producing and converting on cpu (if needed)

@@ -59,6 +59,39 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits
 #endif
 }
 
+//#define GPU_DEBUG
+template <typename TrackerTraits>
+#ifdef __CUDACC__
+void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::allocateMask(const uint8_t *mask, int32_t nHits ,cudaStream_t stream) {
+  using Traits = cms::cudacompat::GPUTraits;
+#else
+void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateMask(const uint8_t *mask, int32_t nHits ,cudaStream_t stream) {
+  using Traits = cms::cudacompat::CPUTraits;
+#endif
+
+  this->device_hitMask_ = Traits::template make_unique<uint8_t[]>(nHits, stream);
+
+  if constexpr (std::is_same<Traits, cms::cudacompat::GPUTraits>::value)
+  {
+    if(mask)
+      cudaCheck(cudaMemcpyAsync(this->device_hitMask_.get(), mask, sizeof(uint8_t) * nHits ,cudaMemcpyDefault,stream));
+    else
+      cudaCheck(cudaMemsetAsync(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits, stream));
+  }
+  else
+  {
+    if(mask)
+      std::copy(mask, mask + nHits, this->device_hitMask_.get());
+    else
+      std::memset(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits); 
+      //cudaCheck(cudaMemsetAsync(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits, stream));
+  }
+#ifdef GPU_DEBUG
+  cudaDeviceSynchronize();
+  cudaCheck(cudaGetLastError());
+#endif
+}
+
 template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::Phase1>;
 template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::Phase2>;
 template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::HIonPhase1>;

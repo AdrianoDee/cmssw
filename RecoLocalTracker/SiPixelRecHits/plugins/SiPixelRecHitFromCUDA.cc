@@ -1,6 +1,7 @@
 #include <cuda_runtime.h>
 
 #include <fmt/printf.h>
+#include "DataFormats/Common/interface/Ref.h"
 
 #include "CUDADataFormats/Common/interface/HostProduct.h"
 #include "CUDADataFormats/Common/interface/Product.h"
@@ -34,6 +35,7 @@ public:
 
   using HMSstorage = HostProduct<uint32_t[]>;
   using HitsOnDevice = TrackingRecHitSoADevice<TrackerTraits>;
+  using MapToHit = std::vector<std::pair<int,int>>;
 
 private:
   void acquire(edm::Event const& iEvent,
@@ -45,7 +47,10 @@ private:
   const edm::EDGetTokenT<cms::cuda::Product<HitsOnDevice>> hitsToken_;  // CUDA hits
   const edm::EDGetTokenT<SiPixelClusterCollectionNew> clusterToken_;    // legacy clusters
   const edm::EDPutTokenT<SiPixelRecHitCollection> rechitsPutToken_;     // legacy rechits
+  const bool dumpForMasking_;
+
   const edm::EDPutTokenT<HMSstorage> hostPutToken_;
+  const edm::EDPutTokenT<MapToHit> hostClustRefPutToken_;
 
   uint32_t nHits_;
   cms::cuda::host::unique_ptr<float[]> store32_;
@@ -58,13 +63,20 @@ SiPixelRecHitFromCUDAT<TrackerTraits>::SiPixelRecHitFromCUDAT(const edm::Paramet
       hitsToken_(consumes<cms::cuda::Product<HitsOnDevice>>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
       clusterToken_(consumes<SiPixelClusterCollectionNew>(iConfig.getParameter<edm::InputTag>("src"))),
       rechitsPutToken_(produces<SiPixelRecHitCollection>()),
-      hostPutToken_(produces<HMSstorage>()) {}
+      dumpForMasking_(iConfig.getParameter<bool>("dumpForMasking")),
+      hostPutToken_(produces<HMSstorage>()) {
+
+        if(dumpForMasking_)
+        {          produces<MapToHit>();
+        }
+      }
 
 template <typename TrackerTraits>
 void SiPixelRecHitFromCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplitting"));
+  desc.add<bool>("dumpForMasking", false);
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -84,7 +96,7 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
 
   if (0 == nHits_)
     return;
-  store32_ = inputData.localCoordToHostAsync(ctx.stream());
+  store32_ = inputData.store32ToHostAsync(ctx.stream());
 
   hitsModuleStart_ = inputData.hitsModuleStartToHostAsync(ctx.stream());
 }
@@ -114,7 +126,14 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
   auto xe = yl + nHits_;
   auto ye = xe + nHits_;
 
+  auto xg = ye + nHits_ + nHits_;
+  auto yg = xg + nHits_;
+  auto zg = yg + nHits_;
+
   const TrackerGeometry* geom = &es.getData(geomToken_);
+
+  auto mapToHitP = std::make_unique<MapToHit>();
+  auto &mapToHit = *mapToHitP;
 
   edm::Handle<SiPixelClusterCollectionNew> hclusters = iEvent.getHandle(clusterToken_);
   auto const& input = *hclusters;
@@ -123,6 +142,10 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
 
   int numberOfDetUnits = 0;
   int numberOfClusters = 0;
+  if(dumpForMasking_)
+    mapToHit.reserve(nHits_);
+
+  std::cout <<  "RecHits from CUDA ---> ";
   for (auto const& dsv : input) {
     numberOfDetUnits++;
     unsigned int detid = dsv.detId();
@@ -159,7 +182,10 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
       assert(clust.originalId() < dsv.size());
       if (clust.originalId() >= nhits)
         continue;
+
       auto ij = jnd(clust.originalId());
+
+
       LocalPoint lp(xl[ij], yl[ij]);
       LocalError le(xe[ij], 0, ye[ij]);
       SiPixelRecHitQuality::QualWordType rqw = 0;
@@ -176,6 +202,14 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
       // Create a persistent edm::Ref to the cluster
       edm::Ref<edmNew::DetSetVector<SiPixelCluster>, SiPixelCluster> cluster = edmNew::makeRefTo(hclusters, &clust);
       // Make a RecHit and add it to the DetSet
+
+      std::cout << "hit - " << ij << " - " << xg[ij]<< " - ";
+      std::cout << yg[ij]<< " - ";
+      std::cout << zg[ij]<< " - ";
+      std::cout << std::endl;
+
+      if(dumpForMasking_)
+        mapToHit.emplace_back(std::pair<uint32_t,uint32_t>(cluster.key(),ij));
       recHitsOnDetUnit.emplace_back(lp, le, rqw, *genericDet, cluster);
       // =============================
 
@@ -188,9 +222,16 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
 
   }  //    <-- End loop on DetUnits
 
+
+
   LogDebug("SiPixelRecHitFromCUDA") << "found " << numberOfDetUnits << " dets, " << numberOfClusters << " clusters";
 
   iEvent.emplace(rechitsPutToken_, std::move(output));
+  if(dumpForMasking_)
+  {
+    std::sort(mapToHit.begin(), mapToHit.end());
+    iEvent.put(std::move(mapToHitP));
+  }
 }
 
 using SiPixelRecHitFromCUDAPhase1 = SiPixelRecHitFromCUDAT<pixelTopology::Phase1>;

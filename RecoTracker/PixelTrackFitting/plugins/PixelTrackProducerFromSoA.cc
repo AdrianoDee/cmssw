@@ -195,9 +195,15 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
 
     hits.resize(nHits);
     auto b = hitIndices.begin(it);
+    std::cout <<  "HITS track no. " << nt << " ---> ";
     for (int iHit = 0; iHit < nHits; ++iHit)
+    {
       hits[iHit] = hitmap[*(b + iHit)];
-
+      std::cout << "hit - " << *(b + iHit) << " - " <<  hits[iHit]->globalPosition().x()<< " - ";
+      std::cout << hits[iHit]->globalPosition().y()<< " - ";
+      std::cout << hits[iHit]->globalPosition().z()<< " - ";
+      std::cout << std::endl;
+    }
     // mind: this values are respect the beamspot!
 
     float chi2 = tsoa.view()[it].chi2();

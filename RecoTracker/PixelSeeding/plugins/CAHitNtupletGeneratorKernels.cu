@@ -233,6 +233,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::buildDoublets(const HitsCon
                                                                  this->device_theCellNeighbors_.get(),
                                                                  this->device_theCellTracks_.get(),
                                                                  hh,
+                                                                 this->device_hitMask_.get(),
                                                                  this->isOuterHitOfCell_,
                                                                  nActualPairs,
                                                                  this->params_.caParams_.maxNumberOfDoublets_,

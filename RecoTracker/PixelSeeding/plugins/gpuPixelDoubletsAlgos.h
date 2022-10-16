@@ -126,6 +126,7 @@ namespace gpuPixelDoublets {
                                                     CellNeighborsVector<TrackerTraits>* cellNeighbors,
                                                     CellTracksVector<TrackerTraits>* cellTracks,
                                                     HitsConstView<TrackerTraits> hh,
+                                                    const uint8_t* hitMask,
                                                     OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
                                                     CellCutsT<TrackerTraits> const& cuts) {
     // ysize cuts (z in the barrel)  times 8
@@ -187,6 +188,10 @@ namespace gpuPixelDoublets {
       auto hoff = PhiBinner::histOff(outer);
       auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
       i += offsets[inner];
+
+      if(hitMask[i])
+        continue;
+      // printf("Hit in Layer %d %d %d %d\n", i, inner, pairLayerId, j);
 
       assert(i >= offsets[inner]);
       assert(i < offsets[inner + 1]);
@@ -251,6 +256,8 @@ namespace gpuPixelDoublets {
         p += first;
         for (; p < e; p += stride) {
           auto oi = __ldg(p);
+          if(hitMask[oi])
+            continue;
           assert(oi >= offsets[outer]);
           assert(oi < offsets[outer + 1]);
           auto mo = hh[oi].detectorIndex();

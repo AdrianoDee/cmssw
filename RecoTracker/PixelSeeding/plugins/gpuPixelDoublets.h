@@ -44,6 +44,7 @@ namespace gpuPixelDoublets {
                                 CellNeighborsVector<TrackerTraits>* cellNeighbors,
                                 CellTracksVector<TrackerTraits>* cellTracks,
                                 HitsConstView<TrackerTraits> hh,
+                                const uint8_t* hitMask,
                                 OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
                                 int nActualPairs,
                                 const int maxNumOfDoublets,

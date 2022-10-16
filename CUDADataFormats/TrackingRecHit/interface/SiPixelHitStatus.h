@@ -12,9 +12,13 @@ struct SiPixelHitStatus {
   uint8_t qBin : 3;  //  ∈[0,1,...,7]
 };
 
+
 struct SiPixelHitStatusAndCharge {
   SiPixelHitStatus status;
   uint32_t charge : 24;
+}
+struct SiPixelMask {
+  bool used : 1;   //  ∈[0,1]
 };
 
 #endif
