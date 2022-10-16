@@ -22,11 +22,21 @@
 #include "CAHitNtupletGeneratorOnGPU.h"
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/SiPixelHitStatus.h"
 
-class CAHitNtupletCUDA : public edm::global::EDProducer<> {
+template <typename TrackerTraits>
+class CAHitNtupletCUDAT : public edm::global::EDProducer<> {
+  using PixelTrackHeterogeneous = PixelTrackHeterogeneousT<TrackerTraits>;
+
+  using HitsView = TrackingRecHit2DSOAViewT<TrackerTraits>;
+  using HitsOnGPU = TrackingRecHit2DGPUT<TrackerTraits>;
+  using HitsOnCPU = TrackingRecHit2DCPUT<TrackerTraits>;
+  using GPUAlgo = CAHitNtupletGeneratorOnGPU<TrackerTraits>;
+  using IndToEdm = std::vector<uint8_t>;
+
 public:
-  explicit CAHitNtupletCUDA(const edm::ParameterSet& iConfig);
-  ~CAHitNtupletCUDA() override = default;
+  explicit CAHitNtupletCUDAT(const edm::ParameterSet& iConfig);
+  ~CAHitNtupletCUDAT() override = default;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -37,56 +47,92 @@ private:
   void produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 
   bool onGPU_;
+  bool useMask_;
 
   edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> tokenField_;
-  edm::EDGetTokenT<cms::cuda::Product<TrackingRecHit2DGPU>> tokenHitGPU_;
+  edm::EDGetTokenT<cms::cuda::Product<HitsOnGPU>> tokenHitGPU_;
   edm::EDPutTokenT<cms::cuda::Product<PixelTrackHeterogeneous>> tokenTrackGPU_;
-  edm::EDGetTokenT<TrackingRecHit2DCPU> tokenHitCPU_;
+  edm::EDGetTokenT<HitsOnCPU> tokenHitCPU_;
   edm::EDPutTokenT<PixelTrackHeterogeneous> tokenTrackCPU_;
+  edm::EDGetTokenT<IndToEdm> tokenHitMask_;
 
-  CAHitNtupletGeneratorOnGPU gpuAlgo_;
+  GPUAlgo gpuAlgo_;
 };
 
-CAHitNtupletCUDA::CAHitNtupletCUDA(const edm::ParameterSet& iConfig)
-    : onGPU_(iConfig.getParameter<bool>("onGPU")), tokenField_(esConsumes()), gpuAlgo_(iConfig, consumesCollector()) {
+template <typename TrackerTraits>
+CAHitNtupletCUDAT<TrackerTraits>::CAHitNtupletCUDAT(const edm::ParameterSet& iConfig)
+    : onGPU_(iConfig.getParameter<bool>("onGPU")), useMask_(iConfig.getParameter<bool>("useMask")),
+      tokenField_(esConsumes()), gpuAlgo_(iConfig, consumesCollector()) {
   if (onGPU_) {
-    tokenHitGPU_ =
-        consumes<cms::cuda::Product<TrackingRecHit2DGPU>>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
+    tokenHitGPU_ = consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
     tokenTrackGPU_ = produces<cms::cuda::Product<PixelTrackHeterogeneous>>();
   } else {
-    tokenHitCPU_ = consumes<TrackingRecHit2DCPU>(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
+    tokenHitCPU_ = consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
     tokenTrackCPU_ = produces<PixelTrackHeterogeneous>();
   }
+  if(useMask_)
+    tokenHitMask_ = consumes(iConfig.getParameter<edm::InputTag>("hitMask"));
+
 }
 
-void CAHitNtupletCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+template <typename TrackerTraits>
+void CAHitNtupletCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
   desc.add<bool>("onGPU", true);
+  desc.add<bool>("useMask", false);
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
 
-  CAHitNtupletGeneratorOnGPU::fillDescriptions(desc);
-  descriptions.add("pixelTracksCUDA", desc);
+  GPUAlgo::fillDescriptions(desc);
+  descriptions.addWithDefaultLabel(desc);
 }
 
-void CAHitNtupletCUDA::beginJob() { gpuAlgo_.beginJob(); }
+template <typename TrackerTraits>
+void CAHitNtupletCUDAT<TrackerTraits>::beginJob() {
+  gpuAlgo_.beginJob();
+}
 
-void CAHitNtupletCUDA::endJob() { gpuAlgo_.endJob(); }
+template <typename TrackerTraits>
+void CAHitNtupletCUDAT<TrackerTraits>::endJob() {
+  gpuAlgo_.endJob();
+}
 
-void CAHitNtupletCUDA::produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& es) const {
+template <typename TrackerTraits>
+void CAHitNtupletCUDAT<TrackerTraits>::produce(edm::StreamID streamID,
+                                               edm::Event& iEvent,
+                                               const edm::EventSetup& es) const {
   auto bf = 1. / es.getData(tokenField_).inverseBzAtOriginInGeV();
 
   if (onGPU_) {
     auto hHits = iEvent.getHandle(tokenHitGPU_);
-
     cms::cuda::ScopedContextProduce ctx{*hHits};
     auto const& hits = ctx.get(*hHits);
-
-    ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits, bf, ctx.stream()));
+    if (useMask_)
+      {
+        auto const& mask = iEvent.get(tokenHitMask_);
+        const uint8_t* maskPtr = &mask[0];
+        ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits, bf, ctx.stream(), maskPtr));
+      }
+    else
+      ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits, bf, ctx.stream()));
   } else {
     auto const& hits = iEvent.get(tokenHitCPU_);
-    iEvent.emplace(tokenTrackCPU_, gpuAlgo_.makeTuples(hits, bf));
+    if (useMask_)
+      {
+        auto const& mask = iEvent.get(tokenHitMask_);
+        const uint8_t* maskPtr = &mask[0];
+        iEvent.emplace(tokenTrackCPU_, gpuAlgo_.makeTuples(hits, bf, maskPtr));
+      }
+    else
+      iEvent.emplace(tokenTrackCPU_, gpuAlgo_.makeTuples(hits, bf));
   }
 }
 
+using CAHitNtupletCUDA = CAHitNtupletCUDAT<pixelTopology::Phase1>;
 DEFINE_FWK_MODULE(CAHitNtupletCUDA);
+
+using CAHitNtupletCUDAPhase1 = CAHitNtupletCUDAT<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(CAHitNtupletCUDAPhase1);
+
+using CAHitNtupletCUDAPhase2 = CAHitNtupletCUDAT<pixelTopology::Phase2>;
+DEFINE_FWK_MODULE(CAHitNtupletCUDAPhase2);
