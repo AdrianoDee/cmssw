@@ -279,7 +279,7 @@ void CAHitNtupletGeneratorOnGPU<TrackerTraits>::endJob() {
 
 template <typename TrackerTraits>
 TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits>::makeTuplesAsync(
-    HitsOnDevice const& hits_d, float bfield, cudaStream_t stream) const {
+    HitsOnDevice const& hits_d, float bfield, cudaStream_t stream, const uint8_t* mask) const {
   using HelixFitOnGPU = HelixFitOnGPU<TrackerTraits>;
   using TrackSoA = TrackSoAHeterogeneousDevice<TrackerTraits>;
   using GPUKernels = CAHitNtupletGeneratorKernelsGPU<TrackerTraits>;
@@ -289,6 +289,8 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
   GPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_d.nHits(), stream);
+  kernels.allocateMask(mask, hits_d.nHits(), stream);
+  cudaCheck(cudaGetLastError());
 
   kernels.buildDoublets(hits_d.view(), hits_d.offsetBPIX2(), stream);
 
@@ -313,7 +315,7 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
 
 template <typename TrackerTraits>
 TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits>::makeTuples(HitsOnHost const& hits_h,
-                                                                                               float bfield) const {
+                                                                                               float bfield, const uint8_t* mask) const {
   using HelixFitOnGPU = HelixFitOnGPU<TrackerTraits>;
   using TrackSoA = TrackSoAHeterogeneousHost<TrackerTraits>;
   using CPUKernels = CAHitNtupletGeneratorKernelsCPU<TrackerTraits>;
@@ -322,7 +324,8 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
 
   CPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
-  kernels.allocateOnGPU(hits_h.nHits(), nullptr);
+  kernels.allocateOnGPU(hits_d.nHits(), nullptr);
+  kernels.allocateMask(mask, hits_d.nHits(), nullptr);
 
   kernels.buildDoublets(hits_h.view(), hits_h.offsetBPIX2(), nullptr);
   kernels.launchKernels(hits_h.view(), tracks.view(), nullptr);

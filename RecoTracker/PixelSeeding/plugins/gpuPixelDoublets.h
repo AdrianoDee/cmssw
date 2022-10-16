@@ -44,12 +44,13 @@ namespace gpuPixelDoublets {
                                 CellNeighborsVector<TrackerTraits>* cellNeighbors,
                                 CellTracksVector<TrackerTraits>* cellTracks,
                                 HitsConstView<TrackerTraits> hh,
+                                const uint8_t* hitMask,
                                 OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
                                 int nActualPairs,
                                 CellCutsT<TrackerTraits> cuts) {
 
     doubletsFromHisto<TrackerTraits>(
-        nActualPairs, cells, nCells, cellNeighbors, cellTracks, hh, isOuterHitOfCell, cuts);
+        nActualPairs, cells, nCells, cellNeighbors, cellTracks, hh, hitMask, isOuterHitOfCell, cuts);
   }
 
 }  // namespace gpuPixelDoublets

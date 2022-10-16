@@ -63,9 +63,9 @@ public:
   void beginJob();
   void endJob();
 
-  TrackSoADevice makeTuplesAsync(HitsOnDevice const& hits_d, float bfield, cudaStream_t stream) const;
+  TrackSoADevice makeTuplesAsync(HitsOnDevice const& hits_d, float bfield, cudaStream_t stream, const uint8_t* mask = nullptr) const;
 
-  TrackSoAHost makeTuples(HitsOnHost const& hits_d, float bfield) const;
+  TrackSoAHost makeTuples(HitsOnHost const& hits_d, float bfield, const uint8_t* mask = nullptr) const;
 
 private:
   void buildDoublets(const HitsConstView& hh, cudaStream_t stream) const;
@@ -77,6 +77,8 @@ private:
   Params m_params;
 
   Counters* m_counters = nullptr;
+
+  uint16_t* m_mask = nullptr;
 };
 
 #endif  // RecoTracker_PixelSeeding_plugins_CAHitNtupletGeneratorOnGPU_h

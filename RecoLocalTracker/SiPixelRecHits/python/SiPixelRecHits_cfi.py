@@ -78,8 +78,16 @@ from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromCUDAPhase2_cfi import s
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDAPhase1_cfi import siPixelRecHitFromCUDAPhase1 as _siPixelRecHitFromCUDA
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDAPhase2_cfi import siPixelRecHitFromCUDAPhase2 as _siPixelRecHitFromCUDAPhase2
 
-(gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDA.clone())
-(gpu & pixelNtupletFit & phase2_tracker).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDAPhase2.clone())
+siPixelRecHitFromCUDA = _siPixelRecHitFromCUDA.clone()
+phase2_tracker.toReplaceWith(siPixelRecHitFromCUDA,_siPixelRecHitFromCUDAPhase2.clone())
+
+
+#(gpu & pixelNtupletFit & phase2_tracker).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDAPhase2.clone())
+(gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplitting,
+            cuda = cms.EDAlias( siPixelRecHitFromCUDA = cms.VPSet(
+                 cms.PSet(type = cms.string("SiPixelRecHitedmNewDetSetVector")),
+                 cms.PSet(type = cms.string("uintAsHostProduct"))
+             )))
 
 
 
@@ -102,6 +110,7 @@ pixelNtupletFit.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     # (normally only one of the two is run because only one is consumed from later stages)
     siPixelRecHitsPreSplittingCUDA,
     siPixelRecHitsPreSplittingCPU,
+    siPixelRecHitFromCUDA,
     # SwitchProducer wrapping an EDAlias on cpu or the converter from SoA to legacy on gpu
     siPixelRecHitsPreSplittingTask.copy(),
     # producing and converting on cpu (if needed)
