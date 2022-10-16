@@ -274,7 +274,7 @@ void CAHitNtupletGeneratorOnGPU<TrackerTraits>::endJob() {
 
 template <typename TrackerTraits>
 PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits>::makeTuplesAsync(
-    HitsOnGPU const& hits_d, float bfield, cudaStream_t stream) const {
+    HitsOnGPU const& hits_d, float bfield, cudaStream_t stream, const uint8_t* mask) const {
   using HelixFitOnGPU = HelixFitOnGPU<TrackerTraits>;
   using PixelTrackHeterogeneous = PixelTrackHeterogeneousT<TrackerTraits>;
   using GPUKernels = CAHitNtupletGeneratorKernelsGPU<TrackerTraits>;
@@ -288,6 +288,7 @@ PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits
   GPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_d.nHits(), stream);
+  kernels.allocateMask(mask, hits_d.nHits(), stream);
   cudaCheck(cudaGetLastError());
 
   kernels.buildDoublets(hits_d, stream);
@@ -315,7 +316,7 @@ PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits
 
 template <typename TrackerTraits>
 PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits>::makeTuples(HitsOnCPU const& hits_d,
-                                                                                              float bfield) const {
+                                                                                              float bfield, const uint8_t* mask) const {
   using HelixFitOnGPU = HelixFitOnGPU<TrackerTraits>;
   using PixelTrackHeterogeneous = PixelTrackHeterogeneousT<TrackerTraits>;
   using CPUKernels = CAHitNtupletGeneratorKernelsCPU<TrackerTraits>;
@@ -328,6 +329,7 @@ PixelTrackHeterogeneousT<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits
   CPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_d.nHits(), nullptr);
+  kernels.allocateMask(mask, hits_d.nHits(), nullptr);
 
   kernels.buildDoublets(hits_d, nullptr);
   kernels.launchKernels(hits_d, soa, nullptr);

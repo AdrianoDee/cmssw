@@ -12,4 +12,8 @@ struct SiPixelHitStatus {
   uint8_t qBin : 3;  //  ∈[0,1,...,7]
 };
 
+struct SiPixelMask {
+  bool used : 1;   //  ∈[0,1]
+};
+
 #endif

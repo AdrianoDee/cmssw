@@ -84,7 +84,7 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
 
   if (0 == nHits_)
     return;
-  store32_ = inputData.localCoordToHostAsync(ctx.stream());
+  store32_ = inputData.store32ToHostAsync(ctx.stream());
 
   hitsModuleStart_ = inputData.hitsModuleStartToHostAsync(ctx.stream());
 }
@@ -114,6 +114,17 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
   auto xe = yl + nHits_;
   auto ye = xe + nHits_;
 
+  auto xg = ye + nHits_ + nHits_;
+  auto yg = xg + nHits_;
+  auto zg = yg + nHits_;
+
+  if(nHits_>1)
+  {
+    std::cout << xg[1]<< " - ";
+    std::cout << yg[1]<< " - ";
+    std::cout << zg[1]<< " - ";
+    std::cout << std::endl;
+  }
   const TrackerGeometry* geom = &es.getData(geomToken_);
 
   edm::Handle<SiPixelClusterCollectionNew> hclusters = iEvent.getHandle(clusterToken_);

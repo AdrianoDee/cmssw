@@ -69,6 +69,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::buildDoublets(HitsOnCPU con
                                       this->device_theCellNeighbors_.get(),
                                       this->device_theCellTracks_.get(),
                                       hh.view(),
+                                      this->device_hitMask_.get(),
                                       this->isOuterHitOfCell_,
                                       nActualPairs,
                                       this->params_.cellCuts_);

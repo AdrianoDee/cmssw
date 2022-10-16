@@ -26,7 +26,7 @@
 
 #include <limits>
 
-/* This is a copy of the TrackClusterRemover 
+/* This is a copy of the TrackClusterRemover
  * for Phase2 Tk upgrade
  * FIXME:: changing with new phase2 pixel DataFormats!
  * FIXME:: still to be factorized
@@ -43,12 +43,15 @@ namespace {
   private:
     void produce(edm::StreamID, edm::Event& evt, const edm::EventSetup&) const override;
 
+    using IndToEdm = std::vector<uint16_t>;
+
     using PixelMaskContainer = edm::ContainerMask<edmNew::DetSetVector<SiPixelCluster>>;
     using Phase2OTMaskContainer = edm::ContainerMask<edmNew::DetSetVector<Phase2TrackerCluster1D>>;
 
     using QualityMaskCollection = std::vector<unsigned char>;
 
     const unsigned char maxChi2_;
+    const bool dumpIndices_;
     const int minNumberOfLayersWithMeasBeforeFiltering_;
     const reco::TrackBase::TrackQuality trackQuality_;
 
@@ -75,6 +78,7 @@ namespace {
 
     desc.add<std::string>("TrackQuality", "highPurity");
     desc.add<double>("maxChi2", 30.);
+    desc.add<bool>("dumpIndices", false);
     desc.add<int>("minNumberOfLayersWithMeasBeforeFiltering", 0);
     // old mode
     desc.add<edm::InputTag>("overrideTrkQuals", edm::InputTag());
@@ -84,6 +88,7 @@ namespace {
 
   TrackClusterRemoverPhase2::TrackClusterRemoverPhase2(const edm::ParameterSet& iConfig)
       : maxChi2_(Traj2TrackHits::toChi2x5(iConfig.getParameter<double>("maxChi2"))),
+        dumpIndices_(iConfig.getParameter<bool>("dumpIndices")),
         minNumberOfLayersWithMeasBeforeFiltering_(
             iConfig.getParameter<int>("minNumberOfLayersWithMeasBeforeFiltering")),
         trackQuality_(reco::TrackBase::qualityByName(iConfig.getParameter<std::string>("TrackQuality"))),
@@ -95,6 +100,11 @@ namespace {
             iConfig.getParameter<edm::InputTag>("phase2OTClusters"))) {
     produces<edm::ContainerMask<edmNew::DetSetVector<SiPixelCluster>>>();
     produces<edm::ContainerMask<edmNew::DetSetVector<Phase2TrackerCluster1D>>>();
+
+    if(dumpIndices_)
+    {
+      produces<IndToEdm>();
+    }
 
     // old mode
     auto const& overrideTrkQuals = iConfig.getParameter<edm::InputTag>("overrideTrkQuals");
@@ -118,6 +128,9 @@ namespace {
     edm::Handle<edmNew::DetSetVector<Phase2TrackerCluster1D>> phase2OTClusters;
     iEvent.getByToken(phase2OTClusters_, phase2OTClusters);
 
+    auto indToEdmP = std::make_unique<IndToEdm>();
+    auto &indToEdm = *indToEdmP;
+
     std::vector<bool> collectedPixels;
     std::vector<bool> collectedPhase2OTs;
 
@@ -136,6 +149,7 @@ namespace {
     } else {
       collectedPixels.resize(pixelClusters->dataSize(), false);
       collectedPhase2OTs.resize(phase2OTClusters->dataSize(), false);
+      indToEdm.resize(pixelClusters->dataSize(), 0);
     }
 
     // loop over trajectories, filter, mask clusters../
@@ -188,7 +202,15 @@ namespace {
         auto const& cluster = thit.firstClusterRef();
         // FIXME when we will get also Phase2 pixel
         if (cluster.isPixel())
+        {
           collectedPixels[cluster.key()] = true;
+          indToEdm[cluster.key()] = 1;
+          if(cluster.key()==1)
+            std::cout << thit.globalPosition().x()<< " - ";
+            std::cout << thit.globalPosition().y()<< " - ";
+            std::cout << thit.globalPosition().z()<< " - ";
+            std::cout << std::endl;
+        }
         else if (cluster.isPhase2())
           collectedPhase2OTs[cluster.key()] = true;
 
@@ -215,6 +237,8 @@ namespace {
     LogDebug("TrackClusterRemoverPhase2")
         << "total pxl to skip: " << std::count(collectedPixels.begin(), collectedPixels.end(), true);
     iEvent.put(std::move(removedPixelClusterMask));
+
+    iEvent.put(std::move(indToEdmP));
 
     auto removedPhase2OTClusterMask = std::make_unique<Phase2OTMaskContainer>(
         edm::RefProd<edmNew::DetSetVector<Phase2TrackerCluster1D>>(phase2OTClusters), collectedPhase2OTs);

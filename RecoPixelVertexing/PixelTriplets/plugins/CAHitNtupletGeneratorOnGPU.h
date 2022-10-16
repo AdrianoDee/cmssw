@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
 #include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/SiPixelHitStatus.h"
 
 #include "DataFormats/SiPixelDetId/interface/PixelSubdetector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -61,9 +62,9 @@ public:
   void beginJob();
   void endJob();
 
-  PixelTrackHeterogeneous makeTuplesAsync(HitsOnGPU const& hits_d, float bfield, cudaStream_t stream) const;
+  PixelTrackHeterogeneous makeTuplesAsync(HitsOnGPU const& hits_d, float bfield, cudaStream_t stream, const uint8_t* mask = nullptr) const;
 
-  PixelTrackHeterogeneous makeTuples(HitsOnCPU const& hits_d, float bfield) const;
+  PixelTrackHeterogeneous makeTuples(HitsOnCPU const& hits_d, float bfield, const uint8_t* mask = nullptr) const;
 
 private:
   void buildDoublets(HitsOnGPU const& hh, cudaStream_t stream) const;
@@ -75,6 +76,8 @@ private:
   Params m_params;
 
   Counters* m_counters = nullptr;
+
+  uint16_t* m_mask = nullptr;
 };
 
 #endif  // RecoPixelVertexing_PixelTriplets_plugins_CAHitNtupletGeneratorOnGPU_h
