@@ -78,7 +78,7 @@ namespace caHitNtupletGenerator {
   struct ParamsT : public AlgoParams {
     // one should define the params for its own pixelTopology
     // not defining anything here
-
+    
     inline uint32_t nPairs() const { return 0; }
   };
 
@@ -127,7 +127,7 @@ namespace caHitNtupletGenerator {
         // for quadruplets, exclude all "jumping" layer pairs
         nActualPairs = TT::nPairsForQuadruplets;
       }
-
+      std::cout << "isPhase1Topology-nPairs() = " << nActualPairs << std::endl;
       return nActualPairs;
     }
 
@@ -162,7 +162,7 @@ namespace caHitNtupletGenerator {
         // include jumping forwards
         nActualPairs = TT::nPairs;
       }
-
+      std::cout << "isPhase2Topology-nPairs() = " << nActualPairs << std::endl;
       return nActualPairs;
     }
 
