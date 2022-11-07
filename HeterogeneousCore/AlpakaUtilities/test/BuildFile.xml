@@ -1,0 +1,9 @@
+<use name="alpaka"/>
+<use name="HeterogeneousCore/AlpakaCore"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="HeterogeneousCore/AlpakaUtilities"/>
+
+<bin file="simpleVector_t.cc">
+  <flags CXXFLAGS="-g"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
