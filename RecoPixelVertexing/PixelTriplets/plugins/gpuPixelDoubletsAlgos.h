@@ -46,6 +46,7 @@ namespace gpuPixelDoublets {
     const bool idealConditions_;  //this is actually not used by phase2
 
     __device__ __forceinline__ bool zSizeCut(H const& hh, int i, int o) const {
+
       auto mi = hh.detectorIndex(i);
 
       bool innerB1 = mi < T::last_bpix1_detIndex;
@@ -55,6 +56,7 @@ namespace gpuPixelDoublets {
       if (mes < 0)
         return false;
 
+
       auto mo = hh.detectorIndex(o);
       auto so = hh.clusterSizeY(o);
 
@@ -63,29 +65,31 @@ namespace gpuPixelDoublets {
 
       auto innerBarrel = mi < T::last_barrel_detIndex;
       auto onlyBarrel = mo < T::last_barrel_detIndex;
-
-      if (not innerBarrel and not onlyBarrel)
-        return false;
+      
+      if(not innerBarrel and not onlyBarrel)
+	return false;
       auto dy = innerB1 ? T::maxDYsize12 : T::maxDYsize;
 
-      return onlyBarrel ? so > 0 && std::abs(so - mes) > dy
-                        : innerBarrel && std::abs(mes - int(std::abs(dz / dr) * T::dzdrFact + 0.5f)) > T::maxDYPred;
+      return onlyBarrel
+                 ? so > 0 && std::abs(so - mes) > dy
+                 : innerBarrel && std::abs(mes - int(std::abs(dz / dr) * T::dzdrFact + 0.5f)) > T::maxDYPred;
     }
 
     __device__ __forceinline__ bool clusterCut(H const& hh, int i, int o) const {
+
       auto mo = hh.detectorIndex(o);
       bool outerFwd = (mo >= T::last_barrel_detIndex);
 
       if (!outerFwd)
         return false;
-
+   
       auto mi = hh.detectorIndex(i);
       bool innerB1orB2 = mi < T::last_bpix2_detIndex;
-
+      
       if (!innerB1orB2)
         return false;
 
-      bool innerB1 = mi < T::last_bpix1_detIndex;
+      bool innerB1 = mi < T::last_bpix1_detIndex;      
       bool isOuterLadder = idealConditions_ ? true : 0 == (mi / 8) % 2;
       auto mes = (!innerB1) || isOuterLadder ? hh.clusterSizeY(i) : -1;
 
@@ -192,7 +196,7 @@ namespace gpuPixelDoublets {
 
       if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
         continue;
-
+  
       if (doClusterCut && cuts.clusterCut(hh, i, fo))
         continue;
 
@@ -256,7 +260,7 @@ namespace gpuPixelDoublets {
           uint16_t idphi = std::min(std::abs(int16_t(mop - mep)), std::abs(int16_t(mep - mop)));
           if (idphi > iphicut)
             continue;
-
+        
           if (doClusterCut && cuts.zSizeCut(hh, i, oi))
             continue;
           if (doPtCut && ptcut(oi, idphi))
