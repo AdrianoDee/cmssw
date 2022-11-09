@@ -117,12 +117,12 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
   auto xg = ye + nHits_ + nHits_;
   auto yg = xg + nHits_;
   auto zg = yg + nHits_;
-
-  if(nHits_>1)
+  std::cout << "HERE" << std::endl;
+  if(nHits_>0)
   {
-    std::cout << xg[1]<< " - ";
-    std::cout << yg[1]<< " - ";
-    std::cout << zg[1]<< " - ";
+    std::cout << "FROM CUDA: " << xg[0]<< " - ";
+    std::cout << yg[0]<< " - ";
+    std::cout << zg[0]<< " - ";
     std::cout << std::endl;
   }
   const TrackerGeometry* geom = &es.getData(geomToken_);

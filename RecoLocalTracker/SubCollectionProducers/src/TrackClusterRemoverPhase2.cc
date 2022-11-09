@@ -44,6 +44,7 @@ namespace {
     void produce(edm::StreamID, edm::Event& evt, const edm::EventSetup&) const override;
 
     using IndToEdm = std::vector<uint16_t>;
+    using HMSstorage = HostProduct<uint32_t[]>;
 
     using PixelMaskContainer = edm::ContainerMask<edmNew::DetSetVector<SiPixelCluster>>;
     using Phase2OTMaskContainer = edm::ContainerMask<edmNew::DetSetVector<Phase2TrackerCluster1D>>;
@@ -66,6 +67,8 @@ namespace {
 
     // backward compatibility during transition period
     edm::EDGetTokenT<edm::ValueMap<int>> overrideTrkQuals_;
+
+    edm::EDGetTokenT<HMSstorage> hmsToken_;
   };
 
   void TrackClusterRemoverPhase2::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -103,6 +106,7 @@ namespace {
 
     if(dumpIndices_)
     {
+      hmsToken_ = consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitsSoA"));
       produces<IndToEdm>();
     }
 
@@ -205,12 +209,14 @@ namespace {
         {
           collectedPixels[cluster.key()] = true;
           indToEdm[cluster.key()] = 1;
-          if(cluster.key()==1)
-            std::cout << thit.globalPosition().x()<< " - ";
+          if(cluster.key()==0)
+{
+            std::cout << "FROM MASK:" << thit.globalPosition().x()<< " - ";
             std::cout << thit.globalPosition().y()<< " - ";
             std::cout << thit.globalPosition().z()<< " - ";
             std::cout << std::endl;
-        }
+}
+       }
         else if (cluster.isPhase2())
           collectedPhase2OTs[cluster.key()] = true;
 
