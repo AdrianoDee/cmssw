@@ -250,7 +250,8 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
         auto ih = h - fc;
 
         if (ih >= maxHitsInModule)
-          break;
+ 	 break;
+
         assert(ih < clusterRef.size());
         LocalPoint lp(output->view()->xLocal(h), output->view()->yLocal(h));
         LocalError le(output->view()->xerrLocal(h), 0, output->view()->yerrLocal(h));
@@ -280,7 +281,8 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
                                 256,
                                 output->phiBinnerStorage());
 
-  LogDebug("SiPixelRecHitSoAFromLegacy") << "created HitSoa for " << numberOfClusters << " clusters in "
+  //LogDebug("SiPixelRecHitSoAFromLegacy") 
+  std::cout << "created HitSoa for " << numberOfClusters << " clusters in "
                                          << numberOfDetUnits << " Dets";
   iEvent.put(std::move(output));
   if (convert2Legacy_)
