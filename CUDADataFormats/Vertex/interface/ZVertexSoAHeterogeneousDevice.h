@@ -18,10 +18,10 @@ public:
       : PortableDeviceCollection<ZVertexSoAHeterogeneousLayout<>>(S, stream) {}
 };
 
-namespace ZVertex {
+namespace zVertex {
 
-  using ZVertexSoADevice = ZVertexSoAHeterogeneousDevice<ZVertex::utilities::MAXTRACKS>;
+  using ZVertexSoADevice = ZVertexSoAHeterogeneousDevice<zVertex::utilities::MAXTRACKS>;
 
-}  // namespace ZVertex
+}  // namespace zVertex
 
 #endif  // CUDADataFormats_Vertex_ZVertexHeterogeneousDevice_H

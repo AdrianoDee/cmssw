@@ -40,9 +40,9 @@ private:
   bool onGPU_;
 
   edm::EDGetTokenT<cms::cuda::Product<pixelTrack::TrackSoADevice>> tokenGPUTrack_;
-  edm::EDPutTokenT<cms::cuda::Product<ZVertex::ZVertexSoADevice>> tokenGPUVertex_;
+  edm::EDPutTokenT<cms::cuda::Product<zVertex::ZVertexSoADevice>> tokenGPUVertex_;
   edm::EDGetTokenT<pixelTrack::TrackSoAHost> tokenCPUTrack_;
-  edm::EDPutTokenT<ZVertex::ZVertexSoAHost> tokenCPUVertex_;
+  edm::EDPutTokenT<zVertex::ZVertexSoAHost> tokenCPUVertex_;
 
   const gpuVertexFinder::Producer gpuAlgo_;
 
@@ -67,10 +67,10 @@ PixelVertexProducerCUDA::PixelVertexProducerCUDA(const edm::ParameterSet& conf)
   if (onGPU_) {
     tokenGPUTrack_ =
         consumes<cms::cuda::Product<pixelTrack::TrackSoADevice>>(conf.getParameter<edm::InputTag>("pixelTrackSrc"));
-    tokenGPUVertex_ = produces<cms::cuda::Product<ZVertex::ZVertexSoADevice>>();
+    tokenGPUVertex_ = produces<cms::cuda::Product<zVertex::ZVertexSoADevice>>();
   } else {
     tokenCPUTrack_ = consumes<pixelTrack::TrackSoAHost>(conf.getParameter<edm::InputTag>("pixelTrackSrc"));
-    tokenCPUVertex_ = produces<ZVertex::ZVertexSoAHost>();
+    tokenCPUVertex_ = produces<zVertex::ZVertexSoAHost>();
   }
 }
 

@@ -15,7 +15,7 @@ namespace testTrackSoAHeterogeneousT {
       tracks_view[j].pt() = (float)j;
       tracks_view[j].eta() = (float)j;
       tracks_view[j].chi2() = (float)j;
-      tracks_view[j].quality() = (uint8_t)j % 256;
+      tracks_view[j].quality() = (pixelTrack::Quality)(j % 256);
       tracks_view[j].nLayers() = j % 128;
       tracks_view.hitIndices().off[j] = j;
     }
@@ -33,7 +33,7 @@ namespace testTrackSoAHeterogeneousT {
       assert(abs(tracks_view[j].pt() - (float)j) < .0001);
       assert(abs(tracks_view[j].eta() - (float)j) < .0001);
       assert(abs(tracks_view[j].chi2() - (float)j) < .0001);
-      assert(tracks_view[j].quality() == j % 256);
+      assert(tracks_view[j].quality() == (pixelTrack::Quality)(j % 256));
       assert(tracks_view[j].nLayers() == j % 128);
       assert(tracks_view.hitIndices().off[j] == j);
     }

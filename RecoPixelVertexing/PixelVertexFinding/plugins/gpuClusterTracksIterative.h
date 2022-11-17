@@ -60,7 +60,7 @@ namespace gpuVertexFinder {
 
     // fill hist  (bin shall be wider than "eps")
     for (auto i = threadIdx.x; i < nt; i += blockDim.x) {
-      assert(i < ZVertex::utilities::MAXTRACKS);
+      assert(i < zVertex::utilities::MAXTRACKS);
       int iz = int(zt[i] * 10.);  // valid if eps<=0.1
       iz = std::clamp(iz, INT8_MIN, INT8_MAX);
       izt[i] = iz - INT8_MIN;
@@ -186,7 +186,7 @@ namespace gpuVertexFinder {
     }
     __syncthreads();
 
-    assert(foundClusters < ZVertex::utilities::MAXVTX);
+    assert(foundClusters < zVertex::utilities::MAXVTX);
 
     // propagate the negative id to all the tracks in the cluster.
     for (auto i = threadIdx.x; i < nt; i += blockDim.x) {

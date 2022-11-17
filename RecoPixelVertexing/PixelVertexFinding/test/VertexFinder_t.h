@@ -123,12 +123,12 @@ int main() {
   cms::cudatest::requireDevices();
   cudaCheck(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
 
-  ZVertex::ZVertexSoADevice onGPU_d(stream);
+  zVertex::ZVertexSoADevice onGPU_d(stream);
   gpuVertexFinder::workSpace::WorkSpaceSoADevice ws_d(stream);
 #else
   stream = nullptr;
 
-  ZVertex::ZVertexSoAHost onGPU_d(stream);
+  zVertex::ZVertexSoAHost onGPU_d(stream);
   gpuVertexFinder::workSpace::WorkSpaceSoAHost ws_d(stream);
 #endif
 

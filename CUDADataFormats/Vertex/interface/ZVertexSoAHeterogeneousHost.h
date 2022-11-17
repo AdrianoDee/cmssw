@@ -16,10 +16,10 @@ public:
       : PortableHostCollection<ZVertexSoAHeterogeneousLayout<>>(S, stream) {}
 };
 
-namespace ZVertex {
+namespace zVertex {
 
-  using ZVertexSoAHost = ZVertexSoAHeterogeneousHost<ZVertex::utilities::MAXTRACKS>;
+  using ZVertexSoAHost = ZVertexSoAHeterogeneousHost<zVertex::utilities::MAXTRACKS>;
 
-}  // namespace ZVertex
+}  // namespace zVertex
 
 #endif  // CUDADataFormats_Vertex_ZVertexHeterogeneousHost_H

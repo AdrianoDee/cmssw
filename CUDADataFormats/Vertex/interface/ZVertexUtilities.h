@@ -16,7 +16,7 @@ GENERATE_SOA_LAYOUT(ZVertexSoAHeterogeneousLayout,
 
 // Previous ZVertexSoA class methods.
 // They operate on View and ConstView of the ZVertexSoA.
-namespace ZVertex {
+namespace zVertex {
   // Common types for both Host and Device code
   using ZVertexSoALayout = ZVertexSoAHeterogeneousLayout<>;
   using ZVertexSoAView = ZVertexSoAHeterogeneousLayout<>::View;
@@ -30,6 +30,6 @@ namespace ZVertex {
     __host__ __device__ inline void init(ZVertexSoAView &vertices) { vertices.nvFinal() = 0; }
 
   }  // namespace utilities
-}  // namespace ZVertex
+}  // namespace zVertex
 
 #endif

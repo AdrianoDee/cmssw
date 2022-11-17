@@ -15,6 +15,9 @@ namespace pixelTrack {
     return static_cast<Quality>(qp);
   }
 
+  // Maximum number of Tracks to be stored,
+  // it's used to initialize Portable Collections
+  // to a specific size
 #ifdef GPU_SMALL_EVENTS
   // kept for testing and debugging
   constexpr uint32_t maxNumber() { return 2 * 1024; }
@@ -32,10 +35,11 @@ namespace pixelTrack {
 using Vector5f = Eigen::Matrix<float, 5, 1>;
 using Vector15f = Eigen::Matrix<float, 15, 1>;
 using HitContainer = pixelTrack::HitContainer;
+using Quality = pixelTrack::Quality;
 
 GENERATE_SOA_LAYOUT(TrackSoAHeterogeneousLayout,
-                    SOA_COLUMN(uint8_t, quality),
-                    SOA_COLUMN(float, chi2),  // this is chi2/ndof as not necessarely all hits are used in the fit
+                    SOA_COLUMN(Quality, quality),
+                    SOA_COLUMN(float, chi2),
                     SOA_COLUMN(int8_t, nLayers),
                     SOA_COLUMN(float, eta),
                     SOA_COLUMN(float, pt),
@@ -45,13 +49,12 @@ GENERATE_SOA_LAYOUT(TrackSoAHeterogeneousLayout,
                     SOA_SCALAR(HitContainer, hitIndices),
                     SOA_SCALAR(HitContainer, detIndices))
 
-// Previous TrajectoryStateSoAT class methods.
-// They operate on View and ConstView of the TrackSoA.
+// Methods that operate on View and ConstView of the TrackSoA, and cannot be class methods.
 namespace pixelTrack {
   namespace utilities {
     using TrackSoAView = TrackSoAHeterogeneousLayout<>::View;
     using TrackSoAConstView = TrackSoAHeterogeneousLayout<>::ConstView;
-    using Quality = pixelTrack::Quality;
+    // using Quality = pixelTrack::Quality;
     using hindex_type = uint32_t;
     // State at the Beam spot
     // phi,tip,1/pt,cotan(theta),zip
@@ -122,15 +125,6 @@ namespace pixelTrack {
       return nl;
     }
     __host__ __device__ inline int nHits(const TrackSoAConstView &tracks, int i) { return tracks.detIndices().size(i); }
-
-    // Casts quality SoA data (uint8_t) to pixelTrack::Quality. This is required
-    // to use the data as an enum instead of a plain uint8_t
-    __host__ __device__ inline const Quality *qualityData(const TrackSoAConstView &tracks) {
-      return reinterpret_cast<Quality const *>(tracks.quality());
-    }
-    __host__ __device__ inline Quality *qualityData(TrackSoAView tracks) {
-      return reinterpret_cast<Quality *>(tracks.quality());
-    }
 
   }  // namespace utilities
 }  // namespace pixelTrack

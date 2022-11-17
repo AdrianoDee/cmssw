@@ -31,15 +31,15 @@ private:
                edm::WaitingTaskWithArenaHolder waitingTaskHolder) override;
   void produce(edm::Event& iEvent, edm::EventSetup const& iSetup) override;
 
-  edm::EDGetTokenT<cms::cuda::Product<ZVertex::ZVertexSoADevice>> tokenCUDA_;
-  edm::EDPutTokenT<ZVertex::ZVertexSoAHost> tokenSOA_;
+  edm::EDGetTokenT<cms::cuda::Product<zVertex::ZVertexSoADevice>> tokenCUDA_;
+  edm::EDPutTokenT<zVertex::ZVertexSoAHost> tokenSOA_;
 
-  ZVertex::ZVertexSoAHost zvertex_h;
+  zVertex::ZVertexSoAHost zvertex_h;
 };
 
 PixelVertexSoAFromCUDA::PixelVertexSoAFromCUDA(const edm::ParameterSet& iConfig)
-    : tokenCUDA_(consumes<cms::cuda::Product<ZVertex::ZVertexSoADevice>>(iConfig.getParameter<edm::InputTag>("src"))),
-      tokenSOA_(produces<ZVertex::ZVertexSoAHost>()) {}
+    : tokenCUDA_(consumes<cms::cuda::Product<zVertex::ZVertexSoADevice>>(iConfig.getParameter<edm::InputTag>("src"))),
+      tokenSOA_(produces<zVertex::ZVertexSoAHost>()) {}
 
 void PixelVertexSoAFromCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
@@ -51,10 +51,10 @@ void PixelVertexSoAFromCUDA::fillDescriptions(edm::ConfigurationDescriptions& de
 void PixelVertexSoAFromCUDA::acquire(edm::Event const& iEvent,
                                      edm::EventSetup const& iSetup,
                                      edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
-  cms::cuda::Product<ZVertex::ZVertexSoADevice> const& inputDataWrapped = iEvent.get(tokenCUDA_);
+  cms::cuda::Product<zVertex::ZVertexSoADevice> const& inputDataWrapped = iEvent.get(tokenCUDA_);
   cms::cuda::ScopedContextAcquire ctx{inputDataWrapped, std::move(waitingTaskHolder)};
   auto const& zvertex_d = ctx.get(inputDataWrapped);  // Tracks on device
-  zvertex_h = ZVertex::ZVertexSoAHost(ctx.stream());  // Create an instance of Tracks on Host, using the stream
+  zvertex_h = zVertex::ZVertexSoAHost(ctx.stream());  // Create an instance of Tracks on Host, using the stream
   cudaCheck(cudaMemcpyAsync(zvertex_h.buffer().get(),
                             zvertex_d.const_buffer().get(),
                             zvertex_d.bufferSize(),

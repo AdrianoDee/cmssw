@@ -34,11 +34,11 @@ private:
   const bool m_onGPU;
   // GPU
   edm::EDGetTokenT<cms::cuda::Product<pixelTrack::TrackSoADevice>> tokenGPUTrack_;
-  edm::EDGetTokenT<cms::cuda::Product<ZVertex::ZVertexSoADevice>> tokenGPUVertex_;
+  edm::EDGetTokenT<cms::cuda::Product<zVertex::ZVertexSoADevice>> tokenGPUVertex_;
 
   // CPU
   edm::EDGetTokenT<pixelTrack::TrackSoAHost> tokenSoATrack_;
-  edm::EDGetTokenT<ZVertex::ZVertexSoAHost> tokenSoAVertex_;
+  edm::EDGetTokenT<zVertex::ZVertexSoAHost> tokenSoAVertex_;
 };
 
 PixelTrackDumpCUDA::PixelTrackDumpCUDA(const edm::ParameterSet& iConfig)
@@ -47,10 +47,10 @@ PixelTrackDumpCUDA::PixelTrackDumpCUDA(const edm::ParameterSet& iConfig)
     tokenGPUTrack_ =
         consumes<cms::cuda::Product<pixelTrack::TrackSoADevice>>(iConfig.getParameter<edm::InputTag>("pixelTrackSrc"));
     tokenGPUVertex_ =
-        consumes<cms::cuda::Product<ZVertex::ZVertexSoADevice>>(iConfig.getParameter<edm::InputTag>("pixelVertexSrc"));
+        consumes<cms::cuda::Product<zVertex::ZVertexSoADevice>>(iConfig.getParameter<edm::InputTag>("pixelVertexSrc"));
   } else {
     tokenSoATrack_ = consumes<pixelTrack::TrackSoAHost>(iConfig.getParameter<edm::InputTag>("pixelTrackSrc"));
-    tokenSoAVertex_ = consumes<ZVertex::ZVertexSoAHost>(iConfig.getParameter<edm::InputTag>("pixelVertexSrc"));
+    tokenSoAVertex_ = consumes<zVertex::ZVertexSoAHost>(iConfig.getParameter<edm::InputTag>("pixelVertexSrc"));
   }
 }
 

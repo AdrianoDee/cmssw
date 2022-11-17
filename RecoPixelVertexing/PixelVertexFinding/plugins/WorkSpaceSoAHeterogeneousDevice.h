@@ -19,7 +19,7 @@ public:
 
 namespace gpuVertexFinder {
   namespace workSpace {
-    using WorkSpaceSoADevice = WorkSpaceSoAHeterogeneousDevice<ZVertex::utilities::MAXTRACKS>;
+    using WorkSpaceSoADevice = WorkSpaceSoAHeterogeneousDevice<zVertex::utilities::MAXTRACKS>;
   }
 }  // namespace gpuVertexFinder
 #endif

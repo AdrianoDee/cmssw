@@ -5,7 +5,6 @@
 
 #include "CUDADataFormats/Track/interface/PixelTrackUtilities.h"
 #include "CUDADataFormats/Common/interface/PortableHostCollection.h"
-#include "HeterogeneousCore/CUDAUtilities/interface/cudaCheck.h"
 
 template <int32_t S>
 class TrackSoAHeterogeneousHost : public cms::cuda::PortableHostCollection<TrackSoAHeterogeneousLayout<>> {

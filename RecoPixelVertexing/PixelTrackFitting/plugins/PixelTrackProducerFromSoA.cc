@@ -154,7 +154,7 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
   hits.reserve(5);
 
   auto &tsoa = iEvent.get(tokenTrack_);
-  auto const *quality = pixelTrack::utilities::qualityData(tsoa.view());
+  auto const *quality = tsoa.view().quality();
   auto const hitIndices = tsoa.view().hitIndices();
   auto nTracks = tsoa.view().nTracks();
 

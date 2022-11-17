@@ -6,7 +6,7 @@ void CAHitNtupletGeneratorKernelsGPU::launchKernels(HitsOnCPU const &hh,
                                                     TkSoAView tracks_view,
                                                     cudaStream_t cudaStream) {
   // these are pointer on GPU!
-  auto *quality_d = pixelTrack::utilities::qualityData(tracks_view);
+  auto *quality_d = tracks_view.quality();
 
   // zero tuples
   cms::cuda::launchZero(&(tracks_view.hitIndices()), cudaStream);
@@ -224,7 +224,7 @@ void CAHitNtupletGeneratorKernelsGPU::classifyTuples(HitsOnCPU const &hh,
                                                      TkSoAView tracks_view,
                                                      cudaStream_t cudaStream) {
   // these are pointer on GPU!
-  auto *quality_d = pixelTrack::utilities::qualityData(tracks_view);
+  auto *quality_d = tracks_view.quality();
 
   int32_t nhits = hh.nHits();
 

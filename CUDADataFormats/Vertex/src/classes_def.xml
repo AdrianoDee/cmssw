@@ -1,8 +1,8 @@
 <lcgdict>
-  <class name="ZVertex::ZVertexSoAHost" persistent="false"/>
-  <class name="edm::Wrapper<ZVertex::ZVertexSoAHost>" persistent="false"/>
-  <class name="ZVertex::ZVertexSoADevice" persistent="false"/>
-  <class name="edm::Wrapper<ZVertex::ZVertexSoADevice>" persistent="false"/>
-  <class name="cms::cuda::Product<ZVertex::ZVertexSoADevice>" persistent="false"/>
-  <class name="edm::Wrapper<cms::cuda::Product<ZVertex::ZVertexSoADevice>>" persistent="false"/>
+  <class name="zVertex::ZVertexSoAHost" persistent="false"/>
+  <class name="edm::Wrapper<zVertex::ZVertexSoAHost>" persistent="false"/>
+  <class name="zVertex::ZVertexSoADevice" persistent="false"/>
+  <class name="edm::Wrapper<zVertex::ZVertexSoADevice>" persistent="false"/>
+  <class name="cms::cuda::Product<zVertex::ZVertexSoADevice>" persistent="false"/>
+  <class name="edm::Wrapper<cms::cuda::Product<zVertex::ZVertexSoADevice>>" persistent="false"/>
 </lcgdict>

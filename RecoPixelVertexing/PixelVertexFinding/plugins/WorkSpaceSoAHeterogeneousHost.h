@@ -19,7 +19,7 @@ public:
 
 namespace gpuVertexFinder {
   namespace workSpace {
-    using WorkSpaceSoAHost = WorkSpaceSoAHeterogeneousHost<ZVertex::utilities::MAXTRACKS>;
+    using WorkSpaceSoAHost = WorkSpaceSoAHeterogeneousHost<zVertex::utilities::MAXTRACKS>;
   }
 }  // namespace gpuVertexFinder
 #endif

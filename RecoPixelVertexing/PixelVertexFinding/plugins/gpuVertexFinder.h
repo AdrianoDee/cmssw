@@ -14,12 +14,12 @@
 
 namespace gpuVertexFinder {
 
-  using VtxSoAView = ZVertex::ZVertexSoAView;
+  using VtxSoAView = zVertex::ZVertexSoAView;
   using TkSoAConstView = pixelTrack::TrackSoAConstView;
   using WsSoAView = gpuVertexFinder::workSpace::WorkSpaceSoAView;
 
   __global__ void init(VtxSoAView pdata, WsSoAView pws) {
-    ZVertex::utilities::init(pdata);
+    zVertex::utilities::init(pdata);
     gpuVertexFinder::workSpace::utilities::init(pws);
   }
 
@@ -45,8 +45,8 @@ namespace gpuVertexFinder {
 
     ~Producer() = default;
 
-    ZVertex::ZVertexSoADevice makeAsync(cudaStream_t stream, TkSoAConstView tracks_view, float ptMin, float ptMax) const;
-    ZVertex::ZVertexSoAHost make(TkSoAConstView tracks_view, float ptMin, float ptMax) const;
+    zVertex::ZVertexSoADevice makeAsync(cudaStream_t stream, TkSoAConstView tracks_view, float ptMin, float ptMax) const;
+    zVertex::ZVertexSoAHost make(TkSoAConstView tracks_view, float ptMin, float ptMax) const;
 
   private:
     const bool oneKernel_;
