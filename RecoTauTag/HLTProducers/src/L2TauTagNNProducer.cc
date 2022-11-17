@@ -182,10 +182,10 @@ private:
   void fillPatatracks(tensorflow::Tensor& cellGridMatrix,
                       const std::vector<l1t::TauRef>& allTaus,
                       const pixelTrack::TrackSoAHost& patatracks_tsoa,
-                      const ZVertex::ZVertexSoAHost& patavtx_soa,
+                      const zVertex::ZVertexSoAHost& patavtx_soa,
                       const reco::BeamSpot& beamspot,
                       const MagneticField* magfi);
-  void selectGoodTracksAndVertices(const ZVertex::ZVertexSoAHost& patavtx_soa,
+  void selectGoodTracksAndVertices(const zVertex::ZVertexSoAHost& patavtx_soa,
                                    const pixelTrack::TrackSoAHost& patatracks_tsoa,
                                    std::vector<int>& trkGood,
                                    std::vector<int>& vtxGood);
@@ -209,7 +209,7 @@ private:
   const edm::EDGetTokenT<EcalRecHitCollection> eeToken_;
   const edm::ESGetToken<CaloGeometry, CaloGeometryRecord> geometryToken_;
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
-  const edm::EDGetTokenT<ZVertex::ZVertexSoAHost> pataVerticesToken_;
+  const edm::EDGetTokenT<zVertex::ZVertexSoAHost> pataVerticesToken_;
   const edm::EDGetTokenT<pixelTrack::TrackSoAHost> pataTracksToken_;
   const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   const unsigned int maxVtx_;
@@ -294,7 +294,7 @@ L2TauNNProducer::L2TauNNProducer(const edm::ParameterSet& cfg, const L2TauNNProd
       eeToken_(consumes<EcalRecHitCollection>(cfg.getParameter<edm::InputTag>("eeInput"))),
       geometryToken_(esConsumes<CaloGeometry, CaloGeometryRecord>()),
       bFieldToken_(esConsumes<MagneticField, IdealMagneticFieldRecord>()),
-      pataVerticesToken_(consumes<ZVertex::ZVertexSoAHost>(cfg.getParameter<edm::InputTag>("pataVertices"))),
+      pataVerticesToken_(consumes<zVertex::ZVertexSoAHost>(cfg.getParameter<edm::InputTag>("pataVertices"))),
       pataTracksToken_(consumes<pixelTrack::TrackSoAHost>(cfg.getParameter<edm::InputTag>("pataTracks"))),
       beamSpotToken_(consumes<reco::BeamSpot>(cfg.getParameter<edm::InputTag>("BeamSpot"))),
       maxVtx_(cfg.getParameter<uint>("maxVtx")),
@@ -571,7 +571,7 @@ void L2TauNNProducer::fillCaloRecHits(tensorflow::Tensor& cellGridMatrix,
   }
 }
 
-void L2TauNNProducer::selectGoodTracksAndVertices(const ZVertex::ZVertexSoAHost& patavtx_soa,
+void L2TauNNProducer::selectGoodTracksAndVertices(const zVertex::ZVertexSoAHost& patavtx_soa,
                                                   const pixelTrack::TrackSoAHost& patatracks_tsoa,
                                                   std::vector<int>& trkGood,
                                                   std::vector<int>& vtxGood) {
@@ -581,7 +581,7 @@ void L2TauNNProducer::selectGoodTracksAndVertices(const ZVertex::ZVertexSoAHost&
   trkGood.reserve(maxTracks);
   vtxGood.clear();
   vtxGood.reserve(nv);
-  auto const* quality = pixelTrack::utilities::qualityData(patatracks_tsoa.view());
+  auto const* quality = patatracks_tsoa.view().quality();
 
   // No need to sort either as the algorithms is just using the max (not even the location, just the max value of pt2sum).
   std::vector<float> pTSquaredSum(nv, 0);
@@ -653,7 +653,7 @@ std::pair<float, float> L2TauNNProducer::impactParameter(int it,
 void L2TauNNProducer::fillPatatracks(tensorflow::Tensor& cellGridMatrix,
                                      const std::vector<l1t::TauRef>& allTaus,
                                      const pixelTrack::TrackSoAHost& patatracks_tsoa,
-                                     const ZVertex::ZVertexSoAHost& patavtx_soa,
+                                     const zVertex::ZVertexSoAHost& patavtx_soa,
                                      const reco::BeamSpot& beamspot,
                                      const MagneticField* magfi) {
   using NNInputs = L2TauTagNNv1::NNInputs;

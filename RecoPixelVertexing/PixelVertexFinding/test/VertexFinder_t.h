@@ -9,8 +9,8 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/launch.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/allocate_device.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/currentDevice.h"
-
-#include "CUDADataFormats/Track/interface/PixelTrackUtilities.h"  // TODO: included in order to compile Eigen columns first!!!
+// PixelTrackUtilities only included in order to compile SoALayout with Eigen columns
+#include "CUDADataFormats/Track/interface/PixelTrackUtilities.h"
 #include "CUDADataFormats/Vertex/interface/ZVertexUtilities.h"
 #include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousHost.h"
 #include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousDevice.h"
