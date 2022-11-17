@@ -1,7 +1,6 @@
 #ifndef CUDADataFormats_Vertex_ZVertexUtilities_h
 #define CUDADataFormats_Vertex_ZVertexUtilities_h
 
-#include <cuda_runtime.h>
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 
 GENERATE_SOA_LAYOUT(ZVertexSoAHeterogeneousLayout,

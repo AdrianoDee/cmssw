@@ -174,7 +174,9 @@ __global__ void kernel_BLFit(caConstants::TupleMultiplicity const *__restrict__ 
                              double *__restrict__ phits,
                              float *__restrict__ phits_ge,
                              double *__restrict__ pfast_fit) {
-  // assert(results_view); // TODO Find equivalent assertion for View
+  assert(results_view.pt());
+  assert(results_view.eta());
+  assert(results_view.chi2());
   assert(pfast_fit);
 
   // same as above...

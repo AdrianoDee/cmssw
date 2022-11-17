@@ -34,7 +34,7 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
-  edm::EDGetTokenT<ZVertex::ZVertexSoAHost> tokenSoAVertex_;
+  edm::EDGetTokenT<zVertex::ZVertexSoAHost> tokenSoAVertex_;
   edm::EDGetTokenT<reco::BeamSpot> tokenBeamSpot_;
   std::string topFolderName_;
   MonitorElement* hnVertex;
@@ -52,7 +52,7 @@ private:
 //
 
 SiPixelPhase1MonitorVertexSoA::SiPixelPhase1MonitorVertexSoA(const edm::ParameterSet& iConfig) {
-  tokenSoAVertex_ = consumes<ZVertex::ZVertexSoAHost>(iConfig.getParameter<edm::InputTag>("pixelVertexSrc"));
+  tokenSoAVertex_ = consumes<zVertex::ZVertexSoAHost>(iConfig.getParameter<edm::InputTag>("pixelVertexSrc"));
   tokenBeamSpot_ = consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpotSrc"));
   topFolderName_ = iConfig.getParameter<std::string>("topFolderName");
 }

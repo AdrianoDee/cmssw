@@ -75,7 +75,6 @@ void PixelTrackDumpCUDA::analyze(edm::StreamID streamID,
     assert(tsoa);
 
     auto const& vertices = ctx.get(iEvent.get(tokenGPUVertex_));
-    //auto const* vsoa = vertices.get();
     auto const* vsoa = &vertices;
     assert(vsoa);
 

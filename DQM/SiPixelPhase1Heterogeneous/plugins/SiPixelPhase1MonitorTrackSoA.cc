@@ -81,12 +81,12 @@ void SiPixelPhase1MonitorTrackSoA::analyze(const edm::Event& iEvent, const edm::
 
   auto& tsoa = *tsoaHandle.product();
   auto maxTracks = tsoa.view().metadata().size();
-  auto const* quality = pixelTrack::utilities::qualityData(tsoa.const_view());
+  auto const* quality = tsoa.view().quality();
   int32_t nTracks = 0;
   int32_t nLooseAndAboveTracks = 0;
 
   for (int32_t it = 0; it < maxTracks; ++it) {
-    auto nHits = pixelTrack::utilities::nHits(tsoa.const_view(), it);
+    auto nHits = pixelTrack::utilities::nHits(tsoa.view(), it);
     auto nLayers = tsoa.view()[it].nLayers();
     if (nHits == 0)
       break;  // this is a guard
@@ -95,7 +95,6 @@ void SiPixelPhase1MonitorTrackSoA::analyze(const edm::Event& iEvent, const edm::
       continue;
 
     // fill the quality for all tracks
-    // pixelTrack::Quality qual = tsoa.view()[it].quality();
     pixelTrack::Quality qual = quality[it];
     hquality->Fill(int(qual));
     nTracks++;
@@ -105,10 +104,10 @@ void SiPixelPhase1MonitorTrackSoA::analyze(const edm::Event& iEvent, const edm::
 
     // fill parameters only for quality >= loose
     float chi2 = tsoa.view()[it].chi2();
-    float phi = pixelTrack::utilities::phi(tsoa.const_view(), it);
-    float zip = pixelTrack::utilities::zip(tsoa.const_view(), it);
+    float phi = pixelTrack::utilities::phi(tsoa.view(), it);
+    float zip = pixelTrack::utilities::zip(tsoa.view(), it);
     float eta = tsoa.view()[it].eta();
-    float tip = pixelTrack::utilities::tip(tsoa.const_view(), it);
+    float tip = pixelTrack::utilities::tip(tsoa.view(), it);
 
     hchi2->Fill(chi2);
     hChi2VsPhi->Fill(phi, chi2);

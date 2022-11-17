@@ -94,6 +94,7 @@ void PixelTrackSoAFromCUDA::produce(edm::Event& iEvent, edm::EventSetup const& i
 #endif
   // DO NOT  make a copy  (actually TWO....)
   iEvent.emplace(tokenSOA_, std::move(tracks_h));
+  assert(!tracks_h.buffer());
 }
 
 DEFINE_FWK_MODULE(PixelTrackSoAFromCUDA);

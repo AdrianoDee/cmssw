@@ -73,6 +73,8 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
+  // Note that the GPU TrackSoA is also of type TrackSoAHost, as the data have
+  // been copied from Device to Host
   const edm::EDGetTokenT<pixelTrack::TrackSoAHost> tokenSoATrackCPU_;
   const edm::EDGetTokenT<pixelTrack::TrackSoAHost> tokenSoATrackGPU_;
   const std::string topFolderName_;
@@ -146,8 +148,8 @@ void SiPixelPhase1CompareTrackSoA::analyze(const edm::Event& iEvent, const edm::
   auto& tsoaGPU = *tsoaHandleGPU.product();
   auto maxTracksCPU = tsoaCPU.view().metadata().size();  //this should be same for both?
   auto maxTracksGPU = tsoaGPU.view().metadata().size();  //this should be same for both?
-  auto const* qualityCPU = pixelTrack::utilities::qualityData(tsoaCPU.view());
-  auto const* qualityGPU = pixelTrack::utilities::qualityData(tsoaGPU.view());
+  auto const* qualityCPU = tsoaCPU.view().quality();
+  auto const* qualityGPU = tsoaGPU.view().quality();
   int32_t nTracksCPU = 0;
   int32_t nTracksGPU = 0;
   int32_t nLooseAndAboveTracksCPU = 0;

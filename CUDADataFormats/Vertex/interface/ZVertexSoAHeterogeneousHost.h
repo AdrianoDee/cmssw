@@ -9,7 +9,7 @@
 template <int32_t S>
 class ZVertexSoAHeterogeneousHost : public cms::cuda::PortableHostCollection<ZVertexSoAHeterogeneousLayout<>> {
 public:
-  ZVertexSoAHeterogeneousHost() = default;
+  ZVertexSoAHeterogeneousHost() = default;  // Required for cms::cuda::Product
 
   // Constructor which specifies the SoA size and CUDA stream
   explicit ZVertexSoAHeterogeneousHost(cudaStream_t stream)

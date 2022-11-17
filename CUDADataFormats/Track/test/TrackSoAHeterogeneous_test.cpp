@@ -18,8 +18,6 @@
 #include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousHost.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/requireDevices.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cudaCheck.h"
-#include "HeterogeneousCore/CUDAUtilities/interface/allocate_device.h"
-#include "HeterogeneousCore/CUDAUtilities/interface/currentDevice.h"
 
 namespace testTrackSoAHeterogeneousT {
 
@@ -42,7 +40,7 @@ int main() {
     // Instantate tracks on host. This is where the data will be
     // copied to from device.
     pixelTrack::TrackSoAHost tracks_h(stream);
-    //tracks_d.copyToHost(tracks_h.buffer(), stream);
+
     cudaCheck(cudaMemcpyAsync(
         tracks_h.buffer().get(), tracks_d.const_buffer().get(), tracks_d.bufferSize(), cudaMemcpyDeviceToHost, stream));
     cudaCheck(cudaGetLastError());
