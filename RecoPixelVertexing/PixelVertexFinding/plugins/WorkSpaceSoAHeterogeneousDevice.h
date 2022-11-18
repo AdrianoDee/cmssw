@@ -1,11 +1,9 @@
 #ifndef RecoPixelVertexing_PixelVertexFinding_WorkSpaceSoAHeterogeneousDevice_h
 #define RecoPixelVertexing_PixelVertexFinding_WorkSpaceSoAHeterogeneousDevice_h
 
-#include <cstdint>
-#include "WorkSpaceUtilities.h"
+#include "CUDADataFormats/Common/interface/PortableDeviceCollection.h"
 #include "CUDADataFormats/Vertex/interface/ZVertexUtilities.h"
 #include "RecoPixelVertexing/PixelVertexFinding/plugins/WorkSpaceUtilities.h"
-#include "CUDADataFormats/Common/interface/PortableDeviceCollection.h"
 
 template <int32_t S>
 class WorkSpaceSoAHeterogeneousDevice : public cms::cuda::PortableDeviceCollection<WorkSpaceSoAHeterogeneousLayout<>> {

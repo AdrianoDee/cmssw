@@ -32,9 +32,12 @@ namespace gpuVertexFinder {
     int32_t* __restrict__ nn = data.ndof();
     int32_t* __restrict__ iv = ws.iv();
 
-    //TODO: check if there is a way to assert this
-    //assert(pdata);
     assert(zt);
+    assert(ezt2);
+    assert(zv);
+    assert(wv);
+    assert(chi2);
+    assert(nn);
 
     assert(nvFinal <= nvIntermediate);
     nvFinal = nvIntermediate;

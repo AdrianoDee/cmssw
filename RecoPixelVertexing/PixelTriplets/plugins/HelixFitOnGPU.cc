@@ -8,7 +8,8 @@ void HelixFitOnGPU::allocateOnGPU(TupleMultiplicity const *tupleMultiplicity, Ou
 
   assert(tuples_);
   assert(tupleMultiplicity_);
-  // assert(outputSoa_); // TODO find equivalent assertion for View
+  assert(outputSoa_.chi2());
+  assert(outputSoa_.pt());
 }
 
 void HelixFitOnGPU::deallocateOnGPU() {}

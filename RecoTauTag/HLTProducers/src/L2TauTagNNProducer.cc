@@ -48,10 +48,8 @@
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h"
 #include "CUDADataFormats/Track/interface/PixelTrackUtilities.h"
-#include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousDevice.h"
 #include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousHost.h"
 #include "CUDADataFormats/Vertex/interface/ZVertexUtilities.h"
-#include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousDevice.h"
 #include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousHost.h"
 
 namespace L2TauTagNNv1 {
@@ -623,7 +621,6 @@ std::pair<float, float> L2TauNNProducer::impactParameter(int it,
                                                          float patatrackPhi,
                                                          const reco::BeamSpot& beamspot,
                                                          const MagneticField* magfi) {
-  // auto const& fit = patatracks_tsoa.stateAtBS;
   /* dxy and dz */
   riemannFit::Vector5d ipar, opar;
   riemannFit::Matrix5d icov, ocov;

@@ -1,6 +1,4 @@
-//#include "CUDADataFormats/Track/interface/PixelTrackHeterogeneous.h"
 #include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousHost.h"
-#include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousDevice.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/GeometrySurface/interface/Plane.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
@@ -93,8 +91,7 @@ void SeedProducerFromSoA::produce(edm::StreamID streamID, edm::Event& iEvent, co
 
   auto& tsoa = iEvent.get(tokenTrack_);
 
-  auto const* quality = pixelTrack::utilities::qualityData(tsoa.view());
-  //auto const& fit = tsoa.stateAtBS;
+  auto const* quality = tsoa.view().quality();
   auto const& detIndices = tsoa.view().detIndices();
   auto maxTracks = tsoa.view().metadata().size();
 

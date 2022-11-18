@@ -1,8 +1,6 @@
 #ifndef CUDADataFormats_Vertex_ZVertexHeterogeneousDevice_H
 #define CUDADataFormats_Vertex_ZVertexHeterogeneousDevice_H
 
-#include <cstdint>
-
 #include "CUDADataFormats/Vertex/interface/ZVertexUtilities.h"
 #include "CUDADataFormats/Common/interface/PortableDeviceCollection.h"
 

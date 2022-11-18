@@ -1,7 +1,6 @@
 #ifndef RecoPixelVertexing_PixelVertexFinding_WorkSpace_h
 #define RecoPixelVertexing_PixelVertexFinding_WorkSpace_h
 
-#include <cstdint>
 #include <cuda_runtime.h>
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 

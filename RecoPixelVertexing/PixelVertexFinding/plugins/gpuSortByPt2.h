@@ -26,8 +26,8 @@ namespace gpuVertexFinder {
     float* __restrict__ ptv2 = data.ptv2();
     uint16_t* __restrict__ sortInd = data.sortInd();
 
-    // if (threadIdx.x == 0)
-    //    printf("sorting %d vertices\n",nvFinal);
+    assert(ptv2);
+    assert(sortInd);
 
     if (nvFinal < 1)
       return;
@@ -37,7 +37,7 @@ namespace gpuVertexFinder {
       data[ws[i].itrk()].idv() = iv[i];
     }
 
-    // can be done asynchronoisly at the end of previous event
+    // can be done asynchronously at the end of previous event
     for (auto i = threadIdx.x; i < nvFinal; i += blockDim.x) {
       ptv2[i] = 0;
     }

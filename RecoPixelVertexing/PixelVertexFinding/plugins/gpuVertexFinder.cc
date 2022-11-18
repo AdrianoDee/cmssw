@@ -22,8 +22,7 @@ namespace gpuVertexFinder {
   constexpr float maxChi2ForSplit = 9.f;
 
   __global__ void loadTracks(TkSoAConstView tracks_view, VtxSoAView soa, WsSoAView pws, float ptMin, float ptMax) {
-    //TODO: check if there is a way to assert this
-    //assert(soa);
+    assert(soa.idv());
     auto const* quality = tracks_view.quality();
 
     auto first = blockIdx.x * blockDim.x + threadIdx.x;
@@ -112,8 +111,14 @@ namespace gpuVertexFinder {
     zVertex::ZVertexSoAHost vertices(nullptr);
 #endif
     auto soa = vertices.view();
-    //TODO: check if there is a way to assert this
-    //assert(soa);
+
+    assert(soa.idv());
+    assert(soa.zv());
+    assert(soa.wv());
+    assert(soa.chi2());
+    assert(soa.ptv2());
+    assert(soa.ndof());
+    assert(soa.sortInd());
 
 #ifdef __CUDACC__
     auto ws_d = gpuVertexFinder::workSpace::WorkSpaceSoADevice(stream);

@@ -193,14 +193,6 @@ __global__ void kernel_fastDuplicateRemover(GPUCACell const *__restrict__ cells,
     float mc = maxScore;
     uint16_t im = tkNotFound;
 
-    /* chi2 penalize higher-pt tracks  (try rescale it?)
-    auto score = [&](auto it) {
-      return tracks_view[it].nLayers() < 4 ?
-              std::abs(pixelTrack::utilities::tip(tracks_view, it)) :  // tip for triplets
-              tracks_view[it].chi2(it);            //chi2 for quads
-    };
-    */
-
     auto score = [&](auto it) { return std::abs(pixelTrack::utilities::tip(tracks_view, it)); };
 
     // full crazy combinatorics
@@ -661,12 +653,6 @@ __global__ void kernel_rejectDuplicate(TkSoAView tracks_view,
     if (hitToTuple.size(idx) < 2)
       continue;
 
-    /* chi2 is bad for large pt
-    auto score = [&](auto it, auto nl) {
-      return nl < 4 ? std::abs(pixelTrack::utilities::tip(tracks_view, it)) :  // tip for triplets
-                 pixelTrack::utilities::chi2(tracks_view, it);                 //chi2
-    };
-    */
     auto score = [&](auto it, auto nl) { return std::abs(pixelTrack::utilities::tip(tracks_view, it)); };
 
     // full combinatorics
@@ -861,7 +847,6 @@ __global__ void kernel_print_found_ntuplets(TrackingRecHit2DSOAView const *__res
                                             int iev) {
   constexpr auto loose = pixelTrack::Quality::loose;
   auto const &hh = *hhp;
-  // auto const &foundNtuplets = *ptuples;
 
   int first = firstPrint + blockDim.x * blockIdx.x + threadIdx.x;
   for (int i = first, np = std::min(lastPrint, tracks_view.hitIndices().nOnes()); i < np; i += blockDim.x * gridDim.x) {
@@ -881,7 +866,6 @@ __global__ void kernel_print_found_ntuplets(TrackingRecHit2DSOAView const *__res
            pixelTrack::utilities::phi(tracks_view, i),
            pixelTrack::utilities::tip(tracks_view, i),
            pixelTrack::utilities::zip(tracks_view, i),
-           //           asinhf(fit_results[i].par(3)),
            tracks_view[i].chi2(),
            hh.zGlobal(*tracks_view.hitIndices().begin(i)),
            hh.zGlobal(*(tracks_view.hitIndices().begin(i) + 1)),

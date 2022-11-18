@@ -41,9 +41,10 @@ namespace gpuVertexFinder {
     int32_t* __restrict__ nn = data.ndof();
     int32_t* __restrict__ iv = ws.iv();
 
-    //TODO: check if there is a way to assert this
-    //assert(pdata);
     assert(zt);
+    assert(iv);
+    assert(nn);
+    assert(ezt2);
 
     using Hist = cms::cuda::HistoContainer<uint8_t, 256, 16000, 8, uint16_t>;
     __shared__ Hist hist;

@@ -134,11 +134,11 @@ __global__ void kernel_LineFit(caConstants::TupleMultiplicity const *__restrict_
                                double *__restrict__ pfast_fit_input,
                                riemannFit::CircleFit *__restrict__ circle_fit,
                                uint32_t offset) {
-  // assert(results); // TODO find equivalent for View
+  assert(results_view.pt());
+  assert(results_view.eta());
+  assert(results_view.chi2());
   assert(circle_fit);
   assert(N <= nHits);
-
-  // same as above...
 
   // look in bin for this hit multiplicity
   auto local_start = (blockIdx.x * blockDim.x + threadIdx.x);

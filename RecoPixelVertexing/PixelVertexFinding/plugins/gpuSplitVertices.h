@@ -28,9 +28,10 @@ namespace gpuVertexFinder {
     int32_t const* __restrict__ nn = data.ndof();
     int32_t* __restrict__ iv = ws.iv();
 
-    //TODO: check if there is a way to assert this
-    //assert(pdata);
     assert(zt);
+    assert(wv);
+    assert(chi2);
+    assert(nn);
 
     // one vertex per block
     for (auto kv = blockIdx.x; kv < nvFinal; kv += gridDim.x) {
