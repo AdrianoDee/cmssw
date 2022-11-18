@@ -355,6 +355,7 @@ namespace caHitNtupletGeneratorKernels {
       auto zo = thisCell.outer_z(hh);
       auto isBarrel = thisCell.inner_detIndex(hh) < last_barrel_detIndex;
 
+      // printf("Cell id %d innerHitId %d numberOfPossibleNeighbors %d.\n",idx,innerHitId,numberOfPossibleNeighbors);
       for (int j = first; j < numberOfPossibleNeighbors; j += stride) {
         auto otherCell = __ldg(vi + j);
         auto &oc = cells[otherCell];
@@ -369,6 +370,25 @@ namespace caHitNtupletGeneratorKernels {
             zo,
             params.ptmin_,
             isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
+
+        auto DCA = thisCell.dcaCut(hh,
+                                       oc,
+                                       oc.inner_detIndex(hh) < last_bpix1_detIndex ? params.dcaCutInnerTriplet_
+                                                                                   : params.dcaCutOuterTriplet_,
+                                       params.hardCurvCut_);
+
+     printf("r1 %.2f z1 %.2f ri %.2f zi %.2f ro %.2f zo %.2f pt %.2f thetabarrel %.5f thetaforward %.5f DCA %d aligned %d isBarrel %d hardCurvCut %.4f\n",
+        r1,
+        z1,
+        ri,
+        zi,
+        ro,
+        zo,
+        params.ptmin_,
+        params.CAThetaCutBarrel_,
+        params.CAThetaCutForward_,
+        DCA,aligned,isBarrel,
+        params.hardCurvCut_);
         if (aligned && thisCell.dcaCut(hh,
                                        oc,
                                        oc.inner_detIndex(hh) < last_bpix1_detIndex ? params.dcaCutInnerTriplet_
@@ -406,15 +426,21 @@ namespace caHitNtupletGeneratorKernels {
       auto const &thisCell = cells[idx];
 
       if (thisCell.isKilled())
+      {
+        printf("Cell %d was killed by fishbone.\n", idx);
         continue;  // cut by earlyFishbone
-
+      }
       // we require at least three hits...
       if (thisCell.outerNeighbors().empty())
-        continue;
+        {
+          printf("Cell %d has no outerNeighbors.\n", idx);
+          continue;
+          // printf("Cell %d has no outerNeighbors.\n", idx);
+        }
 
       auto pid = thisCell.layerPairId();
       bool doit = params.startingLayerPair(pid);
-
+      // auto doit = pid < 3; //minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
       constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
       if (doit) {
         typename Cell::TmpTuple stack;
@@ -423,11 +449,18 @@ namespace caHitNtupletGeneratorKernels {
         bool bpix1Start = params.startAt0(pid);
 
         thisCell.template find_ntuplets<maxDepth>(
-            hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params.minHitsPerNtuplet_, bpix1Start);
+            hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params.minHitsPerNtuplet_, pid<3);
 
         assert(stack.empty());
       }
+      // printf("Up to cell %d found quadruplets: %d\n", idx, apc->get().m);
     }
+
+    #ifdef GPU_DEBUG
+    __syncthreads();
+    if (first == 0)
+      printf("found ntuples -> %d \n",apc->get().m);
+    #endif
   }
   template <typename TrackerTraits>
   __global__ void kernel_mark_used(GPUCACellT<TrackerTraits> *__restrict__ cells, uint32_t const *nCells) {

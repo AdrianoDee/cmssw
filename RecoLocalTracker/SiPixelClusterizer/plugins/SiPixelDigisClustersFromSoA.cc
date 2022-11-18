@@ -50,8 +50,8 @@ SiPixelDigisClustersFromSoAT<TrackerTraits>::SiPixelDigisClustersFromSoAT(const 
     : topoToken_(esConsumes()),
       digiGetToken_(consumes<SiPixelDigisSoA>(iConfig.getParameter<edm::InputTag>("src"))),
       clusterPutToken_(produces<SiPixelClusterCollectionNew>()),
-      clusterThresholds_{iConfig.getParameter<int>("clusterThreshold_layer1"),
-                         iConfig.getParameter<int>("clusterThreshold_otherLayers")},
+      clusterThresholds_(iConfig.getParameter<int>("clusterThreshold_layer1"),
+                         iConfig.getParameter<int>("clusterThreshold_otherLayers")),
       produceDigis_(iConfig.getParameter<bool>("produceDigis")),
       storeDigis_(iConfig.getParameter<bool>("produceDigis") & iConfig.getParameter<bool>("storeDigis")) {
   if (produceDigis_)
@@ -62,8 +62,8 @@ template <typename TrackerTraits>
 void SiPixelDigisClustersFromSoAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelDigisSoA"));
-  desc.add<int>("clusterThreshold_layer1", kSiPixelClusterThresholdsDefaultPhase1.layer1);
-  desc.add<int>("clusterThreshold_otherLayers", kSiPixelClusterThresholdsDefaultPhase1.otherLayers);
+  desc.add<int>("clusterThreshold_layer1", 2000);
+  desc.add<int>("clusterThreshold_otherLayers", 4000);
   desc.add<bool>("produceDigis", true);
   desc.add<bool>("storeDigis", true);
 
@@ -108,7 +108,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
   }
 //std::cout << __LINE__<<std::endl;
   int32_t nclus = -1;
-  PixelClusterizerBase::AccretionCluster aclusters[gpuClustering::maxNumClustersPerModules];
+  PixelClusterizerBase::AccretionCluster aclusters[TrackerTraits::maxNumClustersPerModules];
 #ifdef EDM_ML_DEBUG
   auto totClustersFilled = 0;
 #endif
@@ -121,8 +121,7 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     auto clusterThreshold = clusterThresholds_.getThresholdForLayerOnCondition(layer == 1);
 
     //std::cout << __LINE__<<std::endl;
-    if(nclus> 1000)
-    std::cout << "detId:" << detId << " " << nclus << std::endl;
+
     for (int32_t ic = 0; ic < nclus + 1; ++ic) {
       auto const& acluster = aclusters[ic];
       // in any case we cannot  go out of sync with gpu...

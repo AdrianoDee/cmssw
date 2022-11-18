@@ -32,6 +32,7 @@
 // local includes
 #include "SiPixelRawToClusterGPUKernel.h"
 
+// #define GPU_DEBUG
 namespace pixelgpudetails {
 
   __device__ bool isBarrel(uint32_t rawId) {
@@ -450,8 +451,8 @@ namespace pixelgpudetails {
                                       uint32_t *__restrict__ nModules_Clusters) {
     constexpr int nMaxModules = TrackerTraits::numberOfModules;
     constexpr int startBPIX2 = TrackerTraits::layerStart[1];
+    constexpr uint32_t maxHitsInModule = TrackerTraits::maxHitsInModule;
 
-    assert(nMaxModules < TrackerTraits::numberOfModules);
     assert(startBPIX2 < nMaxModules);
     assert(nMaxModules < 4096);  // easy to extend at least till 32*1024
     assert(nMaxModules > 1024);
@@ -463,7 +464,7 @@ namespace pixelgpudetails {
 
     // limit to MaxHitsInModule;
     for (int i = first, iend = nMaxModules; i < iend; i += blockDim.x) {
-      moduleStart[i + 1] = std::min(gpuClustering::maxHitsInModule(), clusInModule[i]);
+      moduleStart[i + 1] = std::min(maxHitsInModule, clusInModule[i]);
     }
 
     constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
@@ -505,7 +506,7 @@ namespace pixelgpudetails {
 #ifdef GPU_DEBUG
     uint16_t maxH = isPhase2 ? 3027 : 1024;
     assert(0 == moduleStart[0]);
-    auto c0 = std::min(gpuClustering::maxHitsInModule(), clusInModule[0]);
+    auto c0 = std::min(maxHitsInModule, clusInModule[0]);
     assert(c0 == moduleStart[1]);
     assert(moduleStart[maxH] >= moduleStart[maxH - 1]);
     assert(moduleStart[maxH + 1] >= moduleStart[maxH]);
@@ -620,27 +621,16 @@ namespace pixelgpudetails {
       int threadsPerBlock = 256;
       int blocks = (std::max(int(wordCounter), int(TrackerTraits::numberOfModules)) + threadsPerBlock - 1) / threadsPerBlock;
 
-      if (isRun2)
-        gpuCalibPixel::calibDigis<true><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().moduleInd(),
-                                                                                digis_d.view().xx(),
-                                                                                digis_d.view().yy(),
-                                                                                digis_d.view().adc(),
-                                                                                gains,
-                                                                                wordCounter,
-                                                                                clusters_d.moduleStart(),
-                                                                                clusters_d.clusInModule(),
-                                                                                clusters_d.clusModuleStart());
-      else
-        gpuCalibPixel::calibDigis<false><<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().moduleInd(),
-                                                                                 digis_d.view().xx(),
-                                                                                 digis_d.view().yy(),
-                                                                                 digis_d.view().adc(),
-                                                                                 gains,
-                                                                                 wordCounter,
-                                                                                 clusters_d.moduleStart(),
-                                                                                 clusters_d.clusInModule(),
-                                                                                 clusters_d.clusModuleStart());
-
+      gpuCalibPixel::calibDigis<<<blocks, threadsPerBlock, 0, stream>>>(clusterThresholds,
+                                                                              digis_d.view().moduleInd(),
+                                                                              digis_d.view().xx(),
+                                                                              digis_d.view().yy(),
+                                                                              digis_d.view().adc(),
+                                                                              gains,
+                                                                              wordCounter,
+                                                                              clusters_d.moduleStart(),
+                                                                              clusters_d.clusInModule(),
+                                                                              clusters_d.clusModuleStart());
       cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG
       cudaCheck(cudaStreamSynchronize(stream));
@@ -720,7 +710,7 @@ namespace pixelgpudetails {
                                                              const uint32_t numDigis,
                                                              cudaStream_t stream) {
 
-                                                               
+
     using namespace gpuClustering;
     using pixelTopology::Phase2;
     nDigis = numDigis;
@@ -743,7 +733,8 @@ namespace pixelgpudetails {
     int threadsPerBlock = 512;
     int blocks = (int(numDigis) + threadsPerBlock - 1) / threadsPerBlock;
 
-    gpuCalibPixel::calibDigisPhase2<<<blocks, threadsPerBlock, 0, stream>>>(digis_d.view().moduleInd(),
+    gpuCalibPixel::calibDigisPhase2<<<blocks, threadsPerBlock, 0, stream>>>(clusterThresholds,
+                                                                            digis_d.view().moduleInd(),
                                                                             digis_d.view().adc(),
                                                                             numDigis,
                                                                             clusters_d.moduleStart(),

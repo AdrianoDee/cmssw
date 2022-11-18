@@ -131,54 +131,67 @@ hiConformalPixelTracksTask = cms.Task(
 )
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.pixelNtupletFit_cff import pixelNtupletFit
 from RecoPixelVertexing.PixelTrackFitting.pixelTrackSoAFromCUDAHIonPhase1_cfi import pixelTrackSoAFromCUDAHIonPhase1 as _pixelTracksSoA
 from RecoPixelVertexing.PixelTriplets.caHitNtupletCUDAHIonPhase1_cfi import caHitNtupletCUDAHIonPhase1 as _pixelTracksCUDA
 from RecoPixelVertexing.PixelTrackFitting.pixelTrackProducerFromSoAHIonPhase1_cfi import pixelTrackProducerFromSoAHIonPhase1 as _pixelTrackProducerFromSoA
 
 from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
 
-pixelTracksCUDAHIon = _pixelTracksCUDA.clone(pixelRecHitSrc="siPixelRecHitsPreSplittingCUDA")
-
-# #Pixel tracks in SoA format on the CPU
-# pixelTracksHIonCPU = _pixelTracksCUDA.clone(
-#     pixelRecHitSrc = "siPixelRecHitsPreSplitting",
-#     idealConditions = False,
-#     onGPU = False
-# )
+hiPixelTracksCUDA = _pixelTracksCUDA.clone(pixelRecHitSrc="siPixelRecHitsPreSplittingCUDA", idealConditions = False,
+        ptmin = 0.25, hardCurvCut = 0.0756, doPtCut = False,
+        onGPU = True,
+        trackQualityCuts = cms.PSet(
+          chi2MaxPt = cms.double(10),
+          chi2Coeff = cms.vdouble(
+            0.9,
+            1.8
+          ),
+          chi2Scale = cms.double(8),
+          tripletMinPt = cms.double(0.5),
+          tripletMaxTip = cms.double(0.3),
+          tripletMaxZip = cms.double(12),
+          quadrupletMinPt = cms.double(0.3),
+          quadrupletMaxTip = cms.double(0.5),
+          quadrupletMaxZip = cms.double(12)
+        ))
 
 # SwitchProducer providing the pixel tracks in SoA format on the CPU
-pixelTracksSoAHIon = SwitchProducerCUDA(
+hiPixelTracksSoA = SwitchProducerCUDA(
     # build pixel ntuplets and pixel tracks in SoA format on the CPU
     cpu = _pixelTracksCUDA.clone(
-        pixelRecHitSrc = "siPixelRecHitsPreSplitting",
+        pixelRecHitSrc = "siPixelRecHitsPreSplittingCPU",
         idealConditions = False,
-        onGPU = False)
+    	doPtCut = False,
+    	ptmin = 0.25,
+    	hardCurvCut = 0.0756,
+        onGPU = False,
+        trackQualityCuts = cms.PSet(
+          chi2MaxPt = cms.double(10),
+          chi2Coeff = cms.vdouble(
+            0.9,
+            1.8
+          ),
+          chi2Scale = cms.double(8),
+          tripletMinPt = cms.double(0.5),
+          tripletMaxTip = cms.double(0.3),
+          tripletMaxZip = cms.double(12),
+          quadrupletMinPt = cms.double(0.3),
+          quadrupletMaxTip = cms.double(0.5),
+          quadrupletMaxZip = cms.double(12)
+        ))
 )
 
-gpu.toModify(pixelTracksSoAHIon,
+gpu.toModify(hiPixelTracksSoA,
     # transfer the pixel tracks in SoA format to the host
-    cuda = _pixelTracksSoA.clone(src="pixelTracksCUDAHIon")
+    cuda = _pixelTracksSoA.clone(src="hiPixelTracksCUDA")
 )
 
-gpu.toReplaceWith(hiConformalPixelTracks,_pixelTrackProducerFromSoA.clone(
+pixelNtupletFit.toReplaceWith(hiConformalPixelTracks,_pixelTrackProducerFromSoA.clone(
     pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
-    trackSrc = "pixelTracksSoAHIon",
-
+    trackSrc = "hiPixelTracksSoA",
+    minQuality = "highPurity"
 ))
-
-# from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDA_cfi import siPixelRecHitFromCUDA as _siPixelRecHitFromCUDA
-#
-# from RecoLocalTracker.SiPixelClusterizer.siPixelRawToClusterCUDA_cfi import siPixelRawToClusterCUDA as _siPixelRawToClusterCUDA
-# siPixelClustersPreSplittingCUDAHIon = _siPixelRawToClusterCUDA.clone(MaxFEDWords = 500000)
-#
-# from RecoLocalTracker.SiPixelClusterizer.siPixelDigisClustersFromSoA_cfi import siPixelDigisClustersFromSoA as _siPixelDigisClustersFromSoA
-# siPixelDigisClustersPreSplittingHIon = _siPixelDigisClustersFromSoA.clone(src = "siPixelDigisSoAHIon")
-
-# from EventFilter.SiPixelRawToDigi.siPixelDigisSoAFromCUDA_cfi import siPixelDigisSoAFromCUDA as _siPixelDigisSoAFromCUDA
-# siPixelDigisSoAHIon = _siPixelDigisSoAFromCUDA.clone(
-#     src = "siPixelClustersPreSplittingCUDAHIon"
-# )
-#
 
 hiConformalPixelTracksTaskPhase1 = cms.Task(
     hiConformalPixelTracksPhase1TrackingRegions ,
@@ -190,18 +203,18 @@ hiConformalPixelTracksTaskPhase1 = cms.Task(
     hiConformalPixelTracks
 )
 
-gpu.toReplaceWith(hiConformalPixelTracksTaskPhase1, cms.Task(
-    #pixelTracksTrackingRegions,
-    #siPixelClustersPreSplittingCUDAHIon,
-    #siPixelDigisSoAHIon,
-    #siPixelDigisClustersPreSplittingHIon,
-    #siPixelRecHitsPreSplittingCUDAHIon,
-    #siPixelRecHitFromCUDAHIon,
-    # build the pixel ntuplets and the pixel tracks in SoA format on the GPU
-    pixelTracksCUDAHIon,
-    pixelTracksSoAHIon,
+pixelNtupletFit.toReplaceWith(hiConformalPixelTracksTaskPhase1, cms.Task(
+    # build the pixel ntuplets and the pixel tracks in SoA format on the CPU
+    hiPixelTracksSoA,
     # convert the pixel tracks from SoA to legacy format
     hiConformalPixelTracks
+))
+
+(gpu & pixelNtupletFit).toReplaceWith(hiConformalPixelTracksTaskPhase1, cms.Task(
+    # build the pixel ntuplets and the pixel tracks in SoA format on the GPU
+    hiPixelTracksCUDA,
+    # just copying the task above
+    hiConformalPixelTracksTaskPhase1.copy()
 ))
 
 hiConformalPixelTracksSequencePhase1 = cms.Sequence(hiConformalPixelTracksTaskPhase1)

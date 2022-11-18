@@ -95,6 +95,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
   bsHost.y = bs.y0();
   bsHost.z = bs.z0();
 
+  // std::cout << "Mr. Beamspot    " << bs.x0() << " - " << bs.y0() << " - " << bs.z0() << std::endl;
+  // std::cout << "Mr. BeamSpotPOD " << bsHost.x << " - " << bsHost.y << " - " << bsHost.z << std::endl;
+
   edm::Handle<SiPixelClusterCollectionNew> hclusters;
   iEvent.getByToken(clusterToken_, hclusters);
   auto const& input = *hclusters;
@@ -123,7 +126,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
 
   std::vector<edm::Ref<edmNew::DetSetVector<SiPixelCluster>, SiPixelCluster>> clusterRef;
 
-  constexpr uint32_t maxHitsInModule = gpuClustering::maxHitsInModule();
+  constexpr uint32_t maxHitsInModule = TrackerTraits::maxHitsInModule;
 
   HitModuleStart moduleStart_;  // index of the first pixel of each module
   HitModuleStart clusInModule_;
@@ -155,7 +158,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
     hitsModuleStart[i] = hitsModuleStart[i - 1] + clusInModule_[i - 1];
 
   assert(numberOfClusters == int(hitsModuleStart[maxModules]));
-
+  // std::cout << " SiPixelRecHitSoAFromLegacyT numberOfClusters: " << numberOfClusters << std::endl;
   // output SoA
   // element 96 is the start of BPIX2 (i.e. the number of clusters in BPIX1)
 
@@ -268,8 +271,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
   constexpr auto nLayers = TrackerTraits::numberOfLayers;
   for (auto i = 0U; i < nLayers + 1; ++i) {
     output->hitsLayerStart()[i] = hitsModuleStart[cpeView.layerGeometry().layerStart[i]];
-    LogDebug("SiPixelRecHitSoAFromLegacy")
-        << "Layer n." << i << " - starting at module: " << cpeView.layerGeometry().layerStart[i]
+    LogDebug("SiPixelRecHitSoAFromLegacy") <<
+    // std::cout <<
+    "Layer n." << i << " - starting at module: " << cpeView.layerGeometry().layerStart[i]
         << " - starts ad cluster: " << output->hitsLayerStart()[i] << "\n";
   }
 
@@ -281,7 +285,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
                                 256,
                                 output->phiBinnerStorage());
 
-  LogDebug("SiPixelRecHitSoAFromLegacy") << "created HitSoa for " << numberOfClusters << " clusters in "
+  LogDebug("SiPixelRecHitSoAFromLegacy")
+  // std::cout
+  << "created HitSoa for " << numberOfClusters << " clusters in "
                                          << numberOfDetUnits << " Dets"
                                          << "\n";
   iEvent.put(std::move(output));

@@ -120,7 +120,9 @@ namespace {
                                     cfg.getParameter<bool>("doClusterCut"),
                                     cfg.getParameter<bool>("doZ0Cut"),
                                     cfg.getParameter<bool>("doPtCut"),
-                                    cfg.getParameter<bool>("idealConditions")};
+                                    cfg.getParameter<bool>("idealConditions"),
+                                    cfg.getParameter<double>("z0Cut"),
+                                    cfg.getParameter<double>("ptCut")};
   }
 
 }  // namespace
@@ -170,6 +172,8 @@ void CAHitNtupletGeneratorOnGPU<pixelTopology::Phase1>::fillDescriptions(edm::Pa
 
   desc.add<bool>("idealConditions", true);
   desc.add<bool>("includeJumpingForwardDoublets", false);
+  desc.add<double>("z0Cut", 7.5f);
+  desc.add<double>("ptCut", 0.85f);
 
   edm::ParameterSetDescription trackQualityCuts;
   trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
@@ -194,7 +198,10 @@ template <>
 void CAHitNtupletGeneratorOnGPU<pixelTopology::HIonPhase1>::fillDescriptions(edm::ParameterSetDescription& desc) {
   fillDescriptionsCommon(desc);
 
+  desc.add<bool>("idealConditions", false);
   desc.add<bool>("includeJumpingForwardDoublets", false);
+  desc.add<double>("z0Cut", 10.0f);
+  desc.add<double>("ptCut", 0.0f);
 
   edm::ParameterSetDescription trackQualityCuts;
   trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
@@ -203,12 +210,12 @@ void CAHitNtupletGeneratorOnGPU<pixelTopology::HIonPhase1>::fillDescriptions(edm
       ->setComment(
           "Factor to multiply the pT-dependent chi2 cut (currently: 8 for the broken line fit, ?? for the Riemann "
           "fit)");
-  trackQualityCuts.add<double>("tripletMinPt", 0.5)->setComment("Min pT for triplets, in GeV");
-  trackQualityCuts.add<double>("tripletMaxTip", 0.3)->setComment("Max |Tip| for triplets, in cm");
-  trackQualityCuts.add<double>("tripletMaxZip", 12.)->setComment("Max |Zip| for triplets, in cm");
-  trackQualityCuts.add<double>("quadrupletMinPt", 0.3)->setComment("Min pT for quadruplets, in GeV");
+  trackQualityCuts.add<double>("tripletMinPt", 0.0)->setComment("Min pT for triplets, in GeV");
+  trackQualityCuts.add<double>("tripletMaxTip", 0.1)->setComment("Max |Tip| for triplets, in cm");
+  trackQualityCuts.add<double>("tripletMaxZip", 6.)->setComment("Max |Zip| for triplets, in cm");
+  trackQualityCuts.add<double>("quadrupletMinPt", 0.0)->setComment("Min pT for quadruplets, in GeV");
   trackQualityCuts.add<double>("quadrupletMaxTip", 0.5)->setComment("Max |Tip| for quadruplets, in cm");
-  trackQualityCuts.add<double>("quadrupletMaxZip", 12.)->setComment("Max |Zip| for quadruplets, in cm");
+  trackQualityCuts.add<double>("quadrupletMaxZip", 6.)->setComment("Max |Zip| for quadruplets, in cm");
   desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)
       ->setComment(
           "Quality cuts based on the results of the track fit:\n  - apply a pT-dependent chi2 cut;\n  - apply \"region "
@@ -222,6 +229,8 @@ void CAHitNtupletGeneratorOnGPU<pixelTopology::Phase2>::fillDescriptions(edm::Pa
   desc.add<bool>("idealConditions", false);
   desc.add<bool>("includeFarForwards", true);
   desc.add<bool>("includeJumpingForwardDoublets", true);
+  desc.add<double>("z0Cut", 12.0f);
+  desc.add<double>("ptCut", 0.8f);
 
   edm::ParameterSetDescription trackQualityCuts;
   trackQualityCuts.add<double>("maxChi2", 5.)->setComment("Max normalized chi2");

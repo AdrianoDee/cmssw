@@ -98,7 +98,12 @@ SiPixelRawToClusterCUDAT<TrackerTraits>::SiPixelRawToClusterCUDAT(const edm::Par
       includeErrors_(iConfig.getParameter<bool>("IncludeErrors")),
       useQuality_(iConfig.getParameter<bool>("UseQualityInfo")),
       clusterThresholds_{iConfig.getParameter<int32_t>("clusterThreshold_layer1"),
-                         iConfig.getParameter<int32_t>("clusterThreshold_otherLayers")} {
+                         iConfig.getParameter<int32_t>("clusterThreshold_otherLayers"),
+                         (float) iConfig.getParameter<double>("VCaltoElectronGain"),
+                         (float) iConfig.getParameter<double>("VCaltoElectronGain_L1"),
+                         (float) iConfig.getParameter<double>("VCaltoElectronOffset"),
+                         (float) iConfig.getParameter<double>("VCaltoElectronOffset_L1")}
+{
   if (includeErrors_) {
     digiErrorPutToken_ = produces<cms::cuda::Product<SiPixelDigiErrorsCUDA>>();
   }
@@ -119,8 +124,15 @@ void SiPixelRawToClusterCUDAT<TrackerTraits>::fillDescriptions(edm::Configuratio
   // It is kept to avoid breaking older configurations, and will not be printed in the generated cfi.py file.
   desc.addOptionalNode(edm::ParameterDescription<uint32_t>("MaxFEDWords", 0, true), false)
       ->setComment("This parameter is obsolete and will be ignored.");
-  desc.add<int32_t>("clusterThreshold_layer1", kSiPixelClusterThresholdsDefaultPhase1.layer1);
-  desc.add<int32_t>("clusterThreshold_otherLayers", kSiPixelClusterThresholdsDefaultPhase1.otherLayers);
+
+  //Clustering Thresholds
+  desc.add<int32_t>("clusterThreshold_layer1", 2000);
+  desc.add<int32_t>("clusterThreshold_otherLayers", 4000);
+  desc.add<double>("VCaltoElectronGain", 47.f);
+  desc.add<double>("VCaltoElectronGain_L1", 50.f);
+  desc.add<double>("VCaltoElectronOffset", -60.f);
+  desc.add<double>("VCaltoElectronOffset_L1", -670.f);
+
   desc.add<edm::InputTag>("InputLabel", edm::InputTag("rawDataCollector"));
   {
     edm::ParameterSetDescription psd0;

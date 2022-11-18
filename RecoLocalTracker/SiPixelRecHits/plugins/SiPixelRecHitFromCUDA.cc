@@ -119,7 +119,7 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
   edm::Handle<SiPixelClusterCollectionNew> hclusters = iEvent.getHandle(clusterToken_);
   auto const& input = *hclusters;
 
-  constexpr uint32_t maxHitsInModule = gpuClustering::maxHitsInModule();
+  constexpr uint32_t maxHitsInModule = TrackerTraits::maxHitsInModule;
 
   int numberOfDetUnits = 0;
   int numberOfClusters = 0;
@@ -135,9 +135,6 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
     auto fc = hitsModuleStart_[gind];
     auto lc = hitsModuleStart_[gind + 1];
     auto nhits = lc - fc;
-
-    std::cout << "SiPixelRecHitFromCUDA" << " in det " << gind << ": conv " << nhits << " hits from " << dsv.size()
-                                      << " legacy clusters" << ' ' << fc << ',' << lc << "\n";
 
     assert(lc > fc);
     LogDebug("SiPixelRecHitFromCUDA") << "in det " << gind << ": conv " << nhits << " hits from " << dsv.size()

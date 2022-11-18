@@ -12,7 +12,7 @@
 
 #include "PixelRecHitGPUKernel.h"
 #include "gpuPixelRecHits.h"
-#define GPU_DEBUG 1
+// #define GPU_DEBUG 1
 
 namespace {
   template <typename TrackerTraits>

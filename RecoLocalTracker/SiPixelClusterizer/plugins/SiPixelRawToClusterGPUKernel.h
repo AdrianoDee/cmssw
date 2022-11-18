@@ -19,6 +19,8 @@
 // local include(s)
 #include "SiPixelClusterThresholds.h"
 
+// #define GPU_DEBUG
+
 struct SiPixelROCsStatusAndMapping;
 class SiPixelGainForHLTonGPU;
 

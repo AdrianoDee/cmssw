@@ -346,6 +346,7 @@ namespace pixelTopology {
     static constexpr uint32_t maxPixInModule = 6000;
 
     static constexpr uint32_t maxNumClustersPerModules = phase2PixelTopology::maxNumClustersPerModules;
+    static constexpr uint32_t maxHitsInModule = phase2PixelTopology::maxNumClustersPerModules;
 
     static constexpr float moduleLength = 4.345f;
     static constexpr float endcapCorrection = 0.0f;
@@ -449,6 +450,7 @@ namespace pixelTopology {
     static constexpr uint32_t maxPixInModule = 6000;
 
     static constexpr uint32_t maxNumClustersPerModules = phase1PixelTopology::maxNumClustersPerModules;
+    static constexpr uint32_t maxHitsInModule = phase1PixelTopology::maxNumClustersPerModules;
 
     static constexpr float moduleLength = 6.7f;
     static constexpr float endcapCorrection = 1.5f;
@@ -562,12 +564,16 @@ namespace pixelTopology {
     static constexpr uint32_t maxCellTracks = 90;
     static constexpr uint32_t maxNumberOfTuples = 256 * 1024;
     static constexpr uint32_t maxNumberOfDoublets = 6 * 512 * 1024;
+    static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
+    static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
+
+    static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 4; //TODO need to think a better way to avoid this duplication
     static constexpr uint32_t maxCellsPerHit = 256;
 
-    static constexpr uint16_t clusterBinning = 2048;
-    static constexpr uint16_t clusterBits = 10;
-
     static constexpr uint32_t maxNumClustersPerModules = phase1HIonPixelTopology::maxNumClustersPerModules;
+    static constexpr uint32_t maxHitsInModule = phase1HIonPixelTopology::maxNumClustersPerModules;
+
+    static constexpr float z0Cut = 10.f;
 
     static constexpr int16_t const *phicuts = phase1HIonPixelTopology::phicuts;
 

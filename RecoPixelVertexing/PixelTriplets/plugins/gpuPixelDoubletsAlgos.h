@@ -44,6 +44,9 @@ namespace gpuPixelDoublets {
     const bool doZ0Cut_;
     const bool doPtCut_;
     const bool idealConditions_;  //this is actually not used by phase2
+    //the cuts
+    const double z0Cut_;
+    const double ptCut_;
 
     __device__ __forceinline__ bool zSizeCut(H const& hh, int i, int o) const {
 
@@ -126,6 +129,13 @@ namespace gpuPixelDoublets {
     const bool doClusterCut = cuts.doClusterCut_;
     const bool doZ0Cut = cuts.doZ0Cut_;
     const bool doPtCut = cuts.doPtCut_;
+    // all cuts: true if fails
+    const float z0cut = cuts.z0Cut_;              // cm
+    const float hardPtCut = cuts.ptCut_;  // GeV
+    // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
+    const float minRadius = hardPtCut * 87.78f;
+    const float minRadius2T4 = 4.f * minRadius * minRadius;
+
     const uint32_t maxNumOfDoublets = cuts.maxNumberOfDoublets_;
 
     using PhiBinner = typename TrackingRecHit2DSOAViewT<TrackerTraits>::PhiBinner;
@@ -203,12 +213,6 @@ namespace gpuPixelDoublets {
       auto mep = hh.iphi(i);
       auto mer = hh.rGlobal(i);
 
-      // all cuts: true if fails
-      constexpr float z0cut = TrackerTraits::z0Cut;              // cm
-      constexpr float hardPtCut = TrackerTraits::doubletHardPt;  // GeV
-      // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
-      constexpr float minRadius = hardPtCut * 87.78f;
-      constexpr float minRadius2T4 = 4.f * minRadius * minRadius;
       auto ptcut = [&](int j, int16_t idphi) {
         auto r2t4 = minRadius2T4;
         auto ri = mer;
