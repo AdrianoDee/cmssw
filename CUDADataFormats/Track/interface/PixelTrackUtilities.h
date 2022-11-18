@@ -54,7 +54,6 @@ namespace pixelTrack {
   namespace utilities {
     using TrackSoAView = TrackSoAHeterogeneousLayout<>::View;
     using TrackSoAConstView = TrackSoAHeterogeneousLayout<>::ConstView;
-    // using Quality = pixelTrack::Quality;
     using hindex_type = uint32_t;
     // State at the Beam spot
     // phi,tip,1/pt,cotan(theta),zip
