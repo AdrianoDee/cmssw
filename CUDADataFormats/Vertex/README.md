@@ -11,6 +11,11 @@ while the device format is inheriting from `CUDADataFormats/Common/interface/Por
 Both formats use the same SoA Layout (`ZVertexSoAHeterogeneousLayout`) which is generated
 via the `GENERATE_SOA_LAYOUT` macro in the `ZVertexUtilities.h` file.
 
+**Note:** Initially, `ZVertexSoA` had distinct array sizes for each attribute (e.g. `zv` was `MAXVTX` elements
+long, `ndof` was `MAXTRACKS` elements long). All columns are now of uniform `MAXTRACKS` size, 
+meaning that there will be some wasted space (appx. 190kB). 
+
+
 ## ZVertexHeterogeneousHost
 
 The version of the data format to be used for storing vertex data on the CPU. 
