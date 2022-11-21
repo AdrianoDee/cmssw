@@ -44,6 +44,7 @@ int main() {
     cudaCheck(cudaMemcpyAsync(
         tracks_h.buffer().get(), tracks_d.const_buffer().get(), tracks_d.bufferSize(), cudaMemcpyDeviceToHost, stream));
     cudaCheck(cudaGetLastError());
+    cudaCheck(cudaDeviceSynchronize());
 
     // Print results
     std::cout << "pt"
