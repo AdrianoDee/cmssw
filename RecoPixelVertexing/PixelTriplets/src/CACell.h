@@ -109,11 +109,20 @@ public:
         phiCut[j] = phiCutByInnerLayer.at(oc.getInnerLayer());
       }
       // this vectorize!
+
       for (int j = 0; j < vs; ++j)
         ok[j] = areAlignedRZ(r1[j], z1[j], ro, zo, ptmin, thetaCut[j]);
       for (int j = 0; j < vs; ++j) {
         auto koc = innerCells[i + j];
         auto& oc = allCells[koc];
+        auto curv = haveSimilarCurvature(oc, ptmin, region_origin_x, region_origin_y, region_origin_radius, phiCut[j], hardPtCut);
+
+        std::cout << "ri = " << getInnerR() << " zi = " << getInnerZ();
+        std::cout << " ro = " << ro << " zo = " << zo << " r1 = " << r1[j];
+        std::cout << " z1 = " << r1[j] << " thetaCut = " << thetaCut[j] << " thetaCut = " << thetaCut[j];
+        std::cout << " alignedRZ = " << ok[j] << " curv = " << curv << std::endl;
+
+
         if (ok[j] && haveSimilarCurvature(
                          oc, ptmin, region_origin_x, region_origin_y, region_origin_radius, phiCut[j], hardPtCut)) {
           if (foundTriplets)
@@ -121,6 +130,7 @@ public:
           else {
             oc.tagAsOuterNeighbor(cellId);
           }
+
         }
       }
     };
