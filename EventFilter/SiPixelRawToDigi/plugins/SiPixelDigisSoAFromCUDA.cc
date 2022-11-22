@@ -27,7 +27,7 @@ private:
   edm::EDGetTokenT<cms::cuda::Product<SiPixelDigisCUDA>> digiGetToken_;
   edm::EDPutTokenT<SiPixelDigisSoA> digiPutToken_;
 
-  cms::cuda::host::unique_ptr<uint16_t[]> store_;
+  cms::cuda::PortableHostCollection<SiPixelDigisSoALayout<>> digis_h;
 
   int nDigis_;
 };
@@ -48,27 +48,22 @@ void SiPixelDigisSoAFromCUDA::acquire(const edm::Event& iEvent,
   // Do the transfer in a CUDA stream parallel to the computation CUDA stream
   cms::cuda::ScopedContextAcquire ctx{iEvent.streamID(), std::move(waitingTaskHolder)};
 
-  const auto& gpuDigis = ctx.get(iEvent, digiGetToken_);
+  const auto& digis_d = ctx.get(iEvent, digiGetToken_);
 
   nDigis_ = gpuDigis.nDigis();
-  store_ = gpuDigis.copyAllToHostAsync(ctx.stream());
+  digis_h = cms::cuda::PortableHostCollection<SiPixelDigisSoALayout<>>(gpuDigis.view().metadata().size(), stream);
+  cudaCheck(cudaMemcpyAsync(
+      digis_h.buffer().get(), digis_d.const_buffer().get(), digis_d.bufferSize(), cudaMemcpyDeviceToHost, stream));
+  cudaCheck(cudaGetLastError());
 }
 
 void SiPixelDigisSoAFromCUDA::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  // The following line copies the data from the pinned host memory to
-  // regular host memory. In principle that feels unnecessary (why not
-  // just use the pinned host memory?). There are a few arguments for
-  // doing it though
-  // - Now can release the pinned host memory back to the (caching) allocator
-  //   * if we'd like to keep the pinned memory, we'd need to also
-  //     keep the CUDA stream around as long as that, or allow pinned
-  //     host memory to be allocated without a CUDA stream
-  // - What if a CPU algorithm would produce the same SoA? We can't
-  //   use cudaMallocHost without a GPU...
-
-  auto tmp_view = SiPixelDigisCUDASOAView(store_, nDigis_, SiPixelDigisCUDASOAView::StorageLocationHost::kMAX);
-
-  iEvent.emplace(digiPutToken_, nDigis_, tmp_view.pdigi(), tmp_view.rawIdArr(), tmp_view.adc(), tmp_view.clus());
+  iEvent.emplace(digiPutToken_,
+                 nDigis_,
+                 digis_h.view().pdigi(),
+                 digis_h.view().rawIdArr(),
+                 digis_h.view().adc(),
+                 digis_h.view().clus());
 
   store_.reset();
 }
