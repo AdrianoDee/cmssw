@@ -1,7 +1,7 @@
 #include "RiemannFitOnGPU.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/device_unique_ptr.h"
 
-void HelixFitOnGPU::launchRiemannKernels(HitsView const *hv,
+void HelixFitOnGPU::launchRiemannKernels(HitSoAConstView hv,
                                          uint32_t nhits,
                                          uint32_t maxNumberOfTuples,
                                          cudaStream_t stream) {

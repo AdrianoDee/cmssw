@@ -99,7 +99,7 @@ namespace gpuPixelDoublets {
                                 uint32_t* nCells,
                                 CellNeighborsVector* cellNeighbors,
                                 CellTracksVector* cellTracks,
-                                TrackingRecHit2DSOAView const* __restrict__ hhp,
+                                HitsConstView hh,
                                 GPUCACell::OuterHitOfCell isOuterHitOfCell,
                                 int nActualPairs,
                                 bool ideal_cond,
@@ -107,7 +107,7 @@ namespace gpuPixelDoublets {
                                 bool doZ0Cut,
                                 bool doPtCut,
                                 uint32_t maxNumOfDoublets) {
-    auto const& __restrict__ hh = *hhp;
+    // auto& __restrict__ hh = *hhp;
     doubletsFromHisto(layerPairs,
                       nActualPairs,
                       cells,

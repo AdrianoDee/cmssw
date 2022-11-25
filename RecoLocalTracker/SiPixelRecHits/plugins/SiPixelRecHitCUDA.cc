@@ -4,7 +4,7 @@
 #include "CUDADataFormats/Common/interface/Product.h"
 #include "CUDADataFormats/SiPixelCluster/interface/SiPixelClustersCUDA.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDA.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoADevice.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -23,8 +23,11 @@
 
 #include "PixelRecHitGPUKernel.h"
 
+#define GPU_DEBUG
+
 class SiPixelRecHitCUDA : public edm::global::EDProducer<> {
 public:
+  using TrackingRecHitSoADevice = trackingRecHit::TrackingRecHitSoADevice;
   explicit SiPixelRecHitCUDA(const edm::ParameterSet& iConfig);
   ~SiPixelRecHitCUDA() override = default;
 
@@ -37,7 +40,7 @@ private:
   const edm::EDGetTokenT<cms::cuda::Product<BeamSpotCUDA>> tBeamSpot;
   const edm::EDGetTokenT<cms::cuda::Product<SiPixelClustersCUDA>> token_;
   const edm::EDGetTokenT<cms::cuda::Product<SiPixelDigisCUDA>> tokenDigi_;
-  const edm::EDPutTokenT<cms::cuda::Product<TrackingRecHit2DGPU>> tokenHit_;
+  const edm::EDPutTokenT<cms::cuda::Product<TrackingRecHitSoADevice>> tokenHit_;
 
   const pixelgpudetails::PixelRecHitGPUKernel gpuAlgo_;
 };
@@ -47,7 +50,7 @@ SiPixelRecHitCUDA::SiPixelRecHitCUDA(const edm::ParameterSet& iConfig)
       tBeamSpot(consumes<cms::cuda::Product<BeamSpotCUDA>>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
       token_(consumes<cms::cuda::Product<SiPixelClustersCUDA>>(iConfig.getParameter<edm::InputTag>("src"))),
       tokenDigi_(consumes<cms::cuda::Product<SiPixelDigisCUDA>>(iConfig.getParameter<edm::InputTag>("src"))),
-      tokenHit_(produces<cms::cuda::Product<TrackingRecHit2DGPU>>()) {}
+      tokenHit_(produces<cms::cuda::Product<TrackingRecHitSoADevice>>()) {}
 
 void SiPixelRecHitCUDA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
@@ -63,25 +66,26 @@ void SiPixelRecHitCUDA::produce(edm::StreamID streamID, edm::Event& iEvent, cons
   if (not fcpe) {
     throw cms::Exception("Configuration") << "SiPixelRecHitSoAFromLegacy can only use a CPE of type PixelCPEFast";
   }
-
+  std::cout << "SiPixelRecHitCUDA::produce " << __LINE__ << std::endl;
   edm::Handle<cms::cuda::Product<SiPixelClustersCUDA>> hclusters;
   iEvent.getByToken(token_, hclusters);
-
+  std::cout << "SiPixelRecHitCUDA::produce " << __LINE__ << std::endl;
   cms::cuda::ScopedContextProduce ctx{*hclusters};
   auto const& clusters = ctx.get(*hclusters);
-
+  std::cout << "SiPixelRecHitCUDA::produce " << __LINE__ << std::endl;
   edm::Handle<cms::cuda::Product<SiPixelDigisCUDA>> hdigis;
   iEvent.getByToken(tokenDigi_, hdigis);
   auto const& digis = ctx.get(*hdigis);
-
+  std::cout << "SiPixelRecHitCUDA::produce " << __LINE__ << std::endl;
   edm::Handle<cms::cuda::Product<BeamSpotCUDA>> hbs;
   iEvent.getByToken(tBeamSpot, hbs);
   auto const& bs = ctx.get(*hbs);
-
+  std::cout << "SiPixelRecHitCUDA::produce " << __LINE__ << std::endl;
   ctx.emplace(iEvent,
               tokenHit_,
               gpuAlgo_.makeHitsAsync(
                   digis, clusters, bs, fcpe->getGPUProductAsync(ctx.stream()), fcpe->isPhase2(), ctx.stream()));
+  std::cout << "SiPixelRecHitCUDA::produce " << __LINE__ << std::endl;
 }
 
 DEFINE_FWK_MODULE(SiPixelRecHitCUDA);

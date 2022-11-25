@@ -16,7 +16,7 @@
 
 namespace gpuPixelDoublets {
 
-  __global__ void fishbone(GPUCACell::Hits const* __restrict__ hhp,
+  __global__ void fishbone(GPUCACell::HitsConstView hh,
                            GPUCACell* cells,
                            uint32_t const* __restrict__ nCells,
                            GPUCACell::OuterHitOfCell const isOuterHitOfCellWrap,
@@ -24,7 +24,7 @@ namespace gpuPixelDoublets {
                            bool checkTrack) {
     constexpr auto maxCellsPerHit = GPUCACell::maxCellsPerHit;
 
-    auto const& hh = *hhp;
+    // auto& hh = *hhNon p;
 
     auto const isOuterHitOfCell = isOuterHitOfCellWrap.container;
     int32_t offset = isOuterHitOfCellWrap.offset;

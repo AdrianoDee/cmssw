@@ -4,6 +4,7 @@
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DSOAView.h"
 #include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
 template <typename Traits>
 class TrackingRecHit2DHeterogeneous {

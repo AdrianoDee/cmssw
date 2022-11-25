@@ -56,7 +56,7 @@ from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDA_cfi import siPixelRec
 siPixelRecHitsPreSplittingSoA = SwitchProducerCUDA(
     cpu = cms.EDAlias(
             siPixelRecHitsPreSplittingCPU = cms.VPSet(
-                 cms.PSet(type = cms.string("cmscudacompatCPUTraitsTrackingRecHit2DHeterogeneous")),
+                 cms.PSet(type = cms.string("trackingRecHitTrackingRecHitSoAHost")),
                  cms.PSet(type = cms.string("uintAsHostProduct"))
              )),
 )

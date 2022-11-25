@@ -19,8 +19,13 @@
 #include "FWCore/Utilities/interface/isFinite.h"
 #include "HeterogeneousCore/CUDAServices/interface/CUDAService.h"
 #include "TrackingTools/DetLayers/interface/BarrelDetLayer.h"
+#include "CUDADataFormats/Common/interface/HeterogeneousSoA.h"
+
 #include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousHost.h"
 #include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousDevice.h"
+
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoAHost.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoADevice.h"
 
 #include "CAHitNtupletGeneratorOnGPU.h"
 
@@ -186,27 +191,58 @@ void CAHitNtupletGeneratorOnGPU::endJob() {
   }
 }
 
-pixelTrack::TrackSoADevice CAHitNtupletGeneratorOnGPU::makeTuplesAsync(TrackingRecHit2DGPU const& hits_d,
-                                                                       float bfield,
-                                                                       cudaStream_t stream) const {
+pixelTrack::TrackSoADevice CAHitNtupletGeneratorOnGPU::makeTuplesAsync(
+    trackingRecHit::TrackingRecHitSoADevice const& hits_d, float bfield, cudaStream_t stream) const {
   pixelTrack::TrackSoADevice tracks(stream);
-  auto* soa = &tracks;
 
+  std::cout << "!!!!" << hits_d.offsetBPIX2() << ", " << hits_d.nHits() << std::endl;
   CAHitNtupletGeneratorKernelsGPU kernels(m_params);
   kernels.setCounters(m_counters);
-  kernels.allocateOnGPU(hits_d.nHits(), stream);
+  std::cout << "GAMW THN PANAGIA 3" << std::endl;
 
-  kernels.buildDoublets(hits_d, stream);
-  kernels.launchKernels(hits_d, soa->view(), stream);
+  kernels.allocateOnGPU(hits_d.nHits(), stream);
+  cudaCheck(cudaGetLastError());
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "GAMW THN PANAGIA 4" << std::endl;
+
+  kernels.buildDoublets(hits_d.view(), hits_d.offsetBPIX2(), stream);
+  cudaCheck(cudaGetLastError());
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "GAMW THN PANAGIA 5" << std::endl;
+
+  kernels.launchKernels(hits_d.view(), tracks.view(), stream);
+  cudaCheck(cudaGetLastError());
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "GAMW THN PANAGIA 6" << std::endl;
 
   HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
-  fitter.allocateOnGPU(kernels.tupleMultiplicity(), soa->view());
+  cudaCheck(cudaGetLastError());
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "GAMW THN PANAGIA 7" << std::endl;
+
+  fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
+  cudaCheck(cudaGetLastError());
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "GAMW THN PANAGIA 8" << std::endl;
+
   if (m_params.useRiemannFit_) {
+    std::cout << "GAMW THN PANAGIA 8.1a" << std::endl;
     fitter.launchRiemannKernels(hits_d.view(), hits_d.nHits(), caConstants::maxNumberOfQuadruplets, stream);
+    cudaCheck(cudaGetLastError());
+    cudaCheck(cudaDeviceSynchronize());
+    std::cout << "GAMW THN PANAGIA 8.1" << std::endl;
   } else {
+    std::cout << "GAMW THN PANAGIA 8.2a" << std::endl;
     fitter.launchBrokenLineKernels(hits_d.view(), hits_d.nHits(), caConstants::maxNumberOfQuadruplets, stream);
+    cudaCheck(cudaGetLastError());
+    cudaCheck(cudaDeviceSynchronize());
+    std::cout << "GAMW THN PANAGIA 8.2" << std::endl;
   }
-  kernels.classifyTuples(hits_d, soa->view(), stream);
+
+  kernels.classifyTuples(hits_d.view(), tracks.view(), stream);
+  cudaCheck(cudaGetLastError());
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "GAMW THN PANAGIA 9" << std::endl;
 
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
@@ -217,17 +253,18 @@ pixelTrack::TrackSoADevice CAHitNtupletGeneratorOnGPU::makeTuplesAsync(TrackingR
   return tracks;
 }
 
-pixelTrack::TrackSoAHost CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2DCPU const& hits_d, float bfield) const {
+pixelTrack::TrackSoAHost CAHitNtupletGeneratorOnGPU::makeTuples(trackingRecHit::TrackingRecHitSoAHost const& hits_h,
+                                                                float bfield) const {
   pixelTrack::TrackSoAHost tracks(nullptr);
 
   CAHitNtupletGeneratorKernelsCPU kernels(m_params);
   kernels.setCounters(m_counters);
-  kernels.allocateOnGPU(hits_d.nHits(), nullptr);
+  kernels.allocateOnGPU(hits_h.nHits(), nullptr);
 
-  kernels.buildDoublets(hits_d, nullptr);
-  kernels.launchKernels(hits_d, tracks.view(), nullptr);
+  kernels.buildDoublets(hits_h.view(), hits_h.offsetBPIX2(), nullptr);
+  kernels.launchKernels(hits_h.view(), tracks.view(), nullptr);
 
-  if (0 == hits_d.nHits())
+  if (0 == hits_h.nHits())
     return tracks;
 
   // now fit
@@ -235,12 +272,12 @@ pixelTrack::TrackSoAHost CAHitNtupletGeneratorOnGPU::makeTuples(TrackingRecHit2D
   fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
 
   if (m_params.useRiemannFit_) {
-    fitter.launchRiemannKernelsOnCPU(hits_d.view(), hits_d.nHits(), caConstants::maxNumberOfQuadruplets);
+    fitter.launchRiemannKernelsOnCPU(hits_h.view(), hits_h.nHits(), caConstants::maxNumberOfQuadruplets);
   } else {
-    fitter.launchBrokenLineKernelsOnCPU(hits_d.view(), hits_d.nHits(), caConstants::maxNumberOfQuadruplets);
+    fitter.launchBrokenLineKernelsOnCPU(hits_h.view(), hits_h.nHits(), caConstants::maxNumberOfQuadruplets);
   }
 
-  kernels.classifyTuples(hits_d, tracks.view(), nullptr);
+  kernels.classifyTuples(hits_h.view(), tracks.view(), nullptr);
 
 #ifdef GPU_DEBUG
   std::cout << "finished building pixel tracks on CPU" << std::endl;

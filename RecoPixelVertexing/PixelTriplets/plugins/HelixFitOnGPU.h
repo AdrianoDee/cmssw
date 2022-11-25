@@ -2,7 +2,7 @@
 #define RecoPixelVertexing_PixelTriplets_plugins_HelixFitOnGPU_h
 
 #include "CUDADataFormats/Track/interface/PixelTrackUtilities.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitsUtilities.h"
 #include "RecoPixelVertexing/PixelTrackFitting/interface/FitResult.h"
 
 #include "CAConstants.h"
@@ -33,7 +33,8 @@ namespace riemannFit {
 
 class HelixFitOnGPU {
 public:
-  using HitsView = TrackingRecHit2DSOAView;
+  using HitSoAView = trackingRecHitSoA::HitSoAView;
+  using HitSoAConstView = trackingRecHitSoA::HitSoAConstView;
 
   using Tuples = pixelTrack::HitContainer;
   using OutputSoAView = pixelTrack::TrackSoAView;
@@ -44,11 +45,11 @@ public:
   ~HelixFitOnGPU() { deallocateOnGPU(); }
 
   void setBField(double bField) { bField_ = bField; }
-  void launchRiemannKernels(HitsView const *hv, uint32_t nhits, uint32_t maxNumberOfTuples, cudaStream_t cudaStream);
-  void launchBrokenLineKernels(HitsView const *hv, uint32_t nhits, uint32_t maxNumberOfTuples, cudaStream_t cudaStream);
+  void launchRiemannKernels(HitSoAConstView hv, uint32_t nhits, uint32_t maxNumberOfTuples, cudaStream_t cudaStream);
+  void launchBrokenLineKernels(HitSoAConstView hv, uint32_t nhits, uint32_t maxNumberOfTuples, cudaStream_t cudaStream);
 
-  void launchRiemannKernelsOnCPU(HitsView const *hv, uint32_t nhits, uint32_t maxNumberOfTuples);
-  void launchBrokenLineKernelsOnCPU(HitsView const *hv, uint32_t nhits, uint32_t maxNumberOfTuples);
+  void launchRiemannKernelsOnCPU(HitSoAConstView hv, uint32_t nhits, uint32_t maxNumberOfTuples);
+  void launchBrokenLineKernelsOnCPU(HitSoAConstView hv, uint32_t nhits, uint32_t maxNumberOfTuples);
 
   void allocateOnGPU(TupleMultiplicity const *tupleMultiplicity, OutputSoAView outputSoA);
   void deallocateOnGPU();

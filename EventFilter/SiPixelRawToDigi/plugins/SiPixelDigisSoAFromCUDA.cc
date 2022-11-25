@@ -1,4 +1,5 @@
 #include "CUDADataFormats/Common/interface/Product.h"
+#include "CUDADataFormats/Common/interface/PortableHostCollection.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDA.h"
 #include "DataFormats/SiPixelDigi/interface/SiPixelDigisSoA.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -49,12 +50,13 @@ void SiPixelDigisSoAFromCUDA::acquire(const edm::Event& iEvent,
   cms::cuda::ScopedContextAcquire ctx{iEvent.streamID(), std::move(waitingTaskHolder)};
 
   const auto& digis_d = ctx.get(iEvent, digiGetToken_);
-
-  nDigis_ = gpuDigis.nDigis();
-  digis_h = cms::cuda::PortableHostCollection<SiPixelDigisSoALayout<>>(gpuDigis.view().metadata().size(), stream);
+  
+  nDigis_ = digis_d.nDigis();
+  digis_h = cms::cuda::PortableHostCollection<SiPixelDigisSoALayout<>>(digis_d.view().metadata().size(), ctx.stream());
   cudaCheck(cudaMemcpyAsync(
-      digis_h.buffer().get(), digis_d.const_buffer().get(), digis_d.bufferSize(), cudaMemcpyDeviceToHost, stream));
-  cudaCheck(cudaGetLastError());
+      digis_h.buffer().get(), digis_d.const_buffer().get(), digis_d.bufferSize(), cudaMemcpyDeviceToHost, ctx.stream()));
+
+cudaCheck(cudaGetLastError());
 }
 
 void SiPixelDigisSoAFromCUDA::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -64,8 +66,9 @@ void SiPixelDigisSoAFromCUDA::produce(edm::Event& iEvent, const edm::EventSetup&
                  digis_h.view().rawIdArr(),
                  digis_h.view().adc(),
                  digis_h.view().clus());
-
+                 
   store_.reset();
+
 }
 
 // define as framework plugin

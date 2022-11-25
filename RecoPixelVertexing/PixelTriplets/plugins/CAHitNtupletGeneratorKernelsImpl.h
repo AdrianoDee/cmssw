@@ -2,8 +2,8 @@
 // Original Author: Felice Pantaleo, CERN
 //
 
-// #define NTUPLE_DEBUG
-// #define GPU_DEBUG
+#define NTUPLE_DEBUG
+#define GPU_DEBUG
 
 #include <cmath>
 #include <cstdint>
@@ -15,6 +15,7 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 #include "CUDADataFormats/Track/interface/PixelTrackUtilities.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitsUtilities.h"
 
 #include "CAConstants.h"
 #include "CAHitNtupletGeneratorKernels.h"
@@ -22,9 +23,11 @@
 #include "gpuFishbone.h"
 #include "gpuPixelDoublets.h"
 
-using HitsOnGPU = TrackingRecHit2DSOAView;
-using HitsOnCPU = TrackingRecHit2DGPU;
+// using HitsOnGPU = TrackingRecHit2DSOAView;
+// using HitsOnCPU = TrackingRecHit2DGPU;
 
+using HitSoAView = trackingRecHitSoA::HitSoAView;
+using HitSoAConstView = trackingRecHitSoA::HitSoAConstView;
 using HitToTuple = caConstants::HitToTuple;
 using TupleMultiplicity = caConstants::TupleMultiplicity;
 
@@ -259,7 +262,7 @@ __global__ void kernel_fastDuplicateRemover(GPUCACell const *__restrict__ cells,
 
 __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
                                cms::cuda::AtomicPairCounter *apc2,  // just to zero them,
-                               GPUCACell::Hits const *__restrict__ hhp,
+                               GPUCACell::HitsConstView hh,
                                GPUCACell *cells,
                                uint32_t const *__restrict__ nCells,
                                gpuPixelDoublets::CellNeighborsVector *cellNeighbors,
@@ -270,7 +273,7 @@ __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
                                float CAThetaCutForward,
                                float dcaCutInnerTriplet,
                                float dcaCutOuterTriplet) {
-  auto const &hh = *hhp;
+  // auto &hh = *hhp;
 
   auto firstCellIndex = threadIdx.y + blockIdx.y * blockDim.y;
   auto first = threadIdx.x;
@@ -324,7 +327,7 @@ __global__ void kernel_connect(cms::cuda::AtomicPairCounter *apc1,
   }    // loop on outer cells
 }
 
-__global__ void kernel_find_ntuplets(GPUCACell::Hits const *__restrict__ hhp,
+__global__ void kernel_find_ntuplets(GPUCACell::HitsConstView hh,
                                      GPUCACell *__restrict__ cells,
                                      uint32_t const *nCells,
                                      gpuPixelDoublets::CellTracksVector *cellTracks,
@@ -332,7 +335,7 @@ __global__ void kernel_find_ntuplets(GPUCACell::Hits const *__restrict__ hhp,
                                      cms::cuda::AtomicPairCounter *apc,
                                      unsigned int minHitsPerNtuplet) {
   // recursive: not obvious to widen
-  auto const &hh = *hhp;
+  // auto &hh = *hhp;
 
   auto first = threadIdx.x + blockIdx.x * blockDim.x;
   for (int idx = first, nt = (*nCells); idx < nt; idx += gridDim.x * blockDim.x) {
@@ -537,18 +540,17 @@ __global__ void kernel_fillHitInTracks(TkSoAView tracks_view,  // TODO: Make Con
   }
 }
 
-__global__ void kernel_fillHitDetIndices(TkSoAView tracks_view, TrackingRecHit2DSOAView const *__restrict__ hhp) {
+__global__ void kernel_fillHitDetIndices(TkSoAView tracks_view, HitSoAConstView hh) {
   int first = blockDim.x * blockIdx.x + threadIdx.x;
   // copy offsets
   for (int idx = first, ntot = tracks_view.hitIndices().totOnes(); idx < ntot; idx += gridDim.x * blockDim.x) {
     tracks_view.detIndices().off[idx] = tracks_view.hitIndices().off[idx];
   }
   // fill hit indices
-  auto const &hh = *hhp;
   auto nhits = hh.nHits();
   for (int idx = first, ntot = tracks_view.hitIndices().size(); idx < ntot; idx += gridDim.x * blockDim.x) {
     assert(tracks_view.hitIndices().content[idx] < nhits);
-    tracks_view.detIndices().content[idx] = hh.detectorIndex(tracks_view.hitIndices().content[idx]);
+    tracks_view.detIndices().content[idx] = hh[tracks_view.hitIndices().content[idx]].detectorIndex();
   }
 }
 
@@ -691,7 +693,7 @@ __global__ void kernel_rejectDuplicate(TkSoAView tracks_view,
   }
 }
 
-__global__ void kernel_sharedHitCleaner(TrackingRecHit2DSOAView const *__restrict__ hhp,
+__global__ void kernel_sharedHitCleaner(HitSoAConstView hh,
                                         TkSoAView tracks_view,
                                         int nmin,
                                         bool dupPassThrough,
@@ -703,7 +705,7 @@ __global__ void kernel_sharedHitCleaner(TrackingRecHit2DSOAView const *__restric
 
   auto &hitToTuple = *phitToTuple;
 
-  auto const &hh = *hhp;
+  // auto const &hh = *hhp;
   int l1end = hh.hitsLayerStart()[1];
 
   int first = blockDim.x * blockIdx.x + threadIdx.x;
@@ -839,14 +841,15 @@ __global__ void kernel_simpleTripletCleaner(
   }  // loop over hits
 }
 
-__global__ void kernel_print_found_ntuplets(TrackingRecHit2DSOAView const *__restrict__ hhp,
+__global__ void kernel_print_found_ntuplets(HitSoAView hh,
                                             TkSoAView tracks_view,
                                             CAHitNtupletGeneratorKernelsGPU::HitToTuple const *__restrict__ phitToTuple,
                                             int32_t firstPrint,
                                             int32_t lastPrint,
                                             int iev) {
+
   constexpr auto loose = pixelTrack::Quality::loose;
-  auto const &hh = *hhp;
+
 
   int first = firstPrint + blockDim.x * blockIdx.x + threadIdx.x;
   for (int i = first, np = std::min(lastPrint, tracks_view.hitIndices().nOnes()); i < np; i += blockDim.x * gridDim.x) {
@@ -867,13 +870,13 @@ __global__ void kernel_print_found_ntuplets(TrackingRecHit2DSOAView const *__res
            pixelTrack::utilities::tip(tracks_view, i),
            pixelTrack::utilities::zip(tracks_view, i),
            tracks_view[i].chi2(),
-           hh.zGlobal(*tracks_view.hitIndices().begin(i)),
-           hh.zGlobal(*(tracks_view.hitIndices().begin(i) + 1)),
-           hh.zGlobal(*(tracks_view.hitIndices().begin(i) + 2)),
-           nh > 3 ? hh.zGlobal(int(*(tracks_view.hitIndices().begin(i) + 3))) : 0,
-           nh > 4 ? hh.zGlobal(int(*(tracks_view.hitIndices().begin(i) + 4))) : 0,
-           nh > 5 ? hh.zGlobal(int(*(tracks_view.hitIndices().begin(i) + 5))) : 0,
-           nh > 6 ? hh.zGlobal(int(*(tracks_view.hitIndices().begin(i) + nh - 1))) : 0);
+           hh[*tracks_view.hitIndices().begin(i)].zGlobal(),
+           hh[*(tracks_view.hitIndices().begin(i) + 1)].zGlobal(),
+           hh[*(tracks_view.hitIndices().begin(i) + 2)].zGlobal(),
+           nh > 3 ? hh[int(*(tracks_view.hitIndices().begin(i) + 3))].zGlobal() : 0,
+           nh > 4 ? hh[int(*(tracks_view.hitIndices().begin(i) + 4))].zGlobal() : 0,
+           nh > 5 ? hh[int(*(tracks_view.hitIndices().begin(i) + 5))].zGlobal() : 0,
+           nh > 6 ? hh[int(*(tracks_view.hitIndices().begin(i) + nh - 1))].zGlobal() : 0);
   }
 }
 

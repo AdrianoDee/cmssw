@@ -1,6 +1,6 @@
 #include "RiemannFitOnGPU.h"
 
-void HelixFitOnGPU::launchRiemannKernelsOnCPU(HitsView const *hv, uint32_t nhits, uint32_t maxNumberOfTuples) {
+void HelixFitOnGPU::launchRiemannKernelsOnCPU(HitSoAConstView hv, uint32_t nhits, uint32_t maxNumberOfTuples) {
   assert(tuples_);
 
   //  Fit internals

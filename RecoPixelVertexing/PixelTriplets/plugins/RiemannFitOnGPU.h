@@ -6,7 +6,7 @@
 
 #include <cuda_runtime.h>
 
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitsUtilities.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cudaCheck.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
@@ -14,7 +14,7 @@
 
 #include "HelixFitOnGPU.h"
 
-using HitsOnGPU = TrackingRecHit2DSOAView;
+using HitSoAConstView = trackingRecHitSoA::HitSoAConstView;
 using Tuples = pixelTrack::HitContainer;
 using OutputSoAView = pixelTrack::TrackSoAView;
 
@@ -22,7 +22,7 @@ template <int N>
 __global__ void kernel_FastFit(Tuples const *__restrict__ foundNtuplets,
                                caConstants::TupleMultiplicity const *__restrict__ tupleMultiplicity,
                                uint32_t nHits,
-                               HitsOnGPU const *__restrict__ hhp,
+                               HitSoAConstView hh,
                                double *__restrict__ phits,
                                float *__restrict__ phits_ge,
                                double *__restrict__ pfast_fit,
@@ -63,14 +63,12 @@ __global__ void kernel_FastFit(Tuples const *__restrict__ foundNtuplets,
     auto const *hitId = foundNtuplets->begin(tkid);
     for (unsigned int i = 0; i < hitsInFit; ++i) {
       auto hit = hitId[i];
-      // printf("Hit global: %f,%f,%f\n", hhp->xg_d[hit],hhp->yg_d[hit],hhp->zg_d[hit]);
+      // printf("Hit global: %f,%f,%f\n", hh.xg_d[hit],hh.yg_d[hit],hh.zg_d[hit]);
       float ge[6];
-      hhp->cpeParams()
-          .detParams(hhp->detectorIndex(hit))
-          .frame.toGlobal(hhp->xerrLocal(hit), 0, hhp->yerrLocal(hit), ge);
-      // printf("Error: %d: %f,%f,%f,%f,%f,%f\n",hhp->detInd_d[hit],ge[0],ge[1],ge[2],ge[3],ge[4],ge[5]);
+      hh.cpeParams().detParams(hh.detectorIndex(hit)).frame.toGlobal(hh.xerrLocal(hit), 0, hh.yerrLocal(hit), ge);
+      // printf("Error: %d: %f,%f,%f,%f,%f,%f\n",hh.detInd_d[hit],ge[0],ge[1],ge[2],ge[3],ge[4],ge[5]);
 
-      hits.col(i) << hhp->xGlobal(hit), hhp->yGlobal(hit), hhp->zGlobal(hit);
+      hits.col(i) << hh.xGlobal(hit), hh.yGlobal(hit), hh.zGlobal(hit);
       hits_ge.col(i) << ge[0], ge[1], ge[2], ge[3], ge[4], ge[5];
     }
     riemannFit::fastFit(hits, fast_fit);

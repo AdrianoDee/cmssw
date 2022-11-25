@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <limits>
 
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitsUtilities.h"
 #include "DataFormats/Math/interface/approx_atan2.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/VecArray.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
@@ -21,6 +21,7 @@ namespace gpuPixelDoublets {
   using CellTracks = caConstants::CellTracks;
   using CellNeighborsVector = caConstants::CellNeighborsVector;
   using CellTracksVector = caConstants::CellTracksVector;
+  using HitsConstView = trackingRecHitSoA::HitSoAConstView;
 
   __device__ __forceinline__ void doubletsFromHisto(uint8_t const* __restrict__ layerPairs,
                                                     uint32_t nPairs,
@@ -28,7 +29,7 @@ namespace gpuPixelDoublets {
                                                     uint32_t* nCells,
                                                     CellNeighborsVector* cellNeighbors,
                                                     CellTracksVector* cellTracks,
-                                                    TrackingRecHit2DSOAView const& __restrict__ hh,
+                                                    HitsConstView hh,
                                                     GPUCACell::OuterHitOfCell isOuterHitOfCell,
                                                     int16_t const* __restrict__ phicuts,
                                                     float const* __restrict__ minz,
@@ -50,10 +51,10 @@ namespace gpuPixelDoublets {
 
     bool isOuterLadder = ideal_cond;
 
-    using PhiBinner = TrackingRecHit2DSOAView::PhiBinner;
+    using PhiBinner = trackingRecHitSoA::PhiBinner;
 
     auto const& __restrict__ phiBinner = hh.phiBinner();
-    uint32_t const* __restrict__ offsets = hh.hitsLayerStart();
+    uint32_t const* __restrict__ offsets = hh.hitsLayerStart().data();
     assert(offsets);
 
     auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };

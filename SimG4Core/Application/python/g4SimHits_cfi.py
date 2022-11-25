@@ -65,7 +65,9 @@ common_MCtruth = cms.PSet(
 ## enable fine calorimeter functionality: must occur *before* common PSet is used below
 from Configuration.ProcessModifiers.fineCalo_cff import fineCalo
 fineCalo.toModify(common_MCtruth,
-    DoFineCalo = True
+    DoFineCalo = True,
+    UseFineCalo = [2],
+    EminFineTrack = 0.0,
 )
 
 ## enable CaloBoundary information for all Phase2 workflows
@@ -88,6 +90,9 @@ g4SimHits = cms.EDProducer("OscarMTProducer",
     UseParametrisedEMPhysics = cms.untracked.bool(True),
     ThresholdForGeometryExceptions = cms.double(0.1), ## in GeV
     TraceExceptions = cms.bool(False),
+    DefaultVoxelDensity = cms.double(2.0),
+    VoxelRegions = cms.vstring(),
+    VoxelDensityPerRegion = cms.vdouble(),
     CheckGeometry = cms.untracked.bool(False),
     OnlySDs = cms.vstring('ZdcSensitiveDetector', 'TotemT2ScintSensitiveDetector', 'TotemSensitiveDetector', 'RomanPotSensitiveDetector', 'PLTSensitiveDetector', 'MuonSensitiveDetector', 'MtdSensitiveDetector', 'BCM1FSensitiveDetector', 'EcalSensitiveDetector', 'CTPPSSensitiveDetector', 'BSCSensitiveDetector', 'CTPPSDiamondSensitiveDetector', 'FP420SensitiveDetector', 'BHMSensitiveDetector', 'CastorSensitiveDetector', 'CaloTrkProcessing', 'HcalSensitiveDetector', 'TkAccumulatingSensitiveDetector'),
     G4CheckOverlap = cms.untracked.PSet(

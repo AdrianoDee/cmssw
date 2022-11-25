@@ -2,7 +2,7 @@
 // Package:    SiPixelPhase1CompareRecHitsSoA
 // Class:      SiPixelPhase1CompareRecHitsSoA
 //
-/**\class SiPixelPhase1CompareRecHitsSoA SiPixelPhase1CompareRecHitsSoA.cc 
+/**\class SiPixelPhase1CompareRecHitsSoA SiPixelPhase1CompareRecHitsSoA.cc
 */
 //
 // Author: Suvankar Roy Chowdhury, Alessandro Rossi
@@ -18,7 +18,7 @@
 #include "DQMServices/Core/interface/MonitorElement.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMStore.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoAHost.h"
 // Geometry
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
@@ -39,8 +39,8 @@ public:
 private:
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
   const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topoToken_;
-  const edm::EDGetTokenT<TrackingRecHit2DCPU> tokenSoAHitsCPU_;
-  const edm::EDGetTokenT<TrackingRecHit2DCPU> tokenSoAHitsGPU_;
+  const edm::EDGetTokenT<trackingRecHit::TrackingRecHitSoAHost> tokenSoAHitsCPU_;
+  const edm::EDGetTokenT<trackingRecHit::TrackingRecHitSoAHost> tokenSoAHitsGPU_;
   const std::string topFolderName_;
   const float mind2cut_;
   static constexpr uint32_t invalidHit_ = std::numeric_limits<uint32_t>::max();
@@ -77,8 +77,10 @@ private:
 SiPixelPhase1CompareRecHitsSoA::SiPixelPhase1CompareRecHitsSoA(const edm::ParameterSet& iConfig)
     : geomToken_(esConsumes<TrackerGeometry, TrackerDigiGeometryRecord, edm::Transition::BeginRun>()),
       topoToken_(esConsumes<TrackerTopology, TrackerTopologyRcd, edm::Transition::BeginRun>()),
-      tokenSoAHitsCPU_(consumes<TrackingRecHit2DCPU>(iConfig.getParameter<edm::InputTag>("pixelHitsSrcCPU"))),
-      tokenSoAHitsGPU_(consumes<TrackingRecHit2DCPU>(iConfig.getParameter<edm::InputTag>("pixelHitsSrcGPU"))),
+      tokenSoAHitsCPU_(
+          consumes<trackingRecHit::TrackingRecHitSoAHost>(iConfig.getParameter<edm::InputTag>("pixelHitsSrcCPU"))),
+      tokenSoAHitsGPU_(
+          consumes<trackingRecHit::TrackingRecHitSoAHost>(iConfig.getParameter<edm::InputTag>("pixelHitsSrcGPU"))),
       topFolderName_(iConfig.getParameter<std::string>("topFolderName")),
       mind2cut_(iConfig.getParameter<double>("minD2cut")) {}
 //
@@ -107,24 +109,27 @@ void SiPixelPhase1CompareRecHitsSoA::analyze(const edm::Event& iEvent, const edm
     return;
   }
   auto const& rhsoaCPU = *rhsoaHandleCPU;
-  const TrackingRecHit2DSOAView* soa2dCPU = rhsoaCPU.view();
   auto const& rhsoaGPU = *rhsoaHandleGPU;
-  const TrackingRecHit2DSOAView* soa2dGPU = rhsoaGPU.view();
+  // const TrackingRecHit2DSOAView* soa2dCPU
+  auto const& soa2dCPU = rhsoaCPU.const_view();
+  auto const& soa2dGPU = rhsoaGPU.const_view();
+  // *rhsoaHandleGPU;
+  // const TrackingRecHit2DSOAView* soa2dGPU = rhsoaGPU.const_view();
 
-  uint32_t nHitsCPU = soa2dCPU->nHits();
-  uint32_t nHitsGPU = soa2dGPU->nHits();
+  uint32_t nHitsCPU = soa2dCPU.nHits();
+  uint32_t nHitsGPU = soa2dGPU.nHits();
   hnHits_->Fill(nHitsCPU, nHitsGPU);
   auto detIds = tkGeom_->detUnitIds();
   for (uint32_t i = 0; i < nHitsCPU; i++) {
     float minD = mind2cut_;
     uint32_t matchedHit = invalidHit_;
-    uint16_t indCPU = soa2dCPU->detectorIndex(i);
-    float xLocalCPU = soa2dCPU->xLocal(i);
-    float yLocalCPU = soa2dCPU->yLocal(i);
+    uint16_t indCPU = soa2dCPU[i].detectorIndex();
+    float xLocalCPU = soa2dCPU[i].xLocal();
+    float yLocalCPU = soa2dCPU[i].yLocal();
     for (uint32_t j = 0; j < nHitsGPU; j++) {
-      if (soa2dGPU->detectorIndex(j) == indCPU) {
-        float dx = xLocalCPU - soa2dGPU->xLocal(j);
-        float dy = yLocalCPU - soa2dGPU->yLocal(j);
+      if (soa2dGPU.detectorIndex(j) == indCPU) {
+        float dx = xLocalCPU - soa2dGPU[j].xLocal();
+        float dy = yLocalCPU - soa2dGPU[j].yLocal();
         float distance = dx * dx + dy * dy;
         if (distance < minD) {
           minD = distance;
@@ -133,20 +138,20 @@ void SiPixelPhase1CompareRecHitsSoA::analyze(const edm::Event& iEvent, const edm
       }
     }
     DetId id = detIds[indCPU];
-    uint32_t chargeCPU = soa2dCPU->charge(i);
-    int16_t sizeXCPU = std::ceil(float(std::abs(soa2dCPU->clusterSizeX(i)) / 8.));
-    int16_t sizeYCPU = std::ceil(float(std::abs(soa2dCPU->clusterSizeY(i)) / 8.));
+    uint32_t chargeCPU = soa2dCPU[i].chargeAndStatus().charge;
+    int16_t sizeXCPU = std::ceil(float(std::abs(soa2dCPU[i].clusterSizeX()) / 8.));
+    int16_t sizeYCPU = std::ceil(float(std::abs(soa2dCPU[i].clusterSizeY()) / 8.));
     uint32_t chargeGPU = 0;
     int16_t sizeXGPU = -99;
     int16_t sizeYGPU = -99;
     float xLocalGPU = -999.;
     float yLocalGPU = -999.;
     if (matchedHit != invalidHit_) {
-      chargeGPU = soa2dGPU->charge(matchedHit);
-      sizeXGPU = std::ceil(float(std::abs(soa2dGPU->clusterSizeX(matchedHit)) / 8.));
-      sizeYGPU = std::ceil(float(std::abs(soa2dGPU->clusterSizeY(matchedHit)) / 8.));
-      xLocalGPU = soa2dGPU->xLocal(matchedHit);
-      yLocalGPU = soa2dGPU->yLocal(matchedHit);
+      chargeGPU = soa2dGPU[matchedHit].chargeAndStatus().charge;
+      sizeXGPU = std::ceil(float(std::abs(soa2dGPU[matchedHit].clusterSizeX()) / 8.));
+      sizeYGPU = std::ceil(float(std::abs(soa2dGPU[matchedHit].clusterSizeY()) / 8.));
+      xLocalGPU = soa2dGPU[matchedHit].xLocal();
+      yLocalGPU = soa2dGPU[matchedHit].yLocal();
     }
     switch (id.subdetId()) {
       case PixelSubdetector::PixelBarrel:

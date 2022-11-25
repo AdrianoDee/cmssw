@@ -3,7 +3,7 @@
 // Package:    SiPixelPhase1MonitorRecHitsSoA
 // Class:      SiPixelPhase1MonitorRecHitsSoA
 //
-/**\class SiPixelPhase1MonitorRecHitsSoA SiPixelPhase1MonitorRecHitsSoA.cc 
+/**\class SiPixelPhase1MonitorRecHitsSoA SiPixelPhase1MonitorRecHitsSoA.cc
 */
 //
 // Author: Suvankar Roy Chowdhury, Alessandro Rossi
@@ -19,7 +19,7 @@
 #include "DQMServices/Core/interface/MonitorElement.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMStore.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoAHost.h"
 // Geometry
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
@@ -40,7 +40,7 @@ public:
 private:
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
   const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topoToken_;
-  const edm::EDGetTokenT<TrackingRecHit2DCPU> tokenSoAHitsCPU_;
+  const edm::EDGetTokenT<trackingRecHit::TrackingRecHitSoAHost> tokenSoAHitsCPU_;
   const std::string topFolderName_;
   const TrackerGeometry* tkGeom_ = nullptr;
   const TrackerTopology* tTopo_ = nullptr;
@@ -61,10 +61,10 @@ private:
   MonitorElement* hFcharge;
   MonitorElement* hFsizex;
   MonitorElement* hFsizey;
-  MonitorElement* hFposXYD[2][3];
-  MonitorElement* hFchargeD[2][3];
-  MonitorElement* hFsizexD[2][3];
-  MonitorElement* hFsizeyD[2][3];
+  MonitorElement* hFposXYD[2][12];
+  MonitorElement* hFchargeD[2][12];
+  MonitorElement* hFsizexD[2][12];
+  MonitorElement* hFsizeyD[2][12];
 };
 
 //
@@ -74,7 +74,8 @@ private:
 SiPixelPhase1MonitorRecHitsSoA::SiPixelPhase1MonitorRecHitsSoA(const edm::ParameterSet& iConfig)
     : geomToken_(esConsumes<TrackerGeometry, TrackerDigiGeometryRecord, edm::Transition::BeginRun>()),
       topoToken_(esConsumes<TrackerTopology, TrackerTopologyRcd, edm::Transition::BeginRun>()),
-      tokenSoAHitsCPU_(consumes<TrackingRecHit2DCPU>(iConfig.getParameter<edm::InputTag>("pixelHitsSrc"))),
+      tokenSoAHitsCPU_(
+          consumes<trackingRecHit::TrackingRecHitSoAHost>(iConfig.getParameter<edm::InputTag>("pixelHitsSrc"))),
       topFolderName_(iConfig.getParameter<std::string>("TopFolderName")) {}
 //
 // Begin Run
@@ -93,22 +94,24 @@ void SiPixelPhase1MonitorRecHitsSoA::analyze(const edm::Event& iEvent, const edm
     edm::LogWarning("SiPixelPhase1MonitorRecHitsSoA") << "No RecHits SoA found \n returning!" << std::endl;
     return;
   }
-  auto const& rhsoa = *rhsoaHandle;
-  const TrackingRecHit2DSOAView* soa2d = rhsoa.view();
+  auto const& rhsoaCPU = *rhsoaHandle;
+  auto const& soa2d = rhsoaCPU.const_view();
+  // const TrackingRecHit2DSOAView* soa2d = rhsoa.view();
 
-  uint32_t nHits_ = soa2d->nHits();
+  uint32_t nHits_ = soa2d.nHits();
   hnHits->Fill(nHits_);
   auto detIds = tkGeom_->detUnitIds();
   for (uint32_t i = 0; i < nHits_; i++) {
-    DetId id = detIds[soa2d->detectorIndex(i)];
-    float xG = soa2d->xGlobal(i);
-    float yG = soa2d->yGlobal(i);
-    float zG = soa2d->zGlobal(i);
-    float rG = soa2d->rGlobal(i);
-    float fphi = short2phi(soa2d->iphi(i));
-    uint32_t charge = soa2d->charge(i);
-    int16_t sizeX = std::ceil(float(std::abs(soa2d->clusterSizeX(i)) / 8.));
-    int16_t sizeY = std::ceil(float(std::abs(soa2d->clusterSizeY(i)) / 8.));
+    DetId id = detIds[soa2d[i].detectorIndex()];
+    float xG = soa2d[i].xGlobal();
+    ;
+    float yG = soa2d[i].yGlobal();
+    float zG = soa2d[i].zGlobal();
+    float rG = soa2d[i].rGlobal();
+    float fphi = short2phi(soa2d[i].iphi());
+    uint32_t charge = soa2d[i].chargeAndStatus().charge;
+    int16_t sizeX = std::ceil(float(std::abs(soa2d[i].clusterSizeX()) / 8.));
+    int16_t sizeY = std::ceil(float(std::abs(soa2d[i].clusterSizeY()) / 8.));
     hBFposZP->Fill(zG, fphi);
     int16_t ysign = yG >= 0 ? 1 : -1;
     hBFposZR->Fill(zG, rG * ysign);

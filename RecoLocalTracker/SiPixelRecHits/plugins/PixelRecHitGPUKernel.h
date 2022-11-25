@@ -8,8 +8,9 @@
 #include "CUDADataFormats/BeamSpot/interface/BeamSpotCUDA.h"
 #include "CUDADataFormats/SiPixelCluster/interface/SiPixelClustersCUDA.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDA.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoADevice.h"
 
+#define GPU_DEBUG
 namespace pixelgpudetails {
 
   class PixelRecHitGPUKernel {
@@ -17,17 +18,19 @@ namespace pixelgpudetails {
     PixelRecHitGPUKernel() = default;
     ~PixelRecHitGPUKernel() = default;
 
+    using TrackingRecHitSoADevice = trackingRecHit::TrackingRecHitSoADevice;
+
     PixelRecHitGPUKernel(const PixelRecHitGPUKernel&) = delete;
     PixelRecHitGPUKernel(PixelRecHitGPUKernel&&) = delete;
     PixelRecHitGPUKernel& operator=(const PixelRecHitGPUKernel&) = delete;
     PixelRecHitGPUKernel& operator=(PixelRecHitGPUKernel&&) = delete;
 
-    TrackingRecHit2DGPU makeHitsAsync(SiPixelDigisCUDA const& digis_d,
-                                      SiPixelClustersCUDA const& clusters_d,
-                                      BeamSpotCUDA const& bs_d,
-                                      pixelCPEforGPU::ParamsOnGPU const* cpeParams,
-                                      bool isPhase2,
-                                      cudaStream_t stream) const;
+    TrackingRecHitSoADevice makeHitsAsync(SiPixelDigisCUDA const& digis_d,
+                                          SiPixelClustersCUDA const& clusters_d,
+                                          BeamSpotCUDA const& bs_d,
+                                          pixelCPEforGPU::ParamsOnGPU const* cpeParams,
+                                          bool isPhase2,
+                                          cudaStream_t stream) const;
   };
 }  // namespace pixelgpudetails
 

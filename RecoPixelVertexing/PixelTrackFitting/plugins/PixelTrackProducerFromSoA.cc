@@ -134,7 +134,7 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
   auto const &rcs = rechits.data();
   auto nhits = rcs.size();
   hitmap.resize(nhits, nullptr);
-
+  std::cout << "nHits = " << nhits << std::endl;
   auto const *hitsModuleStart = iEvent.get(hmsToken_).get();
   auto fc = hitsModuleStart;
 
@@ -144,6 +144,7 @@ void PixelTrackProducerFromSoA::produce(edm::StreamID streamID,
     auto const &clus = thit.firstClusterRef();
     assert(clus.isPixel());
     auto i = fc[detI] + clus.pixelCluster().originalId();
+    std::cout << "i = " << i << std::endl;
     if (i >= hitmap.size())
       hitmap.resize(i + 256, nullptr);  // only in case of hit overflow in one module
     assert(nullptr == hitmap[i]);

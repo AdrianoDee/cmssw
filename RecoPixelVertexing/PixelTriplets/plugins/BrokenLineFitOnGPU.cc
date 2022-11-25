@@ -1,6 +1,6 @@
 #include "BrokenLineFitOnGPU.h"
 
-void HelixFitOnGPU::launchBrokenLineKernelsOnCPU(HitsView const* hv, uint32_t hitsInFit, uint32_t maxNumberOfTuples) {
+void HelixFitOnGPU::launchBrokenLineKernelsOnCPU(HitSoAConstView hv, uint32_t hitsInFit, uint32_t maxNumberOfTuples) {
   assert(tuples_);
 
 #ifdef BROKENLINE_DEBUG

@@ -7,29 +7,32 @@
 
 #include "CUDADataFormats/BeamSpot/interface/BeamSpotCUDA.h"
 #include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
+// #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHit2DHeterogeneous.h"
 #include "DataFormats/Math/interface/approx_atan2.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cuda_assert.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDASOAView.h"
+#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitsUtilities.h"
 
+#define GPU_DEBUG
 namespace gpuPixelRecHits {
 
   __global__ void getHits(pixelCPEforGPU::ParamsOnGPU const* __restrict__ cpeParams,
                           BeamSpotPOD const* __restrict__ bs,
-                          SiPixelDigisCUDASOAView const digis,
+                          // SiPixelDigisCUDASOAView const digis
+                          SiPixelDigisCUDASOAConstView digis,
                           int numElements,
-                          SiPixelClustersCUDA::SiPixelClustersCUDASOAView const* __restrict__ pclusters,
-                          TrackingRecHit2DSOAView* phits) {
+                          SiPixelClustersCUDASoA::ConstView clusters,
+                          trackingRecHitSoA::HitSoAView hits) {
     // FIXME
     // the compiler seems NOT to optimize loads from views (even in a simple test case)
     // The whole gimnastic here of copying or not is a pure heuristic exercise that seems to produce the fastest code with the above signature
     // not using views (passing a gazzilion of array pointers) seems to produce the fastest code (but it is harder to mantain)
-    assert(phits);
+    // assert(phits);
     assert(cpeParams);
-    auto& hits = *phits;
+    // auto& hits = *phits;
 
-    auto const& clusters = *pclusters;
+    // auto const& clusters = *pclusters;
     auto isPhase2 = cpeParams->commonParams().isPhase2;
     // copy average geometry corrected by beamspot . FIXME (move it somewhere else???)
     if (0 == blockIdx.x) {
@@ -71,15 +74,15 @@ namespace gpuPixelRecHits {
 #ifdef GPU_DEBUG
     if (threadIdx.x == 0) {
       auto k = clusters.moduleStart(1 + blockIdx.x);
-      while (digis.moduleInd(k) == invalidModuleId)
+      while (digis.moduleId(k) == invalidModuleId)
         ++k;
-      assert(digis.moduleInd(k) == me);
+      assert(digis.moduleId(k) == me);
     }
 #endif
 #ifdef GPU_DEBUG
-    if (me % 100 == 1)
-      if (threadIdx.x == 0)
-        printf("hitbuilder: %d clusters in module %d. will write at %d\n", nclus, me, clusters.clusModuleStart(me));
+    // if (me % 100 == 1)
+    if (threadIdx.x == 0)
+      printf("hitbuilder: %d clusters in module %d. will write at %d\n", nclus, me, clusters.clusModuleStart(me));
 #endif
     for (int startClus = 0, endClus = nclus; startClus < endClus; startClus += MaxHitsInIter) {
       int nClusInIter = std::min(MaxHitsInIter, endClus - startClus);
@@ -108,7 +111,7 @@ namespace gpuPixelRecHits {
       // one thread per "digi"
       auto first = clusters.moduleStart(1 + blockIdx.x) + threadIdx.x;
       for (int i = first; i < numElements; i += blockDim.x) {
-        auto id = digis.moduleInd(i);
+        auto id = digis.moduleId(i);
         if (id == invalidModuleId)
           continue;  // not valid
         if (id != me)
@@ -131,7 +134,7 @@ namespace gpuPixelRecHits {
 
       auto pixmx = cpeParams->detParams(me).pixmx;
       for (int i = first; i < numElements; i += blockDim.x) {
-        auto id = digis.moduleInd(i);
+        auto id = digis.moduleId(i);
         if (id == invalidModuleId)
           continue;  // not valid
         if (id != me)
@@ -175,18 +178,19 @@ namespace gpuPixelRecHits {
           pixelCPEforGPU::errorFromSize(cpeParams->commonParams(), cpeParams->detParams(me), clusParams, ic);
 
         // store it
-        hits.setChargeAndStatus(h, clusParams.charge[ic], clusParams.status[ic]);
-        hits.detectorIndex(h) = me;
+        hits[h].chargeAndStatus().charge = clusParams.charge[ic];
+        hits[h].chargeAndStatus().status = clusParams.status[ic];
+        hits[h].detectorIndex() = me;
 
         float xl, yl;
-        hits.xLocal(h) = xl = clusParams.xpos[ic];
-        hits.yLocal(h) = yl = clusParams.ypos[ic];
+        hits[h].xLocal() = xl = clusParams.xpos[ic];
+        hits[h].yLocal() = yl = clusParams.ypos[ic];
 
-        hits.clusterSizeX(h) = clusParams.xsize[ic];
-        hits.clusterSizeY(h) = clusParams.ysize[ic];
+        hits[h].clusterSizeX() = clusParams.xsize[ic];
+        hits[h].clusterSizeY() = clusParams.ysize[ic];
 
-        hits.xerrLocal(h) = clusParams.xerr[ic] * clusParams.xerr[ic] + cpeParams->detParams(me).apeXX;
-        hits.yerrLocal(h) = clusParams.yerr[ic] * clusParams.yerr[ic] + cpeParams->detParams(me).apeYY;
+        hits[h].xerrLocal() = clusParams.xerr[ic] * clusParams.xerr[ic] + cpeParams->detParams(me).apeXX;
+        hits[h].yerrLocal() = clusParams.yerr[ic] * clusParams.yerr[ic] + cpeParams->detParams(me).apeYY;
 
         // keep it local for computations
         float xg, yg, zg;
@@ -197,12 +201,12 @@ namespace gpuPixelRecHits {
         yg -= bs->y;
         zg -= bs->z;
 
-        hits.xGlobal(h) = xg;
-        hits.yGlobal(h) = yg;
-        hits.zGlobal(h) = zg;
+        hits[h].xGlobal() = xg;
+        hits[h].yGlobal() = yg;
+        hits[h].zGlobal() = zg;
 
-        hits.rGlobal(h) = std::sqrt(xg * xg + yg * yg);
-        hits.iphi(h) = unsafe_atan2s<7>(yg, xg);
+        hits[h].rGlobal() = std::sqrt(xg * xg + yg * yg);
+        hits[h].iphi() = unsafe_atan2s<7>(yg, xg);
       }
       __syncthreads();
     }  // end loop on batches
