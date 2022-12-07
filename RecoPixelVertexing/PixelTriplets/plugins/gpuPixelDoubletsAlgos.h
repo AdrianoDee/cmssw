@@ -44,8 +44,12 @@ namespace gpuPixelDoublets {
     const bool doZ0Cut_;
     const bool doPtCut_;
     const bool idealConditions_;  //this is actually not used by phase2
+    //the cuts
+    const double z0Cut_;
+    const double ptCut_;
 
     __device__ __forceinline__ bool zSizeCut(H const& hh, int i, int o) const {
+
       auto mi = hh.detectorIndex(i);
 
       bool innerB1 = mi < T::last_bpix1_detIndex;
@@ -55,6 +59,7 @@ namespace gpuPixelDoublets {
       if (mes < 0)
         return false;
 
+
       auto mo = hh.detectorIndex(o);
       auto so = hh.clusterSizeY(o);
 
@@ -63,29 +68,31 @@ namespace gpuPixelDoublets {
 
       auto innerBarrel = mi < T::last_barrel_detIndex;
       auto onlyBarrel = mo < T::last_barrel_detIndex;
-
-      if (not innerBarrel and not onlyBarrel)
-        return false;
+      
+      if(not innerBarrel and not onlyBarrel)
+	return false;
       auto dy = innerB1 ? T::maxDYsize12 : T::maxDYsize;
 
-      return onlyBarrel ? so > 0 && std::abs(so - mes) > dy
-                        : innerBarrel && std::abs(mes - int(std::abs(dz / dr) * T::dzdrFact + 0.5f)) > T::maxDYPred;
+      return onlyBarrel
+                 ? so > 0 && std::abs(so - mes) > dy
+                 : innerBarrel && std::abs(mes - int(std::abs(dz / dr) * T::dzdrFact + 0.5f)) > T::maxDYPred;
     }
 
     __device__ __forceinline__ bool clusterCut(H const& hh, int i, int o) const {
+
       auto mo = hh.detectorIndex(o);
       bool outerFwd = (mo >= T::last_barrel_detIndex);
 
       if (!outerFwd)
         return false;
-
+   
       auto mi = hh.detectorIndex(i);
       bool innerB1orB2 = mi < T::last_bpix2_detIndex;
-
+      
       if (!innerB1orB2)
         return false;
 
-      bool innerB1 = mi < T::last_bpix1_detIndex;
+      bool innerB1 = mi < T::last_bpix1_detIndex;      
       bool isOuterLadder = idealConditions_ ? true : 0 == (mi / 8) % 2;
       auto mes = (!innerB1) || isOuterLadder ? hh.clusterSizeY(i) : -1;
 
@@ -122,6 +129,13 @@ namespace gpuPixelDoublets {
     const bool doClusterCut = cuts.doClusterCut_;
     const bool doZ0Cut = cuts.doZ0Cut_;
     const bool doPtCut = cuts.doPtCut_;
+    // all cuts: true if fails
+    const float z0cut = cuts.z0Cut_;              // cm
+    const float hardPtCut = cuts.ptCut_;  // GeV
+    // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
+    const float minRadius = hardPtCut * 87.78f;
+    const float minRadius2T4 = 4.f * minRadius * minRadius;
+
     const uint32_t maxNumOfDoublets = cuts.maxNumberOfDoublets_;
 
     using PhiBinner = typename TrackingRecHit2DSOAViewT<TrackerTraits>::PhiBinner;
@@ -192,19 +206,13 @@ namespace gpuPixelDoublets {
 
       if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
         continue;
-
+  
       if (doClusterCut && cuts.clusterCut(hh, i, fo))
         continue;
 
       auto mep = hh.iphi(i);
       auto mer = hh.rGlobal(i);
 
-      // all cuts: true if fails
-      constexpr float z0cut = TrackerTraits::z0Cut;              // cm
-      constexpr float hardPtCut = TrackerTraits::doubletHardPt;  // GeV
-      // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
-      constexpr float minRadius = hardPtCut * 87.78f;
-      constexpr float minRadius2T4 = 4.f * minRadius * minRadius;
       auto ptcut = [&](int j, int16_t idphi) {
         auto r2t4 = minRadius2T4;
         auto ri = mer;
@@ -256,7 +264,7 @@ namespace gpuPixelDoublets {
           uint16_t idphi = std::min(std::abs(int16_t(mop - mep)), std::abs(int16_t(mep - mop)));
           if (idphi > iphicut)
             continue;
-
+        
           if (doClusterCut && cuts.zSizeCut(hh, i, oi))
             continue;
           if (doPtCut && ptcut(oi, idphi))
@@ -270,6 +278,7 @@ namespace gpuPixelDoublets {
           // int layerPairId, int doubletId, int innerHitId, int outerHitId)
           cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, i, oi);
           isOuterHitOfCell[oi].push_back(ind);
+          printf("DOUBLETS;%d;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f\n",pairLayerId, hh.xGlobal(i),hh.yGlobal(i),hh.zGlobal(i),hh.xGlobal(oi),hh.yGlobal(oi),hh.zGlobal(oi));
 #ifdef GPU_DEBUG
           if (isOuterHitOfCell[oi].full())
             ++tooMany;

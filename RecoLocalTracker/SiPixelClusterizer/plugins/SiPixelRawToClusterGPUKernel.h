@@ -14,9 +14,12 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/host_noncached_unique_ptr.h"
 #include "DataFormats/SiPixelRawData/interface/SiPixelErrorCompact.h"
 #include "DataFormats/SiPixelRawData/interface/SiPixelFormatterErrors.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
 // local include(s)
 #include "SiPixelClusterThresholds.h"
+
+// #define GPU_DEBUG
 
 struct SiPixelROCsStatusAndMapping;
 class SiPixelGainForHLTonGPU;
@@ -71,6 +74,7 @@ namespace pixelgpudetails {
     return (row << thePacking.column_width) | col;
   }
 
+  template<typename TrackerTraits>
   class SiPixelRawToClusterGPUKernel {
   public:
     class WordFedAppender {
@@ -100,7 +104,11 @@ namespace pixelgpudetails {
     SiPixelRawToClusterGPUKernel& operator=(const SiPixelRawToClusterGPUKernel&) = delete;
     SiPixelRawToClusterGPUKernel& operator=(SiPixelRawToClusterGPUKernel&&) = delete;
 
-    void makeClustersAsync(bool isRun2,
+
+    template <typename Enable = void, class... Types>
+    void makeClustersAsync(Types... args);
+
+    void makePhase1ClustersAsync(bool isRun2,
                            const SiPixelClusterThresholds clusterThresholds,
                            const SiPixelROCsStatusAndMapping* cablingMap,
                            const unsigned char* modToUnp,

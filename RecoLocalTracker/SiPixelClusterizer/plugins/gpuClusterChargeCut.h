@@ -12,6 +12,7 @@
 // local include(s)
 #include "SiPixelClusterThresholds.h"
 
+// #define GPU_DEBUG
 namespace gpuClustering {
 
   template <typename TrackerTraits>
@@ -25,6 +26,9 @@ namespace gpuClustering {
       uint32_t const* __restrict__ moduleId,     // module id of each module
       int32_t* __restrict__ clusterId,           // modified: cluster id of each pixel
       uint32_t numElements) {
+
+    constexpr int32_t maxNumClustersPerModules = TrackerTraits::maxNumClustersPerModules;
+    static_assert(maxNumClustersPerModules <= 2048, "\nclusterChargeCut is limited to 2048 clusters per module. \nHere maxNumClustersPerModules is set to be %d. \nIf you need maxNumClustersPerModules to be higher \nyou will need to fix the blockPrefixScans.");
     __shared__ int32_t charge[maxNumClustersPerModules];
     __shared__ uint8_t ok[maxNumClustersPerModules];
     __shared__ uint16_t newclusId[maxNumClustersPerModules];
@@ -101,14 +105,43 @@ namespace gpuClustering {
         if (id[i] != thisModuleId)
           break;  // end of module
         atomicAdd(&charge[clusterId[i]], adc[i]);
+        // atomicInc(&size[clusterId[i]],1);
       }
       __syncthreads();
 
       auto chargeCut = clusterThresholds.getThresholdForLayerOnCondition(thisModuleId < startBPIX2);
 
+      // if (threadIdx.x == 0 and nclus>0)
+      // {
+      //   int oneCounter = 0;
+      //   int overCounter = 0;
+      //   for (int i = 0; i < int(nclus); i++)
+      //   {
+      //     int thisC = 0;
+      //     int thisS = 0;
+      //     for (size_t j = 0; j < numElements; j++) {
+      //       if(clusterId[j] == i)
+      //       {
+      //         thisS++;
+      //         thisC = thisC + adc[j];
+      //       }
+      //     }
+      //     if(thisS<2)
+      //       oneCounter++;
+      //     if(thisC>chargeCut)
+      //       overCounter++;
+      //     printf("cluster id %d size %d charge %d \n",i,thisS,thisC);
+      //   }
+      //
+      //   printf("clusters one %d above %d \n",oneCounter,overCounter);
+      // }
+      // __syncthreads();
       bool good = true;
       for (auto i = threadIdx.x; i < nclus; i += blockDim.x) {
         newclusId[i] = ok[i] = charge[i] >= chargeCut ? 1 : 0;
+
+        // if(nclus > 0)
+        //   printf("CLUST: %d %d %d %d \n",i, ok[i],charge[i],chargeCut);
         if (0 == ok[i])
           good = false;
       }
@@ -119,9 +152,44 @@ namespace gpuClustering {
 
       // renumber
       __shared__ uint16_t ws[32];
-      cms::cuda::blockPrefixScan(newclusId, nclus, ws);
+      // __shared__ uint16_t off = 0U;
+      constexpr auto maxThreads = 1024;
+      auto minClust = nclus > maxThreads ? maxThreads : nclus; //TODO this 1024 (==max number of threads) could be written somewhere, used also in other blockPrefixScan
+
+      cms::cuda::blockPrefixScan(newclusId, newclusId, minClust, ws);
+      if (nclus>maxThreads)
+        cms::cuda::blockPrefixScan(newclusId+maxThreads, newclusId+maxThreads, nclus-maxThreads, ws);
+      // for (auto off = 0U; off < nclus-maxThreads; off+=maxThreads) {
+      //   if(nclus>0)
+      //     printf("0000: %d %d %d \n",off, nclus, minClust);
+      //   cms::cuda::blockPrefixScan(newclusId+off, newclusId+off, minClust, ws);
+      //   __syncthreads();
+      // }
+
+      // if (nclus>maxThreads)
+      // {
+      //   int lastOff = (nclus/maxThreads)*maxThreads;
+      //   printf("1024: %d %d 1024 \n",lastOff, nclus);
+      //   cms::cuda::blockPrefixScan(newclusId+lastOff, newclusId+lastOff, nclus-maxThreads, ws);
+      // }// for the extra above N*1024
+
+
+      for (auto i = threadIdx.x + maxThreads; i < nclus; i += blockDim.x)
+      {
+        int prevBlockEnd = ((i/maxThreads)*maxThreads) - 1;
+        newclusId[i] += newclusId[prevBlockEnd];
+      }
+      __syncthreads();
+
 
       assert(nclus > newclusId[nclus - 1]);
+
+      // if (threadIdx.x == 0)
+      // {
+      //   for (int i = 0; i < int(nclus-1); i++) {
+      //     printf("newclusId[%d] %d \n",i,newclusId[i]);
+      //   }
+      // }
 
       nClustersInModule[thisModuleId] = newclusId[nclus - 1];
 

@@ -13,7 +13,7 @@
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforGPU.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDASOAView.h"
 
-//#define GPU_DEBUG 1
+// #define GPU_DEBUG 1
 namespace gpuPixelRecHits {
 
   template <typename TrackerTraits>
@@ -78,7 +78,7 @@ namespace gpuPixelRecHits {
 //     }
 // #endif
 #ifdef GPU_DEBUG
-    if (me % 100 == 1)
+    if (me % 100 == 1 or true)
       if (threadIdx.x == 0)
         printf("hitbuilder: %d clusters in module %d. will write at %d\n", nclus, me, clusters.clusModuleStart(me));
 #endif
@@ -203,6 +203,16 @@ namespace gpuPixelRecHits {
 
         hits.rGlobal(h) = std::sqrt(xg * xg + yg * yg);
         hits.iphi(h) = unsafe_atan2s<7>(yg, xg);
+
+    //     printf("clusid %d charge %d minRow %d maxRow %d minCol %d maxCol %d xl %.2f yl %.2f xsize %d ysize %d bs->x %.2f bs->y %.2f bs->z %.2f xg %.3f yg %.3f zg %.3f phi %d r %.3f\n",
+    //   ic+startClus,clusParams.charge[ic],
+    //   clusParams.minRow[ic],
+    //   clusParams.maxRow[ic],
+    //   clusParams.minCol[ic],
+    //   clusParams.maxCol[ic],
+    //   xl,yl,clusParams.xsize[ic],clusParams.ysize[ic],bs->x,bs->y,bs->z,
+    //   xg,yg,zg,hits.iphi(h),hits.rGlobal(h)
+    // );
       }
       __syncthreads();
     }  // end loop on batches

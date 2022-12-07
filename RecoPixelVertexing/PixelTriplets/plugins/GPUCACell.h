@@ -170,6 +170,17 @@ public:
                                 zo,
                                 ptmin,
                                 isBarrel ? caThetaCutBarrel : caThetaCutForward);  // 2.f*thetaCut); // FIXME tune cuts
+    auto theCut = isBarrel ? caThetaCutBarrel : caThetaCutForward;
+    auto dcacut = dcaCut(hh,
+                              otherCell,
+                              otherCell.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? dcaCutInnerTriplet
+                                                                                                : dcaCutOuterTriplet,
+                              hardCurvCut);
+
+  //   printf(">ri = %2.f zi = %2.f ro = %2.f zo = %2.f r1 = %2.f z1 = %.2f isBarrel = %d theCut = %.2f hardCurvCut = %.2f ptmin = %.2f aligned = %d dcacut = %d \n.",
+  // ri,zi,ro,zo,r1,z1,theCut,hardCurvCut,ptmin,isBarrel,aligned,dcacut);
+  printf("%2.f;%2.f;%2.f;%2.f;%2.f;%.2f;%d;%.2f;%.2f;%.2f;%d;%d \n.",
+  ri,zi,ro,zo,r1,z1,theCut,hardCurvCut,ptmin,isBarrel,aligned,dcacut);
     return (aligned && dcaCut(hh,
                               otherCell,
                               otherCell.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? dcaCutInnerTriplet
