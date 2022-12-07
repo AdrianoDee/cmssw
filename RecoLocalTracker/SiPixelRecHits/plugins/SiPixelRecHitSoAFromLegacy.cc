@@ -95,7 +95,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
   bsHost.y = bs.y0();
   bsHost.z = bs.z0();
 
-  // std::cout << "Mr. Beamspot    " << bs.x0() << " - " << bs.y0() << " - " << bs.z0() << std::endl;
+  std::cout << "Mr. Beamspot    " << bs.x0() << " - " << bs.y0() << " - " << bs.z0() << std::endl;
   // std::cout << "Mr. BeamSpotPOD " << bsHost.x << " - " << bsHost.y << " - " << bsHost.z << std::endl;
 
   edm::Handle<SiPixelClusterCollectionNew> hclusters;
@@ -261,6 +261,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
         SiPixelRecHitQuality::QualWordType rqw = 0;
         SiPixelRecHit hit(lp, le, rqw, *genericDet, clusterRef[ih]);
         recHitsOnDetUnit.push_back(hit);
+        std::cout << "HITS>"<< hit.globalPosition().x() << ";" << hit.globalPosition().y() << ";" << hit.globalPosition().z() << std::endl;
       }
     }
   }

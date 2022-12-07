@@ -369,7 +369,7 @@ namespace caHitNtupletGeneratorKernels {
             ro,
             zo,
             params.ptmin_,
-            isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
+            isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // .3f*thetaCut); // FIXME tune cuts
 
         auto DCA = thisCell.dcaCut(hh,
                                        oc,
@@ -377,7 +377,10 @@ namespace caHitNtupletGeneratorKernels {
                                                                                    : params.dcaCutOuterTriplet_,
                                        params.hardCurvCut_);
 
-     printf("r1 %.2f z1 %.2f ri %.2f zi %.2f ro %.2f zo %.2f pt %.2f thetabarrel %.5f thetaforward %.5f DCA %d aligned %d isBarrel %d hardCurvCut %.4f\n",
+      auto theCut = isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_;
+      printf("CACELL;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%d;%d;%d;%.0f;%.0f \n",
+      ri,zi,ro,zo,r1,z1,theCut,params.hardCurvCut_,params.ptmin_,isBarrel,aligned,DCA,oc.inner_detIndex(hh),oc.outer_detIndex(hh));
+      /*printf("r1 %.3f z1 %.3f ri %.3f zi %.3f ro %.3f zo %.3f pt %.3f thetabarrel %.5f thetaforward %.5f DCA %d aligned %d isBarrel %d hardCurvCut %.4f\n",
         r1,
         z1,
         ri,
@@ -389,6 +392,7 @@ namespace caHitNtupletGeneratorKernels {
         params.CAThetaCutForward_,
         DCA,aligned,isBarrel,
         params.hardCurvCut_);
+        */
         if (aligned && thisCell.dcaCut(hh,
                                        oc,
                                        oc.inner_detIndex(hh) < last_bpix1_detIndex ? params.dcaCutInnerTriplet_
@@ -427,13 +431,13 @@ namespace caHitNtupletGeneratorKernels {
 
       if (thisCell.isKilled())
       {
-        printf("Cell %d was killed by fishbone.\n", idx);
+       // printf("Cell %d was killed by fishbone.\n", idx);
         continue;  // cut by earlyFishbone
       }
       // we require at least three hits...
       if (thisCell.outerNeighbors().empty())
         {
-          printf("Cell %d has no outerNeighbors.\n", idx);
+          //printf("Cell %d has no outerNeighbors.\n", idx);
           continue;
           // printf("Cell %d has no outerNeighbors.\n", idx);
         }

@@ -278,6 +278,7 @@ namespace gpuPixelDoublets {
           // int layerPairId, int doubletId, int innerHitId, int outerHitId)
           cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, i, oi);
           isOuterHitOfCell[oi].push_back(ind);
+          printf("DOUBLETS;%d;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f\n",pairLayerId, hh.xGlobal(i),hh.yGlobal(i),hh.zGlobal(i),hh.xGlobal(oi),hh.yGlobal(oi),hh.zGlobal(oi));
 #ifdef GPU_DEBUG
           if (isOuterHitOfCell[oi].full())
             ++tooMany;

@@ -117,11 +117,17 @@ public:
         auto& oc = allCells[koc];
         auto curv = haveSimilarCurvature(oc, ptmin, region_origin_x, region_origin_y, region_origin_radius, phiCut[j], hardPtCut);
 
-        std::cout << "ri = " << getInnerR() << " zi = " << getInnerZ();
-        std::cout << " ro = " << ro << " zo = " << zo << " r1 = " << r1[j];
-        std::cout << " z1 = " << r1[j] << " thetaCut = " << thetaCut[j] << " thetaCut = " << thetaCut[j];
-        std::cout << " alignedRZ = " << ok[j] << " curv = " << curv << std::endl;
+        // std::cout << "ri = " << getInnerR() << " zi = " << getInnerZ();
+        // std::cout << " ro = " << ro << " zo = " << zo;
+        // std::cout << " r1 = " << r1[j] << " z1 = " << r1[j];
+        // std::cout << " thetaCut = " << thetaCut[j] << " ptmin = " << ptmin << " hardPtCut = " << hardPtCut;
+        // std::cout << " alignedRZ = " << ok[j] << " curv = " << curv << std::endl;
 
+        std::cout <<"CACELL;" << getInnerR() << ";" << getInnerZ();
+        std::cout << ";" << ro << ";" << zo;
+        std::cout << ";" << r1[j] << ";" << r1[j];
+        std::cout << ";" << thetaCut[j] << ";" << hardPtCut << ";" << ptmin;
+        std::cout << ";" << curv  << ";" <<  ok[j] << getInnerLayer() << ";" << getOuterLayer()<<std::endl;
 
         if (ok[j] && haveSimilarCurvature(
                          oc, ptmin, region_origin_x, region_origin_y, region_origin_radius, phiCut[j], hardPtCut)) {
