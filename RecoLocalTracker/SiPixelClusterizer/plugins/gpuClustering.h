@@ -203,12 +203,9 @@ namespace gpuClustering {
       }
 
       // fill histo
-
       for (int i = first; i < msize; i += blockDim.x) {
         if (id[i] == invalidModuleId)  // skip invalid pixels
           continue;
-        // if(msize>1000)
-        //   printf("> pixel at %d %d %d \n",id[i],y[i],x[i]);
         hist.count(y[i]);
 #ifdef GPU_DEBUG
         atomicAdd(&totGood, 1);
@@ -261,10 +258,9 @@ namespace gpuClustering {
       __syncthreads();
       for (auto j = threadIdx.x; j < Hist::nbins(); j += blockDim.x) {
         if (hist.size(j) > 60)
-            atomicAdd(&n60, 1);
+          atomicAdd(&n60, 1);
         if (hist.size(j) > 40)
           atomicAdd(&n40, 1);
-
       }
       __syncthreads();
       if (0 == threadIdx.x) {
@@ -401,17 +397,7 @@ namespace gpuClustering {
 #endif
 #ifdef GPU_DEBUG
         if (thisModuleId % 100 == 1)
-          printf("%d clusters in module %d from %d pixels \n", foundClusters, thisModuleId, msize - firstPixel);
-        // if(foundClusters > 1000)
-        // {
-        //   int thisClusterSize = 0;
-        //   int thisClusterCharge = 0;
-        //   for (size_t i = 0; i < foundClusters; i++) {
-        //     for (size_t j = 0; j < msize; j++) {
-        //       if(id[j]==i)
-        //     }
-        //   }
-        // }
+          printf("%d clusters in module %d\n", foundClusters, thisModuleId);
 #endif
       }
     }  // module loop

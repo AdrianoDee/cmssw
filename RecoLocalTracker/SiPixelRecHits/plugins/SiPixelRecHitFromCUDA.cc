@@ -178,8 +178,6 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
       // Make a RecHit and add it to the DetSet
       recHitsOnDetUnit.emplace_back(lp, le, rqw, *genericDet, cluster);
 
-      SiPixelRecHit hit(lp, le, rqw, *genericDet, cluster);
-      std::cout << "HITS>"<< hit.globalPosition().x() << ";" << hit.globalPosition().y() << ";" << hit.globalPosition().z() << std::endl;
       // =============================
 
       LogDebug("SiPixelRecHitFromCUDA") << "cluster " << numberOfClusters << " at " << lp << ' ' << le;

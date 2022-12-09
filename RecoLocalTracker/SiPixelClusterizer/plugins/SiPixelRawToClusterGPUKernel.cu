@@ -452,7 +452,8 @@ namespace pixelgpudetails {
     constexpr int nMaxModules = TrackerTraits::numberOfModules;
     constexpr int startBPIX2 = TrackerTraits::layerStart[1];
     constexpr uint32_t maxHitsInModule = TrackerTraits::maxHitsInModule;
-
+    
+    assert(nMaxModules <= TrackerTraits::numberOfModules);
     assert(startBPIX2 < nMaxModules);
     assert(nMaxModules < 4096);  // easy to extend at least till 32*1024
     assert(nMaxModules > 1024);

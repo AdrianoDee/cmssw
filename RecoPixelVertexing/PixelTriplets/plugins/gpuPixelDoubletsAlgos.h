@@ -108,12 +108,6 @@ namespace gpuPixelDoublets {
     }
   };
 
-  // template <typename TrackerTraits>
-  // struct CellCutsT : public CellCutsCommon<TrackerTraits> {};
-  //
-  // template <>
-  // struct CellCutsT<pixelTopology::Phase2> : public CellCutsCommon<pixelTopology::Phase2> {};
-
   template <typename TrackerTraits>
   __device__ __forceinline__ void doubletsFromHisto(uint32_t nPairs,
                                                     GPUCACellT<TrackerTraits>* cells,
@@ -278,7 +272,7 @@ namespace gpuPixelDoublets {
           // int layerPairId, int doubletId, int innerHitId, int outerHitId)
           cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, i, oi);
           isOuterHitOfCell[oi].push_back(ind);
-          printf("DOUBLETS;%d;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f\n",pairLayerId, hh.xGlobal(i),hh.yGlobal(i),hh.zGlobal(i),hh.xGlobal(oi),hh.yGlobal(oi),hh.zGlobal(oi));
+          //printf("Doublet -> %d;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f\n",pairLayerId, hh.xGlobal(i),hh.yGlobal(i),hh.zGlobal(i),hh.xGlobal(oi),hh.yGlobal(oi),hh.zGlobal(oi));
 #ifdef GPU_DEBUG
           if (isOuterHitOfCell[oi].full())
             ++tooMany;

@@ -124,7 +124,7 @@ namespace {
           intermediateHitDoubletsProducer.fill(std::get<1>(hitCachePtr_filler_ihd), layerSet, std::move(doublets));
         }
       }
-       std::cout << "DOUBLETSEND" << std::endl;
+
       seedingHitSetsProducer.put(iEvent);
       intermediateHitDoubletsProducer.put(iEvent);
     }

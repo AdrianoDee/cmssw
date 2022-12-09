@@ -156,18 +156,9 @@ void PixelThresholdClusterizer::clusterizeDetUnitT(const T& input,
 
   //  Copy PixelDigis to the buffer array; select the seed pixels
   //  on the way, and store them in theSeeds.
-  // std::cout << "Detector id: " << theDetid << " with n. " << end-begin << "pixels ->";
   if (end > begin)
     copy_to_buffer(begin, end);
-  int C = 0;
-  for (int x = 0; x < theBuffer.rows(); x++) {
-    for (int y = 0; y < theBuffer.columns(); y++) {
-      if(theBuffer(x,y)!=0)
-      C++;
-  }
-  }
 
-  // std::cout << " buffer size: " << C << " theSeeds: " << theSeeds.size();
   assert(output.empty());
   //  Loop over all seeds.  TO DO: wouldn't using iterators be faster?
   for (unsigned int i = 0; i < theSeeds.size(); i++) {
@@ -181,10 +172,6 @@ void PixelThresholdClusterizer::clusterizeDetUnitT(const T& input,
       // (TO DO: one is signed, other unsigned, gcc warns...)
       if (cluster.charge() >= clusterThreshold) {
         // sort by row (x)
-        // if(theSeeds.size()>1000)
-        // {
-        //   std::cout << " -> cluster.charge() = " << cluster.charge() << " cluster.size() = " << cluster.size() << std::endl;
-        // }
         output.push_back(std::move(cluster));
         std::push_heap(output.begin(), output.end(), [](SiPixelCluster const& cl1, SiPixelCluster const& cl2) {
           return cl1.minPixelRow() < cl2.minPixelRow();
@@ -192,7 +179,6 @@ void PixelThresholdClusterizer::clusterizeDetUnitT(const T& input,
       }
     }
   }
-  // std::cout << " clusters " << output.size() << " <- "<< clusterThreshold<<std::endl;
   // sort by row (x)   maybe sorting the seed would suffice....
   std::sort_heap(output.begin(), output.end(), [](SiPixelCluster const& cl1, SiPixelCluster const& cl2) {
     return cl1.minPixelRow() < cl2.minPixelRow();

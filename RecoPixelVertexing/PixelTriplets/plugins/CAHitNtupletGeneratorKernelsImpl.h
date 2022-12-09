@@ -355,7 +355,6 @@ namespace caHitNtupletGeneratorKernels {
       auto zo = thisCell.outer_z(hh);
       auto isBarrel = thisCell.inner_detIndex(hh) < last_barrel_detIndex;
 
-      // printf("Cell id %d innerHitId %d numberOfPossibleNeighbors %d.\n",idx,innerHitId,numberOfPossibleNeighbors);
       for (int j = first; j < numberOfPossibleNeighbors; j += stride) {
         auto otherCell = __ldg(vi + j);
         auto &oc = cells[otherCell];
@@ -369,30 +368,7 @@ namespace caHitNtupletGeneratorKernels {
             ro,
             zo,
             params.ptmin_,
-            isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // .3f*thetaCut); // FIXME tune cuts
-
-        auto DCA = thisCell.dcaCut(hh,
-                                       oc,
-                                       oc.inner_detIndex(hh) < last_bpix1_detIndex ? params.dcaCutInnerTriplet_
-                                                                                   : params.dcaCutOuterTriplet_,
-                                       params.hardCurvCut_);
-
-      auto theCut = isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_;
-      printf("CACELL;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%d;%d;%d;%.0f;%.0f \n",
-      ri,zi,ro,zo,r1,z1,theCut,params.hardCurvCut_,params.ptmin_,isBarrel,aligned,DCA,oc.inner_detIndex(hh),oc.outer_detIndex(hh));
-      /*printf("r1 %.3f z1 %.3f ri %.3f zi %.3f ro %.3f zo %.3f pt %.3f thetabarrel %.5f thetaforward %.5f DCA %d aligned %d isBarrel %d hardCurvCut %.4f\n",
-        r1,
-        z1,
-        ri,
-        zi,
-        ro,
-        zo,
-        params.ptmin_,
-        params.CAThetaCutBarrel_,
-        params.CAThetaCutForward_,
-        DCA,aligned,isBarrel,
-        params.hardCurvCut_);
-        */
+            isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
         if (aligned && thisCell.dcaCut(hh,
                                        oc,
                                        oc.inner_detIndex(hh) < last_bpix1_detIndex ? params.dcaCutInnerTriplet_
@@ -430,21 +406,15 @@ namespace caHitNtupletGeneratorKernels {
       auto const &thisCell = cells[idx];
 
       if (thisCell.isKilled())
-      {
-       // printf("Cell %d was killed by fishbone.\n", idx);
         continue;  // cut by earlyFishbone
-      }
+
       // we require at least three hits...
       if (thisCell.outerNeighbors().empty())
-        {
-          //printf("Cell %d has no outerNeighbors.\n", idx);
-          continue;
-          // printf("Cell %d has no outerNeighbors.\n", idx);
-        }
+        continue;
 
       auto pid = thisCell.layerPairId();
       bool doit = params.startingLayerPair(pid);
-      // auto doit = pid < 3; //minHitsPerNtuplet > 3 ? pid < 3 : pid < 8 || pid > 12;
+
       constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
       if (doit) {
         typename Cell::TmpTuple stack;
@@ -453,18 +423,11 @@ namespace caHitNtupletGeneratorKernels {
         bool bpix1Start = params.startAt0(pid);
 
         thisCell.template find_ntuplets<maxDepth>(
-            hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params.minHitsPerNtuplet_, pid<3);
+            hh, cells, *cellTracks, *foundNtuplets, *apc, quality, stack, params.minHitsPerNtuplet_, bpix1Start);
 
         assert(stack.empty());
       }
-      // printf("Up to cell %d found quadruplets: %d\n", idx, apc->get().m);
     }
-
-    #ifdef GPU_DEBUG
-    __syncthreads();
-    if (first == 0)
-      printf("found ntuples -> %d \n",apc->get().m);
-    #endif
   }
   template <typename TrackerTraits>
   __global__ void kernel_mark_used(GPUCACellT<TrackerTraits> *__restrict__ cells, uint32_t const *nCells) {
