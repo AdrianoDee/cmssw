@@ -24,6 +24,7 @@ template <typename TrackerTraits>
 using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
 // #define BL_DUMP_HITS
+// #define BROKENLINE_DEBUG
 
 template <int N, typename TrackerTraits>
 __global__ void kernel_BLFastFit(Tuples<TrackerTraits> const *__restrict__ foundNtuplets,

@@ -2,7 +2,10 @@ import FWCore.ParameterSet.Config as cms
 from HeterogeneousCore.AlpakaCore.functions import *
 from Configuration.Eras.Modifier_run3_common_cff import run3_common
 from Configuration.ProcessModifiers.gpu_cff import gpu
+
 from Configuration.ProcessModifiers.alpaka_cff import alpaka
+from Configuration.ProcessModifiers.gpuOfflineCA_cff import gpuOfflineCA 
+
 
 # conditions used *only* by the modules running on GPU
 from CalibTracker.SiPixelESProducers.siPixelROCsStatusAndMappingWrapperESProducer_cfi import siPixelROCsStatusAndMappingWrapperESProducer
@@ -49,7 +52,7 @@ from RecoLocalTracker.SiPixelClusterizer.siPixelDigisClustersFromSoAHIonPhase1_c
 run3_common.toModify(siPixelDigisClustersPreSplitting,
                      clusterThreshold_layer1 = 4000)
 
-gpu.toReplaceWith(siPixelClustersPreSplittingTask, cms.Task(
+(gpu | gpuOfflineCA).toReplaceWith(siPixelClustersPreSplittingTask, cms.Task(
     # conditions used *only* by the modules running on GPU
     siPixelROCsStatusAndMappingWrapperESProducer,
     siPixelGainCalibrationForHLTGPU,

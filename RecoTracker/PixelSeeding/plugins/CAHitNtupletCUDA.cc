@@ -75,6 +75,7 @@ void CAHitNtupletCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescri
 
   desc.add<bool>("onGPU", true);
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
+  desc.add<edm::InputTag>("hitMask", edm::InputTag(""));
 
   GPUAlgo::fillDescriptions(desc);
   descriptions.addWithDefaultLabel(desc);
@@ -104,6 +105,30 @@ void CAHitNtupletCUDAT<TrackerTraits>::produce(edm::StreamID streamID,
     ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits_d, bf, ctx.stream()));
   } else {
     auto& hits_h = iEvent.get(tokenHitCPU_);
+
+    if (useMask_)
+    {
+      std::cout << "useMask_" << std::endl;
+      auto const& mask = iEvent.get(tokenHitMask_);
+      std::cout << mask.size() << std::endl;
+      std::cout << "PreMask GPU" << mask[0] << std::endl;
+      const uint8_t* maskPtr = &mask[0];
+      ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits_d, bf, ctx.stream(), maskPtr));
+    }
+    else
+      ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits_d, bf, ctx.stream()));
+  } else {
+    auto& hits_h = iEvent.get(tokenHitCPU_);
+    if (useMask_)
+      {
+        std::cout << "useMask_" << std::endl;
+        auto const& mask = iEvent.get(tokenHitMask_);
+        std::cout << mask.size() << std::endl;
+        std::cout << "PreMask CPU" << mask[0] << std::endl;
+        const uint8_t* maskPtr = &mask[0];
+        iEvent.emplace(tokenTrackCPU_, gpuAlgo_.makeTuples(hits_h, bf, maskPtr));
+      }
+    else
     iEvent.emplace(tokenTrackCPU_, gpuAlgo_.makeTuples(hits_h, bf));
   }
 }

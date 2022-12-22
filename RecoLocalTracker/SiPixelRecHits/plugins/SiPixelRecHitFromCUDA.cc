@@ -123,6 +123,11 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
 
   int numberOfDetUnits = 0;
   int numberOfClusters = 0;
+
+  if(dumpForMasking_)
+    mapToHit.reserve(nHits_);
+
+  // std::cout <<  "RecHits from CUDA ---> ";
   for (auto const& dsv : input) {
     numberOfDetUnits++;
     unsigned int detid = dsv.detId();
@@ -176,6 +181,14 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
       // Create a persistent edm::Ref to the cluster
       edm::Ref<edmNew::DetSetVector<SiPixelCluster>, SiPixelCluster> cluster = edmNew::makeRefTo(hclusters, &clust);
       // Make a RecHit and add it to the DetSet
+      // std::cout << "hit - " << ij << " - " << xg[ij]<< " - ";
+      // std::cout << yg[ij]<< " - ";
+      // std::cout << zg[ij]<< " - ";
+      // std::cout << std::endl;
+
+      if(dumpForMasking_)
+        mapToHit.emplace_back(std::pair<uint32_t,uint32_t>(cluster.key(),ij));
+
       recHitsOnDetUnit.emplace_back(lp, le, rqw, *genericDet, cluster);
       // =============================
 

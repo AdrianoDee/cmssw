@@ -13,9 +13,10 @@ siPixelClustersPreSplitting = SwitchProducerCUDA(
 from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
 from Configuration.ProcessModifiers.gpu_cff import gpu
 
-# ensure the same results when running on GPU (which supports only the 'HLT' payload) and CPU
-# but not for phase-2 where we don't calibrate digis in the clusterizer (yet)
-(gpu & ~phase2_tracker).toModify(siPixelClustersPreSplitting,
+from Configuration.ProcessModifiers.gpuOfflineCA_cff import gpuOfflineCA 
+# SwitchProducer wrapping the legacy pixel cluster producer or an alias for the pixel clusters information converted from SoA
+(gpu & ~phase2_tracker| gpuOfflineCA).toModify(siPixelClustersPreSplitting,
+    # ensure the same results when running on GPU (which supports only the 'HLT' payload) and CPU
     cpu = dict(
         payloadType = 'HLT'
     )

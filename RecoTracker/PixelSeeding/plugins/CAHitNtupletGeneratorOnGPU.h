@@ -77,6 +77,9 @@ private:
   Params m_params;
 
   Counters* m_counters = nullptr;
+
+  uint8_t* m_mask = nullptr;
+
 };
 
 #endif  // RecoTracker_PixelSeeding_plugins_CAHitNtupletGeneratorOnGPU_h

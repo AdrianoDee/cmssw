@@ -73,7 +73,14 @@ _forPhase1 = dict(
         'tobTecStep'
     ],
 )
+
 trackingPhase1.toModify(earlyGeneralTracks, **_forPhase1)
+
+from Configuration.Eras.Modifier_trackingPhase1GPU_cff import trackingPhase1GPU
+_forPhase1GPU = {x: [d for d in _forPhase1[x] if "highPtTriplet" not in d] for x in _forPhase1}
+print(_forPhase1GPU)
+#print(l)
+trackingPhase1GPU.toModify(earlyGeneralTracks, **_forPhase1GPU)
 
 from Configuration.ProcessModifiers.displacedTracking_cff import displacedTracking
 def _extend_displacedGeneral(x):

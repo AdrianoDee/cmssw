@@ -43,6 +43,9 @@ namespace {
   private:
     void produce(edm::StreamID, edm::Event& evt, const edm::EventSetup&) const override;
 
+    using IndToEdm = std::vector<uint16_t>;
+    using MapToHit = std::vector<std::pair<int,int>>;
+
     using PixelMaskContainer = edm::ContainerMask<edmNew::DetSetVector<SiPixelCluster>>;
     using Phase2OTMaskContainer = edm::ContainerMask<edmNew::DetSetVector<Phase2TrackerCluster1D>>;
 
@@ -178,6 +181,11 @@ namespace {
       auto const& chi2sX5 = track.extra()->chi2sX5();
       assert(chi2sX5.size() == track.recHitsSize());
       auto hb = track.recHitsBegin();
+
+
+      // if(soaIndicesDump_)
+      //   std::cout <<  "MASK HITS track no. " << i << " ---> ";
+
       for (unsigned int h = 0; h < track.recHitsSize(); h++) {
         auto const hit = *(hb + h);
         if (!hit->isValid())
@@ -189,6 +197,24 @@ namespace {
         // FIXME when we will get also Phase2 pixel
         if (cluster.isPixel())
           collectedPixels[cluster.key()] = true;
+
+          if(soaIndicesDump_)
+          {
+            // uint16_t ij = clusterKeyMapP->at(cluster.key());
+            auto key = std::lower_bound(clusterKeyMapP->begin(), clusterKeyMapP->end(), cluster.key(), [](const auto& p, int v) {return p.first < v;});
+            auto ij = key->second;
+            indToEdm[ij] = 1;
+            // std::cout << "hit - " << ij << " - " << thit.globalPosition().x()<< " - ";
+            // std::cout << thit.globalPosition().y()<< " - ";
+            // std::cout << thit.globalPosition().z()<< " - ";
+            // std::cout << std::endl;
+          }
+
+
+
+
+       }
+
         else if (cluster.isPhase2())
           collectedPhase2OTs[cluster.key()] = true;
 
@@ -215,6 +241,9 @@ namespace {
     LogDebug("TrackClusterRemoverPhase2")
         << "total pxl to skip: " << std::count(collectedPixels.begin(), collectedPixels.end(), true);
     iEvent.put(std::move(removedPixelClusterMask));
+
+    if(soaIndicesDump_)
+     iEvent.put(std::move(indToEdmP));
 
     auto removedPhase2OTClusterMask = std::make_unique<Phase2OTMaskContainer>(
         edm::RefProd<edmNew::DetSetVector<Phase2TrackerCluster1D>>(phase2OTClusters), collectedPhase2OTs);

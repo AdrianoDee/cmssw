@@ -2,8 +2,10 @@
 
 #include "CAHitNtupletGeneratorKernelsImpl.h"
 
-//#define GPU_DEBUG
-//#define NTUPLE_DEBUG
+// #define NTUPLE_DEBUG
+// #define GPU_DEBUG
+// #define DUMP_GPU_TK_TUPLES
+
 
 template <typename TrackerTraits>
 void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsConstView &hh,
@@ -76,6 +78,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsCon
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
+  std::cout << "done kernel_find_ntuplets" << std::endl;
 #endif
   if (this->params_.doStats_)
     kernel_mark_used<TrackerTraits>
@@ -85,6 +88,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsCon
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
+  std::cout << "done kernel_mark_used" << std::endl;
 #endif
 
   blockSize = 128;
@@ -96,6 +100,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsCon
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
+  std::cout << "done finalizeBulk" << std::endl;
 #endif
 
   kernel_fillHitDetIndices<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(tracks_view, hh);
@@ -104,6 +109,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsCon
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
+  std::cout << "done kernel_fillHitDetIndices" << std::endl;
 #endif
   kernel_fillNLayers<TrackerTraits>
       <<<numberOfBlocks, blockSize, 0, cudaStream>>>(tracks_view, this->device_hitTuple_apc_);
@@ -112,6 +118,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsCon
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
+  std::cout << "done kernel_fillNLayers" << std::endl;
 #endif
 
   // remove duplicates (tracks that share a doublet)
@@ -123,6 +130,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsCon
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
+  std::cout << "done kernel_earlyDuplicateRemover" << std::endl;
 #endif
 
   blockSize = 128;
@@ -136,6 +144,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsCon
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
+  std::cout << "done kernel_countMultiplicity" << std::endl;
 #endif
 
   // do not run the fishbone if there are hits only in BPIX1
@@ -154,6 +163,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::launchKernels(const HitsCon
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
   cudaCheck(cudaGetLastError());
+  std::cout << "done fishbone" << std::endl;
 #endif
 }
 
@@ -258,8 +268,15 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::classifyTuples(const HitsCo
 
   // classify tracks based on kinematics
   auto numberOfBlocks = this->nQuadrupletBlocks(blockSize);
-  kernel_classifyTracks<TrackerTraits>
-      <<<numberOfBlocks, blockSize, 0, cudaStream>>>(tracks_view, this->params_.qualityCuts_);
+
+  if (this->params_.doFit_)
+    kernel_classifyTracks<TrackerTraits>
+        <<<numberOfBlocks, blockSize, 0, cudaStream>>>(tracks_view, this->params_.qualityCuts_);
+
+#ifdef GPU_DEBUG
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "done kernel_classifyTracks"<<std::endl;
+#endif
 
   if (this->params_.lateFishbone_) {
     // apply fishbone cleaning to good tracks
@@ -269,6 +286,10 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::classifyTuples(const HitsCo
     cudaCheck(cudaGetLastError());
   }
 
+#ifdef GPU_DEBUG
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "done kernel_fishboneCleaner"<<std::endl;
+#endif
   // mark duplicates (tracks that share a doublet)
   numberOfBlocks = this->nDoubletBlocks(blockSize);
   kernel_fastDuplicateRemover<TrackerTraits><<<numberOfBlocks, blockSize, 0, cudaStream>>>(
@@ -276,6 +297,7 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::classifyTuples(const HitsCo
   cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG
   cudaCheck(cudaDeviceSynchronize());
+  std::cout << "done kernel_fastDuplicateRemover"<<std::endl;
 #endif
 
   if (this->params_.doSharedHitCut_ || this->params_.doStats_) {
@@ -294,7 +316,8 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::classifyTuples(const HitsCo
         <<<numberOfBlocks, blockSize, 0, cudaStream>>>(tracks_view, this->device_hitToTuple_.get());
     cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG
-    cudaCheck(cudaDeviceSynchronize());
+  cudaCheck(cudaDeviceSynchronize());
+  std::cout << "done kernel_fillHitInTracks"<<std::endl;
 #endif
   }
 

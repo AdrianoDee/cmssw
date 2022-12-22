@@ -73,6 +73,9 @@ private:
 
   int32_t const minNumberOfHits_;
   pixelTrack::Quality const minQuality_;
+
+  static constexpr uint16_t invalidClusterId = std::numeric_limits<uint16_t>::max(); //From legacy SiPixelCluster dataformat
+
 };
 
 template <typename TrackerTraits>
@@ -154,13 +157,24 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
     auto const &thit = static_cast<BaseTrackerRecHit const &>(hit);
     auto const detI = thit.det()->index();
     auto const &clus = thit.firstClusterRef();
+    if( clus.pixelCluster().originalId() == invalidClusterId) // some clusters may be invalid from the origin
+        continue;
     assert(clus.isPixel());
-    auto const idx = hitsModuleStart[detI] + clus.pixelCluster().originalId();
-    if (idx >= hitmap.size())
-      hitmap.resize(idx + 256, nullptr);  // only in case of hit overflow in one module
 
-    assert(nullptr == hitmap[idx]);
-    hitmap[idx] = &hit;
+    auto i = fc[detI] + clus.pixelCluster().originalId();
+    // std::cout << "i  = " << i << " nhits = " << nhits
+    //           << " fc[detI] = " << fc[detI]
+    //           << " detI = " << detI 
+    //           << " clus.pixelCluster().originalId() = " << clus.pixelCluster().originalId()
+    //           << std::endl;
+    if (i >= hitmap.size())
+      hitmap.resize(i + 256, nullptr);  // only in case of hit overflow in one module
+    
+    // if (nullptr !=  hitmap[i])
+    //   std::cout << nhits << " - " << i << std::endl;
+    assert(nullptr == hitmap[i]);
+    hitmap[i] = &h;
+
   }
 
   std::vector<const TrackingRecHit *> hits;
@@ -202,8 +216,19 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
 
     hits.resize(nHits);
     auto b = hitIndices.begin(it);
+
+    // std::cout <<  "HITS track no. " << nt << " ---> ";
     for (int iHit = 0; iHit < nHits; ++iHit)
+    {
+      if(hitmap[*(b + iHit)]==nullptr)
+        continue;
+
       hits[iHit] = hitmap[*(b + iHit)];
+      // std::cout << counter << " - " << iHit << " - " << nHits << std::endl;      // std::cout << "(b + iHit) << " - " <<  hits[iHit]->globalPosition().x()<< " - ";
+      // std::cout << hits[iHit]->globalPosition().y()<< " - ";
+      // std::cout << hits[iHit]->globalPosition().z()<< " - ";
+      // std::cout << std::endl;
+    }
 
     // mind: this values are respect the beamspot!
     float chi2 = tsoa.view()[it].chi2();

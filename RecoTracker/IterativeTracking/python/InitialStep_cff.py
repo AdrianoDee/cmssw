@@ -446,7 +446,62 @@ InitialStepTask = cms.Task(initialStepSeedLayers,
                            initialStep,caloJetsForTrkTask)
 InitialStep = cms.Sequence(InitialStepTask)
 
+
 from RecoLocalTracker.Phase2TrackerRecHits.Phase2TrackerRecHits_cfi import siPhase2RecHits
+from Configuration.ProcessModifiers.gpuOfflineCA_cff import gpuOfflineCA 
+from RecoTracker.PixelSeeding.caHitNtupletCUDAPhase1_cfi import caHitNtupletCUDAPhase1 as _pixelSeedsCUDA
+from RecoTracker.PixelTrackFitting.pixelTrackSoAFromCUDAPhase1_cfi import pixelTrackSoAFromCUDAPhase1 as _pixelSeedsSoA
+from RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAPhase1_cfi import pixelTrackProducerFromSoAPhase1 as _pixelSeedsProducerFromSoA
+from RecoTracker.TkSeedGenerator.SeedGeneratorFromProtoTracksEDProducer_cfi import SeedGeneratorFromProtoTracksEDProducer as _seedProducer
+
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitCUDAFromSoAPhase1_cfi import siPixelRecHitCUDAFromSoAPhase1 as _siPixelRecHitToGPU
+
+siPixelRecHitsCUDA = _siPixelRecHitToGPU.clone(pixelRecHitSrc = cms.InputTag('siPixelRecHits'))
+
+initialStepSeedsSoA = SwitchProducerCUDA(
+    cpu = _pixelSeedsCUDA.clone(
+        pixelRecHitSrc = "siPixelRecHits",
+        idealConditions = False,
+        onGPU = False,
+        minHitsPerNtuplet = 3
+    ),
+    cuda = _pixelSeedsSoA.clone(src = cms.InputTag('initialStepSeedsCUDA'))
+)
+
+initialStepSeedsCUDA = _pixelSeedsCUDA.clone(
+    pixelRecHitSrc = "siPixelRecHitsCUDA",
+    idealConditions = False,
+    onGPU = True,
+    minHitsPerNtuplet = 3
+)
+
+initialStepPixelSeeds = _pixelSeedsProducerFromSoA.clone(
+    pixelRecHitLegacySrc = "siPixelRecHits",
+    trackSrc = "initialStepSeedsSoA",
+)
+
+gpuOfflineCA.toReplaceWith(initialStepSeeds, _seedProducer.clone(
+    InputCollection = 'initialStepPixelSeeds',
+    #useProtoTrackKinematics = True,
+    includeFourthHit = True
+))
+
+# Final sequence GPU
+InitialStepTaskGPU = cms.Task(siPixelRecHitsCUDA,
+                           initialStepSeedsCUDA,
+                           initialStepSeedsSoA,
+                           initialStepPixelSeeds,
+                           initialStepSeeds,
+                           initialStepTrackCandidates,
+                           initialStepTracks,
+                           firstStepPrimaryVerticesUnsorted,
+                           initialStepTrackRefsForJets,
+                           firstStepPrimaryVertices,
+                           initialStepClassifier1,initialStepClassifier2,initialStepClassifier3,
+                           initialStep,caloJetsForTrkTask)
+
+gpuOfflineCA.toReplaceWith(InitialStepTask,InitialStepTaskGPU)
+
 from Configuration.ProcessModifiers.trackingMkFitCommon_cff import trackingMkFitCommon
 _InitialStepTask_trackingMkFitCommon = InitialStepTask.copy()
 _InitialStepTask_trackingMkFitCommon_Phase2 = InitialStepTask.copy()

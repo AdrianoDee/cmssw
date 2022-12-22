@@ -44,6 +44,7 @@ namespace gpuPixelDoublets {
     CellCutsT(const bool doClusterCut,
               const bool doZ0Cut,
               const bool doPtCut,
+              const bool useMask,
               const bool idealConditions,
               const float z0Cut,
               const float ptCut,
@@ -51,6 +52,7 @@ namespace gpuPixelDoublets {
         : doClusterCut_(doClusterCut),
           doZ0Cut_(doZ0Cut),
           doPtCut_(doPtCut),
+          useMask_(useMask),
           idealConditions_(idealConditions),
           z0Cut_(z0Cut),
           ptCut_(ptCut) {
@@ -61,6 +63,7 @@ namespace gpuPixelDoublets {
     bool doClusterCut_;
     bool doZ0Cut_;
     bool doPtCut_;
+    bool useMask_;
     bool idealConditions_;  //this is actually not used by phase2
 
     float z0Cut_;
@@ -134,6 +137,7 @@ namespace gpuPixelDoublets {
     const bool doClusterCut = cuts.doClusterCut_;
     const bool doZ0Cut = cuts.doZ0Cut_;
     const bool doPtCut = cuts.doPtCut_;
+    const bool useMask = cuts.useMask_;
 
     const float z0cut = cuts.z0Cut_;      // cm
     const float hardPtCut = cuts.ptCut_;  // GeV
@@ -163,7 +167,7 @@ namespace gpuPixelDoublets {
       ntot = innerLayerCumulativeSize[nPairs - 1];
     }
     __syncthreads();
-
+    // if (threadIdx.y == 0 && threadIdx.x == 0) printf("%d\n",__LINE__);
     // x runs faster
     auto idy = blockIdx.y * blockDim.y + threadIdx.y;
     auto first = threadIdx.x;
@@ -187,6 +191,20 @@ namespace gpuPixelDoublets {
       auto hoff = PhiBinner::histOff(outer);
       auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
       i += offsets[inner];
+      
+      if(useMask)
+
+      {
+        if(hitMask[i])
+        {
+          printf("Not Using Hit %d - %.4f - %.4f - %.4f \n",i,hh[i].xGlobal(),hh[i].yGlobal(),hh[i].zGlobal());
+          continue;
+        }
+      }
+
+      
+
+      // printf("Hit in Layer %d %d %d %d\n", i, inner, pairLayerId, j);
 
       assert(i >= offsets[inner]);
       assert(i < offsets[inner + 1]);
@@ -195,7 +213,7 @@ namespace gpuPixelDoublets {
 
       if (hh[i].detectorIndex() > gpuClustering::maxNumModules)
         continue;  // invalid
-
+      
       /* maybe clever, not effective when zoCut is on
       auto bpos = (mi%8)/4;  // if barrel is 1 for z>0
       auto fpos = (outer>3) & (outer<7);
@@ -212,7 +230,7 @@ namespace gpuPixelDoublets {
 
       auto mep = hh[i].iphi();
       auto mer = hh[i].rGlobal();
-
+      
       auto ptcut = [&](int j, int16_t idphi) {
         auto r2t4 = minRadius2T4;
         auto ri = mer;
@@ -226,19 +244,19 @@ namespace gpuPixelDoublets {
         auto dr = ro - mer;
         return dr > TrackerTraits::maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
       };
-
+      
       auto iphicut = cuts.phiCuts[pairLayerId];
-
+      
       auto kl = PhiBinner::bin(int16_t(mep - iphicut));
       auto kh = PhiBinner::bin(int16_t(mep + iphicut));
       auto incr = [](auto& k) { return k = (k + 1) % PhiBinner::nbins(); };
-
+      
 #ifdef GPU_DEBUG
       int tot = 0;
       int nmin = 0;
       int tooMany = 0;
 #endif
-
+      
       auto khh = kh;
       incr(khh);
       for (auto kk = kl; kk != khh; incr(kk)) {
@@ -248,28 +266,35 @@ namespace gpuPixelDoublets {
 #endif
         auto const* __restrict__ p = phiBinner.begin(kk + hoff);
         auto const* __restrict__ e = phiBinner.end(kk + hoff);
+        
         p += first;
         for (; p < e; p += stride) {
           auto oi = __ldg(p);
+ 
+          if(useMask)
+           if(hitMask[oi])
+            continue;
+         
           assert(oi >= offsets[outer]);
           assert(oi < offsets[outer + 1]);
           auto mo = hh[oi].detectorIndex();
-
+          
           if (mo > gpuClustering::maxNumModules)
             continue;  //    invalid
-
+          
           if (doZ0Cut && z0cutoff(oi))
             continue;
           auto mop = hh[oi].iphi();
+          
           uint16_t idphi = std::min(std::abs(int16_t(mop - mep)), std::abs(int16_t(mep - mop)));
           if (idphi > iphicut)
             continue;
-
+          
           if (doClusterCut && cuts.zSizeCut(hh, i, oi))
             continue;
           if (doPtCut && ptcut(oi, idphi))
             continue;
-
+          
           auto ind = atomicAdd(nCells, 1);
           if (ind >= maxNumOfDoublets) {
             atomicSub(nCells, 1);

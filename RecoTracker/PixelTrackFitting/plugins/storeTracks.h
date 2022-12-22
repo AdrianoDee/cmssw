@@ -32,6 +32,7 @@ void storeTracks(Ev& ev, const TWH& tracksWithHits, const TrackerTopology& ttopo
     const auto& hits = tracksWithHits[i].second;
 
     for (unsigned int k = 0; k < hits.size(); k++) {
+
       auto* hit = hits[k]->clone();  // need to clone (at least if from SoA)
       track->appendHitPattern(*hit, ttopo);
       recHits->push_back(hit);
