@@ -24,8 +24,6 @@
 
 #include "RecoTracker/TransientTrackingRecHit/interface/Traj2TrackHits.h"
 
-#include "CUDADataFormats/Common/interface/HostProduct.h"
-
 #include <limits>
 
 #include "DataFormats/Common/interface/Ref.h"
@@ -49,7 +47,6 @@ namespace {
 
     using IndToEdm = std::vector<uint16_t>;
     using MapToHit = std::vector<std::pair<int,int>>;
-    using HMSstorage = HostProduct<uint32_t[]>;
 
     using PixelMaskContainer = edm::ContainerMask<edmNew::DetSetVector<SiPixelCluster>>;
     using Phase2OTMaskContainer = edm::ContainerMask<edmNew::DetSetVector<Phase2TrackerCluster1D>>;
@@ -266,8 +263,8 @@ namespace {
     LogDebug("TrackClusterRemoverPhase2")
         << "total pxl to skip: " << std::count(collectedPixels.begin(), collectedPixels.end(), true);
     iEvent.put(std::move(removedPixelClusterMask));
-
-    iEvent.put(std::move(indToEdmP));
+    if(soaIndicesDump_)
+     iEvent.put(std::move(indToEdmP));
 
     auto removedPhase2OTClusterMask = std::make_unique<Phase2OTMaskContainer>(
         edm::RefProd<edmNew::DetSetVector<Phase2TrackerCluster1D>>(phase2OTClusters), collectedPhase2OTs);

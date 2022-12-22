@@ -35,6 +35,9 @@ namespace {
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
   private:
+    using IndToEdm = std::vector<uint16_t>;
+    using MapToHit = std::vector<std::pair<int,int>>;
+
     void produce(edm::StreamID, edm::Event& evt, const edm::EventSetup&) const override;
 
     using PixelMaskContainer = edm::ContainerMask<edmNew::DetSetVector<SiPixelCluster>>;
@@ -43,6 +46,7 @@ namespace {
     using QualityMaskCollection = std::vector<unsigned char>;
 
     const unsigned char maxChi2x5_;
+    bool soaIndicesDump_;
     const int minNumberOfLayersWithMeasBeforeFiltering_;
     const reco::TrackBase::TrackQuality trackQuality_;
 
@@ -57,6 +61,7 @@ namespace {
 
     // backward compatibility during transition period
     edm::EDGetTokenT<edm::ValueMap<int>> overrideTrkQuals_;
+    edm::EDGetTokenT<MapToHit> clusterKeyMap_;
   };
 
   void TrackClusterRemover::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -66,6 +71,7 @@ namespace {
     desc.add<edm::InputTag>("pixelClusters", edm::InputTag("siPixelClusters"));
     desc.add<edm::InputTag>("stripClusters", edm::InputTag("siStripClusters"));
     desc.add<edm::InputTag>("oldClusterRemovalInfo", edm::InputTag());
+    desc.add<edm::InputTag>("clusterKeyMapForSoA", edm::InputTag());
 
     desc.add<std::string>("TrackQuality", "highPurity");
     desc.add<double>("maxChi2", 30.);
@@ -99,6 +105,13 @@ namespace {
       stripClusters_ = consumes<edmNew::DetSetVector<SiStripCluster>>(stripClusters);
       produces<edm::ContainerMask<edmNew::DetSetVector<SiStripCluster>>>();
     }
+    auto const& clusterKeyMapForSoAInput = iConfig.getParameter<edm::InputTag>("clusterKeyMapForSoA");
+    if(!clusterKeyMapForSoAInput.label().empty())
+    {
+      soaIndicesDump_ = true;
+      clusterKeyMap_ = consumes<MapToHit>(iConfig.getParameter<edm::InputTag>("clusterKeyMapForSoA"));
+      produces<IndToEdm>();
+    }
     // old mode
     auto const& overrideTrkQuals = iConfig.getParameter<edm::InputTag>("overrideTrkQuals");
     if (!overrideTrkQuals.label().empty())
@@ -122,6 +135,17 @@ namespace {
     edm::Handle<edmNew::DetSetVector<SiStripCluster>> stripClusters;
     if (!stripClusters_.isUninitialized())
       iEvent.getByToken(stripClusters_, stripClusters);
+    
+    auto indToEdmP = std::make_unique<IndToEdm>();
+    auto &indToEdm = *indToEdmP;
+    MapToHit const* clusterKeyMapP = nullptr;
+
+    if(soaIndicesDump_)
+    {
+      edm::Handle<MapToHit> clusterKeyMap;
+      iEvent.getByToken(clusterKeyMap_, clusterKeyMap);
+      clusterKeyMapP = clusterKeyMap.product();
+    }
 
     std::vector<bool> collectedStrips;
     std::vector<bool> collectedPixels;
@@ -205,7 +229,15 @@ namespace {
         if (!stripClusters_.isUninitialized() && cluster.isStrip())
           collectedStrips[cluster.key()] = true;
         if (!pixelClusters_.isUninitialized() && cluster.isPixel())
+        {
           collectedPixels[cluster.key()] = true;
+	  if(soaIndicesDump_)
+          {
+  	    auto key = std::lower_bound(clusterKeyMapP->begin(), clusterKeyMapP->end(), cluster.key(), [](const auto& p, int v) {return p.first < v;});
+            auto ij = key->second;
+            indToEdm[ij] = 1;
+	  }
+        }
         if (trackerHitRTTI::isMatched(thit))
           collectedStrips[reinterpret_cast<SiStripMatchedRecHit2D const&>(hit).stereoClusterRef().key()] = true;
       }
@@ -226,6 +258,8 @@ namespace {
       LogDebug("TrackClusterRemover") << "total pxl to skip: "
                                       << std::count(collectedPixels.begin(), collectedPixels.end(), true);
       iEvent.put(std::move(removedPixelClusterMask));
+      if(soaIndicesDump_)
+       iEvent.put(std::move(indToEdmP));
     }
   }
 
