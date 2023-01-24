@@ -54,6 +54,8 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits
 
 template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::Phase1>;
 template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::Phase2>;
+template class CAHitNtupletGeneratorKernelsGPU<pixelTopology::HIonPhase1>;
 
 template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::Phase1>;
 template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::Phase2>;
+template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::HIonPhase1>;

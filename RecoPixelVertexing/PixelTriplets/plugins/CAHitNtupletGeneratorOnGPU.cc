@@ -120,11 +120,29 @@ namespace {
   //moving them to topologyCuts and using the same syntax
   template <typename TrakterTraits>
   CellCutsT<TrakterTraits> makeCellCuts(edm::ParameterSet const& cfg) {
+    auto phiCuts = cfg.getParameter<std::vector<int>>("phiCuts");
+    auto minZ = cfg.getParameter<std::vector<double>>("minZCuts");
+    auto maxZ = cfg.getParameter<std::vector<double>>("maxZCuts");
+    auto maxR = cfg.getParameter<std::vector<double>>("maxRCuts");
+    if (phiCuts.size() != TrakterTraits::nPairs || minZ.size() != TrakterTraits::nPairs || maxZ.size() != TrakterTraits::nPairs || maxR.size() != TrackerTraits::nPairs)
+      throw cms::Exception("CACellCuts") << "ALL Cell Cuts for  " << TrakterTraits::nameModifier
+                                         << " geometry should have " << TrakterTraits::nPairs
+                                         << " each.\n Input sizes: \n"
+                                         << " - phiCuts: " << phiCuts.size() << "\n."
+                                         << " - minZ   : " << minZ.size() << "\n."
+                                         << " - maxZ   : " << maxZ.size() << "\n."
+                                         << " - maxR   : " << maxR.size() << "\n.";
+
     return CellCutsT<TrakterTraits>{cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
                                     cfg.getParameter<bool>("doClusterCut"),
                                     cfg.getParameter<bool>("doZ0Cut"),
                                     cfg.getParameter<bool>("doPtCut"),
-                                    cfg.getParameter<bool>("idealConditions")};
+                                    cfg.getParameter<bool>("idealConditions"),
+                                    cfg.getParameter<double>("z0Cut"),
+                                    cfg.getParameter<double>("ptCut"),
+                                    &(phiCuts[0]),
+                                    &(minZ[0]),
+                                    &(maxZ[0])};
   }
 
 }  // namespace
@@ -174,6 +192,8 @@ void CAHitNtupletGeneratorOnGPU<pixelTopology::Phase1>::fillDescriptions(edm::Pa
 
   desc.add<bool>("idealConditions", true);
   desc.add<bool>("includeJumpingForwardDoublets", false);
+  desc.add<double>("z0Cut", 12.0f);
+  desc.add<double>("ptCut", 0.8f);
 
   edm::ParameterSetDescription trackQualityCuts;
   trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
@@ -195,12 +215,43 @@ void CAHitNtupletGeneratorOnGPU<pixelTopology::Phase1>::fillDescriptions(edm::Pa
 }
 
 template <>
+void CAHitNtupletGeneratorOnGPU<pixelTopology::HIonPhase1>::fillDescriptions(edm::ParameterSetDescription& desc) {
+  fillDescriptionsCommon(desc);
+
+  desc.add<bool>("idealConditions", false);
+  desc.add<bool>("includeJumpingForwardDoublets", false);
+  desc.add<double>("z0Cut", 10.0f);
+  desc.add<double>("ptCut", 0.0f);
+
+
+  edm::ParameterSetDescription trackQualityCuts;
+  trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
+  trackQualityCuts.add<std::vector<double>>("chi2Coeff", {0.9, 1.8})->setComment("chi2 at 1GeV and at ptMax above");
+  trackQualityCuts.add<double>("chi2Scale", 8.)
+      ->setComment(
+          "Factor to multiply the pT-dependent chi2 cut (currently: 8 for the broken line fit, ?? for the Riemann "
+          "fit)");
+  trackQualityCuts.add<double>("tripletMinPt", 0.0)->setComment("Min pT for triplets, in GeV");
+  trackQualityCuts.add<double>("tripletMaxTip", 0.1)->setComment("Max |Tip| for triplets, in cm");
+  trackQualityCuts.add<double>("tripletMaxZip", 6.)->setComment("Max |Zip| for triplets, in cm");
+  trackQualityCuts.add<double>("quadrupletMinPt", 0.0)->setComment("Min pT for quadruplets, in GeV");
+  trackQualityCuts.add<double>("quadrupletMaxTip", 0.5)->setComment("Max |Tip| for quadruplets, in cm");
+  trackQualityCuts.add<double>("quadrupletMaxZip", 6.)->setComment("Max |Zip| for quadruplets, in cm");
+  desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)
+      ->setComment(
+          "Quality cuts based on the results of the track fit:\n  - apply a pT-dependent chi2 cut;\n  - apply \"region "
+          "cuts\" based on the fit results (pT, Tip, Zip).");
+}
+
+template <>
 void CAHitNtupletGeneratorOnGPU<pixelTopology::Phase2>::fillDescriptions(edm::ParameterSetDescription& desc) {
   fillDescriptionsCommon(desc);
 
   desc.add<bool>("idealConditions", false);
   desc.add<bool>("includeFarForwards", true);
   desc.add<bool>("includeJumpingForwardDoublets", true);
+  desc.add<double>("z0Cut", 7.5f);
+  desc.add<double>("ptCut", 0.85f);
 
   edm::ParameterSetDescription trackQualityCuts;
   trackQualityCuts.add<double>("maxChi2", 5.)->setComment("Max normalized chi2");
@@ -240,6 +291,16 @@ void CAHitNtupletGeneratorOnGPU<TrackerTraits>::fillDescriptionsCommon(edm::Para
   desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
   desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
   desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+
+  //Cuts for doublets
+  std::vector<int> phiCuts(TrackerTraits::phicuts,TrackerTraits::phicuts+TrackerTraits::nPairs);
+  desc.add<std::vector<int>>("phiCuts", phiCuts);
+  std::vector<double> minZ(TrackerTraits::minz,TrackerTraits::minz+TrackerTraits::nPairs);
+  desc.add<std::vector<double>>("minZCuts", minZ);
+  std::vector<double> maxZ(TrackerTraits::maxz,TrackerTraits::maxz+TrackerTraits::nPairs);
+  desc.add<std::vector<double>>("maxZCuts", maxZ);
+  std::vector<double> maxR(TrackerTraits::maxr,TrackerTraits::maxr+TrackerTraits::nPairs);
+  desc.add<std::vector<double>>("maxZCuts", maxR);
 }
 
 template <typename TrackerTraits>
@@ -360,3 +421,4 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
 
 template class CAHitNtupletGeneratorOnGPU<pixelTopology::Phase1>;
 template class CAHitNtupletGeneratorOnGPU<pixelTopology::Phase2>;
+template class CAHitNtupletGeneratorOnGPU<pixelTopology::HIonPhase1>;

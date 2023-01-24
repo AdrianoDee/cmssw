@@ -130,17 +130,7 @@ namespace caHitNtupletGeneratorKernels {
              cellNeighbors->size(),
              cellTracks->size(),
              hitToTuple->size());
-// printf("cellTracksSizes;");
-// for (int i = 0; i < cellTracks->size(); i++) {
-//   printf("%d;",cellTracks[i].size());
-// }
-//
-// printf("\n");
-// printf("cellNeighborsSizes;");
-// for (int i = 0; i < cellNeighbors->size(); i++) {
-//   printf("%d;",cellNeighbors[i].size());
-// }
-// printf("\n");
+
 #endif
     }
 
