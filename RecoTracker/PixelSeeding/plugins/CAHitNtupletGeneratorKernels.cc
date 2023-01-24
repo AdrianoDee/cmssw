@@ -227,3 +227,4 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::classifyTuples(const HitsCo
 
 template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::Phase1>;
 template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::Phase2>;
+template class CAHitNtupletGeneratorKernelsCPU<pixelTopology::HIonPhase1>;

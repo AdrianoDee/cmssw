@@ -1828,6 +1828,8 @@ steps['DIGIHI2023PPRECO']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fak
 steps['DIGIHI2022PPRECOAPPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2022_ppReco_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
 steps['DIGIHI2022PPRECO']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2022_ppReco, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
 steps['DIGIHI2018PPRECO']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2018_ppReco, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+#steps['DIGIHI2021PPRECO_PatatrackCPU']=merge([steps['DIGIHI2021PPRECO'],step3_pixel_ntuplet_cpu])
+#steps['DIGIHI2021PPRECO_PatatrackGPU']=merge([steps['DIGIHI2021PPRECO'],step3_pixel_ntuplet_gpu])
 steps['DIGIHI2018']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2018, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
 steps['DIGIHI2017']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2017, step2Upg2015Defaults])
 steps['DIGIHI2015']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake'}, hiDefaults2015, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
@@ -2102,6 +2104,9 @@ steps['RAWPRIMESIMHI18']={ '--scenario':'pp',
                            '--customise_commands':'\"process.siStripDigisHLT.ProductLabel=\'rawDataCollector\'\"',
                            '--process':'REHLT'
 }
+
+#steps['RAWPRIMESIMH18_PatatrackCPU'] = merge([steps['RAWPRIMESIMHI18'],step3_pixel_ntuplet_cpu])
+#steps['RAWPRIMESIMH18_PatatrackGPU'] = merge([steps['RAWPRIMESIMHI18'],step3_pixel_ntuplet_gpu])
 
 steps['RECOHID18APPROXCLUSTERS']=merge([{ '--scenario':'pp',
                                           '--conditions':'auto:run2_data_promptlike_hi',
@@ -2928,6 +2933,8 @@ steps['RECOHI2023PROD']=merge([hiDefaults2023_ppReco_approxClusters,{'-s':'RAW2D
                                                                      '--eventcontent':'AODSIM',
                                                                      '--era':'Run3_pp_on_PbPb',
                                                         },step3Up2015Defaults])
+steps['RECOHI2021PPRECOMBAPPROXCLUSTERS_PatatrackCPU'] = merge([steps['RECOHI2021PPRECOMBAPPROXCLUSTERS'],step3_pixel_ntuplet_cpu])
+steps['RECOHI2021PPRECOMBAPPROXCLUSTERS_PatatrackGPU'] = merge([steps['RECOHI2021PPRECOMBAPPROXCLUSTERS'],step3_pixel_ntuplet_gpu])
 
 steps['MINIHI2023PROD']=merge([hiDefaults2023_ppReco,{'-s':'PAT',
                                                                      '--datatier':'MINIAODSIM',

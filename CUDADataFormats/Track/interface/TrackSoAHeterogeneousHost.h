@@ -29,6 +29,7 @@ namespace pixelTrack {
 
   using TrackSoAHostPhase1 = TrackSoAHeterogeneousHost<pixelTopology::Phase1>;
   using TrackSoAHostPhase2 = TrackSoAHeterogeneousHost<pixelTopology::Phase2>;
+  using TrackSoAHostHIonPhase1 = TrackSoAHeterogeneousHost<pixelTopology::HIonPhase1>;
 
 }  // namespace pixelTrack
 
