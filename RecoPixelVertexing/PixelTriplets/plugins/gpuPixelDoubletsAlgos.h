@@ -132,13 +132,13 @@ namespace gpuPixelDoublets {
     auto const& __restrict__ phiBinner = hh.phiBinner();
     uint32_t const* __restrict__ offsets = hh.hitsLayerStart().data();
     assert(offsets);
-
+    printf("%d \n",__LINE__);
     auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };
-
+    printf("%d \n",__LINE__);
     // nPairsMax to be optimized later (originally was 64).
     // If it should be much bigger, consider using a block-wide parallel prefix scan,
     // e.g. see  https://nvlabs.github.io/cub/classcub_1_1_warp_scan.html
-
+    printf("%d \n",__LINE__);
     __shared__ uint32_t innerLayerCumulativeSize[TrackerTraits::nPairs];
     __shared__ uint32_t ntot;
     if (threadIdx.y == 0 && threadIdx.x == 0) {
@@ -149,14 +149,14 @@ namespace gpuPixelDoublets {
       ntot = innerLayerCumulativeSize[nPairs - 1];
     }
     __syncthreads();
-
+    printf("%d \n",__LINE__);
     // x runs faster
     auto idy = blockIdx.y * blockDim.y + threadIdx.y;
     auto first = threadIdx.x;
     auto stride = blockDim.x;
 
     uint32_t pairLayerId = 0;  // cannot go backward
-
+    printf("%d \n",__LINE__);
     for (auto j = idy; j < ntot; j += blockDim.y * gridDim.y) {
       while (j >= innerLayerCumulativeSize[pairLayerId++])
         ;
@@ -173,7 +173,7 @@ namespace gpuPixelDoublets {
       auto hoff = PhiBinner::histOff(outer);
       auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
       i += offsets[inner];
-
+      printf("%d \n",__LINE__);
       assert(i >= offsets[inner]);
       assert(i < offsets[inner + 1]);
 
@@ -189,16 +189,16 @@ namespace gpuPixelDoublets {
       */
 
       auto mez = hh[i].zGlobal();
-
+printf("%d \n",__LINE__);
       if (mez < cuts.minZ_[pairLayerId] || mez > cuts.maxZ_[pairLayerId])
         continue;
-
+        printf("%d \n",__LINE__);
       if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(hh, i))
         continue;
 
       auto mep = hh[i].iphi();
       auto mer = hh[i].rGlobal();
-
+      printf("%d \n",__LINE__);
       auto ptcut = [&](int j, int16_t idphi) {
         auto r2t4 = minRadius2T4;
         auto ri = mer;
@@ -210,11 +210,11 @@ namespace gpuPixelDoublets {
         auto zo = hh[j].zGlobal();
         auto ro = hh[j].rGlobal();
         auto dr = ro - mer;
-        return dr > cuts.maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
+        return dr > cuts.maxR_[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
       };
-
+printf("%d \n",__LINE__);
       auto iphicut = cuts.maxPhi_[pairLayerId];
-
+printf("%d \n",__LINE__);
       auto kl = PhiBinner::bin(int16_t(mep - iphicut));
       auto kh = PhiBinner::bin(int16_t(mep + iphicut));
       auto incr = [](auto& k) { return k = (k + 1) % PhiBinner::nbins(); };
@@ -243,7 +243,7 @@ namespace gpuPixelDoublets {
 
           if (mo > gpuClustering::maxNumModules)
             continue;  //    invalid
-
+            printf("%d \n",__LINE__);
           if (doZ0Cut && z0cutoff(oi))
             continue;
           auto mop = hh[oi].iphi();
