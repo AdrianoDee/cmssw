@@ -5,6 +5,8 @@
 #include <cuda_runtime.h>
 
 #include "DataFormats/SiPixelDetId/interface/PixelChannelIdentifier.h"
+#include "DataFormats/SiPixelRawData/interface/SiPixelErrorCompact.h"
+#include "DataFormats/SiPixelRawData/interface/SiPixelFormatterErrors.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDA.h"
 #include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigiErrorsCUDA.h"
 #include "CUDADataFormats/SiPixelCluster/interface/SiPixelClustersCUDA.h"
@@ -12,8 +14,9 @@
 #include "HeterogeneousCore/CUDAUtilities/interface/SimpleVector.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/host_unique_ptr.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/host_noncached_unique_ptr.h"
-#include "DataFormats/SiPixelRawData/interface/SiPixelErrorCompact.h"
-#include "DataFormats/SiPixelRawData/interface/SiPixelFormatterErrors.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+
+// #define GPU_DEBUG
 
 // local include(s)
 #include "SiPixelClusterThresholds.h"
@@ -71,6 +74,7 @@ namespace pixelgpudetails {
     return (row << thePacking.column_width) | col;
   }
 
+  template<typename TrackerTraits>
   class SiPixelRawToClusterGPUKernel {
   public:
     class WordFedAppender {
@@ -100,7 +104,7 @@ namespace pixelgpudetails {
     SiPixelRawToClusterGPUKernel& operator=(const SiPixelRawToClusterGPUKernel&) = delete;
     SiPixelRawToClusterGPUKernel& operator=(SiPixelRawToClusterGPUKernel&&) = delete;
 
-    void makeClustersAsync(bool isRun2,
+    void makePhase1ClustersAsync(bool isRun2,
                            const SiPixelClusterThresholds clusterThresholds,
                            const SiPixelROCsStatusAndMapping* cablingMap,
                            const unsigned char* modToUnp,

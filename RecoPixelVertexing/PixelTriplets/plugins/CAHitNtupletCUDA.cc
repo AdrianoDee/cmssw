@@ -116,3 +116,6 @@ DEFINE_FWK_MODULE(CAHitNtupletCUDAPhase1);
 
 using CAHitNtupletCUDAPhase2 = CAHitNtupletCUDAT<pixelTopology::Phase2>;
 DEFINE_FWK_MODULE(CAHitNtupletCUDAPhase2);
+
+using CAHitNtupletCUDAHIonPhase1 = CAHitNtupletCUDAT<pixelTopology::HIonPhase1>;
+DEFINE_FWK_MODULE(CAHitNtupletCUDAHIonPhase1);

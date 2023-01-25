@@ -45,6 +45,15 @@ namespace gpuPixelDoublets {
     const bool doPtCut_;
     const bool idealConditions_;  //this is actually not used by phase2
 
+    //the cuts
+    const double z0Cut_;
+    const double ptCut_;
+
+    const int *maxPhi_; //Q: have these as fixed size vectors and have a custom constructor?
+    const double *minZ_;
+    const double *maxZ_;
+    const double *maxR_;
+
     __device__ __forceinline__ bool zSizeCut(H hh, int i, int o) const {
       const uint32_t mi = hh[i].detectorIndex();
 
@@ -112,6 +121,12 @@ namespace gpuPixelDoublets {
     const bool doPtCut = cuts.doPtCut_;
     const uint32_t maxNumOfDoublets = cuts.maxNumberOfDoublets_;
 
+    const float z0cut = cuts.z0Cut_;              // cm
+    const float hardPtCut = cuts.ptCut_;  // GeV
+    // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
+    const float minRadius = hardPtCut * 87.78f;
+    const float minRadius2T4 = 4.f * minRadius * minRadius;
+
     using PhiBinner = typename TrackingRecHitSoA<TrackerTraits>::PhiBinner;
 
     auto const& __restrict__ phiBinner = hh.phiBinner();
@@ -175,7 +190,7 @@ namespace gpuPixelDoublets {
 
       auto mez = hh[i].zGlobal();
 
-      if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
+      if (mez < cuts.minZ_[pairLayerId] || mez > cuts.maxZ_[pairLayerId])
         continue;
 
       if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(hh, i))
@@ -184,12 +199,6 @@ namespace gpuPixelDoublets {
       auto mep = hh[i].iphi();
       auto mer = hh[i].rGlobal();
 
-      // all cuts: true if fails
-      constexpr float z0cut = TrackerTraits::z0Cut;              // cm
-      constexpr float hardPtCut = TrackerTraits::doubletHardPt;  // GeV
-      // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
-      constexpr float minRadius = hardPtCut * 87.78f;
-      constexpr float minRadius2T4 = 4.f * minRadius * minRadius;
       auto ptcut = [&](int j, int16_t idphi) {
         auto r2t4 = minRadius2T4;
         auto ri = mer;
@@ -201,10 +210,10 @@ namespace gpuPixelDoublets {
         auto zo = hh[j].zGlobal();
         auto ro = hh[j].rGlobal();
         auto dr = ro - mer;
-        return dr > TrackerTraits::maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
+        return dr > cuts.maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
       };
 
-      auto iphicut = TrackerTraits::phicuts[pairLayerId];
+      auto iphicut = cuts.maxPhi_[pairLayerId];
 
       auto kl = PhiBinner::bin(int16_t(mep - iphicut));
       auto kh = PhiBinner::bin(int16_t(mep + iphicut));
@@ -273,8 +282,8 @@ namespace gpuPixelDoublets {
                tot,
                tooMany,
                iphicut,
-               TrackerTraits::minz[pairLayerId],
-               TrackerTraits::maxz[pairLayerId]);
+               cuts.minZ_[pairLayerId],
+               cuts.maxZ_[pairLayerId]);
 #endif
     }  // loop in block...
   }
