@@ -1,0 +1,6 @@
+#ifndef DataFormats_SiPixelClusterPortable_src_classes_h
+#define DataFormats_SiPixelClusterPortable_src_classes_h
+
+#include "DataFormats/SiPixelClusterPortable/interface/SiPixelClustersLayout.h"
+
+#endif  // DataFormats_SiPixelClusterPortable_src_classes_h
