@@ -158,8 +158,7 @@ namespace gpuClustering {
       assert((msize == numElements) or ((msize < numElements) and (id[msize] != thisModuleId)));
 
       // limit to maxPixInModule  (FIXME if recurrent (and not limited to simulation with low threshold) one will need to implement something cleverer)
-      if (0 == threadIdx.x) {
-        printf(">pixInModules;%d\n",msize - firstPixel);
+      if (0 == threadIdx.x) { 
         if (msize - firstPixel > maxPixInModule) {
           printf("too many pixels in module %d: %d > %d\n", thisModuleId, msize - firstPixel, maxPixInModule);
           msize = maxPixInModule + firstPixel;

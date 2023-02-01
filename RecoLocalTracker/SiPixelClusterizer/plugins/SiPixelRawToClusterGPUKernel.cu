@@ -32,7 +32,7 @@
 // local includes
 #include "SiPixelRawToClusterGPUKernel.h"
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 
 namespace pixelgpudetails {
 
@@ -634,9 +634,9 @@ namespace pixelgpudetails {
 
       countModules<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(
           digis_d->moduleId(), clusters_d->moduleStart(), digis_d->clus(), wordCounter);
-      cudaCheck(cudaGetLastError());
+      cudaCheck(cudaGetLastError()); 
 
-      threadsPerBlock = 256 + 128;  /// should be larger than 6000/16 aka (maxPixInModule/maxiter in the kernel)
+      threadsPerBlock = ((TrackerTraits::maxPixInModule/16) - (TrackerTraits::maxPixInModule % 128) )+ 128;  /// should be larger than maxPixInModule/16 aka (maxPixInModule/maxiter in the kernel)
       blocks = TrackerTraits::numberOfModules;
 #ifdef GPU_DEBUG
       std::cout << "CUDA findClus kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";

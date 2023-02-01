@@ -120,29 +120,13 @@ namespace {
   //moving them to topologyCuts and using the same syntax
   template <typename TrakterTraits>
   CellCutsT<TrakterTraits> makeCellCuts(edm::ParameterSet const& cfg) {
-    auto phiCuts = cfg.getParameter<std::vector<int>>("phiCuts");
-    auto minZ = cfg.getParameter<std::vector<double>>("minZCuts");
-    auto maxZ = cfg.getParameter<std::vector<double>>("maxZCuts");
-    auto maxR = cfg.getParameter<std::vector<double>>("maxRCuts");
-    if (phiCuts.size() != TrakterTraits::nPairs || minZ.size() != TrakterTraits::nPairs || maxZ.size() != TrakterTraits::nPairs || maxR.size() != TrackerTraits::nPairs)
-      throw cms::Exception("CACellCuts") << "ALL Cell Cuts for  " << TrakterTraits::nameModifier
-                                         << " geometry should have " << TrakterTraits::nPairs
-                                         << " each.\n Input sizes: \n"
-                                         << " - phiCuts: " << phiCuts.size() << "\n."
-                                         << " - minZ   : " << minZ.size() << "\n."
-                                         << " - maxZ   : " << maxZ.size() << "\n."
-                                         << " - maxR   : " << maxR.size() << "\n.";
-
     return CellCutsT<TrakterTraits>{cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
                                     cfg.getParameter<bool>("doClusterCut"),
                                     cfg.getParameter<bool>("doZ0Cut"),
                                     cfg.getParameter<bool>("doPtCut"),
                                     cfg.getParameter<bool>("idealConditions"),
-                                    cfg.getParameter<double>("z0Cut"),
-                                    cfg.getParameter<double>("ptCut"),
-                                    &(phiCuts[0]),
-                                    &(minZ[0]),
-                                    &(maxZ[0])};
+                                    (float)cfg.getParameter<double>("z0Cut"),
+                                    (float)cfg.getParameter<double>("ptCut")};
   }
 
 }  // namespace
@@ -291,16 +275,6 @@ void CAHitNtupletGeneratorOnGPU<TrackerTraits>::fillDescriptionsCommon(edm::Para
   desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
   desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
   desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
-
-  //Cuts for doublets
-  std::vector<int> phiCuts(TrackerTraits::phicuts,TrackerTraits::phicuts+TrackerTraits::nPairs);
-  desc.add<std::vector<int>>("phiCuts", phiCuts);
-  std::vector<double> minZ(TrackerTraits::minz,TrackerTraits::minz+TrackerTraits::nPairs);
-  desc.add<std::vector<double>>("minZCuts", minZ);
-  std::vector<double> maxZ(TrackerTraits::maxz,TrackerTraits::maxz+TrackerTraits::nPairs);
-  desc.add<std::vector<double>>("maxZCuts", maxZ);
-  std::vector<double> maxR(TrackerTraits::maxr,TrackerTraits::maxr+TrackerTraits::nPairs);
-  desc.add<std::vector<double>>("maxZCuts", maxR);
 }
 
 template <typename TrackerTraits>

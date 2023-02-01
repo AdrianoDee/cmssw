@@ -365,8 +365,6 @@ namespace pixelTopology {
     static constexpr float bigPixYCorrection = 0.0f;
 
     static constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
-    static constexpr float z0Cut = 7.5f;
-    static constexpr float doubletHardPt = 0.8f;
 
     static constexpr int minYsizeB1 = 25;
     static constexpr int minYsizeB2 = 15;
@@ -458,8 +456,6 @@ namespace pixelTopology {
     static constexpr float bigPixYCorrection = 8.0f;
 
     static constexpr float dzdrFact = 8 * 0.0285 / 0.015;  // from dz/dr to "DY"
-    static constexpr float z0Cut = 12.f;
-    static constexpr float doubletHardPt = 0.5f;
 
     static constexpr int minYsizeB1 = 36;
     static constexpr int minYsizeB2 = 28;
@@ -553,13 +549,13 @@ namespace pixelTopology {
     static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
     static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
 
+    static constexpr uint32_t maxPixInModule = 10000;
+
     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 4; //TODO need to think a better way to avoid this duplication
     static constexpr uint32_t maxCellsPerHit = 256;
 
     static constexpr uint32_t maxNumClustersPerModules = phase1HIonPixelTopology::maxNumClustersPerModules;
     static constexpr uint32_t maxHitsInModule = phase1HIonPixelTopology::maxNumClustersPerModules;
-
-    static constexpr float z0Cut = 10.f;
 
     static constexpr int16_t const *phicuts = phase1HIonPixelTopology::phicuts;
 
@@ -571,9 +567,6 @@ namespace pixelTopology {
 
   template <typename T>
   using isPhase2Topology = typename std::enable_if<std::is_base_of<Phase2, T>::value>::type;
-
-  // struct HIonPhase1 : public Phase1 {
-  //     static constexpr uint32_t maxNumberOfDoublets=3*1024*1024;};
 
 }  // namespace pixelTopology
 
