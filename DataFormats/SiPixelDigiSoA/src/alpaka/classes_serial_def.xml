@@ -1,0 +1,18 @@
+<lcgdict>
+<class name="PortableHostCollection<SiPixelDigisLayout>"/>
+<read
+  sourceClass="PortableHostCollection<SiPixelDigisLayout>"
+  targetClass="PortableHostCollection<SiPixelDigisLayout>"
+  version="[1-]"
+  source="SiPixelDigisLayout layout_;"
+  target="buffer_"
+  embed="false">
+<![CDATA[
+  PortableHostCollection<SiPixelDigisLayout>::ROOTReadStreamer(newObj, onfile.layout_);
+]]>
+</read>
+
+<class name="SiPixelDigisHost"/>
+<class name="edm::Wrapper<SiPixelDigisHost>" splitLevel="0"/>
+
+</lcgdict>

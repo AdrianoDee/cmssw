@@ -1,9 +1,9 @@
 #include <alpaka/alpaka.hpp>
 #include <unistd.h>
 
-#include "DataFormats/SiPixelClusterSoA/interface/alpaka/SiPixelClustersDevice.h"
-#include "DataFormats/SiPixelClusterSoA/interface/SiPixelClustersHost.h"
-#include "DataFormats/SiPixelClusterSoA/interface/SiPixelClustersLayout.h"
+#include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisDevice.h"
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisHost.h"
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisLayout.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/devices.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
@@ -14,9 +14,9 @@
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
-  namespace testClusterSoA {
+  namespace testDigisSoA {
 
-    void runKernels(SiPixelClustersLayoutSoAView clust_view, Queue& queue);
+    void runKernels(SiPixelDigisLayoutSoAView digis_view, Queue& queue);
   }
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
@@ -29,15 +29,15 @@ int main() {
   {
     // Instantiate tracks on device. PortableDeviceCollection allocates
     // SoA on device automatically.
-    SiPixelClustersDevice clusters_d(100,queue);
-    testClusterSoA::runKernels(clusters_d.view(), queue);
+    SiPixelDigisDevice digis_d(1000,queue);
+    testDigisSoA::runKernels(digis_d.view(), queue);
 
     // Instantate tracks on host. This is where the data will be
     // copied to from device.
-    SiPixelClustersHost clusters_h(clusters_d.view().metadata().size(),queue);
+    SiPixelDigisHost digis_h(digis_d.view().metadata().size(),queue);
 
-    std::cout << clusters_h.view().metadata().size() << std::endl;
-    alpaka::memcpy(queue, clusters_h.buffer(), clusters_d.const_buffer());
+    std::cout << digis_h.view().metadata().size() << std::endl;
+    alpaka::memcpy(queue, digis_h.buffer(), digis_d.const_buffer());
     alpaka::wait(queue);
 
   }
