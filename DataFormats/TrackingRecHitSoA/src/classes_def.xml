@@ -1,0 +1,6 @@
+<lcgdict>
+  <class name="pixelTopology::Phase1"/>
+  <class name="TrackingRecHitAlpakaSoA<pixelTopology::Phase1>"/>
+  <class name="TrackingRecHitAlpakaSoAViewPhase1"/>
+  <class name="TrackingRecHitAlpakaSoAConstViewPhase1"/> 
+</lcgdict>

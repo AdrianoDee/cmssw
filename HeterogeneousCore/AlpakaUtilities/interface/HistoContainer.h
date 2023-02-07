@@ -345,5 +345,4 @@ namespace cms {
 
   }  // namespace alpakatools
 }  // namespace cms
-
 #endif  // AlpakaCore_HistoContainer_h
