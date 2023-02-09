@@ -34,14 +34,12 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/CUDACore/interface/ScopedContext.h"
-#include "HeterogeneousCore/CUDAServices/interface/CUDAInterface.h"
+#include "HeterogeneousCore/CUDAServices/interface/CUDAService.h"
 #include "RecoTracker/Record/interface/CkfComponentsRecord.h"
 
 // local includes
 #include "SiPixelClusterThresholds.h"
 #include "SiPixelRawToClusterGPUKernel.h"
-
-namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 class SiPixelRawToClusterCUDA : public edm::stream::EDProducer<edm::ExternalWork> {
 public:
@@ -135,8 +133,7 @@ void SiPixelRawToClusterCUDA::fillDescriptions(edm::ConfigurationDescriptions& d
 void SiPixelRawToClusterCUDA::acquire(const edm::Event& iEvent,
                                       const edm::EventSetup& iSetup,
                                       edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
-  auto const& input = event.get(deviceToken_);
-  cms::alpakatools::ScopedContextAcquire ctx{input, std::move(waitingTaskHolder)};
+  cms::cuda::ScopedContextAcquire ctx{iEvent.streamID(), std::move(waitingTaskHolder), ctxState_};
 
   auto hgpuMap = iSetup.getHandle(gpuMapToken_);
   if (hgpuMap->hasQuality() != useQuality_) {
