@@ -1,6 +1,7 @@
 #ifndef DataFormats_SiPixelMappingSoA_interface_SiPixelMappingLayout_h
 #define DataFormats_SiPixelMappingSoA_interface_SiPixelMappingLayout_h
 
+#include <array>
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelROCsStatusAndMapping.h"
 
@@ -18,11 +19,17 @@
 // - getModToUnpAllAsync che mi da il vettore di sopra
 // - getModToUnpRegionalAsync che mi da il vettore di sopra “skimmed” regionally
 
-
 GENERATE_SOA_LAYOUT(SiPixelMappingLayout,
-                    SOA_SCALAR(SiPixelROCsStatusAndMapping, cablingMap),
-                    SOA_SCALAR(std::array<unsigned char, pixelgpudetails::MAX_SIZE>, modToUnpDefault),
-                    SOA_SCALAR(bool, hasQuality))
+                    SOA_COLUMN(unsigned int, fed),
+                    SOA_COLUMN(unsigned int, link),
+                    SOA_COLUMN(unsigned int, roc),
+                    SOA_COLUMN(unsigned int, rawId),
+                    SOA_COLUMN(unsigned int, rocInDet),
+                    SOA_COLUMN(unsigned int, moduleId),
+                    SOA_COLUMN(bool, badRocs),
+                    SOA_COLUMN(unsigned char, modToUnpDefault),
+                    SOA_SCALAR(unsigned int, size))
+
 
 using SiPixelMappingLayoutSoA = SiPixelMappingLayout<>;
 using SiPixelMappingLayoutSoAView = SiPixelMappingLayout<>::View;

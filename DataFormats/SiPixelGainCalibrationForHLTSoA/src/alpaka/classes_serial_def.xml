@@ -1,0 +1,18 @@
+<lcgdict>
+<class name="PortableHostCollection<SiPixelGainCalibrationForHLTLayout>"/>
+<read
+  sourceClass="PortableHostCollection<SiPixelGainCalibrationForHLTLayout>"
+  targetClass="PortableHostCollection<SiPixelGainCalibrationForHLTLayout>"
+  version="[1-]"
+  source="SiPixelGainCalibrationForHLTLayout layout_;"
+  target="buffer_"
+  embed="false">
+<![CDATA[
+  PortableHostCollection<SiPixelGainCalibrationForHLTLayout>::ROOTReadStreamer(newObj, onfile.layout_);
+]]>
+</read>
+
+<class name="SiPixelGainCalibrationForHLTHost"/>
+<class name="edm::Wrapper<SiPixelGainCalibrationForHLTHost>" splitLevel="0"/>
+
+</lcgdict>

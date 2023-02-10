@@ -41,8 +41,6 @@
 #include "SiPixelClusterThresholds.h"
 #include "SiPixelRawToClusterGPUKernel.h"
 
-namespace ALPAKA_ACCELERATOR_NAMESPACE {
-
 class SiPixelRawToClusterCUDA : public edm::stream::EDProducer<edm::ExternalWork> {
 public:
   explicit SiPixelRawToClusterCUDA(const edm::ParameterSet& iConfig);
@@ -135,8 +133,7 @@ void SiPixelRawToClusterCUDA::fillDescriptions(edm::ConfigurationDescriptions& d
 void SiPixelRawToClusterCUDA::acquire(const edm::Event& iEvent,
                                       const edm::EventSetup& iSetup,
                                       edm::WaitingTaskWithArenaHolder waitingTaskHolder) {
-  auto const& input = event.get(deviceToken_);
-  cms::alpakatools::ScopedContextAcquire ctx{input, std::move(waitingTaskHolder)};
+  cms::cuda::ScopedContextAcquire ctx{iEvent.streamID(), std::move(waitingTaskHolder), ctxState_};
 
   auto hgpuMap = iSetup.getHandle(gpuMapToken_);
   if (hgpuMap->hasQuality() != useQuality_) {
