@@ -15,14 +15,11 @@
   <flags EDM_PLUGIN="1"/>
 </library>
 
-
 <library file="alpaka/*.cc" name="CalibTrackerSiPixelESProducersPluginsPortable">
   <use name="alpaka"/>
   <use name="DataFormats/PortableTestObjects"/>
   <use name="DataFormats/TestObjects"/>
   <use name="DataFormats/SiPixelMappingSoA"/>
-  <use name="FWCore/Framework"/>
-  <use name="FWCore/ParameterSet"/>
   <use name="FWCore/Utilities"/>
   <use name="HeterogeneousCore/AlpakaCore"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
