@@ -1,6 +1,7 @@
 #include "DataFormats/SiPixelClusterSoA/interface/alpaka/SiPixelClustersDevice.h"
 #include "DataFormats/SiPixelClusterSoA/interface/SiPixelClustersHost.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/traits.h"
 
 using namespace alpaka;
 
@@ -11,7 +12,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     class TestFillKernel {
     public:
-      template <typename TAcc, typename = std::enable_if_t<is_accelerator_v<TAcc>>>
+      template <typename TAcc, typename = std::enable_if_t<isAccelerator<TAcc>>>
       ALPAKA_FN_ACC void operator()(TAcc const& acc, SiPixelClustersLayoutSoAView clust_view) const {
         for (int32_t j : elements_with_stride(acc, clust_view.metadata().size())) {
           clust_view[j].moduleStart() = j;
@@ -25,7 +26,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     class TestVerifyKernel {
     public:
-      template <typename TAcc, typename = std::enable_if_t<is_accelerator_v<TAcc>>>
+      template <typename TAcc, typename = std::enable_if_t<isAccelerator<TAcc>>>
       ALPAKA_FN_ACC void operator()(TAcc const& acc, SiPixelClustersLayoutSoAConstView clust_view) const {
         for (uint32_t j : elements_with_stride(acc, clust_view.metadata().size())) {
           assert(clust_view[j].moduleStart()==j);

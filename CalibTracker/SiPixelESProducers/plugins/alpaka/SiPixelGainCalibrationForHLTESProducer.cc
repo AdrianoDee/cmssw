@@ -74,7 +74,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         << "sizes " << sizeof(char) << ' ' << sizeof(uint8_t) << ' ' << sizeof(siPixelGainsSoA::DecodingStructure);
     
     // &(product->view().v_pedestals()) = (siPixelGainsSoA::DecodingStructure*)gains.data().data();
-    std::copy here
+    //std::copy here
     // do not read back from the (possibly write-combined) memory buffer
     auto minPed = gains.getPedLow();
     auto maxPed = gains.getPedHigh();

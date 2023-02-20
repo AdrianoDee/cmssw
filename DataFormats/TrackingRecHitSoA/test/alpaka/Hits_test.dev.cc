@@ -1,6 +1,7 @@
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsLayout.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitSoADevice.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/traits.h"
 
 using namespace alpaka;
 
@@ -12,7 +13,7 @@ namespace testTrackingRecHitSoA {
   template <typename TrackerTraits>
   class TestFillKernel {
   public:
-    template <typename TAcc, typename = std::enable_if_t<is_accelerator_v<TAcc>>>
+    template <typename TAcc, typename = std::enable_if_t<isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const& acc, TrackingRecHitAlpakaSoAView<TrackerTraits> soa) const {
 
     const uint32_t i(alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0u]);
@@ -32,7 +33,7 @@ namespace testTrackingRecHitSoA {
   template <typename TrackerTraits>
   class ShowKernel {
   public:
-    template <typename TAcc, typename = std::enable_if_t<is_accelerator_v<TAcc>>>
+    template <typename TAcc, typename = std::enable_if_t<isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const& acc, TrackingRecHitAlpakaSoAConstView<TrackerTraits> soa) const {
 
     const uint32_t i(alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0u]);
