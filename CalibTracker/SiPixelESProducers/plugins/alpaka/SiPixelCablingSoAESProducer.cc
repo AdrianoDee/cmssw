@@ -3,9 +3,9 @@
 #include "CondFormats/SiPixelObjects/interface/SiPixelFedCablingMap.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelFedCablingTree.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelQuality.h"
-#include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h" //TODO: move me
+#include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h"
 #include "DataFormats/SiPixelMappingSoA/interface/SiPixelMappingHost.h"
-
+#include "DataFormats/SiPixelMappingSoA/interface/alpaka/SiPixelMappingDevice.h"
 #include "FWCore/Framework/interface/ESTransientHandle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -22,9 +22,14 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 #include "RecoTracker/Record/interface/CkfComponentsRecord.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
+#include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
 
+template struct cms::alpakatools::CopyToDevice<SiPixelMappingHost>; //needed for the method to not be incomplete
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
+
+  using namespace cms::alpakatools;
 
   class SiPixelCablingSoAESProducer : public ESProducer {
   public:
@@ -59,7 +64,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       bool hasQuality = quality != nullptr;
       auto geom = iRecord.getTransientHandle(geometryToken_);
-      auto product = std::make_unique<SiPixelMappingHost>(pixelgpudetails::MAX_SIZE, *(cablingMap.product()), hasQuality, cms::alpakatools::host());
+      auto product = std::make_unique<SiPixelMappingHost>(pixelgpudetails::MAX_SIZE, cms::alpakatools::host()); //(pixelgpudetails::MAX_SIZE, *(cablingMap.product()), hasQuality, cms::alpakatools::host());
       
       std::vector<unsigned int> const& fedIds = cablingMap->fedIds();
       std::unique_ptr<SiPixelFedCablingTree> const& cabling = cablingMap->cablingTree();
@@ -71,6 +76,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       int index = 1;
 
       auto mapView = product->view();
+
+      mapView.hasQuality() = hasQuality;
 
       for (unsigned int fed = startFed; fed <= endFed; fed++) {
         for (unsigned int link = 1; link <= pixelgpudetails::MAX_LINK; link++) {

@@ -28,7 +28,8 @@ GENERATE_SOA_LAYOUT(SiPixelMappingLayout,
                     SOA_COLUMN(unsigned int, moduleId),
                     SOA_COLUMN(bool, badRocs),
                     SOA_COLUMN(unsigned char, modToUnpDefault),
-                    SOA_SCALAR(unsigned int, size))
+                    SOA_SCALAR(unsigned int, size),
+                    SOA_SCALAR(bool,hasQuality))
 
 
 using SiPixelMappingLayoutSoA = SiPixelMappingLayout<>;

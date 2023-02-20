@@ -4,6 +4,7 @@
 <use name="DataFormats/Portable"/>
 <use name="DataFormats/SiPixelRawData"/>
 <use name="DataFormats/SoATemplate" source_only="1"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
 <export>
     <lib name="1"/>
 </export>

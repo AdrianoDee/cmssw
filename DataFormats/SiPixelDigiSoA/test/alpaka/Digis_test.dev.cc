@@ -1,6 +1,7 @@
 #include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisDevice.h"
 #include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisHost.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/traits.h"
 
 using namespace alpaka;
 
@@ -11,7 +12,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     class TestFillKernel {
     public:
-      template <typename TAcc, typename = std::enable_if_t<is_accelerator_v<TAcc>>>
+      template <typename TAcc, typename = std::enable_if_t<isAccelerator<TAcc>>>
       ALPAKA_FN_ACC void operator()(TAcc const& acc, SiPixelDigisLayoutSoAView digi_view) const {
         for (int32_t j : elements_with_stride(acc, digi_view.metadata().size())) {
           digi_view[j].clus() = j;
@@ -25,7 +26,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     class TestVerifyKernel {
     public:
-      template <typename TAcc, typename = std::enable_if_t<is_accelerator_v<TAcc>>>
+      template <typename TAcc, typename = std::enable_if_t<isAccelerator<TAcc>>>
       ALPAKA_FN_ACC void operator()(TAcc const& acc, SiPixelDigisLayoutSoAConstView digi_view) const {
         for (uint32_t j : elements_with_stride(acc, digi_view.metadata().size())) {
           assert(digi_view[j].clus()==int(j));
