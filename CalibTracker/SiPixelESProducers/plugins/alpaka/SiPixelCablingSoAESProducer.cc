@@ -11,6 +11,7 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/ESGetToken.h"
+// #include "FWCore/Framework/interface/ModuleFactory.h"
 
 #include "Geometry/CommonDetUnit/interface/GeomDetType.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
@@ -25,15 +26,23 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
 
-template struct cms::alpakatools::CopyToDevice<SiPixelMappingHost>; //needed for the method to not be incomplete
-
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
-
-  using namespace cms::alpakatools;
 
   class SiPixelCablingSoAESProducer : public ESProducer {
   public:
-    SiPixelCablingSoAESProducer(edm::ParameterSet const& iConfig) : 
+    explicit SiPixelCablingSoAESProducer(edm::ParameterSet const& iConfig);
+    std::unique_ptr<SiPixelMappingHost> produce(const CkfComponentsRecord& iRecord);
+
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+
+  private:
+    edm::ESGetToken<SiPixelFedCablingMap, SiPixelFedCablingMapRcd> cablingMapToken_;
+    edm::ESGetToken<SiPixelQuality, SiPixelQualityRcd> qualityToken_;
+    edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geometryToken_;
+    bool useQuality_;
+  };
+
+    SiPixelCablingSoAESProducer::SiPixelCablingSoAESProducer(edm::ParameterSet const& iConfig) : 
       useQuality_(iConfig.getParameter<bool>("UseQualityInfo")) 
     {
       auto const& component = iConfig.getParameter<std::string>("ComponentName");
@@ -45,7 +54,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       geometryToken_ = cc.consumes();
     }
 
-    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+    void SiPixelCablingSoAESProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
      edm::ParameterSetDescription desc;
      desc.add<std::string>("ComponentName", "");
      desc.add<std::string>("CablingMapLabel", "")->setComment("CablingMap label");
@@ -53,7 +62,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
      descriptions.addWithDefaultLabel(desc);
     }
 
-    std::unique_ptr<SiPixelMappingHost> produce(const CkfComponentsRecord& iRecord) {
+    std::unique_ptr<SiPixelMappingHost> SiPixelCablingSoAESProducer::produce(const CkfComponentsRecord& iRecord) {
       auto cablingMap = iRecord.getTransientHandle(cablingMapToken_);
 
       const SiPixelQuality* quality = nullptr;
@@ -150,12 +159,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return product;
     }
 
-  private:
-    edm::ESGetToken<SiPixelFedCablingMap, SiPixelFedCablingMapRcd> cablingMapToken_;
-    edm::ESGetToken<SiPixelQuality, SiPixelQualityRcd> qualityToken_;
-    edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geometryToken_;
-    bool useQuality_;
-  };
+
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 DEFINE_FWK_EVENTSETUP_ALPAKA_MODULE(SiPixelCablingSoAESProducer);

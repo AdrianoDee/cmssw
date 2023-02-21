@@ -4,14 +4,15 @@
 #include <cstdint>
 #include <alpaka/alpaka.hpp>
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
+#include "DataFormats/Portable/interface/PortableHostCollection.h"
 #include "DataFormats/SiPixelMappingSoA/interface/SiPixelMappingLayout.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/ESProducer.h"
+#include "DataFormats/SiPixelMappingSoA/interface/SiPixelMappingHost.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       using SiPixelMappingDevice = PortableCollection<SiPixelMappingLayout<>>;
-      using SiPixelMappingHost = PortableCollectionHost<SiPixelMappingLayout<>>;
-
+      using SiPixelMappingHost = PortableHostCollection<SiPixelMappingLayout<>>;
     //   template <>
     // struct CopyToDevice<ExampleHostProduct> {
     //    template <typename TQueue>
@@ -94,4 +95,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 // }
 
 // }
+
+
+// #include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
+// template struct cms::alpakatools::CopyToDevice<SiPixelMappingHost>; 
+
 #endif  // DataFormats_SiPixelMappingSoA_interface_SiPixelClustersDevice_h

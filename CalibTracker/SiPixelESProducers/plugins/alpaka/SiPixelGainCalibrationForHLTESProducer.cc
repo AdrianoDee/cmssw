@@ -1,33 +1,35 @@
-#include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTHost.h"
-#include "CalibTracker/Records/interface/SiPixelGainCalibrationForHLTSoARcd.h"
+#include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTSoARcd.h"
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTLayout.h"
-#include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTHost.h"
+// #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTHost.h"
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/alpaka/SiPixelGainCalibrationForHLTDevice.h"
-#include "CondFormats/DataRecord/interface/SiPixelGainCalibrationForHLTRcd.h"
+#include "CalibTracker/Records/interface/SiPixelGainCalibrationForHLTGPURcd.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelGainCalibrationForHLT.h"
 #include "FWCore/Framework/interface/ESProducer.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/Framework/interface/ModuleFactory.h"
+// #include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/CommonDetUnit/interface/GeomDetType.h"
 
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/ESProducer.h"
-#include "HeterogeneousCore/AlpakaCore/interface/alpaka/ModuleFactory.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/ModuleFactory.h"
+
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
 #include <memory>
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-  class SiPixelGainCalibrationForHLTSoAESProducer : public edm::ESProducer {
+  class SiPixelGainCalibrationForHLTSoAESProducer : public ESProducer {
   public:
     explicit SiPixelGainCalibrationForHLTSoAESProducer(const edm::ParameterSet& iConfig);
-    std::unique_ptr<SiPixelGainCalibrationForHLTHost> produce(const SiPixelGainCalibrationForHLTSoARcd& iRecord);
+    std::unique_ptr<SiPixelGainCalibrationForHLTHost> produce(const SiPixelGainCalibrationForHLTGPURcd& iRecord);
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -49,14 +51,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   std::unique_ptr<SiPixelGainCalibrationForHLTHost> SiPixelGainCalibrationForHLTSoAESProducer::produce(
-      const SiPixelGainCalibrationForHLTSoARcd& iRecord) {
+      const SiPixelGainCalibrationForHLTGPURcd& iRecord) {
     auto gainsRecord = iRecord.getHandle(gainsToken_);
     auto geomRecord = iRecord.getHandle(geometryToken_);
 
     auto geom = *(geomRecord);
     auto gains = *(gainsRecord);
 
-    auto product = std::make_unique<SiPixelGainCalibrationForHLTHost>(gains.data().size(), cms::alpakatools::host());
+    auto product = std::make_unique<SiPixelGainCalibrationForHLTHost>(phase1PixelTopology::numberOfModules, cms::alpakatools::host());
     
       // bizzarre logic (looking for fist strip-det) don't ask
     auto const& dus = geom.detUnits();
@@ -74,7 +76,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         << "sizes " << sizeof(char) << ' ' << sizeof(uint8_t) << ' ' << sizeof(siPixelGainsSoA::DecodingStructure);
     
     // &(product->view().v_pedestals()) = (siPixelGainsSoA::DecodingStructure*)gains.data().data();
-    //std::copy here
+    memcpy(&(product->view().v_pedestals()), (gains.data().data()), sizeof(siPixelGainsSoA::DecodingStructure));
     // do not read back from the (possibly write-combined) memory buffer
     auto minPed = gains.getPedLow();
     auto maxPed = gains.getPedHigh();
@@ -113,7 +115,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       assert(0 == p->iend % 2);
       assert(p->ibegin != p->iend);
       assert(p->ncols > 0);
-      product->view().rangeAndCols()[i] = std::make_pair(siPixelGainsSoA::Range(p->ibegin, p->iend), p->ncols);
+      product->view()[i].rangeAndCols() = std::make_pair(siPixelGainsSoA::Range(p->ibegin, p->iend), p->ncols);
       if (ind[i].detid != dus[i]->geographicalId())
         LogDebug("SiPixelGainCalibrationForHLTSoA") << ind[i].detid << "!=" << dus[i]->geographicalId();
     }
@@ -122,4 +124,5 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
 } // namespace ALPAKA_ACCELERATOR_NAMESPACE
+
 DEFINE_FWK_EVENTSETUP_ALPAKA_MODULE(SiPixelGainCalibrationForHLTSoAESProducer);

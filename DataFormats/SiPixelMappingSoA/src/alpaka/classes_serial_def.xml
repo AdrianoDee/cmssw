@@ -1,4 +1,4 @@
-<lcgdict>
+<!-- <lcgdict>
 <class name="PortableHostCollection<SiPixelMappingLayout>"/>
 <read
   sourceClass="PortableHostCollection<SiPixelMappingLayout>"
@@ -15,4 +15,4 @@
 <class name="SiPixelMappingHost"/>
 <class name="edm::Wrapper<SiPixelMappingHost>" splitLevel="0"/>
 
-</lcgdict>
+</lcgdict> -->
