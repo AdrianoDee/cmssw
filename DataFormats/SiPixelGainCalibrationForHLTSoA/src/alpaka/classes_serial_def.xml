@@ -1,4 +1,4 @@
-<lcgdict>
+<!-- <lcgdict>
 <class name="PortableHostCollection<SiPixelGainCalibrationForHLTLayout>"/>
 <read
   sourceClass="PortableHostCollection<SiPixelGainCalibrationForHLTLayout>"
@@ -15,4 +15,4 @@
 <class name="SiPixelGainCalibrationForHLTHost"/>
 <class name="edm::Wrapper<SiPixelGainCalibrationForHLTHost>" splitLevel="0"/>
 
-</lcgdict>
+</lcgdict> -->

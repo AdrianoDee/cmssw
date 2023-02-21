@@ -1,15 +1,18 @@
-#ifndef DataFormats_SiPixelGainCalibrationForHLTSoA_interface_SiPixelClustersDevice_h
-#define DataFormats_SiPixelGainCalibrationForHLTSoA_interface_SiPixelClustersDevice_h
+#ifndef DataFormats_SiPixelGainCalibrationForHLTSoA_interface_alpaka_SiPixelGainCalibrationForHLTDevice_h
+#define DataFormats_SiPixelGainCalibrationForHLTSoA_interface_alpaka_SiPixelGainCalibrationForHLTDevice_h
 
 #include <cstdint>
 #include <alpaka/alpaka.hpp>
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
+#include "DataFormats/Portable/interface/PortableHostCollection.h"
+#include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTHost.h"
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTLayout.h"
-
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   using SiPixelGainCalibrationForHLTDevice = PortableCollection<SiPixelGainCalibrationForHLTLayout<>>;
+  using SiPixelGainCalibrationForHLTHost = siPixelGains::SiPixelGainCalibrationForHLTHost;//PortableHostCollection<SiPixelGainCalibrationForHLTLayout<>>;
+
   // class SiPixelGainCalibrationForHLTDevice : public PortableCollection<SiPixelGainCalibrationForHLTLayout<>> {
   // public:
   //   SiPixelGainCalibrationForHLTDevice() = default;
@@ -63,4 +66,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   //   const SiPixelFedCablingMap *cablingMap_; //this is the cabling map that is ALWAYS on Host
   // };
 }
+
+// #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTHost.h"
+// #include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
+// template struct cms::alpakatools::CopyToDevice<SiPixelGainCalibrationForHLTHost>; //needed for the method to not be incomplete
+
 #endif  // DataFormats_SiPixelGainCalibrationForHLTSoA_interface_SiPixelClustersDevice_h
