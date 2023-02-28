@@ -82,8 +82,8 @@
 #include "RecoLocalTracker/Records/interface/TkPixelCPERecord.h"
 
 // Make heterogeneous framework happy
-#include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h"
-#include "CUDADataFormats/Common/interface/HostProduct.h"
+#include "DataFormats/SiPixelClusterSoA/interface/gpuClusteringConstants.h"
+#include "DataFormats/Portable/interface/HostProduct.h"
 
 using namespace std;
 

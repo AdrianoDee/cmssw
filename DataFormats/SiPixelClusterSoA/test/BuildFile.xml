@@ -1,0 +1,5 @@
+<bin file="alpaka/Clusters_test.cc alpaka/Clusters_test.dev.cc" name="Clusters_test">
+  <use name="alpaka"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+<flags ALPAKA_BACKENDS="1"/>
+</bin>

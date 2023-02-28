@@ -1,14 +1,15 @@
-#include <cuda_runtime.h>
 
 #include "CondFormats/SiPixelTransient/interface/SiPixelTemplate.h"
 #include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/PixelCPEFastParams/interface/PixelCPEFastParams.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "Geometry/CommonDetUnit/interface/PixelGeomDetUnit.h"
 #include "Geometry/TrackerGeometryBuilder/interface/RectangularPixelTopology.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "DataFormats/TrackerCommon/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/CUDAUtilities/interface/cudaCheck.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEFast.h"
+#include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
 
 // Services
 // this is needed to get errors from templates
@@ -37,73 +38,29 @@ PixelCPEFast<TrackerTraits>::PixelCPEFast(edm::ParameterSet const& conf,
           << (*genErrorDBObject_).version();
   }
 
-  fillParamsForGpu();
-
-  cpuData_ = {
-      &commonParamsGPU_,
-      detParamsGPU_.data(),
-      &layerGeometry_,
-      &averageGeometry_,
-  };
+  initializeParams();
 }
 
+// Initialize the CPE Params on host.
 template <typename TrackerTraits>
-const pixelCPEforGPU::ParamsOnGPUT<TrackerTraits>* PixelCPEFast<TrackerTraits>::getGPUProductAsync(
-    cudaStream_t cudaStream) const {
-  using ParamsOnGPU = pixelCPEforGPU::ParamsOnGPUT<TrackerTraits>;
-  using LayerGeometry = pixelCPEforGPU::LayerGeometryT<TrackerTraits>;
-  using AverageGeometry = pixelTopology::AverageGeometryT<TrackerTraits>;
-
-  const auto& data = gpuData_.dataForCurrentDeviceAsync(cudaStream, [this](GPUData& data, cudaStream_t stream) {
-    // and now copy to device...
-
-    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_commonParams, sizeof(pixelCPEforGPU::CommonParams)));
-    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_detParams,
-                         this->detParamsGPU_.size() * sizeof(pixelCPEforGPU::DetParams)));
-    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_averageGeometry, sizeof(AverageGeometry)));
-    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_h.m_layerGeometry, sizeof(LayerGeometry)));
-    cudaCheck(cudaMalloc((void**)&data.paramsOnGPU_d, sizeof(ParamsOnGPU)));
-    cudaCheck(cudaMemcpyAsync(data.paramsOnGPU_d, &data.paramsOnGPU_h, sizeof(ParamsOnGPU), cudaMemcpyDefault, stream));
-    cudaCheck(cudaMemcpyAsync((void*)data.paramsOnGPU_h.m_commonParams,
-                              &this->commonParamsGPU_,
-                              sizeof(pixelCPEforGPU::CommonParams),
-                              cudaMemcpyDefault,
-                              stream));
-    cudaCheck(cudaMemcpyAsync((void*)data.paramsOnGPU_h.m_averageGeometry,
-                              &this->averageGeometry_,
-                              sizeof(AverageGeometry),
-                              cudaMemcpyDefault,
-                              stream));
-    cudaCheck(cudaMemcpyAsync((void*)data.paramsOnGPU_h.m_layerGeometry,
-                              &this->layerGeometry_,
-                              sizeof(LayerGeometry),
-                              cudaMemcpyDefault,
-                              stream));
-    cudaCheck(cudaMemcpyAsync((void*)data.paramsOnGPU_h.m_detParams,
-                              this->detParamsGPU_.data(),
-                              this->detParamsGPU_.size() * sizeof(pixelCPEforGPU::DetParams),
-                              cudaMemcpyDefault,
-                              stream));
-  });
-  return data.paramsOnGPU_d;
-}
-
-template <typename TrackerTraits>
-void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
-  //
+void PixelCPEFast<TrackerTraits>::initializeParams() {
   // this code executes only once per job, computation inefficiency is not an issue
   // many code blocks are repeated: better keep the computation local and self oconsistent as blocks may in future move around, be deleted ...
   // It is valid only for Phase1 and the version of GenError in DB used in late 2018 and in 2021
+  auto& commonParams_ = cpeParams_.m_commonParams;
+  auto& detParams_ = cpeParams_.m_detParams;
+  auto& layerGeometry_ = cpeParams_.m_layerGeometry;
+  auto& averageGeometry_ = cpeParams_.m_averageGeometry;
 
-  commonParamsGPU_.theThicknessB = m_DetParams.front().theThickness;
-  commonParamsGPU_.theThicknessE = m_DetParams.back().theThickness;
-  commonParamsGPU_.thePitchX = m_DetParams[0].thePitchX;
-  commonParamsGPU_.thePitchY = m_DetParams[0].thePitchY;
+  commonParams_.theThicknessB = m_DetParams.front().theThickness;
+  commonParams_.theThicknessE = m_DetParams.back().theThickness;
+  commonParams_.thePitchX = m_DetParams[0].thePitchX;
+  commonParams_.thePitchY = m_DetParams[0].thePitchY;
 
-  commonParamsGPU_.numberOfLaddersInBarrel = TrackerTraits::numberOfLaddersInBarrel;
+  commonParams_.numberOfLaddersInBarrel = TrackerTraits::numberOfLaddersInBarrel;
 
-  LogDebug("PixelCPEFast") << "pitch & thickness " << commonParamsGPU_.thePitchX << ' ' << commonParamsGPU_.thePitchY
-                           << "  " << commonParamsGPU_.theThicknessB << ' ' << commonParamsGPU_.theThicknessE;
+  LogDebug("PixelCPEFast") << "pitch & thickness " << commonParams_.thePitchX << ' ' << commonParams_.thePitchY << "  "
+                           << commonParams_.theThicknessB << ' ' << commonParams_.theThicknessE;
 
   // zero average geometry
   memset(&averageGeometry_, 0, sizeof(pixelTopology::AverageGeometryT<TrackerTraits>));
@@ -115,11 +72,11 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
   float miz = 500, mxz = 0;
   float pl = 0;
   int nl = 0;
-  detParamsGPU_.resize(m_DetParams.size());
+  // detParams_.resize(m_DetParams.size());
 
   for (auto i = 0U; i < m_DetParams.size(); ++i) {
     auto& p = m_DetParams[i];
-    auto& g = detParamsGPU_[i];
+    auto& g = detParams_[i];
 
     g.nRowsRoc = p.theDet->specificTopology().rowsperroc();
     g.nColsRoc = p.theDet->specificTopology().colsperroc();
@@ -129,15 +86,15 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
     g.numPixsInModule = g.nRows * g.nCols;
 
     assert(p.theDet->index() == int(i));
-    assert(commonParamsGPU_.thePitchY == p.thePitchY);
-    assert(commonParamsGPU_.thePitchX == p.thePitchX);
+    assert(commonParams_.thePitchY == p.thePitchY);
+    assert(commonParams_.thePitchX == p.thePitchX);
 
     g.isBarrel = GeomDetEnumerators::isBarrel(p.thePart);
     g.isPosZ = p.theDet->surface().position().z() > 0;
     g.layer = ttopo_.layer(p.theDet->geographicalId());
     g.index = i;  // better be!
     g.rawId = p.theDet->geographicalId();
-    auto thickness = g.isBarrel ? commonParamsGPU_.theThicknessB : commonParamsGPU_.theThicknessE;
+    auto thickness = g.isBarrel ? commonParams_.theThicknessB : commonParams_.theThicknessE;
     assert(thickness == p.theThickness);
 
     auto ladder = ttopo_.pxbLadder(p.theDet->geographicalId());
@@ -172,8 +129,8 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
     g.z0 = p.theOrigin.z();
 
     auto vv = p.theDet->surface().position();
-    auto rr = pixelCPEforGPU::Rotation(p.theDet->surface().rotation());
-    g.frame = pixelCPEforGPU::Frame(vv.x(), vv.y(), vv.z(), rr);
+    auto rr = pixelCPEforDevice::Rotation(p.theDet->surface().rotation());
+    g.frame = pixelCPEforDevice::Frame(vv.x(), vv.y(), vv.z(), rr);
 
     zl += vv.z();
     miz = std::min(miz, std::abs(vv.z()));
@@ -196,7 +153,7 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
     auto toMicron = [&](float x) { return std::min(511, int(x * 1.e4f + 0.5f)); };
 
     // average angle
-    auto gvx = p.theOrigin.x() + 40.f * commonParamsGPU_.thePitchX;
+    auto gvx = p.theOrigin.x() + 40.f * commonParams_.thePitchX;
     auto gvy = p.theOrigin.y();
     auto gvz = 1.f / p.theOrigin.z();
     //--- Note that the normalization is not required as only the ratio used
@@ -228,7 +185,7 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
     // moduleOffsetX is the definition of TrackerTraits::xOffset,
     // needs to be calculated because for Phase2 the modules are not uniform
     float moduleOffsetX = -(0.5f * float(g.nRows) + TrackerTraits::bigPixXCorrection);
-    auto const xoff = moduleOffsetX * commonParamsGPU_.thePitchX;
+    auto const xoff = moduleOffsetX * commonParams_.thePitchX;
 
     for (int ix = 0; ix < CPEFastParametrisation::kNumErrorBins; ++ix) {
       auto x = xoff * (1.f - (0.5f + float(ix)) / 8.f);
@@ -247,11 +204,11 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
     // sample yerr as function of position
     // moduleOffsetY is the definition of TrackerTraits::yOffset (removed)
     float moduleOffsetY = 0.5f * float(g.nCols) + TrackerTraits::bigPixYCorrection;
-    auto const yoff = -moduleOffsetY * commonParamsGPU_.thePitchY;
+    auto const yoff = -moduleOffsetY * commonParams_.thePitchY;
 
     for (int ix = 0; ix < CPEFastParametrisation::kNumErrorBins; ++ix) {
       auto y = yoff * (1.f - (0.5f + float(ix)) / 8.f);
-      auto gvx = p.theOrigin.x() + 40.f * commonParamsGPU_.thePitchY;
+      auto gvx = p.theOrigin.x() + 40.f * commonParams_.thePitchY;
       auto gvy = p.theOrigin.y() - y;
       auto gvz = 1.f / p.theOrigin.z();
       cp.cotbeta = gvy * gvz;
@@ -307,8 +264,8 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
       ys += 1.f;  // first bin 0 is for size 9  (and size is in fixed point 2^3)
       if (CPEFastParametrisation::kNumErrorBins - 1 == iy)
         ys += 8.f;  // last bin for "overflow"
-      // cp.cotalpha = ys*(commonParamsGPU_.thePitchX/(8.f*thickness));  //  use this to print sampling in "x"  (and comment the line below)
-      cp.cotbeta = std::copysign(ys * (commonParamsGPU_.thePitchY / (8.f * thickness)), aveCB);
+      // cp.cotalpha = ys*(commonParams_.thePitchX/(8.f*thickness));  //  use this to print sampling in "x"  (and comment the line below)
+      cp.cotbeta = std::copysign(ys * (commonParams_.thePitchY / (8.f * thickness)), aveCB);
       errorFromTemplates(p, cp, 20000.f);
       g.sigmay[iy] = toMicron(cp.sigmay);
       LogDebug("PixelCPEFast") << "sigmax/sigmay " << i << ' ' << (ys + 4.f) / 8.f << ' ' << cp.cotalpha << '/'
@@ -330,7 +287,7 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
   auto& aveGeom = averageGeometry_;
   int il = 0;
   for (int im = 0, nm = numberOfModulesInBarrel; im < nm; ++im) {
-    auto const& g = detParamsGPU_[im];
+    auto const& g = detParams_[im];
     il = im / numberOfModulesInLadder;
     assert(il < int(numberOfLaddersInBarrel));
     auto z = g.frame.z();
@@ -352,11 +309,11 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
 
   // compute "max z" for first layer in endcap (should we restrict to the outermost ring?)
   for (auto im = TrackerTraits::layerStart[firstEndcapPos]; im < TrackerTraits::layerStart[firstEndcapPos + 1]; ++im) {
-    auto const& g = detParamsGPU_[im];
+    auto const& g = detParams_[im];
     aveGeom.endCapZ[0] = std::max(aveGeom.endCapZ[0], g.frame.z());
   }
   for (auto im = TrackerTraits::layerStart[firstEndcapNeg]; im < TrackerTraits::layerStart[firstEndcapNeg + 1]; ++im) {
-    auto const& g = detParamsGPU_[im];
+    auto const& g = detParams_[im];
     aveGeom.endCapZ[1] = std::min(aveGeom.endCapZ[1], g.frame.z());
   }
   // correct for outer ring being closer
@@ -374,24 +331,24 @@ void PixelCPEFast<TrackerTraits>::fillParamsForGpu() {
 #endif  // EDM_ML_DEBUG
 
   // fill Layer and ladders geometry
-  memset(&layerGeometry_, 0, sizeof(pixelCPEforGPU::LayerGeometryT<TrackerTraits>));
+  memset(&layerGeometry_, 0, sizeof(pixelCPEforDevice::LayerGeometryT<TrackerTraits>));
   memcpy(layerGeometry_.layerStart,
          TrackerTraits::layerStart,
-         sizeof(pixelCPEforGPU::LayerGeometryT<TrackerTraits>::layerStart));
+         sizeof(pixelCPEforDevice::LayerGeometryT<TrackerTraits>::layerStart));
   memcpy(layerGeometry_.layer, pixelTopology::layer<TrackerTraits>.data(), pixelTopology::layer<TrackerTraits>.size());
   layerGeometry_.maxModuleStride = pixelTopology::maxModuleStride<TrackerTraits>;
 }
 
-template <typename TrackerTraits>
-PixelCPEFast<TrackerTraits>::GPUData::~GPUData() {
-  if (paramsOnGPU_d != nullptr) {
-    cudaFree((void*)paramsOnGPU_h.m_commonParams);
-    cudaFree((void*)paramsOnGPU_h.m_detParams);
-    cudaFree((void*)paramsOnGPU_h.m_averageGeometry);
-    cudaFree((void*)paramsOnGPU_h.m_layerGeometry);
-    cudaFree(paramsOnGPU_d);
-  }
-}
+// template <typename TrackerTraits>
+// PixelCPEFast<TrackerTraits>::GPUData::~GPUData() {
+//   if (paramsOnGPU_d != nullptr) {
+//     cudaFree((void*)paramsOnGPU_h.m_commonParams);
+//     cudaFree((void*)paramsOnGPU_h.m_detParams);
+//     cudaFree((void*)paramsOnGPU_h.m_averageGeometry);
+//     cudaFree((void*)paramsOnGPU_h.m_layerGeometry);
+//     cudaFree(paramsOnGPU_d);
+//   }
+// }
 
 template <typename TrackerTraits>
 void PixelCPEFast<TrackerTraits>::errorFromTemplates(DetParam const& theDetParam,
@@ -474,8 +431,7 @@ LocalPoint PixelCPEFast<TrackerTraits>::localPosition(DetParam const& theDetPara
   int q_l_Y;  //!< Q of the last   pixel  in Y
   collect_edge_charges(theClusterParam, q_f_X, q_l_X, q_f_Y, q_l_Y, useErrorsFromTemplates_ && truncatePixelCharge_);
 
-  // do GPU like ...
-  pixelCPEforGPU::ClusParams cp;
+  pixelCPEforDevice::ClusParams cp;
 
   cp.minRow[0] = theClusterParam.theCluster->minPixelRow();
   cp.maxRow[0] = theClusterParam.theCluster->maxPixelRow();
@@ -488,14 +444,16 @@ LocalPoint PixelCPEFast<TrackerTraits>::localPosition(DetParam const& theDetPara
   cp.q_l_Y[0] = q_l_Y;
 
   cp.charge[0] = theClusterParam.theCluster->charge();
+  auto& commonParams_ = cpeParams_.m_commonParams;
+  auto& detParams_ = cpeParams_.m_detParams;
 
   auto ind = theDetParam.theDet->index();
-  pixelCPEforGPU::position<TrackerTraits>(commonParamsGPU_, detParamsGPU_[ind], cp, 0);
+  pixelCPEforDevice::position<TrackerTraits>(commonParams_, detParams_[ind], cp, 0);
   auto xPos = cp.xpos[0];
   auto yPos = cp.ypos[0];
 
   // set the error  (mind ape....)
-  pixelCPEforGPU::errorFromDB<TrackerTraits>(commonParamsGPU_, detParamsGPU_[ind], cp, 0);
+  pixelCPEforDevice::errorFromDB<TrackerTraits>(commonParams_, detParams_[ind], cp, 0);
   theClusterParam.sigmax = cp.xerr[0];
   theClusterParam.sigmay = cp.yerr[0];
 

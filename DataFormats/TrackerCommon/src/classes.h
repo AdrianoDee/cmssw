@@ -1,4 +1,5 @@
 #include "DataFormats/TrackerCommon/interface/ClusterSummary.h"
+#include "DataFormats/TrackerCommon/interface/SimplePixelTopology.h"
 #include "DataFormats/Common/interface/Wrapper.h"
 #include <vector>
 

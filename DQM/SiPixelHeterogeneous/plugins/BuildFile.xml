@@ -1,3 +1,4 @@
+<use name="alpaka"/>
 <use name="DQMServices/Core"/>
 <use name="FWCore/Framework"/>
 <use name="FWCore/ParameterSet"/>
@@ -5,8 +6,8 @@
 <use name="DataFormats/Common"/>
 <use name="Geometry/Records"/>
 <use name="Geometry/TrackerGeometryBuilder"/>
-<use name="CUDADataFormats/TrackingRecHit"/>
-<use name="CUDADataFormats/Track"/>
-<use name="CUDADataFormats/Vertex"/>
+<use name="DataFormats/TrackingRecHitSoA"/>
+<use name="DataFormats/Track"/>
+<use name="DataFormats/Vertex"/>
 <use name="DataFormats/BeamSpot"/>
 <flags EDM_PLUGIN="1"/>

@@ -1,14 +1,16 @@
 <use name="boost"/>
 <use name="boost_regex"/>
 <use name="cuda"/>
+<use name="alpaka"/>
 <use name="vdt_headers"/>
 <use name="CondFormats/SiPixelObjects"/>
 <use name="CondFormats/SiPixelTransient"/>
 <use name="DataFormats/TrackerCommon"/>
 <use name="DataFormats/TrackerRecHit2D"/>
+<use name="DataFormats/BeamSpotAlpaka"/>
 <use name="FWCore/ParameterSet"/>
-<use name="HeterogeneousCore/CUDACore"/>
-<use name="HeterogeneousCore/CUDAUtilities"/>
+<use name="HeterogeneousCore/AlpakaCore"/>
+<use name="HeterogeneousCore/AlpakaUtilities"/>
 <use name="RecoLocalTracker/ClusterParameterEstimator"/>
 <export>
   <lib name="1"/>

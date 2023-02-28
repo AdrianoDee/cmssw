@@ -1,21 +1,23 @@
 #ifndef RecoPixelVertexing__PixelTrackFitting__test_common_h
 #define RecoPixelVertexing__PixelTrackFitting__test_common_h
-
+#include <alpaka/alpaka.hpp>
 #include <algorithm>
 #include <cassert>
 #include <random>
 
-template <class C>
-__host__ __device__ void printIt(C* m) {
+namespace ALPAKA_ACCELERATOR_NAMESPACE {
+  template <class C>
+  ALPAKA_FN_ACC void printIt(C* m) {
 #ifdef TEST_DEBUG
-  printf("\nMatrix %dx%d\n", (int)m->rows(), (int)m->cols());
-  for (u_int r = 0; r < m->rows(); ++r) {
-    for (u_int c = 0; c < m->cols(); ++c) {
-      printf("Matrix(%d,%d) = %f\n", r, c, (*m)(r, c));
+    printf("\nMatrix %dx%d\n", (int)m->rows(), (int)m->cols());
+    for (u_int r = 0; r < m->rows(); ++r) {
+      for (u_int c = 0; c < m->cols(); ++c) {
+        printf("Matrix(%d,%d) = %f\n", r, c, (*m)(r, c));
+      }
     }
-  }
 #endif
-}
+  }
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 template <class C1, class C2>
 bool isEqualFuzzy(C1 a, C2 b, double epsilon = 1e-6) {

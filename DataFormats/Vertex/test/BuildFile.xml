@@ -1,0 +1,5 @@
+<bin file="alpaka/ZVertexSoA_test.cc alpaka/ZVertexSoA_test.dev.cc" name="ZVertexSoA_test">
+  <use name="alpaka"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+<flags ALPAKA_BACKENDS="1"/>
+</bin>

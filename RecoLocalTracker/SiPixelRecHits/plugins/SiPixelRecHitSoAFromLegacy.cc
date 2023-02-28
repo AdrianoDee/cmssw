@@ -1,11 +1,11 @@
-#include <cuda_runtime.h>
+#include <alpaka/alpaka.hpp>
 
-#include "CUDADataFormats/BeamSpot/interface/BeamSpotCUDA.h"
-#include "CUDADataFormats/SiPixelCluster/interface/SiPixelClustersCUDA.h"
-#include "CUDADataFormats/SiPixelDigi/interface/SiPixelDigisCUDA.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoAHost.h"
-#include "CUDADataFormats/Common/interface/PortableHostCollection.h"
-#include "CUDADataFormats/Common/interface/HostProduct.h"
+#include "DataFormats/Portable/interface/PortableHostCollection.h"
+#include "DataFormats/BeamSpotAlpaka/interface/alpaka/BeamSpotAlpaka.h"
+#include "DataFormats/SiPixelClusterSoA/interface/alpaka/SiPixelClustersDevice.h"
+#include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisDevice.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitSoAHost.h"
+#include "DataFormats/Portable/interface/HostProduct.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/Common/interface/DetSetVectorNew.h"
 #include "DataFormats/Common/interface/Handle.h"
@@ -21,10 +21,13 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "DataFormats/TrackerCommon/interface/SimplePixelTopology.h"
 #include "RecoLocalTracker/Records/interface/TkPixelCPERecord.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEBase.h"
-#include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEFast.h"
+#include "RecoLocalTracker/SiPixelRecHits/interface/alpaka/PixelCPEFast.h"
+#include "DataFormats/PixelCPEFastParams/interface/PixelCPEFastParams.h"
+#include "HeterogeneousCore/AlpakaUtilities/interface/HistoContainer.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 #include "gpuPixelRecHits.h"
 
@@ -39,12 +42,14 @@ public:
   using HitModuleStart = std::array<uint32_t, TrackerTraits::numberOfModules + 1>;
   using HMSstorage = HostProduct<uint32_t[]>;
   using HitsOnHost = TrackingRecHitSoAHost<TrackerTraits>;
+  using ParamsOnGPU = pixelCPEforDevice::ParamsOnDeviceT<TrackerTraits>;
 
 private:
   void produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
-  const edm::ESGetToken<PixelClusterParameterEstimator, TkPixelCPERecord> cpeToken_;
+  const edm::ESGetToken<pixelCPEforDevice::PixelCPEFastParams<alpaka_common::DevHost, TrackerTraits>, TkPixelCPERecord>
+      cpeToken_;
   const edm::EDGetTokenT<reco::BeamSpot> bsGetToken_;
   const edm::EDGetTokenT<SiPixelClusterCollectionNew> clusterToken_;  // Legacy Clusters
   const edm::EDPutTokenT<HitsOnHost> tokenHit_;
@@ -84,11 +89,10 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
                                                          edm::Event& iEvent,
                                                          const edm::EventSetup& es) const {
   const TrackerGeometry* geom_ = &es.getData(geomToken_);
-  PixelCPEFast<TrackerTraits> const* fcpe = dynamic_cast<const PixelCPEFast<TrackerTraits>*>(&es.getData(cpeToken_));
-  if (not fcpe) {
+  auto const& fcpe = es.getData(cpeToken_);
+  if (not fcpe.data()) {
     throw cms::Exception("Configuration") << "SiPixelRecHitSoAFromLegacy can only use a CPE of type PixelCPEFast";
   }
-  auto const& cpeView = fcpe->getCPUProduct();
 
   const reco::BeamSpot& bs = iEvent.get(bsGetToken_);
 
@@ -119,7 +123,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
 
   constexpr uint32_t maxHitsInModule = gpuClustering::maxHitsInModule();
 
-  cms::cuda::PortableHostCollection<SiPixelClustersCUDALayout<>> clusters_h(nModules + 1);
+  PortableHostCollection<SiPixelClustersLayout<>> clusters_h(nModules + 1);
 
   memset(clusters_h.view().clusInModule(), 0, (nModules + 1) * sizeof(uint32_t));  // needed??
   memset(clusters_h.view().moduleStart(), 0, (nModules + 1) * sizeof(uint32_t));
@@ -151,8 +155,10 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
   assert((uint32_t)numberOfClusters == clusters_h.view()[nModules].clusModuleStart());
   // output SoA
   // element 96 is the start of BPIX2 (i.e. the number of clusters in BPIX1)
-  HitsOnHost output(
-      numberOfClusters, clusters_h.view()[startBPIX2].clusModuleStart(), &cpeView, clusters_h.view().clusModuleStart());
+  HitsOnHost output(numberOfClusters,
+                    clusters_h.view()[startBPIX2].clusModuleStart(),
+                    fcpe.get(),
+                    clusters_h.view().clusModuleStart());
 
   if (0 == numberOfClusters) {
     iEvent.emplace(tokenHit_, std::move(output));
@@ -198,7 +204,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
       ndigi += clust.size();
     }
 
-    cms::cuda::PortableHostCollection<SiPixelDigisSoALayout<>> digis_h(ndigi);
+    PortableHostCollection<SiPixelDigisSoALayout<>> digis_h(ndigi);
 
     clusterRef.clear();
     clusters_h.view()[0].moduleId() = gind;
@@ -229,7 +235,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
     assert(digis_h.view()[0].adc() != 0);
     // we run on blockId.x==0
 
-    gpuPixelRecHits::getHits(&cpeView, &bsHost, digis_h.view(), ndigi, clusters_h.view(), output.view());
+    gpuPixelRecHits::getHits(fcpe.get(), &bsHost, digis_h.view(), ndigi, clusters_h.view(), output.view());
     for (auto h = fc; h < lc; ++h)
       if (h - fc < maxHitsInModule)
         assert(gind == output.view()[h].detectorIndex());
@@ -260,19 +266,19 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
   // fill data structure to support CA
   constexpr auto nLayers = TrackerTraits::numberOfLayers;
   for (auto i = 0U; i < nLayers + 1; ++i) {
-    output.view().hitsLayerStart()[i] = clusters_h.view()[cpeView.layerGeometry().layerStart[i]].clusModuleStart();
+    output.view().hitsLayerStart()[i] = clusters_h.view()[fcpe->m_layerGeometry().layerStart[i]].clusModuleStart();
     LogDebug("SiPixelRecHitSoAFromLegacy")
-        << "Layer n." << i << " - starting at module: " << cpeView.layerGeometry().layerStart[i]
+        << "Layer n." << i << " - starting at module: " << fcpe->m_layerGeometry().layerStart[i]
         << " - starts ad cluster: " << output->hitsLayerStart()[i] << "\n";
   }
 
-  cms::cuda::fillManyFromVector(&(output.view().phiBinner()),
-                                nLayers,
-                                output.view().iphi(),
-                                output.view().hitsLayerStart().data(),
-                                output.view().nHits(),
-                                256,
-                                output.view().phiBinnerStorage());
+  cms::alpakatools::fillManyFromVector(&(output.view().phiBinner()),
+                                       nLayers,
+                                       output.view().iphi(),
+                                       output.view().hitsLayerStart().data(),
+                                       output.view().nHits(),
+                                       256,
+                                       output.view().phiBinnerStorage());
 
   LogDebug("SiPixelRecHitSoAFromLegacy") << "created HitSoa for " << numberOfClusters << " clusters in "
                                          << numberOfDetUnits << " Dets"
