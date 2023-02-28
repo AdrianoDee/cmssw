@@ -1,0 +1,11 @@
+<lcgdict>
+
+  <class name="TrackSoA<pixelTopology::Phase1>"/>
+  <class name="TrackLayout<pixelTopology::Phase1>"/>
+  <class name="TrackSoAView<pixelTopology::Phase1>"/>
+
+  <class name="TrackSoA<pixelTopology::Phase2>"/>
+  <class name="TrackLayout<pixelTopology::Phase2>"/>
+  <class name="TrackSoAView<pixelTopology::Phase2>"/>
+
+</lcgdict>

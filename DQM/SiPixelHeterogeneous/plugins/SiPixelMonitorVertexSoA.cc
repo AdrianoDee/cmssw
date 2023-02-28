@@ -21,7 +21,7 @@
 #include "DQMServices/Core/interface/MonitorElement.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMStore.h"
-#include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousHost.h"
+#include "DataFormats/Vertex/interface/ZVertexSoAHost.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 class SiPixelMonitorVertexSoA : public DQMEDAnalyzer {
@@ -34,7 +34,7 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
-  edm::EDGetTokenT<ZVertexSoAHost> tokenSoAVertex_;
+  edm::EDGetTokenT<ZVertexHost> tokenSoAVertex_;
   edm::EDGetTokenT<reco::BeamSpot> tokenBeamSpot_;
   std::string topFolderName_;
   MonitorElement* hnVertex;

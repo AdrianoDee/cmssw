@@ -18,7 +18,7 @@
 #include "DQMServices/Core/interface/MonitorElement.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMStore.h"
-#include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousHost.h"
+#include "DataFormats/Vertex/interface/ZVertexSoAHost.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 class SiPixelCompareVertexSoA : public DQMEDAnalyzer {
@@ -31,8 +31,8 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
-  const edm::EDGetTokenT<ZVertexSoAHost> tokenSoAVertexCPU_;
-  const edm::EDGetTokenT<ZVertexSoAHost> tokenSoAVertexGPU_;
+  const edm::EDGetTokenT<ZVertexHost> tokenSoAVertexCPU_;
+  const edm::EDGetTokenT<ZVertexHost> tokenSoAVertexGPU_;
   const edm::EDGetTokenT<reco::BeamSpot> tokenBeamSpot_;
   const std::string topFolderName_;
   const float dzCut_;
@@ -55,8 +55,8 @@ private:
 
 // Note tokenSoAVertexGPU_ contains data copied from device to host, hence is a HostCollection
 SiPixelCompareVertexSoA::SiPixelCompareVertexSoA(const edm::ParameterSet& iConfig)
-    : tokenSoAVertexCPU_(consumes<ZVertexSoAHost>(iConfig.getParameter<edm::InputTag>("pixelVertexSrcCPU"))),
-      tokenSoAVertexGPU_(consumes<ZVertexSoAHost>(iConfig.getParameter<edm::InputTag>("pixelVertexSrcGPU"))),
+    : tokenSoAVertexCPU_(consumes<ZVertexHost>(iConfig.getParameter<edm::InputTag>("pixelVertexSrcCPU"))),
+      tokenSoAVertexGPU_(consumes<ZVertexHost>(iConfig.getParameter<edm::InputTag>("pixelVertexSrcGPU"))),
       tokenBeamSpot_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpotSrc"))),
       topFolderName_(iConfig.getParameter<std::string>("topFolderName")),
       dzCut_(iConfig.getParameter<double>("dzCut")) {}

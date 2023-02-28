@@ -1,0 +1,14 @@
+<lcgdict>
+  <class name="zVertex::ZVertexSoALayout">
+    <field name="mem_" comment="!"/>
+    <field name="byteSize_" comment="!"/>
+    <field name="idv" comment="[elements_]"/>
+    <field name="zv" comment="[elements_]"/>
+    <field name="wv" comment="[elements_]"/>
+    <field name="chi2" comment="[elements_]"/>
+    <field name="ptv2" comment="[elements_]"/>
+    <field name="ndof" comment="[elements_]"/>
+    <field name="sortInd" comment="[elements_]"/>
+    <field name="nvFinal" comment="[scalar_]"/>
+  </class>
+</lcgdict>

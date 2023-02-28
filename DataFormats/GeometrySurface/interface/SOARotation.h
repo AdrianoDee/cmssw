@@ -12,7 +12,7 @@ class TkRotation;
 template <class T>
 class SOARotation {
 public:
-  constexpr inline SOARotation() {}
+  inline SOARotation() {}
 
   constexpr inline explicit SOARotation(T) : R11(1), R12(0), R13(0), R21(0), R22(1), R23(0), R31(0), R32(0), R33(1) {}
 
@@ -76,7 +76,7 @@ private:
 template <class T>
 class SOAFrame {
 public:
-  constexpr inline SOAFrame() {}
+  inline SOAFrame() {}
 
   constexpr inline SOAFrame(T ix, T iy, T iz, SOARotation<T> const &irot) : px(ix), py(iy), pz(iz), rot(irot) {}
 

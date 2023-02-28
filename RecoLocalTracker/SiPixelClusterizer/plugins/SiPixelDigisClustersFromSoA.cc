@@ -1,4 +1,4 @@
-#include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h"
+#include "DataFormats/SiPixelClusterSoA/interface/gpuClusteringConstants.h"
 #include "DataFormats/Common/interface/DetSetVector.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/DetId/interface/DetId.h"
@@ -15,7 +15,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "DataFormats/TrackerCommon/interface/SimplePixelTopology.h"
 
 // local include(s)
 #include "PixelClusterizerBase.h"

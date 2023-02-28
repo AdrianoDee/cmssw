@@ -19,8 +19,8 @@
 #include "DQMServices/Core/interface/MonitorElement.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMStore.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoAHost.h"
-#include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitsUtilities.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitSoAHost.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsLayout.h"
 // Geometry
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
@@ -32,8 +32,8 @@
 template <typename T>
 class SiPixelMonitorRecHitsSoA : public DQMEDAnalyzer {
 public:
-  using HitSoA = TrackingRecHitSoAView<T>;
-  using HitsOnHost = TrackingRecHitSoAHost<T>;
+  using HitSoA = TrackingRecHitAlpakaSoAView<T>;
+  using HitsOnHost = TrackingRecHitAlpakaHost<T>;
 
   explicit SiPixelMonitorRecHitsSoA(const edm::ParameterSet&);
   ~SiPixelMonitorRecHitsSoA() override = default;

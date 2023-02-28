@@ -1,5 +1,5 @@
-#include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousHost.h"
-#include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousDevice.h"
+#include "DataFormats/Vertex/interface/ZVertexSoAHost.h"
+// #include "DataFormats/Vertex/interface/ZVertexSoADevice.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/Common/interface/OrphanHandle.h"
 #include "DataFormats/TrackReco/interface/Track.h"

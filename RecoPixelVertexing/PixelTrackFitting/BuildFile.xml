@@ -1,4 +1,4 @@
-<use name="cuda"/>
+<use name="alpaka"/>
 <use name="eigen"/>
 <use name="root"/>
 <use name="CommonTools/Statistics"/>
@@ -13,6 +13,8 @@
 <use name="FWCore/MessageLogger"/>
 <use name="FWCore/ParameterSet"/>
 <use name="FWCore/Utilities"/>
+<use name="HeterogeneousCore/AlpakaCore"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
 <use name="Geometry/CommonDetUnit" source_only="1"/>
 <use name="Geometry/TrackerGeometryBuilder"/>
 <use name="MagneticField/Engine"/>

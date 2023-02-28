@@ -1,3 +1,4 @@
+/*
 #include <cuda_runtime.h>
 
 #include "CUDADataFormats/BeamSpot/interface/BeamSpotCUDA.h"
@@ -99,3 +100,4 @@ void BeamSpotToCUDA::produce(edm::StreamID streamID, edm::Event& iEvent, const e
 }
 
 DEFINE_FWK_MODULE(BeamSpotToCUDA);
+*/

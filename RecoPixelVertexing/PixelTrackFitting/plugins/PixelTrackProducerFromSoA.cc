@@ -24,27 +24,26 @@
 #include "TrackingTools/AnalyticalJacobians/interface/JacobianLocalToCurvilinear.h"
 #include "TrackingTools/TrajectoryParametrization/interface/GlobalTrajectoryParameters.h"
 #include "TrackingTools/TrajectoryParametrization/interface/CurvilinearTrajectoryError.h"
-#include "RecoPixelVertexing/PixelTrackFitting/interface/FitUtils.h"
+#include "RecoPixelVertexing/PixelTrackFitting/interface/alpaka/FitUtils.h"
 
-#include "CUDADataFormats/Common/interface/HostProduct.h"
-#include "CUDADataFormats/SiPixelCluster/interface/gpuClusteringConstants.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "DataFormats/Portable/interface/HostProduct.h"
+#include "DataFormats/SiPixelClusterSoA/interface/gpuClusteringConstants.h"
+#include "DataFormats/TrackerCommon/interface/SimplePixelTopology.h"
 
 #include "storeTracks.h"
-#include "CUDADataFormats/Common/interface/HostProduct.h"
 
-#include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousHost.h"
-#include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousDevice.h"
-#include "CUDADataFormats/Track/interface/PixelTrackUtilities.h"
+#include "DataFormats/Track/interface/TrackSoAHost.h"
+#include "DataFormats/Track/interface/alpaka/PixelTrackUtilities.h"
+#include <alpaka/alpaka.hpp>
 
 /**
- * This class creates "leagcy"  reco::Track
+ * This class creates "legacy" reco::Track
  * objects from the output of SoA CA.
  */
 template <typename TrackerTraits>
 class PixelTrackProducerFromSoAT : public edm::global::EDProducer<> {
-  using TrackSoAHost = TrackSoAHeterogeneousHost<TrackerTraits>;
-  using tracksHelpers = TracksUtilities<TrackerTraits>;
+  using TkSoAHost = TrackSoAHost<TrackerTraits>;
+  using tracksHelpers = ALPAKA_ACCELERATOR_NAMESPACE::TracksUtilities<TrackerTraits>;
 
 public:
   using IndToEdm = std::vector<uint32_t>;
@@ -61,7 +60,7 @@ private:
 
   // Event Data tokens
   const edm::EDGetTokenT<reco::BeamSpot> tBeamSpot_;
-  const edm::EDGetTokenT<TrackSoAHost> tokenTrack_;
+  const edm::EDGetTokenT<TkSoAHost> tokenTrack_;
   const edm::EDGetTokenT<SiPixelRecHitCollectionNew> cpuHits_;
   const edm::EDGetTokenT<HMSstorage> hmsToken_;
   // Event Setup tokens

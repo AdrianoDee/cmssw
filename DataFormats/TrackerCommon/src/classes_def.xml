@@ -2,5 +2,7 @@
  <class name="ClusterSummary">
  </class>
  <class name="edm::Wrapper<ClusterSummary>"/>
+ <class name="pixelTopology::Phase1"/>
+ <class name="pixelTopology::Phase2"/>
 </lcgdict>
 

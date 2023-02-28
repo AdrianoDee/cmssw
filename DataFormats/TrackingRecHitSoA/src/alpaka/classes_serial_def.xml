@@ -1,0 +1,36 @@
+<lcgdict>
+  <class name="PortableHostCollection<TrackingRecHitAlpakaLayoutPhase1>"/>
+  <class name="PortableHostCollection<TrackingRecHitLayout<pixelTopology::Phase1>>"/>
+  <read
+    sourceClass="PortableHostCollection<TrackingRecHitLayout<pixelTopology::Phase1>>"
+    targetClass="PortableHostCollection<TrackingRecHitLayout<pixelTopology::Phase1>>"
+    version="[1-]"
+    source="TrackingRecHitLayout<pixelTopology::Phase1> layout_;"
+    target="buffer_"
+    embed="false">
+  <![CDATA[
+    PortableHostCollection<TrackingRecHitLayout<pixelTopology::Phase1>>::ROOTReadStreamer(newObj, onfile.layout_);
+  ]]>
+  </read>
+
+  <class name="TrackingRecHitAlpakaHostPhase2"/>
+  <class name="edm::Wrapper<TrackingRecHitAlpakaHostPhase2>" splitLevel="0"/>
+
+  <class name="PortableHostCollection<TrackingRecHitAlpakaLayoutPhase2>"/>
+  <class name="PortableHostCollection<TrackingRecHitLayout<pixelTopology::Phase2>>"/>
+  <read
+    sourceClass="PortableHostCollection<TrackingRecHitLayout<pixelTopology::Phase2>>"
+    targetClass="PortableHostCollection<TrackingRecHitLayout<pixelTopology::Phase2>>"
+    version="[1-]"
+    source="TrackingRecHitLayout<pixelTopology::Phase2> layout_;"
+    target="buffer_"
+    embed="false">
+  <![CDATA[
+    PortableHostCollection<TrackingRecHitLayout<pixelTopology::Phase2>>::ROOTReadStreamer(newObj, onfile.layout_);
+  ]]>
+  </read>
+
+  <class name="TrackingRecHitAlpakaHostPhase2"/>
+  <class name="edm::Wrapper<TrackingRecHitAlpakaHostPhase2>" splitLevel="0"/>
+
+</lcgdict>
