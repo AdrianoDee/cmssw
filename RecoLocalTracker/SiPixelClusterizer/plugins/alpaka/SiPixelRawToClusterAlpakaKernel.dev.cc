@@ -26,6 +26,8 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
+#include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTLayout.h"
+#include "DataFormats/SiPixelMappingSoA/interface/SiPixelMappingLayout.h"
 // local includes
 #include "gpuClusterChargeCut.h"
 #include "SiPixelRawToClusterAlpakaKernel.h"
@@ -70,7 +72,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       using namespace ::pixelgpudetails;
       uint32_t index = fed * MAX_LINK * MAX_ROC + (link - 1) * MAX_ROC + roc;
       ::pixelgpudetails::DetIdGPU detId = {
-          cablingMap->RawId[index], cablingMap->rocInDet[index], cablingMap->moduleId[index]};
+          cablingMap.rawId()[index], cablingMap.rocInDet()[index], cablingMap.moduleId()[index]};
       return detId;
     }
 
@@ -208,8 +210,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         case (25): {
           errorFound = true;
           uint32_t index = fedId * MAX_LINK * MAX_ROC + (link - 1) * MAX_ROC + 1;
-          if (index > 1 && index <= cablingMap->size) {
-            if (!(link == cablingMap->link[index] && 1 == cablingMap->roc[index]))
+          if (index > 1 && index <= cablingMap.size()) {
+            if (!(link == cablingMap.link()[index] && 1 == cablingMap.roc()[index]))
               errorFound = false;
           }
           if (debug and errorFound)
@@ -354,7 +356,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     struct RawToDigi_kernel {
       template <typename TAcc>
       ALPAKA_FN_ACC void operator()(const TAcc &acc,
-                                    const SiPixelFedCablingMapGPU *cablingMap,
+                                    // const SiPixelFedCablingMapGPU *cablingMap,
+                                    const SiPixelMappingLayoutSoAConstView& cablingMap,
                                     const unsigned char *modToUnp,
                                     const uint32_t wordCounter,
                                     const uint32_t *word,
@@ -408,7 +411,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           uint32_t index = fedId * ::pixelgpudetails::MAX_LINK * ::pixelgpudetails::MAX_ROC +
                            (link - 1) * ::pixelgpudetails::MAX_ROC + roc;
           if (useQualityInfo) {
-            skipROC = cablingMap->badRocs[index];
+            skipROC = cablingMap.badRocs()[index];
             if (skipROC)
               return;
           }
@@ -546,9 +549,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // Interface to outside
     void SiPixelRawToClusterGPUKernel::makeClustersAsync(bool isRun2,
-                                                         const SiPixelFedCablingMapGPU *cablingMap,
+                                                        //  const SiPixelFedCablingMapGPU *cablingMap,
+                                                         const SiPixelMappingLayoutSoAConstView& cablingMap,
                                                          const unsigned char *modToUnp,
-                                                         const SiPixelGainForHLTonGPU *gains,
+                                                        //  const SiPixelGainForHLTonGPU *gains,
+                                                         const SiPixelGainCalibrationForHLTSoAConstView& gains,
                                                          const WordFedAppender &wordFed,
                                                          PixelFormatterErrors &&errors,
                                                          const uint32_t wordCounter,
@@ -784,7 +789,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 //                                                 uint32_t roc) {
 //     uint32_t index = fed * MAX_LINK * MAX_ROC + (link - 1) * MAX_ROC + roc;
 //     pixelgpudetails::DetIdGPU detId = {
-//         cablingMap->rawId[index], cablingMap->rocInDet[index], cablingMap->moduleId[index]};
+//         cablingMap.rawId[index], cablingMap.rocInDet[index], cablingMap.moduleId[index]};
 //     return detId;
 //   }
 
@@ -917,8 +922,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 //       case (25): {
 //         errorFound = true;
 //         uint32_t index = fedId * MAX_LINK * MAX_ROC + (link - 1) * MAX_ROC + 1;
-//         if (index > 1 && index <= cablingMap->size) {
-//           if (!(link == cablingMap->link[index] && 1 == cablingMap->roc[index]))
+//         if (index > 1 && index <= cablingMap.size) {
+//           if (!(link == cablingMap.link[index] && 1 == cablingMap.roc[index]))
 //             errorFound = false;
 //         }
 //         if constexpr (debug)
@@ -1111,7 +1116,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 //       uint32_t index = fedId * MAX_LINK * MAX_ROC + (link - 1) * MAX_ROC + roc;
 //       if (useQualityInfo) {
-//         skipROC = cablingMap->badRocs[index];
+//         skipROC = cablingMap.badRocs[index];
 //         if (skipROC)
 //           continue;
 //       }

@@ -56,6 +56,7 @@
 
 // #include "SiPixelRawToClusterGPUKernel.h"
 #include "RecoLocalTracker/SiPixelClusterizer/plugins/SiPixelClusterThresholds.h"
+#include "SiPixelRawToClusterAlpakaKernel.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
