@@ -5,10 +5,11 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "AlpakaCore/alpakaConfig.h"
-#include "AlpakaDataFormats/gpuClusteringConstants.h"
-#include "CondFormats/alpaka/SiPixelGainForHLTonGPU.h"
-
+#include "HeterogeneousCore/AlpakaInterface/interface/config.h"
+#include "DataFormats/SiPixelClusterSoA/interface/gpuClusteringConstants.h"
+#include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTLayout.h"
+#include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/alpaka/SiPixelGainCalibrationForHLTDevice.h"
+#include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/alpaka/SiPixelGainCalibrationForHLTUtilities.h"
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace gpuCalibPixel {
 
@@ -34,7 +35,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     uint16_t const* __restrict__ x,
                                     uint16_t const* __restrict__ y,
                                     uint16_t* adc,
-                                    SiPixelGainForHLTonGPU const* __restrict__ ped,
+                                    const SiPixelGainCalibrationForHLTSoAConstView& __restrict__ gains,
                                     int numElements,
                                     uint32_t* __restrict__ moduleStart,        // just to zero first
                                     uint32_t* __restrict__ nClustersInModule,  // just to zero them
@@ -59,7 +60,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
             int row = x[i];
             int col = y[i];
-            auto ret = ped->getPedAndGain(id[i], col, row, isDeadColumn, isNoisyColumn);
+            
+            auto ret = SiPixelClustersUtilities::getPedAndGain(id[i], col, row, isDeadColumn, isNoisyColumn, gains); 
+
             float pedestal = ret.first;
             float gain = ret.second;
             // float pedestal = 0; float gain = 1.;
