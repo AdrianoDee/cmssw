@@ -6,6 +6,7 @@
 #include "DataFormats/SiPixelRawData/interface/SiPixelErrorCompact.h"
 #include "DataFormats/SiPixelRawData/interface/SiPixelFormatterErrors.h"
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisErrorLayout.h"
 
 class SiPixelDigiErrorsHost : public PortableCollection<SiPixelDigisErrorLayout<>> {
 public:

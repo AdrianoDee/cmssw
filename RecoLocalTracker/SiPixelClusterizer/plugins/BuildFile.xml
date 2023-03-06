@@ -9,6 +9,7 @@
 <use name="FWCore/Utilities"/>
 <use name="HeterogeneousCore/CUDACore"/>
 <use name="RecoTracker/Record"/>
+
 <iftool name="cuda-gcc-support">
   <use name="cuda"/>
   <set name="cuda_src" value="*.cu"/>
@@ -16,5 +17,22 @@
   <set name="cuda_src" value=""/>
 </iftool>
 <library file="*.cc ${cuda_src}" name="RecoLocalTrackerSiPixelClusterizerPlugins">
+  <flags EDM_PLUGIN="1"/>
+</library>
+
+<!-- alpaka-based portable plugins -->
+<library file="alpaka/*.cc" name="RecoLocalTrackerSiPixelClusterizerAlpakaPlugins">
+  <use name="alpaka"/>
+  <!--
+  The dependency on "DataFormats/PortableTestObjects" automatically expands to include
+  the host-only library (if it exists) and the corresponding Alpaka libraries (if they exist)
+  -->
+  <use name="DataFormats/SiPixelClusterSoA"/>
+  <use name="DataFormats/SiPixelDigiSoA"/>
+  <use name="FWCore/Framework"/>
+  <use name="HeterogeneousCore/AlpakaCore"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="HeterogeneousCore/AlpakaTest"/>
+  <flags ALPAKA_BACKENDS="1"/>
   <flags EDM_PLUGIN="1"/>
 </library>

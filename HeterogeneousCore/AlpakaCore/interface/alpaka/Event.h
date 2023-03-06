@@ -137,6 +137,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::device {
       }
     }
 
+    edm::Event const& edmEvent() const { return constEvent_;};
+
   private:
     // Having both const and non-const here in order to serve the
     // clients with one device::Event class
