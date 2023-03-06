@@ -44,7 +44,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::device {
     }
 
     // getHandle()
-
+    
     template <typename T, typename R>
     edm::ESHandle<T> getHandle(edm::ESGetToken<T, R> const& iToken) const {
       return setup_.getHandle(iToken);
@@ -68,6 +68,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::device {
     // device::EventSetup is available only for those. If
     // device::EventSetup ever gets added for run or lumi transitions,
     // getTransientHandle() will be straightforward to add
+
+    edm::EventSetup const& edmSetup() const { return setup_;};
 
   private:
     edm::EventSetup const& setup_;

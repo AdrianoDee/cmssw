@@ -6,6 +6,7 @@
 #include "DataFormats/SiPixelRawData/interface/SiPixelErrorCompact.h"
 #include "DataFormats/SiPixelRawData/interface/SiPixelFormatterErrors.h"
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisErrorLayout.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -21,7 +22,7 @@ public:
   SiPixelDigiErrorsDevice &operator=(SiPixelDigiErrorsDevice &&) = default;
 
 private:
-  PixelFormatterErrors formatterErrors_h;
+  SiPixelFormatterErrors formatterErrors_h;
 
   };
 }// namespace ALPAKA_ACCELERATOR_NAMESPACE
