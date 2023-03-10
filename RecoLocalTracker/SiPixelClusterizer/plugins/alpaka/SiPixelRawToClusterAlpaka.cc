@@ -9,6 +9,7 @@
 #include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisDevice.h"
 
 #include "DataFormats/SiPixelMappingSoA/interface/alpaka/SiPixelMappingDevice.h"
+#include "DataFormats/SiPixelMappingSoA/interface/alpaka/SiPixelMappingUtilities.h"
 #include "DataFormats/SiPixelMappingSoA/interface/SiPixelMappingSoARecord.h"
 
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTSoARcd.h"
@@ -88,7 +89,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const SiPixelFedCablingMap* cablingMap_ = nullptr;
     std::unique_ptr<PixelUnpackingRegions> regions_;
     
-    // pixelgpudetails::SiPixelRawToClusterGPUKernel gpuAlgo_;
+    pixelgpudetails::SiPixelRawToClusterGPUKernel gpuAlgo_;
     // std::unique_ptr<pixelgpudetails::SiPixelRawToClusterGPUKernel::WordFedAppender> wordFedAppender_;
     PixelDataFormatter::Errors errors_;
 
@@ -151,7 +152,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // cms::alpakatools::ScopedContextAcquire<Queue> ctx{iEvent.streamID(), std::move(waitingTaskHolder), ctxState_};
 
     auto const& hgpuMap = iSetup.getData(gpuMapToken_);
-    if (hgpuMap->hasQuality() != useQuality_) {
+    if (SiPixelMappingUtilities::hasQuality(hgpuMap->const_view()) != useQuality_) {
       throw cms::Exception("LogicError")
         << "UseQuality of the module (" << useQuality_
         << ") differs the one from SiPixelROCsStatusAndMappingWrapper. Please fix your configuration.";
@@ -162,28 +163,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     auto const& gpuGains = iSetup.getData(gainsToken_);
 
-    cms::cuda::device::unique_ptr<unsigned char[]> modulesToUnpackRegional;
+    cms::alpakatools::device_buffer<Device,unsigned char[]> modulesToUnpackRegional;
     const unsigned char* gpuModulesToUnpack;
 
+        // initialize cabling map or update if necessary
+    if (recordWatcher_.check(iSetup) or regions_) {
+      // cabling map, which maps online address (fed->link->ROC->local pixel) to offline (DetId->global pixel)
+      cablingMap_ = iSetup.getHandle(cablingMapToken_).product();
+      //cablingMap_ = cablingMap.product();
+      fedIds_ = cablingMap_->fedIds();
+      cabling_ = cablingMap_->cablingTree();
+      LogDebug("map version:") << cablingMap_->version();
+    }
+
     if (regions_) {
-      regions_->run(iEvent.edmEvent(), iSetup.edmSetup());
-      // LogDebug("SiPixelRawToCluster") << "region2unpack #feds: " << regions_->nFEDs();
-      // LogDebug("SiPixelRawToCluster") << "region2unpack #modules (BPIX,EPIX,total): " << regions_->nBarrelModules() << " "
-      //                                 << regions_->nForwardModules() << " " << regions_->nModules();
-      // modulesToUnpackRegional = hgpuMap->getModToUnpRegionalAsync(*(regions_->modulesToUnpack()), iEvent.queue());
-      // gpuModulesToUnpack = modulesToUnpackRegional.get();
+      regions_->run(iEvent, iSetup);
+      LogDebug("SiPixelRawToCluster") << "region2unpack #feds: " << regions_->nFEDs();
+      LogDebug("SiPixelRawToCluster") << "region2unpack #modules (BPIX,EPIX,total): " << regions_->nBarrelModules() << " "
+                                      << regions_->nForwardModules() << " " << regions_->nModules();
+      modulesToUnpackRegional = SiPixelMappingUtilities::getModToUnpRegionalAsync(*(regions_->modulesToUnpack()),cablingMap_,iEvent.queue());; //hgpuMap->getModToUnpRegionalAsync(*(regions_->modulesToUnpack()), iEvent.queue());
+      gpuModulesToUnpack =  modulesToUnpackRegional.data();
     } else {
       gpuModulesToUnpack = hgpuMap->modToUnpDefault();//getModToUnpAllAsync(iEvent.queue());
-    }
-    
-    // initialize cabling map or update if necessary
-    if (recordWatcher_.check(iSetup.edmSetup())) {
-      // cabling map, which maps online address (fed->link->ROC->local pixel) to offline (DetId->global pixel)
-      auto cablingMap = iSetup.edmSetup().getTransientHandle(cablingMapToken_);
-      cablingMap_ = cablingMap.product();
-      fedIds_ = cablingMap->fedIds();
-      cabling_ = cablingMap->cablingTree();
-      LogDebug("map version:") << cabling_->version();
     }
     
     // auto const& hgains = iSetup.get<SiPixelGainCalibrationForHLTGPU>();
@@ -266,23 +267,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return;
 
     // copy the FED data to a single cpu buffer
-    pixelgpudetails::SiPixelRawToClusterGPUKernel::WordFedAppender wordFedAppender(nDigis_, iEvent.queue());
+    pixelgpudetails::SiPixelRawToClusterGPUKernel::WordFedAppender wordFedAppender(nDigis_);
     for (uint32_t i = 0; i < fedIds_.size(); ++i) {
       wordFedAppender.initializeWordFed(fedIds_[i], index[i], start[i], words[i]);
     }
     
-    // gpuAlgo_.makeClustersAsync(isRun2_,
-    //                            gpuMap,
-    //                            gpuModulesToUnpack,
-    //                            gpuGains,
-    //                            *wordFedAppender_, 
-    //                            std::move(errors_),
-    //                            wordCounterGPU,
-    //                            fedCounter,
-    //                            useQuality_,
-    //                            includeErrors_,
-    //                            false,  // debug
-    //                            iEvent.queue());
+    gpuAlgo_.makeClustersAsync(isRun2_,
+                              clusterThresholds_
+                               gpuMap,
+                               gpuModulesToUnpack,
+                               gpuGains,
+                               wordFedAppender, 
+                               std::move(errors_),
+                               wordCounter,
+                               fedCounter,
+                               useQuality_,
+                               includeErrors_,
+                               false,  // debug
+                               iEvent.queue());
   }
 
   void SiPixelRawToCluster::produce(device::Event& iEvent, device::EventSetup const& iSetup) {
@@ -296,10 +298,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // of TrackingRecHits fail. Example: workflow 11604.0
       SiPixelDigisDevice digis_d = SiPixelDigisDevice(nDigis_, iEvent.queue());
       SiPixelClustersDevice clusters_d = SiPixelClustersDevice(pixelTopology::Phase1::numberOfModules, iEvent.queue());
-      iEvent.emplace(iEvent, digiPutToken_, std::move(digis_d));
-      iEvent.emplace(iEvent, clusterPutToken_, std::move(clusters_d));
+      iEvent.emplace(digiPutToken_, std::move(digis_d));
+      iEvent.emplace(clusterPutToken_, std::move(clusters_d));
       if (includeErrors_) {
-        iEvent.emplace(iEvent, digiErrorPutToken_, SiPixelDigiErrorsDevice{});
+        iEvent.emplace(digiErrorPutToken_, SiPixelDigiErrorsDevice{});
       }
       return;
   }

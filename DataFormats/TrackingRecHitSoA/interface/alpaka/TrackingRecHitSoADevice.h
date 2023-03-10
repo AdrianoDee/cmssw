@@ -45,7 +45,7 @@ public:
 
     auto start_h = alpaka::createView(host, hitsModuleStart, TrackerTraits::numberOfModules + 1);
     auto start_d = alpaka::createView(device, view().hitsModuleStart().data(), TrackerTraits::numberOfModules + 1);
-    alpaka::memcpy(queue, start_d, start_h, TrackerTraits::numberOfModules + 1);
+    alpaka::memcpy(queue, start_d, start_h, 1);
 
     // auto nHits_d = alpaka::createView(device, &(view().nHits()), 1);
     // alpaka::memset(queue, nHits_d, nHits);

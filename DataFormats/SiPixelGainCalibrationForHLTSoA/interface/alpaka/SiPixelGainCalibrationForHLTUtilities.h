@@ -12,7 +12,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     struct SiPixelClustersUtilities
     {
-        ALPAKA_FN_HOST_ACC ALPAKA_FN_ACC ALPAKA_FN_INLINE std::pair<float, float> getPedAndGain(
+        ALPAKA_FN_HOST_ACC ALPAKA_FN_ACC ALPAKA_FN_INLINE static std::pair<float, float> getPedAndGain(
             uint32_t moduleInd, int col, int row, bool& isDeadColumn, bool& isNoisyColumn,
             const SiPixelGainCalibrationForHLTSoAConstView &view)
         {
@@ -22,7 +22,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             // determine what averaged data block we are in (there should be 1 or 2 of these depending on if plaquette is 1 by X or 2 by X
             unsigned int lengthOfColumnData = (range.second - range.first) / nCols;
             unsigned int lengthOfAveragedDataInEachColumn = 2;  // we always only have two values per column averaged block
-            unsigned int numberOfDataBlocksToSkip = row / numberOfRowsAveragedOver_;
+            unsigned int numberOfDataBlocksToSkip = row / view.numberOfRowsAveragedOver();
 
             auto offset = range.first + col * lengthOfColumnData + lengthOfAveragedDataInEachColumn * numberOfDataBlocksToSkip;
 
@@ -30,7 +30,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             assert(offset < 3088384);
             assert(0 == offset % 2);
 
-            siPixelGainsSoA::DecodingStructure const* __restrict__ lp = view.v_pedestals();
+            auto lp = view.v_pedestals();
             auto s = lp[offset / 2];
 
             isDeadColumn = (s.ped & 0xFF) == view.deadFlag();
@@ -41,7 +41,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
             return std::make_pair(decodePed, decodeGain);
         };
-    }
+    };
 
 }
 #endif

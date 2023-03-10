@@ -90,19 +90,19 @@ namespace pixelgpudetails {
     uint32_t col;
   };
   
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr pixelchannelidentifierimpl::Packing packing() { return PixelChannelIdentifier::thePacking; }
+  // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr pixelchannelidentifierimpl::Packing packing() { return PixelChannelIdentifier::thePacking; }
 
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr uint32_t pack(uint32_t row, uint32_t col, uint32_t adc, uint32_t flag = 0) {
-    constexpr pixelchannelidentifierimpl::Packing thePacking = packing();
-    adc = std::min(adc, uint32_t(thePacking.max_adc));
+  // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr uint32_t pack(uint32_t row, uint32_t col, uint32_t adc, uint32_t flag = 0) {
+  //   constexpr pixelchannelidentifierimpl::Packing thePacking = packing();
+  //   adc = std::min(adc, uint32_t(thePacking.max_adc));
 
-    return (row << thePacking.row_shift) | (col << thePacking.column_shift) | (adc << thePacking.adc_shift);
-  }
+  //   return (row << thePacking.row_shift) | (col << thePacking.column_shift) | (adc << thePacking.adc_shift);
+  // }
 
-  constexpr uint32_t pixelToChannel(int row, int col) {
-    constexpr pixelchannelidentifierimpl::Packing thePacking = packing();
-    return (row << thePacking.column_width) | col;
-  }
+  // constexpr uint32_t pixelToChannel(int row, int col) {
+  //   constexpr pixelchannelidentifierimpl::Packing thePacking = packing();
+  //   return (row << thePacking.column_width) | col;
+  // }
 
 }  // namespace pixelgpudetails
 
@@ -119,6 +119,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         WordFedAppender();
         ~WordFedAppender() = default;
 
+        WordFedAppender(uint32_t words);
+        
         void initializeWordFed(int fedId, unsigned int wordCounterGPU, const uint32_t* src, unsigned int length);
 
         auto word() const { return word_; }
@@ -129,7 +131,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         cms::alpakatools::host_buffer<unsigned char[]> fedId_;
       };
 
-      SiPixelRawToClusterGPUKernel() : nModules_Clusters_h{cms::alpakatools::make_host_buffer<uint32_t[], Platform>(2u)} {}
+      SiPixelRawToClusterGPUKernel() : nModules_Clusters_h{cms::alpakatools::make_host_buffer<uint32_t[], Platform>(3u)} {}
 
       ~SiPixelRawToClusterGPUKernel() = default;
 
@@ -139,11 +141,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       SiPixelRawToClusterGPUKernel& operator=(SiPixelRawToClusterGPUKernel&&) = delete;
 
       void makeClustersAsync(bool isRun2,
-                             const SiPixelFedCablingMapGPU* cablingMap,
+                             const SiPixelClusterThresholds clusterThresholds,
+                             const SiPixelMappingLayoutSoAConstView& cablingMap,
                              const unsigned char* modToUnp,
-                             const SiPixelGainForHLTonGPU* gains,
+                             const SiPixelGainCalibrationForHLTSoAConstView& gains,
                              const WordFedAppender& wordFed,
-                             PixelFormatterErrors&& errors,
+                             SiPixelFormatterErrors&& errors,
                              const uint32_t wordCounter,
                              const uint32_t fedCounter,
                              bool useQualityInfo,
@@ -159,11 +162,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                  const uint32_t* packedData,
                                  const uint32_t* rawIds,
                                  const uint32_t numDigis,
-                                 cudaStream_t stream);
+                                 Queue& queue);
 
       std::pair<SiPixelDigisDevice, SiPixelClustersDevice> getResults() {
         digis_d->setNModulesDigis(nModules_Clusters_h[0], nDigis);
-        clusters_d->setNClusters(nModules_Clusters_h[1]);
+        clusters_d->setNClusters(nModules_Clusters_h[1],nModules_Clusters_h[2]);
         return std::make_pair(std::move(*digis_d), std::move(*clusters_d));
       }
 

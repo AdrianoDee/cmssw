@@ -7,9 +7,12 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "DataFormats/SiPixelClusterSoA/interface/gpuClusteringConstants.h"
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisErrorLayout.h"
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTLayout.h"
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/alpaka/SiPixelGainCalibrationForHLTDevice.h"
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/alpaka/SiPixelGainCalibrationForHLTUtilities.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace gpuCalibPixel {
 
@@ -31,48 +34,52 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       template <typename TAcc>
       ALPAKA_FN_ACC void operator()(const TAcc& acc,
                                     bool isRun2,
-                                    uint16_t* id,
-                                    uint16_t const* __restrict__ x,
-                                    uint16_t const* __restrict__ y,
-                                    uint16_t* adc,
+                                    SiPixelDigisLayoutSoAView view,
+                                    SiPixelClustersLayoutSoAView clus_view,
+                                    // uint16_t* id,
+                                    // uint16_t const* __restrict__ x,
+                                    // uint16_t const* __restrict__ y,
+                                    // uint16_t* adc,
                                     const SiPixelGainCalibrationForHLTSoAConstView& __restrict__ gains,
-                                    int numElements,
-                                    uint32_t* __restrict__ moduleStart,        // just to zero first
-                                    uint32_t* __restrict__ nClustersInModule,  // just to zero them
-                                    uint32_t* __restrict__ clusModuleStart     // just to zero first
+                                    int numElements
+                                    // uint32_t* __restrict__ moduleStart,        // just to zero first
+                                    // uint32_t* __restrict__ nClustersInModule,  // just to zero them
+                                    // uint32_t* __restrict__ clusModuleStart     // just to zero first
       ) const {
         const uint32_t threadIdxGlobal(alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u]);
 
         // zero for next kernels...
         if (threadIdxGlobal == 0) {
-          clusModuleStart[0] = moduleStart[0] = 0;
+          clus_view[0].clusModuleStart() = clus_view[0].moduleStart();
         }
 
         cms::alpakatools::for_each_element_in_grid_strided(
-            acc, gpuClustering::MaxNumModules, [&](uint32_t i) { nClustersInModule[i] = 0; });
+            acc, phase1PixelTopology::numberOfModules, [&](uint32_t i) { clus_view[i].clusInModule() = 0; });
 
         cms::alpakatools::for_each_element_in_grid_strided(acc, numElements, [&](uint32_t i) {
-          if (id[i] != InvId) {
-            float conversionFactor = (isRun2) ? (id[i] < 96 ? VCaltoElectronGain_L1 : VCaltoElectronGain) : 1.f;
-            float offset = (isRun2) ? (id[i] < 96 ? VCaltoElectronOffset_L1 : VCaltoElectronOffset) : 0;
+          auto dvgi = view[i];
+          if (dvgi.moduleId() != InvId) {
+            float conversionFactor = (isRun2) ? (dvgi.moduleId() < 96 ? VCaltoElectronGain_L1 : VCaltoElectronGain) : 1.f;
+            float offset = (isRun2) ? (dvgi.moduleId() < 96 ? VCaltoElectronOffset_L1 : VCaltoElectronOffset) : 0;
 
             bool isDeadColumn = false, isNoisyColumn = false;
 
-            int row = x[i];
-            int col = y[i];
+            int row = dvgi.xx();
+            int col = dvgi.yy();
+
             
-            auto ret = SiPixelClustersUtilities::getPedAndGain(id[i], col, row, isDeadColumn, isNoisyColumn, gains); 
+            auto ret = SiPixelClustersUtilities::getPedAndGain(dvgi.moduleId(), col, row, isDeadColumn, isNoisyColumn, gains); 
 
             float pedestal = ret.first;
             float gain = ret.second;
             // float pedestal = 0; float gain = 1.;
             if (isDeadColumn | isNoisyColumn) {
-              id[i] = InvId;
-              adc[i] = 0;
-              printf("bad pixel at %d in %d\n", i, id[i]);
+              dvgi.moduleId() = InvId;
+              dvgi.adc() = 0;
+              printf("bad pixel at %d in %d\n", i, dvgi.moduleId());
             } else {
-              float vcal = adc[i] * gain - pedestal * gain;
-              adc[i] = std::max(100, int(vcal * conversionFactor + offset));
+              float vcal = dvgi.adc() * gain - pedestal * gain;
+              dvgi.adc() = std::max(100, int(vcal * conversionFactor + offset));
             }
           }
         });
@@ -83,54 +90,56 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       template <typename TAcc>
       ALPAKA_FN_ACC void operator()(const TAcc& acc,
-                                   uint16_t* id,
-                                   uint16_t* adc,
-                                   int numElements,
-                                   uint32_t* __restrict__ moduleStart,        // just to zero first
-                                   uint32_t* __restrict__ nClustersInModule,  // just to zero them
-                                   uint32_t* __restrict__ clusModuleStart     // just to zero first
+                                  SiPixelDigisLayoutSoAView view,
+                                  SiPixelClustersLayoutSoAView clus_view,
+                                  //  uint16_t* id,
+                                  //  uint16_t* adc,
+                                   int numElements
+                                  //  uint32_t* __restrict__ moduleStart,        // just to zero first
+                                  //  uint32_t* __restrict__ nClustersInModule,  // just to zero them
+                                  //  uint32_t* __restrict__ clusModuleStart     // just to zero first
   ) {
     const uint32_t threadIdxGlobal(alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u]);
     // zero for next kernels...
 
     if (0 == threadIdxGlobal)
-      clusModuleStart[0] = moduleStart[0] = 0;
-    for (int i = threadIdxGlobal; i < phase2PixelTopology::numberOfModules; i += gridDim.x * blockDim.x) {
-      nClustersInModule[i] = 0;
-    }
+      clus_view[0].clusModuleStart() = clus_view[0].moduleStart();
+    cms::alpakatools::for_each_element_in_grid_strided(
+            acc, phase2PixelTopology::numberOfModules, [&](uint32_t i) { clus_view[i].clusInModule() = 0; });
 
-    for (int i = threadIdxGlobal; i < numElements; i += gridDim.x * blockDim.x) {
-      if (invalidModuleId == id[i])
-        continue;
+    cms::alpakatools::for_each_element_in_grid_strided(acc, numElements, [&](uint32_t i) {
+      auto dvgi = view[i];
+      if (gpuClustering::invalidModuleId != dvgi.moduleId())
+      { 
+        constexpr int mode = (Phase2ReadoutMode < -1 ? -1 : Phase2ReadoutMode);
 
-      constexpr int mode = (Phase2ReadoutMode < -1 ? -1 : Phase2ReadoutMode);
+        int adc_int = dvgi.adc()                                                ;
 
-      int adc_int = adc[i];
-
-      if constexpr (mode < 0)
-        adc_int = int(adc_int * ElectronPerADCGain);
-      else {
-        if (adc_int < Phase2KinkADC)
-          adc_int = int((adc_int + 0.5) * ElectronPerADCGain);
+        if constexpr (mode < 0)
+          adc_int = int(adc_int * ElectronPerADCGain);
         else {
-          constexpr int8_t dspp = (Phase2ReadoutMode < 10 ? Phase2ReadoutMode : 10);
-          constexpr int8_t ds = int8_t(dspp <= 1 ? 1 : (dspp - 1) * (dspp - 1));
+          if (adc_int < Phase2KinkADC)
+            adc_int = int((adc_int + 0.5) * ElectronPerADCGain);
+          else {
+            constexpr int8_t dspp = (Phase2ReadoutMode < 10 ? Phase2ReadoutMode : 10);
+            constexpr int8_t ds = int8_t(dspp <= 1 ? 1 : (dspp - 1) * (dspp - 1));
 
-          adc_int -= Phase2KinkADC;
-          adc_int *= ds;
-          adc_int += Phase2KinkADC;
+            adc_int -= Phase2KinkADC;
+            adc_int *= ds;
+            adc_int += Phase2KinkADC;
 
-          adc_int = ((adc_int + 0.5 * ds) * ElectronPerADCGain);
+            adc_int = ((adc_int + 0.5 * ds) * ElectronPerADCGain);
+          }
+
+          adc_int += int(Phase2DigiBaseline);
         }
-
-        adc_int += int(Phase2DigiBaseline);
-      }
-      adc[i] = std::min(adc_int, int(std::numeric_limits<uint16_t>::max()));
-    }
+        dvgi.adc() = std::min(adc_int, int(std::numeric_limits<uint16_t>::max()));
+        }
+    });
   }
 
 
-    }
+    };
   }  // namespace gpuCalibPixel
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

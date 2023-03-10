@@ -19,7 +19,7 @@ namespace siPixelGainsSoA
 GENERATE_SOA_LAYOUT(SiPixelGainCalibrationForHLTLayout,
                     SOA_COLUMN(siPixelGainsSoA::RangeAndCols, rangeAndCols),
 
-                    SOA_SCALAR(siPixelGainsSoA::DecodingStructure, v_pedestals),
+                    SOA_COLUMN(siPixelGainsSoA::DecodingStructure, v_pedestals),
 
                     SOA_SCALAR(float, minPed),
                     SOA_SCALAR(float, maxPed),
