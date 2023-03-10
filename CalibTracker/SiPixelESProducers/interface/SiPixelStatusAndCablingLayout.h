@@ -13,5 +13,4 @@ using SiPixelClustersLayoutSoA = SiPixelClustersLayout<>;
 using SiPixelClustersLayoutSoAView = SiPixelClustersLayout<>::View;
 using SiPixelClustersLayoutSoAConstView = SiPixelClustersLayout<>::ConstView;
 
-
 #endif  // DataFormats_SiPixelClusterSoA_interface_SiPixelClustersLayout_h

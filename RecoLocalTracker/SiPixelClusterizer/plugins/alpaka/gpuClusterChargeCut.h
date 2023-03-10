@@ -18,14 +18,15 @@ namespace gpuClustering {
         const TAcc& acc,
         SiPixelDigisLayoutSoAView digi_view,
         SiPixelClustersLayoutSoAView clus_view,
-        SiPixelClusterThresholds clusterThresholds, // charge cut on cluster in electrons (for layer 1 and for other layers)
+        SiPixelClusterThresholds
+            clusterThresholds,  // charge cut on cluster in electrons (for layer 1 and for other layers)
         // uint16_t* __restrict__ id,                 // module id of each pixel (modified if bad cluster)
         // uint16_t const* __restrict__ adc,          //  charge of each pixel
-        
+
         // uint32_t const* __restrict__ moduleStart,  // index of the first pixel of each module
         // uint32_t* __restrict__ nClustersInModule,  // modified: number of clusters found in each module
         // uint32_t const* __restrict__ moduleId,     // module id of each module
-        
+
         // int32_t* __restrict__ clusterId,           // modified: cluster id of each pixel
         const uint32_t numElements) const {
       constexpr int startBPIX2 = TrackerTraits::layerStart[1];
@@ -104,7 +105,8 @@ namespace gpuClustering {
           continue;  // not valid
         if (digi_view[i].moduleId() != thisModuleId)
           break;  // end of module
-        alpaka::atomicAdd(acc, &charge[digi_view[i].clus()], static_cast<int32_t>(adc[i]), alpaka::hierarchy::Threads{});
+        alpaka::atomicAdd(
+            acc, &charge[digi_view[i].clus()], static_cast<int32_t>(adc[i]), alpaka::hierarchy::Threads{});
       }
       alpaka::syncBlockThreads(acc);
 

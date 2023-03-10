@@ -19,7 +19,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           digi_view[j].rawIdArr() = j * 2;
           digi_view[j].xx() = j * 3;
           digi_view[j].moduleId() = j * 4;
-
         }
       }
     };
@@ -29,10 +28,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       template <typename TAcc, typename = std::enable_if_t<isAccelerator<TAcc>>>
       ALPAKA_FN_ACC void operator()(TAcc const& acc, SiPixelDigisLayoutSoAConstView digi_view) const {
         for (uint32_t j : elements_with_stride(acc, digi_view.metadata().size())) {
-          assert(digi_view[j].clus()==int(j));
-          assert(digi_view[j].rawIdArr()==j*2);
-          assert(digi_view[j].xx()==j*3);
-          assert(digi_view[j].moduleId()==j*4);
+          assert(digi_view[j].clus() == int(j));
+          assert(digi_view[j].rawIdArr() == j * 2);
+          assert(digi_view[j].xx() == j * 3);
+          assert(digi_view[j].moduleId() == j * 4);
         }
       }
     };

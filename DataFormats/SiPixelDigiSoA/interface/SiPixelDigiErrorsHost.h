@@ -14,8 +14,7 @@ public:
   ~SiPixelDigiErrorsHost() = default;
   template <typename TQueue>
   explicit SiPixelDigiErrorsHost(size_t maxFedWords, SiPixelFormatterErrors errors, TQueue queue)
-      : PortableHostCollection<SiPixelDigisErrorLayout<>>(maxFedWords, queue),
-        formatterErrors_h{std::move(errors)} {}
+      : PortableHostCollection<SiPixelDigisErrorLayout<>>(maxFedWords, queue), formatterErrors_h{std::move(errors)} {}
   SiPixelDigiErrorsHost(SiPixelDigiErrorsHost &&) = default;
   SiPixelDigiErrorsHost &operator=(SiPixelDigiErrorsHost &&) = default;
 
@@ -24,7 +23,6 @@ public:
 private:
   SiPixelFormatterErrors formatterErrors_h;
   int nErrorWords_ = 0;
-
-  };
+};
 
 #endif  // AlpakaDataFormats_alpaka_SiPixelDigiErrorsAlpaka_h

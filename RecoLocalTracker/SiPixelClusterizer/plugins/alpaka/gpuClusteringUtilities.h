@@ -4,9 +4,8 @@
 // #include <alpaka/alpaka.hpp>
 // #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
-// namespace ALPAKA_ACCELERATOR_NAMESPACE 
+// namespace ALPAKA_ACCELERATOR_NAMESPACE
 // {
-    
 
 // }
 // #endif

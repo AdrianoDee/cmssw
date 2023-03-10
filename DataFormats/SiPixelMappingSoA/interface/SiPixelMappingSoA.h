@@ -31,8 +31,4 @@
 // //   const SiPixelFedCablingMap *cablingMap_; //this is the cabling map that is ALWAYS on Host
 // // };
 
-
-
-
-
 // #endif  // DataFormats_SiPixelMappingSoA_interface_SiPixelClustersDevice_h

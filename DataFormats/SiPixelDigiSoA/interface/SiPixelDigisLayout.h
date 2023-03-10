@@ -16,5 +16,4 @@ using SiPixelDigisLayoutSoA = SiPixelDigisLayout<>;
 using SiPixelDigisLayoutSoAView = SiPixelDigisLayout<>::View;
 using SiPixelDigisLayoutSoAConstView = SiPixelDigisLayout<>::ConstView;
 
-
 #endif  // DataFormats_SiPixelDigi_interface_SiPixelDigisLayout_h

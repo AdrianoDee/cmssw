@@ -4,17 +4,16 @@
 #include <array>
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 
-namespace siPixelGainsSoA
-{
-    struct DecodingStructure {
-        uint8_t gain;
-        uint8_t ped;
-    };
+namespace siPixelGainsSoA {
+  struct DecodingStructure {
+    uint8_t gain;
+    uint8_t ped;
+  };
 
-    using Range = std::pair<uint32_t, uint32_t>;
-    using RangeAndCols = std::pair<Range, int>;//std::array<,phase1PixelTopology::numberOfModules>;
+  using Range = std::pair<uint32_t, uint32_t>;
+  using RangeAndCols = std::pair<Range, int>;  //std::array<,phase1PixelTopology::numberOfModules>;
 
-}
+}  // namespace siPixelGainsSoA
 
 GENERATE_SOA_LAYOUT(SiPixelGainCalibrationForHLTLayout,
                     SOA_COLUMN(siPixelGainsSoA::RangeAndCols, rangeAndCols),
@@ -34,10 +33,8 @@ GENERATE_SOA_LAYOUT(SiPixelGainCalibrationForHLTLayout,
                     SOA_SCALAR(unsigned int, noisyFlag),
                     SOA_SCALAR(float, link))
 
-
 using SiPixelGainCalibrationForHLTSoA = SiPixelGainCalibrationForHLTLayout<>;
 using SiPixelGainCalibrationForHLTSoAView = SiPixelGainCalibrationForHLTLayout<>::View;
 using SiPixelGainCalibrationForHLTSoAConstView = SiPixelGainCalibrationForHLTLayout<>::ConstView;
-
 
 #endif  // DataFormats_SiPixelGainCalibrationForHLToA_interface_SiPixelGainCalibrationForHLTLayout_h

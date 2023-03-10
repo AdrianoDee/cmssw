@@ -89,7 +89,7 @@ namespace pixelgpudetails {
     uint32_t row;
     uint32_t col;
   };
-  
+
   // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr pixelchannelidentifierimpl::Packing packing() { return PixelChannelIdentifier::thePacking; }
 
   // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr uint32_t pack(uint32_t row, uint32_t col, uint32_t adc, uint32_t flag = 0) {
@@ -120,7 +120,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ~WordFedAppender() = default;
 
         WordFedAppender(uint32_t words);
-        
+
         void initializeWordFed(int fedId, unsigned int wordCounterGPU, const uint32_t* src, unsigned int length);
 
         auto word() const { return word_; }
@@ -131,7 +131,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         cms::alpakatools::host_buffer<unsigned char[]> fedId_;
       };
 
-      SiPixelRawToClusterGPUKernel() : nModules_Clusters_h{cms::alpakatools::make_host_buffer<uint32_t[], Platform>(3u)} {}
+      SiPixelRawToClusterGPUKernel()
+          : nModules_Clusters_h{cms::alpakatools::make_host_buffer<uint32_t[], Platform>(3u)} {}
 
       ~SiPixelRawToClusterGPUKernel() = default;
 
@@ -155,18 +156,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                              Queue& queue);
 
       void makePhase2ClustersAsync(const SiPixelClusterThresholds clusterThresholds,
-                                 const uint16_t* moduleIds,
-                                 const uint16_t* xDigis,
-                                 const uint16_t* yDigis,
-                                 const uint16_t* adcDigis,
-                                 const uint32_t* packedData,
-                                 const uint32_t* rawIds,
-                                 const uint32_t numDigis,
-                                 Queue& queue);
+                                   const uint16_t* moduleIds,
+                                   const uint16_t* xDigis,
+                                   const uint16_t* yDigis,
+                                   const uint16_t* adcDigis,
+                                   const uint32_t* packedData,
+                                   const uint32_t* rawIds,
+                                   const uint32_t numDigis,
+                                   Queue& queue);
 
       std::pair<SiPixelDigisDevice, SiPixelClustersDevice> getResults() {
         digis_d->setNModulesDigis(nModules_Clusters_h[0], nDigis);
-        clusters_d->setNClusters(nModules_Clusters_h[1],nModules_Clusters_h[2]);
+        clusters_d->setNClusters(nModules_Clusters_h[1], nModules_Clusters_h[2]);
         return std::make_pair(std::move(*digis_d), std::move(*clusters_d));
       }
 

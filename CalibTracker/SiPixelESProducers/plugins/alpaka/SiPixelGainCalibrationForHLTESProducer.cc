@@ -38,7 +38,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geometryToken_;
   };
 
-  SiPixelGainCalibrationForHLTSoAESProducer::SiPixelGainCalibrationForHLTSoAESProducer(const edm::ParameterSet& iConfig) {
+  SiPixelGainCalibrationForHLTSoAESProducer::SiPixelGainCalibrationForHLTSoAESProducer(
+      const edm::ParameterSet& iConfig) {
     auto cc = setWhatProduced(this);
     gainsToken_ = cc.consumes();
     geometryToken_ = cc.consumes();
@@ -58,9 +59,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto geom = *(geomRecord);
     auto gains = *(gainsRecord);
 
-    auto product = std::make_unique<SiPixelGainCalibrationForHLTHost>(phase1PixelTopology::numberOfModules, cms::alpakatools::host());
-    
-      // bizzarre logic (looking for fist strip-det) don't ask
+    auto product = std::make_unique<SiPixelGainCalibrationForHLTHost>(phase1PixelTopology::numberOfModules,
+                                                                      cms::alpakatools::host());
+
+    // bizzarre logic (looking for fist strip-det) don't ask
     auto const& dus = geom.detUnits();
     unsigned int n_detectors = dus.size();
     for (unsigned int i = 1; i < 7; ++i) {
@@ -73,8 +75,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     //LogDebug("SiPixelGainCalibrationForHLTSoA")
     std::cout << "caching calibs for " << n_detectors << " pixel detectors of size " << gains.data().size() << '\n'
-        << "sizes " << sizeof(char) << ' ' << sizeof(uint8_t) << ' ' << sizeof(siPixelGainsSoA::DecodingStructure);
-    
+              << "sizes " << sizeof(char) << ' ' << sizeof(uint8_t) << ' '
+              << sizeof(siPixelGainsSoA::DecodingStructure);
+
     // &(product->view().v_pedestals()) = (siPixelGainsSoA::DecodingStructure*)gains.data().data();
     memcpy(&(product->view().v_pedestals()), (gains.data().data()), sizeof(siPixelGainsSoA::DecodingStructure));
     // do not read back from the (possibly write-combined) memory buffer
@@ -123,6 +126,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     return product;
   }
 
-} // namespace ALPAKA_ACCELERATOR_NAMESPACE
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 DEFINE_FWK_EVENTSETUP_ALPAKA_MODULE(SiPixelGainCalibrationForHLTSoAESProducer);

@@ -29,17 +29,16 @@ int main() {
   {
     // Instantiate tracks on device. PortableDeviceCollection allocates
     // SoA on device automatically.
-    SiPixelClustersDevice clusters_d(100,queue);
+    SiPixelClustersDevice clusters_d(100, queue);
     testClusterSoA::runKernels(clusters_d.view(), queue);
 
     // Instantate tracks on host. This is where the data will be
     // copied to from device.
-    SiPixelClustersHost clusters_h(clusters_d.view().metadata().size(),queue);
+    SiPixelClustersHost clusters_h(clusters_d.view().metadata().size(), queue);
 
     std::cout << clusters_h.view().metadata().size() << std::endl;
     alpaka::memcpy(queue, clusters_h.buffer(), clusters_d.const_buffer());
     alpaka::wait(queue);
-
   }
 
   return 0;

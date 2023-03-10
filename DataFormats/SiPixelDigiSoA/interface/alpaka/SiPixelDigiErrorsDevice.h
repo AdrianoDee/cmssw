@@ -12,23 +12,23 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-// class SiPixelDigiErrorsDevice : public PortableCollection<SiPixelDigisErrorLayout<>> {
-// public:
-//   SiPixelDigiErrorsDevice() = default;
-//   ~SiPixelDigiErrorsDevice() = default;
-//   template <typename TQueue>
-//   explicit SiPixelDigiErrorsDevice(size_t maxFedWords, SiPixelFormatterErrors errors, TQueue queue)
-//       : PortableCollection<SiPixelDigisErrorLayout<>>(maxFedWords, queue),
-//         formatterErrors_h{std::move(errors)} {};
-//   SiPixelDigiErrorsDevice(SiPixelDigiErrorsDevice &&) = default;
-//   SiPixelDigiErrorsDevice &operator=(SiPixelDigiErrorsDevice &&) = default;
+  // class SiPixelDigiErrorsDevice : public PortableCollection<SiPixelDigisErrorLayout<>> {
+  // public:
+  //   SiPixelDigiErrorsDevice() = default;
+  //   ~SiPixelDigiErrorsDevice() = default;
+  //   template <typename TQueue>
+  //   explicit SiPixelDigiErrorsDevice(size_t maxFedWords, SiPixelFormatterErrors errors, TQueue queue)
+  //       : PortableCollection<SiPixelDigisErrorLayout<>>(maxFedWords, queue),
+  //         formatterErrors_h{std::move(errors)} {};
+  //   SiPixelDigiErrorsDevice(SiPixelDigiErrorsDevice &&) = default;
+  //   SiPixelDigiErrorsDevice &operator=(SiPixelDigiErrorsDevice &&) = default;
 
-// private:
-//   SiPixelFormatterErrors formatterErrors_h;
+  // private:
+  //   SiPixelFormatterErrors formatterErrors_h;
 
-//   };
+  //   };
 
-class SiPixelDigiErrorsDevice {
+  class SiPixelDigiErrorsDevice {
   public:
     SiPixelDigiErrorsDevice() = delete;  // alpaka buffers are not default-constructible
     explicit SiPixelDigiErrorsDevice(size_t maxFedWords, SiPixelFormatterErrors errors, Queue& queue)
@@ -55,7 +55,6 @@ class SiPixelDigiErrorsDevice {
     cms::alpakatools::SimpleVector<SiPixelErrorCompact> const* error() const { return error_d.data(); }
     cms::alpakatools::SimpleVector<SiPixelErrorCompact> const* c_error() const { return error_d.data(); }
 
-
   private:
     cms::alpakatools::device_buffer<Device, SiPixelErrorCompact[]> data_d;
     cms::alpakatools::device_buffer<Device, cms::alpakatools::SimpleVector<SiPixelErrorCompact>> error_d;
@@ -63,6 +62,6 @@ class SiPixelDigiErrorsDevice {
     SiPixelFormatterErrors formatterErrors_h;
   };
 
-}// namespace ALPAKA_ACCELERATOR_NAMESPACE
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif  // DeviceDataFormats_alpaka_SiPixelDigiErrorsDevice_h

@@ -16,16 +16,15 @@ using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-namespace testTrackingRecHitSoA {
+  namespace testTrackingRecHitSoA {
 
-  template <typename TrackerTraits>
-  void runKernels(TrackingRecHitAlpakaSoAView<TrackerTraits>& hits, Queue& queue);
+    template <typename TrackerTraits>
+    void runKernels(TrackingRecHitAlpakaSoAView<TrackerTraits>& hits, Queue& queue);
 
-}
-}
+  }
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 int main() {
-
   const auto host = cms::alpakatools::host();
   const auto device = cms::alpakatools::devices<Platform>()[0];
   Queue queue(device);
@@ -46,7 +45,6 @@ int main() {
     testTrackingRecHitSoA::runKernels<pixelTopology::Phase1>(tkhit.view(), queue);
     alpaka::wait(queue);
   }
-
 
   return 0;
 }

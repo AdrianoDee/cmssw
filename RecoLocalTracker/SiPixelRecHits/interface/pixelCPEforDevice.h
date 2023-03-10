@@ -79,7 +79,6 @@ namespace pixelCPEforDevice {
   // using LayerGeometry = LayerGeometryT<pixelTopology::Phase1>;
   // using LayerGeometryPhase2 = LayerGeometryT<pixelTopology::Phase2>;
 
-
   template <typename TrackerTopology>
   struct ParamsOnDeviceT {
     using LayerGeometry = LayerGeometryT<TrackerTopology>;
@@ -105,8 +104,6 @@ namespace pixelCPEforDevice {
       return m_layerGeometry->layer[id / TrackerTopology::maxModuleStride];
     };
   };
-
-
 
   // SOA (on device)
   template <uint32_t N>
@@ -432,6 +429,6 @@ namespace pixelCPEforDevice {
     errorFromSize<pixelTopology::Phase2>(comParams, detParams, cp, ic);
   }
 
-}  // namespace pixelCPE
+}  // namespace pixelCPEforDevice
 
 #endif  // RecoLocalTracker_SiPixelRecHits_pixelCPE_h

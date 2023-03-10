@@ -68,7 +68,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     ALPAKA_FN_ACC bool isBarrel(uint32_t rawId) { return (1 == ((rawId >> 25) & 0x7)); }
 
-    ALPAKA_FN_ACC ::pixelgpudetails::DetIdGPU getRawId(const SiPixelMappingLayoutSoAConstView&cablingMap,
+    ALPAKA_FN_ACC ::pixelgpudetails::DetIdGPU getRawId(const SiPixelMappingLayoutSoAConstView &cablingMap,
                                                        uint8_t fed,
                                                        uint32_t link,
                                                        uint32_t roc) {
@@ -201,7 +201,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC uint8_t checkROC(uint32_t errorWord,
                                    uint8_t fedId,
                                    uint32_t link,
-                                   const SiPixelMappingLayoutSoAConstView&cablingMap,
+                                   const SiPixelMappingLayoutSoAConstView &cablingMap,
                                    bool debug = false) {
       uint8_t errorType = (errorWord >> ::pixelgpudetails::ROC_shift) & ::pixelgpudetails::ERROR_mask;
       if (errorType < 25)
@@ -211,7 +211,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       switch (errorType) {
         case (25): {
           errorFound = true;
-          uint32_t index = fedId * ::pixelgpudetails::MAX_LINK * ::pixelgpudetails::MAX_ROC + (link - 1) * ::pixelgpudetails::MAX_ROC + 1;
+          uint32_t index = fedId * ::pixelgpudetails::MAX_LINK * ::pixelgpudetails::MAX_ROC +
+                           (link - 1) * ::pixelgpudetails::MAX_ROC + 1;
           if (index > 1 && index <= cablingMap.size()) {
             if (!(link == cablingMap.link()[index] && 1 == cablingMap.roc()[index]))
               errorFound = false;
@@ -280,7 +281,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC uint32_t getErrRawID(uint8_t fedId,
                                        uint32_t errWord,
                                        uint32_t errorType,
-                                       const SiPixelMappingLayoutSoAConstView&cablingMap,
+                                       const SiPixelMappingLayoutSoAConstView &cablingMap,
                                        bool debug = false) {
       uint32_t rID = 0xffffffff;
 
@@ -359,7 +360,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       template <typename TAcc>
       ALPAKA_FN_ACC void operator()(const TAcc &acc,
                                     // const SiPixelFedCablingMapGPU *cablingMap,
-                                    const SiPixelMappingLayoutSoAConstView& cablingMap,
+                                    const SiPixelMappingLayoutSoAConstView &cablingMap,
                                     const unsigned char *modToUnp,
                                     const uint32_t wordCounter,
                                     const uint32_t *word,
@@ -496,7 +497,7 @@ namespace pixelgpudetails {
                                   // uint32_t const *__restrict__ cluStart,
                                   SiPixelClustersLayoutSoAView clus_view
                                   // uint32_t *__restrict__ moduleStart
-                                  ) const {
+    ) const {
       ALPAKA_ASSERT_OFFLOAD(TrackerTraits::numberOfModules < 2048);  // easy to extend at least till 32*1024
 
       constexpr int nMaxModules = TrackerTraits::numberOfModules;
@@ -512,33 +513,35 @@ namespace pixelgpudetails {
       cms::alpakatools::for_each_element_in_block_strided(acc, nMaxModules, [&](uint32_t i) {
         clus_view[i + 1].moduleStart() = std::min(gpuClustering::maxHitsInModule(), clus_view[i].clusInModule());
       });
-      
+
       constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
       constexpr auto leftModules = isPhase2 ? 1024 : nMaxModules - 1024;
-      
+
       auto &&ws = alpaka::declareSharedVar<uint32_t[32], __COUNTER__>(acc);
       cms::alpakatools::blockPrefixScan(acc, clus_view.moduleStart() + 1, clus_view.moduleStart() + 1, 1024, ws);
       cms::alpakatools::blockPrefixScan(
           acc, clus_view.moduleStart() + 1024 + 1, clus_view.moduleStart() + 1024 + 1, leftModules, ws);
-      
+
       if constexpr (isPhase2) {
-        cms::alpakatools::blockPrefixScan(acc, clus_view.moduleStart() + 2048 + 1, clus_view.moduleStart() + 2048 + 1, 1024, ws);
-        cms::alpakatools::blockPrefixScan(acc, clus_view.moduleStart() + 3072 + 1, clus_view.moduleStart() + 3072 + 1, nMaxModules - 3072, ws);
-     }
-      
+        cms::alpakatools::blockPrefixScan(
+            acc, clus_view.moduleStart() + 2048 + 1, clus_view.moduleStart() + 2048 + 1, 1024, ws);
+        cms::alpakatools::blockPrefixScan(
+            acc, clus_view.moduleStart() + 3072 + 1, clus_view.moduleStart() + 3072 + 1, nMaxModules - 3072, ws);
+      }
+
       constexpr auto lastModule = isPhase2 ? 2049u : nMaxModules + 1;
       cms::alpakatools::for_each_element_in_block_strided(
           acc, lastModule, 1025u, [&](uint32_t i) { clus_view[i].moduleStart() += clus_view[1024].moduleStart(); });
       alpaka::syncBlockThreads(acc);
 
-      if constexpr (isPhase2) 
-      {
+      if constexpr (isPhase2) {
         cms::alpakatools::for_each_element_in_block_strided(
-          acc, 3073u, 2049u, [&](uint32_t i) { clus_view[i].moduleStart() += clus_view[2048].moduleStart(); });
+            acc, 3073u, 2049u, [&](uint32_t i) { clus_view[i].moduleStart() += clus_view[2048].moduleStart(); });
         alpaka::syncBlockThreads(acc);
 
-        cms::alpakatools::for_each_element_in_block_strided(
-          acc, nMaxModules + 1, 3073u, [&](uint32_t i) { clus_view[i].moduleStart() += clus_view[3072].moduleStart(); });
+        cms::alpakatools::for_each_element_in_block_strided(acc, nMaxModules + 1, 3073u, [&](uint32_t i) {
+          clus_view[i].moduleStart() += clus_view[3072].moduleStart();
+        });
         alpaka::syncBlockThreads(acc);
       }
 #ifdef GPU_DEBUG
@@ -561,7 +564,7 @@ namespace pixelgpudetails {
 #endif
 
       // avoid overflow
-      constexpr auto MAX_HITS = 200000;//gpuClustering::MaxNumClusters; //FIXME: in TrackerTraits
+      constexpr auto MAX_HITS = 200000;  //gpuClustering::MaxNumClusters; //FIXME: in TrackerTraits
       cms::alpakatools::for_each_element_in_block_strided(acc, nMaxModules + 1, [&](uint32_t i) {
         if (clus_view[i].moduleStart() > MAX_HITS)
           clus_view[i].moduleStart() = MAX_HITS;
@@ -578,11 +581,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // Interface to outside
     void SiPixelRawToClusterGPUKernel::makeClustersAsync(bool isRun2,
                                                          const SiPixelClusterThresholds clusterThresholds,
-                                                        //  const SiPixelFedCablingMapGPU *cablingMap,
-                                                         const SiPixelMappingLayoutSoAConstView& cablingMap,
+                                                         //  const SiPixelFedCablingMapGPU *cablingMap,
+                                                         const SiPixelMappingLayoutSoAConstView &cablingMap,
                                                          const unsigned char *modToUnp,
-                                                        //  const SiPixelGainForHLTonGPU *gains,
-                                                         const SiPixelGainCalibrationForHLTSoAConstView& gains,
+                                                         //  const SiPixelGainForHLTonGPU *gains,
+                                                         const SiPixelGainCalibrationForHLTSoAConstView &gains,
                                                          const WordFedAppender &wordFed,
                                                          SiPixelFormatterErrors &&errors,
                                                          const uint32_t wordCounter,
@@ -686,26 +689,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                         gains,
                                                         wordCounter));
 
-                                                        // clusters_d->view().moduleStart(),
-                                                        // clusters_d->clusInModule(),
-                                                        // clusters_d->clusModuleStart()));
+        // clusters_d->view().moduleStart(),
+        // clusters_d->clusInModule(),
+        // clusters_d->clusModuleStart()));
 #ifdef GPU_DEBUG
         alpaka::wait(queue);
         std::cout << "CUDA countModules kernel launch with " << blocks << " blocks of "
                   << threadsPerBlockOrElementsPerThread << " threadsPerBlockOrElementsPerThread\n";
 #endif
 
-        alpaka::enqueue(queue,
-                        alpaka::createTaskKernel<Acc1D>(workDiv,
-                                                        countModules<pixelTopology::Phase1>(),
-                                                        digis_d->view(),
-                                                        clusters_d->view(),
-                                                        wordCounter));
+        alpaka::enqueue(
+            queue,
+            alpaka::createTaskKernel<Acc1D>(
+                workDiv, countModules<pixelTopology::Phase1>(), digis_d->view(), clusters_d->view(), wordCounter));
 
-                                                        // .moduleInd(),
-                                                        // clusters_d->view().moduleStart(),
-                                                        // digis_d->view().clus(),
-                                                        // wordCounter));
+        // .moduleInd(),
+        // clusters_d->view().moduleStart(),
+        // digis_d->view().clus(),
+        // wordCounter));
 
         auto moduleStartFirstElement =
             cms::alpakatools::make_device_view(alpaka::getDev(queue), clusters_d->view().moduleStart(), 1u);
@@ -747,11 +748,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         // MUST be ONE block
         const auto workDivOneBlock = cms::alpakatools::make_workdiv<Acc1D>(1u, 1024u);
-        alpaka::enqueue(queue,
-                        alpaka::createTaskKernel<Acc1D>(workDivOneBlock,
-                                                        ::pixelgpudetails::fillHitsModuleStart<pixelTopology::Phase1>(),
-                                                        clusters_d->view()));
-                                                        // clusters_d->clusModuleStart()));
+        alpaka::enqueue(
+            queue,
+            alpaka::createTaskKernel<Acc1D>(
+                workDivOneBlock, ::pixelgpudetails::fillHitsModuleStart<pixelTopology::Phase1>(), clusters_d->view()));
+        // clusters_d->clusModuleStart()));
 
         // last element holds the number of all clusters
         const auto clusModuleStartLastElement = cms::alpakatools::make_device_view(
@@ -761,9 +762,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         constexpr int startBPIX2 = pixelTopology::Phase1::layerStart[1];
         // element startBPIX2 hold the number of clusters until BPIX2
         const auto bpix2ClusterStart = cms::alpakatools::make_device_view(
-            alpaka::getDev(queue),
-            const_cast<uint32_t const *>(clusters_d->view().clusModuleStart() + startBPIX2),
-            1u);
+            alpaka::getDev(queue), const_cast<uint32_t const *>(clusters_d->view().clusModuleStart() + startBPIX2), 1u);
         auto nModules_Clusters_h_1 = cms::alpakatools::make_host_view(nModules_Clusters_h.data() + 1, 1u);
         alpaka::memcpy(queue, nModules_Clusters_h_1, clusModuleStartLastElement);
 
@@ -774,5 +773,3 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
   }  // namespace pixelgpudetails
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
-
-

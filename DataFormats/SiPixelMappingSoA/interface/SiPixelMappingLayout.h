@@ -29,12 +29,10 @@ GENERATE_SOA_LAYOUT(SiPixelMappingLayout,
                     SOA_COLUMN(bool, badRocs),
                     SOA_COLUMN(unsigned char, modToUnpDefault),
                     SOA_SCALAR(unsigned int, size),
-                    SOA_SCALAR(bool,hasQuality))
-
+                    SOA_SCALAR(bool, hasQuality))
 
 using SiPixelMappingLayoutSoA = SiPixelMappingLayout<>;
 using SiPixelMappingLayoutSoAView = SiPixelMappingLayout<>::View;
 using SiPixelMappingLayoutSoAConstView = SiPixelMappingLayout<>::ConstView;
-
 
 #endif  // DataFormats_SiPixelMappingoA_interface_SiPixelMappingLayout_h

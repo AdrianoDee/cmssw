@@ -7,101 +7,100 @@
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
-template <typename TrackerTraits>
-class TrackingRecHitAlpakaDevice : public PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>> {
-public:
-  using hitSoA = TrackingRecHitAlpakaSoA<TrackerTraits>;
-  //Need to decorate the class with the inherited portable accessors being now a template
-  using PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>>::view;
-  using PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>>::const_view;
-  using PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>>::buffer;
+  template <typename TrackerTraits>
+  class TrackingRecHitAlpakaDevice : public PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>> {
+  public:
+    using hitSoA = TrackingRecHitAlpakaSoA<TrackerTraits>;
+    //Need to decorate the class with the inherited portable accessors being now a template
+    using PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>>::view;
+    using PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>>::const_view;
+    using PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>>::buffer;
 
-  TrackingRecHitAlpakaDevice() = default;
+    TrackingRecHitAlpakaDevice() = default;
 
-  using AverageGeometry = typename hitSoA::AverageGeometry;
-  using ParamsOnDevice = typename hitSoA::ParamsOnDevice;
-  using PhiBinnerStorageType = typename hitSoA::PhiBinnerStorageType;
-  using PhiBinner = typename hitSoA::PhiBinner;
-  // Constructor which specifies the SoA size
-  template <typename TQueue>
-  explicit TrackingRecHitAlpakaDevice(uint32_t nHits,
-                                   int32_t offsetBPIX2,
-                                   ParamsOnDevice const* cpeParams,
-                                   uint32_t const* hitsModuleStart,
-                                   TQueue queue)
-      : PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>>(nHits, queue),
-        nHits_(nHits),
-        cpeParams_(cpeParams),
-        hitsModuleStart_(hitsModuleStart),
-        offsetBPIX2_(offsetBPIX2) {
-    phiBinner_ = &(view().phiBinner());
+    using AverageGeometry = typename hitSoA::AverageGeometry;
+    using ParamsOnDevice = typename hitSoA::ParamsOnDevice;
+    using PhiBinnerStorageType = typename hitSoA::PhiBinnerStorageType;
+    using PhiBinner = typename hitSoA::PhiBinner;
+    // Constructor which specifies the SoA size
+    template <typename TQueue>
+    explicit TrackingRecHitAlpakaDevice(uint32_t nHits,
+                                        int32_t offsetBPIX2,
+                                        ParamsOnDevice const* cpeParams,
+                                        uint32_t const* hitsModuleStart,
+                                        TQueue queue)
+        : PortableCollection<TrackingRecHitAlpakaLayout<TrackerTraits>>(nHits, queue),
+          nHits_(nHits),
+          cpeParams_(cpeParams),
+          hitsModuleStart_(hitsModuleStart),
+          offsetBPIX2_(offsetBPIX2) {
+      phiBinner_ = &(view().phiBinner());
 
-    const auto host = cms::alpakatools::host();
-    const auto device = cms::alpakatools::devices<Platform>()[0];
+      const auto host = cms::alpakatools::host();
+      const auto device = cms::alpakatools::devices<Platform>()[0];
 
-    auto cpe_h = alpaka::createView(host, cpeParams, 1);
-    auto cpe_d = alpaka::createView(device, &(view().cpeParams()), 1);
-    alpaka::memcpy(queue, cpe_d, cpe_h, 1);
+      auto cpe_h = alpaka::createView(host, cpeParams, 1);
+      auto cpe_d = alpaka::createView(device, &(view().cpeParams()), 1);
+      alpaka::memcpy(queue, cpe_d, cpe_h, 1);
 
-    auto start_h = alpaka::createView(host, hitsModuleStart, TrackerTraits::numberOfModules + 1);
-    auto start_d = alpaka::createView(device, view().hitsModuleStart().data(), TrackerTraits::numberOfModules + 1);
-    alpaka::memcpy(queue, start_d, start_h, 1);
+      auto start_h = alpaka::createView(host, hitsModuleStart, TrackerTraits::numberOfModules + 1);
+      auto start_d = alpaka::createView(device, view().hitsModuleStart().data(), TrackerTraits::numberOfModules + 1);
+      alpaka::memcpy(queue, start_d, start_h, 1);
 
-    // auto nHits_d = alpaka::createView(device, &(view().nHits()), 1);
-    // alpaka::memset(queue, nHits_d, nHits);
+      // auto nHits_d = alpaka::createView(device, &(view().nHits()), 1);
+      // alpaka::memset(queue, nHits_d, nHits);
 
-    auto nHits_h = alpaka::createView(host, &nHits, 1);
-    auto nHits_d = alpaka::createView(device, &(view().nHits()), 1);
-    alpaka::memcpy(queue, nHits_d, nHits_h,1);
+      auto nHits_h = alpaka::createView(host, &nHits, 1);
+      auto nHits_d = alpaka::createView(device, &(view().nHits()), 1);
+      alpaka::memcpy(queue, nHits_d, nHits_h, 1);
 
-    auto off_h = alpaka::createView(host, &offsetBPIX2, 1);
-    auto off_d = alpaka::createView(device, &(view().offsetBPIX2()), 1);
-    alpaka::memcpy(queue, off_d, off_h,1);
+      auto off_h = alpaka::createView(host, &offsetBPIX2, 1);
+      auto off_d = alpaka::createView(device, &(view().offsetBPIX2()), 1);
+      alpaka::memcpy(queue, off_d, off_h, 1);
+    }
 
-  }
+    uint32_t nHits() const { return nHits_; }  //go to size of view
 
-  uint32_t nHits() const { return nHits_; }  //go to size of view
+    // template <typename TQueue>
+    // auto localCoordToHostAsync(TQueue queue) const {
+    //   auto ret = cms::alpakatools::make_host_buffer<float[]>(4 * nHits(), queue);
+    //   size_t rowSize = sizeof(float) * nHits();
+    //   alpaka::memcpy(queue, ret.get(), view().xLocal(), rowSize * 4);
+    //
+    //   return ret;
+    // }  //move to utilities
+    //
+    // template <typename TQueue>
+    // auto hitsModuleStartToHostAsync(TQueue queue) const {
+    //   auto ret = cms::alpakatools::make_host_buffer<uint32_t[]>(TrackerTraits::numberOfModules + 1, queue);
+    //   alpaka::memcpy(queue, ret.get(),
+    //                             view().hitsModuleStart().data(),
+    //                             sizeof(uint32_t) * (TrackerTraits::numberOfModules + 1),
+    //                             cudaMemcpyDefault,
+    //                             queue);
+    //   return ret;
+    // }
 
-  // template <typename TQueue>
-  // auto localCoordToHostAsync(TQueue queue) const {
-  //   auto ret = cms::alpakatools::make_host_buffer<float[]>(4 * nHits(), queue);
-  //   size_t rowSize = sizeof(float) * nHits();
-  //   alpaka::memcpy(queue, ret.get(), view().xLocal(), rowSize * 4);
-  //
-  //   return ret;
-  // }  //move to utilities
-  //
-  // template <typename TQueue>
-  // auto hitsModuleStartToHostAsync(TQueue queue) const {
-  //   auto ret = cms::alpakatools::make_host_buffer<uint32_t[]>(TrackerTraits::numberOfModules + 1, queue);
-  //   alpaka::memcpy(queue, ret.get(),
-  //                             view().hitsModuleStart().data(),
-  //                             sizeof(uint32_t) * (TrackerTraits::numberOfModules + 1),
-  //                             cudaMemcpyDefault,
-  //                             queue);
-  //   return ret;
-  // }
+    auto phiBinnerStorage() { return phiBinnerStorage_; }
+    auto hitsModuleStart() const { return hitsModuleStart_; }
+    uint32_t offsetBPIX2() const { return offsetBPIX2_; }
+    auto phiBinner() { return phiBinner_; }
 
-  auto phiBinnerStorage() { return phiBinnerStorage_; }
-  auto hitsModuleStart() const { return hitsModuleStart_; }
-  uint32_t offsetBPIX2() const { return offsetBPIX2_; }
-  auto phiBinner() { return phiBinner_; }
+  private:
+    uint32_t nHits_;  //Needed for the host SoA size
 
-private:
-  uint32_t nHits_;  //Needed for the host SoA size
+    //TODO: this is used not that much from the hits (only once in BrokenLineFit), would make sens to remove it from this class.
+    ParamsOnDevice const* cpeParams_;
+    uint32_t const* hitsModuleStart_;
+    uint32_t offsetBPIX2_;
 
-  //TODO: this is used not that much from the hits (only once in BrokenLineFit), would make sens to remove it from this class.
-  ParamsOnDevice const* cpeParams_;
-  uint32_t const* hitsModuleStart_;
-  uint32_t offsetBPIX2_;
-
-  PhiBinnerStorageType* phiBinnerStorage_;
-  PhiBinner* phiBinner_;
-};
+    PhiBinnerStorageType* phiBinnerStorage_;
+    PhiBinner* phiBinner_;
+  };
 
   //Classes definition for Phase1/Phase2, to make the classes_def lighter. Not actually used in the code.
   using TrackingRecHitAlpakaDevicePhase1 = TrackingRecHitAlpakaDevice<pixelTopology::Phase1>;
   using TrackingRecHitAlpakaDevicePhase2 = TrackingRecHitAlpakaDevice<pixelTopology::Phase2>;
-}
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif  // CUDADataFormats_Track_TrackHeterogeneousT_H

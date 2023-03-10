@@ -6,5 +6,4 @@
 
 class SiPixelMappingSoARecord : public edm::eventsetup::EventSetupRecordImplementation<SiPixelMappingSoARecord> {};
 
-
 #endif

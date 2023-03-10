@@ -88,7 +88,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::vector<unsigned int> fedIds_;
     const SiPixelFedCablingMap* cablingMap_ = nullptr;
     std::unique_ptr<PixelUnpackingRegions> regions_;
-    
+
     pixelgpudetails::SiPixelRawToClusterGPUKernel gpuAlgo_;
     // std::unique_ptr<pixelgpudetails::SiPixelRawToClusterGPUKernel::WordFedAppender> wordFedAppender_;
     PixelDataFormatter::Errors errors_;
@@ -105,21 +105,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         digiPutToken_(produces()),
         clusterPutToken_(produces()),
         cablingMapToken_(esConsumes<SiPixelFedCablingMap, SiPixelFedCablingMapRcd>(
-          edm::ESInputTag("", iConfig.getParameter<std::string>("CablingMapLabel")))),
+            edm::ESInputTag("", iConfig.getParameter<std::string>("CablingMapLabel")))),
         isRun2_(iConfig.getParameter<bool>("isRun2")),
         includeErrors_(iConfig.getParameter<bool>("IncludeErrors")),
         useQuality_(iConfig.getParameter<bool>("UseQualityInfo")),
         clusterThresholds_{iConfig.getParameter<int32_t>("clusterThreshold_layer1"),
-                         iConfig.getParameter<int32_t>("clusterThreshold_otherLayers")} {
+                           iConfig.getParameter<int32_t>("clusterThreshold_otherLayers")} {
     if (includeErrors_) {
-      digiErrorPutToken_ = produces();//<cms::alpakatools::Product<alpaka_cuda_async::Queue,alpaka_cuda_async::SiPixelDigisDevice>>(); //reg.produces<cms::alpakatools::Product<Queue, SiPixelDigiErrorsAlpaka>>();
+      digiErrorPutToken_ =
+          produces();  //<cms::alpakatools::Product<alpaka_cuda_async::Queue,alpaka_cuda_async::SiPixelDigisDevice>>(); //reg.produces<cms::alpakatools::Product<Queue, SiPixelDigiErrorsAlpaka>>();
     }
 
-      // regions
+    // regions
     if (!iConfig.getParameter<edm::ParameterSet>("Regions").getParameterNames().empty()) {
       regions_ = std::make_unique<PixelUnpackingRegions>(iConfig, consumesCollector());
     }
-    
+
     // wordFedAppender_ = std::make_unique<pixelgpudetails::SiPixelRawToClusterGPUKernel::WordFedAppender>();
   }
 
@@ -154,8 +155,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto const& hgpuMap = iSetup.getData(gpuMapToken_);
     if (SiPixelMappingUtilities::hasQuality(hgpuMap->const_view()) != useQuality_) {
       throw cms::Exception("LogicError")
-        << "UseQuality of the module (" << useQuality_
-        << ") differs the one from SiPixelROCsStatusAndMappingWrapper. Please fix your configuration.";
+          << "UseQuality of the module (" << useQuality_
+          << ") differs the one from SiPixelROCsStatusAndMappingWrapper. Please fix your configuration.";
     }
     // get the GPU product already here so that the async transfer can begin
     // const auto* gpuMap = hgpuMap.getGPUProductAsync(iEvent.queue());
@@ -163,10 +164,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     auto const& gpuGains = iSetup.getData(gainsToken_);
 
-    cms::alpakatools::device_buffer<Device,unsigned char[]> modulesToUnpackRegional;
+    cms::alpakatools::device_buffer<Device, unsigned char[]> modulesToUnpackRegional;
     const unsigned char* gpuModulesToUnpack;
 
-        // initialize cabling map or update if necessary
+    // initialize cabling map or update if necessary
     if (recordWatcher_.check(iSetup) or regions_) {
       // cabling map, which maps online address (fed->link->ROC->local pixel) to offline (DetId->global pixel)
       cablingMap_ = iSetup.getHandle(cablingMapToken_).product();
@@ -179,20 +180,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     if (regions_) {
       regions_->run(iEvent, iSetup);
       LogDebug("SiPixelRawToCluster") << "region2unpack #feds: " << regions_->nFEDs();
-      LogDebug("SiPixelRawToCluster") << "region2unpack #modules (BPIX,EPIX,total): " << regions_->nBarrelModules() << " "
-                                      << regions_->nForwardModules() << " " << regions_->nModules();
-      modulesToUnpackRegional = SiPixelMappingUtilities::getModToUnpRegionalAsync(*(regions_->modulesToUnpack()),cablingMap_,iEvent.queue());; //hgpuMap->getModToUnpRegionalAsync(*(regions_->modulesToUnpack()), iEvent.queue());
-      gpuModulesToUnpack =  modulesToUnpackRegional.data();
+      LogDebug("SiPixelRawToCluster") << "region2unpack #modules (BPIX,EPIX,total): " << regions_->nBarrelModules()
+                                      << " " << regions_->nForwardModules() << " " << regions_->nModules();
+      modulesToUnpackRegional = SiPixelMappingUtilities::getModToUnpRegionalAsync(
+          *(regions_->modulesToUnpack()), cablingMap_, iEvent.queue());
+      ;  //hgpuMap->getModToUnpRegionalAsync(*(regions_->modulesToUnpack()), iEvent.queue());
+      gpuModulesToUnpack = modulesToUnpackRegional.data();
     } else {
-      gpuModulesToUnpack = hgpuMap->modToUnpDefault();//getModToUnpAllAsync(iEvent.queue());
+      gpuModulesToUnpack = hgpuMap->modToUnpDefault();  //getModToUnpAllAsync(iEvent.queue());
     }
-    
+
     // auto const& hgains = iSetup.get<SiPixelGainCalibrationForHLTGPU>();
     // const auto* gpuGains = hgains.getGPUProductAsync(iEvent.queue());
     // auto const& fedIds_ = iSetup.get<SiPixelFedIds>().fedIds();
     const auto& buffers = iEvent.get(rawGetToken_);
 
-   errors_.clear();
+    errors_.clear();
 
     // GPU specific: Data extraction for RawToDigi GPU
     unsigned int wordCounter = 0;
@@ -271,13 +274,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     for (uint32_t i = 0; i < fedIds_.size(); ++i) {
       wordFedAppender.initializeWordFed(fedIds_[i], index[i], start[i], words[i]);
     }
-    
+
     gpuAlgo_.makeClustersAsync(isRun2_,
-                              clusterThresholds_
-                               gpuMap,
+                               clusterThresholds_ gpuMap,
                                gpuModulesToUnpack,
                                gpuGains,
-                               wordFedAppender, 
+                               wordFedAppender,
                                std::move(errors_),
                                wordCounter,
                                fedCounter,
@@ -304,7 +306,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         iEvent.emplace(digiErrorPutToken_, SiPixelDigiErrorsDevice{});
       }
       return;
-  }
+    }
 
     // auto tmp = gpuAlgo_.getResults();
     // iEvent.emplace(iEvent, digiPutToken_, std::move(tmp.first));
@@ -312,7 +314,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // if (includeErrors_) {
     //   iEvent.emplace(iEvent, digiErrorPutToken_, gpuAlgo_.getErrors());
     // }
-
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

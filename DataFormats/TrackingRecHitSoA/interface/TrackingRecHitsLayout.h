@@ -12,11 +12,11 @@ template <typename TrackerTraits>
 struct TrackingRecHitAlpakaSoA {
   using hindex_type = typename TrackerTraits::hindex_type;
   using PhiBinner = cms::alpakatools::HistoContainer<int16_t,
-                                              256,
-                                              500000,
-                                              8 * sizeof(int16_t),
-                                              hindex_type,
-                                              TrackerTraits::numberOfLayers>;  //28 for phase2 geometry
+                                                     256,
+                                                     500000,
+                                                     8 * sizeof(int16_t),
+                                                     hindex_type,
+                                                     TrackerTraits::numberOfLayers>;  //28 for phase2 geometry
 
   using PhiBinnerStorageType = typename PhiBinner::index_type;
   using AverageGeometry = pixelTopology::AverageGeometryT<TrackerTraits>;
@@ -55,9 +55,11 @@ struct TrackingRecHitAlpakaSoA {
 };
 
 template <typename TrackerTraits>
-using TrackingRecHitAlpakaLayout = typename TrackingRecHitAlpakaSoA<TrackerTraits>::template TrackingRecHitAlpakaSoALayout<>;
+using TrackingRecHitAlpakaLayout =
+    typename TrackingRecHitAlpakaSoA<TrackerTraits>::template TrackingRecHitAlpakaSoALayout<>;
 template <typename TrackerTraits>
-using TrackingRecHitAlpakaSoAView = typename TrackingRecHitAlpakaSoA<TrackerTraits>::template TrackingRecHitAlpakaSoALayout<>::View;
+using TrackingRecHitAlpakaSoAView =
+    typename TrackingRecHitAlpakaSoA<TrackerTraits>::template TrackingRecHitAlpakaSoALayout<>::View;
 template <typename TrackerTraits>
 using TrackingRecHitAlpakaSoAConstView =
     typename TrackingRecHitAlpakaSoA<TrackerTraits>::template TrackingRecHitAlpakaSoALayout<>::ConstView;

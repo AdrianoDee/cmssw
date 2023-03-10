@@ -12,4 +12,3 @@ class SiPixelGainCalibrationForHLTSoARcd
           edm::mpl::Vector<SiPixelGainCalibrationForHLTRcd, TrackerDigiGeometryRecord>> {};
 
 #endif  // CalibTracker_Records_SiPixelGainCalibrationForHLTSoARcd_h
-
