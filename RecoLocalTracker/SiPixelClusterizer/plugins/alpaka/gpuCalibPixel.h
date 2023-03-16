@@ -11,6 +11,7 @@
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/SiPixelGainCalibrationForHLTLayout.h"
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/alpaka/SiPixelGainCalibrationForHLTDevice.h"
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/alpaka/SiPixelGainCalibrationForHLTUtilities.h"
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisErrorLayout.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
@@ -34,13 +35,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       template <typename TAcc>
       ALPAKA_FN_ACC void operator()(const TAcc& acc,
                                     bool isRun2,
-                                    SiPixelDigisLayoutSoAView view,
-                                    SiPixelClustersLayoutSoAView clus_view,
+                                    SiPixelDigisLayoutSoAView& view,
+                                    SiPixelClustersLayoutSoAView& clus_view,
                                     // uint16_t* id,
                                     // uint16_t const* __restrict__ x,
                                     // uint16_t const* __restrict__ y,
                                     // uint16_t* adc,
-                                    const SiPixelGainCalibrationForHLTSoAConstView& __restrict__ gains,
+                                    const SiPixelGainCalibrationForHLTSoAConstView& gains,
                                     int numElements
                                     // uint32_t* __restrict__ moduleStart,        // just to zero first
                                     // uint32_t* __restrict__ nClustersInModule,  // just to zero them
@@ -68,8 +69,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             int row = dvgi.xx();
             int col = dvgi.yy();
 
-            auto ret =
-                SiPixelClustersUtilities::getPedAndGain(dvgi.moduleId(), col, row, isDeadColumn, isNoisyColumn, gains);
+            auto ret = SiPixelGainUtilities::getPedAndGain(dvgi.moduleId(), col, row, isDeadColumn, isNoisyColumn, gains);
 
             float pedestal = ret.first;
             float gain = ret.second;
@@ -87,18 +87,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
     };
 
+
     struct calibDigisPhase2 {
       template <typename TAcc>
       ALPAKA_FN_ACC void operator()(const TAcc& acc,
-                                    SiPixelDigisLayoutSoAView view,
-                                    SiPixelClustersLayoutSoAView clus_view,
+                                    SiPixelDigisLayoutSoAView& view,
+                                    SiPixelClustersLayoutSoAView& clus_view,
                                     //  uint16_t* id,
                                     //  uint16_t* adc,
                                     int numElements
                                     //  uint32_t* __restrict__ moduleStart,        // just to zero first
                                     //  uint32_t* __restrict__ nClustersInModule,  // just to zero them
                                     //  uint32_t* __restrict__ clusModuleStart     // just to zero first
-      ) {
+      ) const {
         const uint32_t threadIdxGlobal(alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u]);
         // zero for next kernels...
 
@@ -137,6 +138,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         });
       }
     };
+
   }  // namespace gpuCalibPixel
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

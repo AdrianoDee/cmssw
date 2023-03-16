@@ -187,7 +187,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         using Hist = cms::alpakatools::HistoContainer<uint16_t, nbins, maxPixInModule, nbits, uint16_t>;
         auto& hist = alpaka::declareSharedVar<Hist, __COUNTER__>(acc);
-        auto& ws = alpaka::declareSharedVar<Hist::Counter[32], __COUNTER__>(acc);
+        auto& ws = alpaka::declareSharedVar<typename Hist::Counter[32], __COUNTER__>(acc);
 
         cms::alpakatools::for_each_element_in_block_strided(acc, Hist::totbins(), [&](uint32_t j) { hist.off[j] = 0; });
         alpaka::syncBlockThreads(acc);

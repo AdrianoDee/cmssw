@@ -18,7 +18,7 @@
 
 #include "DataFormats/SiPixelRawData/interface/SiPixelErrorCompact.h"
 #include "DataFormats/SiPixelRawData/interface/SiPixelFormatterErrors.h"
-
+#include "DataFormats/SiPixelDetId/interface/PixelChannelIdentifier.h"
 // struct SiPixelFedCablingMapGPU;
 // class SiPixelGainForHLTonGPU;
 
@@ -90,19 +90,19 @@ namespace pixelgpudetails {
     uint32_t col;
   };
 
-  // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr pixelchannelidentifierimpl::Packing packing() { return PixelChannelIdentifier::thePacking; }
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr pixelchannelidentifierimpl::Packing packing() { return PixelChannelIdentifier::thePacking; }
 
-  // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr uint32_t pack(uint32_t row, uint32_t col, uint32_t adc, uint32_t flag = 0) {
-  //   constexpr pixelchannelidentifierimpl::Packing thePacking = packing();
-  //   adc = std::min(adc, uint32_t(thePacking.max_adc));
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE  constexpr uint32_t pack(uint32_t row, uint32_t col, uint32_t adc, uint32_t flag = 0) {
+    constexpr pixelchannelidentifierimpl::Packing thePacking = packing();
+    adc = std::min(adc, uint32_t(thePacking.max_adc));
 
-  //   return (row << thePacking.row_shift) | (col << thePacking.column_shift) | (adc << thePacking.adc_shift);
-  // }
+    return (row << thePacking.row_shift) | (col << thePacking.column_shift) | (adc << thePacking.adc_shift);
+  }
 
-  // constexpr uint32_t pixelToChannel(int row, int col) {
-  //   constexpr pixelchannelidentifierimpl::Packing thePacking = packing();
-  //   return (row << thePacking.column_width) | col;
-  // }
+  constexpr uint32_t pixelToChannel(int row, int col) {
+    constexpr pixelchannelidentifierimpl::Packing thePacking = packing();
+    return (row << thePacking.column_width) | col;
+  }
 
 }  // namespace pixelgpudetails
 
@@ -156,22 +156,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                              Queue& queue);
 
       void makePhase2ClustersAsync(const SiPixelClusterThresholds clusterThresholds,
-                                   const uint16_t* moduleIds,
-                                   const uint16_t* xDigis,
-                                   const uint16_t* yDigis,
-                                   const uint16_t* adcDigis,
-                                   const uint32_t* packedData,
-                                   const uint32_t* rawIds,
+                                   SiPixelDigisLayoutSoAView& digis_view,
                                    const uint32_t numDigis,
                                    Queue& queue);
 
-      std::pair<SiPixelDigisDevice, SiPixelClustersDevice> getResults() {
+      // std::pair<SiPixelDigisDevice, SiPixelClustersDevice> getResults() {
+      //   digis_d->setNModulesDigis(nModules_Clusters_h[0], nDigis);
+      //   clusters_d->setNClusters(nModules_Clusters_h[1], nModules_Clusters_h[2]);
+      //   return std::make_pair(std::move(*digis_d), std::move(*clusters_d));
+      // }
+
+      SiPixelDigisDevice&& getDigis (){
         digis_d->setNModulesDigis(nModules_Clusters_h[0], nDigis);
-        clusters_d->setNClusters(nModules_Clusters_h[1], nModules_Clusters_h[2]);
-        return std::make_pair(std::move(*digis_d), std::move(*clusters_d));
+        return std::move(*digis_d);
       }
 
-      SiPixelDigiErrorsDevice&& getErrors() { return std::move(*digiErrors_d); }
+      SiPixelClustersDevice&& getClusters (){
+        clusters_d->setNClusters(nModules_Clusters_h[1], nModules_Clusters_h[2]);
+        return std::move(*clusters_d);
+      }
+
+      SiPixelDigiErrorsDevice&& getErrors(){ return std::move(*digiErrors_d); }
 
     private:
       uint32_t nDigis = 0;

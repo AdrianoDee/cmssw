@@ -8,6 +8,8 @@
 #include "HeterogeneousCore/AlpakaUtilities/interface/prefixScan.h"
 #include "DataFormats/SiPixelClusterSoA/interface/gpuClusteringConstants.h"
 #include "../SiPixelClusterThresholds.h"
+#include "DataFormats/SiPixelClusterSoA/interface/SiPixelClustersLayout.h"
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisLayout.h"
 
 namespace gpuClustering {
 
@@ -106,7 +108,7 @@ namespace gpuClustering {
         if (digi_view[i].moduleId() != thisModuleId)
           break;  // end of module
         alpaka::atomicAdd(
-            acc, &charge[digi_view[i].clus()], static_cast<int32_t>(adc[i]), alpaka::hierarchy::Threads{});
+            acc, &charge[digi_view[i].clus()], static_cast<int32_t>(digi_view[i].adc()), alpaka::hierarchy::Threads{});
       }
       alpaka::syncBlockThreads(acc);
 
@@ -124,7 +126,7 @@ namespace gpuClustering {
       if (nclus == newclusId[nclus - 1])
         return;
 
-      nClustersInModule[thisModuleId] = newclusId[nclus - 1];
+      clus_view[thisModuleId].clusInModule() = newclusId[nclus - 1];
       alpaka::syncBlockThreads(acc);
 
       // mark bad cluster again
@@ -145,8 +147,8 @@ namespace gpuClustering {
           continue;  // not valid
         if (digi_view[i].moduleId() != thisModuleId)
           break;  // end of module
-        digi_view[i].clus() = newclusId[clusterId[i]] - 1;
-        if (clusterId[i] == invalidModuleId)
+        digi_view[i].clus() = newclusId[digi_view[i].clus()] - 1;
+        if (digi_view[i].clus() == invalidModuleId)
           digi_view[i].moduleId() = invalidModuleId;
       }
 

@@ -9,7 +9,7 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-  struct SiPixelClustersUtilities {
+  struct SiPixelGainUtilities {
     ALPAKA_FN_HOST_ACC ALPAKA_FN_ACC ALPAKA_FN_INLINE static std::pair<float, float> getPedAndGain(
         uint32_t moduleInd,
         int col,

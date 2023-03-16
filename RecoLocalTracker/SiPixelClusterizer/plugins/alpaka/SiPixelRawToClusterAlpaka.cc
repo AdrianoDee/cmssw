@@ -16,8 +16,8 @@
 #include "DataFormats/SiPixelGainCalibrationForHLTSoA/interface/alpaka/SiPixelGainCalibrationForHLTDevice.h"
 
 #include "CalibTracker/Records/interface/SiPixelGainCalibrationForHLTGPURcd.h"
-#include "CalibTracker/SiPixelESProducers/interface/SiPixelROCsStatusAndMappingWrapper.h"
-#include "CalibTracker/SiPixelESProducers/interface/SiPixelGainCalibrationForHLTGPU.h"
+// #include "CalibTracker/SiPixelESProducers/interface/SiPixelROCsStatusAndMappingWrapper.h"
+// #include "CalibTracker/SiPixelESProducers/interface/SiPixelGainCalibrationForHLTGPU.h"
 #include "CondFormats/DataRecord/interface/SiPixelFedCablingMapRcd.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelFedCablingMap.h"
 #include "CondFormats/SiPixelObjects/interface/SiPixelFedCablingTree.h"
@@ -32,7 +32,6 @@
 #include "FWCore/Framework/interface/ESWatcher.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
@@ -72,12 +71,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void acquire(device::Event const& iEvent, device::EventSetup const& iSetup) override;
     void produce(device::Event& iEvent, device::EventSetup const& iSetup) override;
 
-    cms::alpakatools::ContextState<Queue> ctxState_;
+    // cms::alpakatools::ContextState<Queue> ctxState_;
 
     edm::EDGetTokenT<FEDRawDataCollection> rawGetToken_;
-    const device::EDPutToken<SiPixelDigisDevice> digiPutToken_;
+    device::EDPutToken<SiPixelDigisDevice> digiPutToken_;
     device::EDPutToken<SiPixelDigiErrorsDevice> digiErrorPutToken_;
-    const device::EDPutToken<SiPixelClustersDevice> clusterPutToken_;
+    device::EDPutToken<SiPixelClustersDevice> clusterPutToken_;
 
     edm::ESWatcher<SiPixelFedCablingMapRcd> recordWatcher_;
     const device::ESGetToken<SiPixelMappingDevice, SiPixelMappingSoARecord> gpuMapToken_;
@@ -153,7 +152,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // cms::alpakatools::ScopedContextAcquire<Queue> ctx{iEvent.streamID(), std::move(waitingTaskHolder), ctxState_};
 
     auto const& hgpuMap = iSetup.getData(gpuMapToken_);
-    if (SiPixelMappingUtilities::hasQuality(hgpuMap->const_view()) != useQuality_) {
+    if (SiPixelMappingUtilities::hasQuality(hgpuMap.const_view()) != useQuality_) {
       throw cms::Exception("LogicError")
           << "UseQuality of the module (" << useQuality_
           << ") differs the one from SiPixelROCsStatusAndMappingWrapper. Please fix your configuration.";
@@ -164,7 +163,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     auto const& gpuGains = iSetup.getData(gainsToken_);
 
-    cms::alpakatools::device_buffer<Device, unsigned char[]> modulesToUnpackRegional;
+    auto modulesToUnpackRegional = cms::alpakatools::make_device_buffer<unsigned char[]>(iEvent.queue(), ::pixelgpudetails::MAX_SIZE);
     const unsigned char* gpuModulesToUnpack;
 
     // initialize cabling map or update if necessary
@@ -276,9 +275,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     gpuAlgo_.makeClustersAsync(isRun2_,
-                               clusterThresholds_ gpuMap,
+                               clusterThresholds_,
+                               hgpuMap.const_view(),
                                gpuModulesToUnpack,
-                               gpuGains,
+                               gpuGains.const_view(),
                                wordFedAppender,
                                std::move(errors_),
                                wordCounter,
@@ -290,7 +290,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   void SiPixelRawToCluster::produce(device::Event& iEvent, device::EventSetup const& iSetup) {
-    cms::alpakatools::ScopedContextProduce ctx{ctxState_};
 
     if (nDigis_ == 0) {
       // Cannot use the default constructor here, as it would not allocate memory.
@@ -303,20 +302,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       iEvent.emplace(digiPutToken_, std::move(digis_d));
       iEvent.emplace(clusterPutToken_, std::move(clusters_d));
       if (includeErrors_) {
-        iEvent.emplace(digiErrorPutToken_, SiPixelDigiErrorsDevice{});
+        iEvent.emplace(digiErrorPutToken_, SiPixelDigiErrorsDevice());
       }
       return;
     }
 
     // auto tmp = gpuAlgo_.getResults();
-    // iEvent.emplace(iEvent, digiPutToken_, std::move(tmp.first));
-    // iEvent.emplace(iEvent, clusterPutToken_, std::move(tmp.second));
-    // if (includeErrors_) {
-    //   iEvent.emplace(iEvent, digiErrorPutToken_, gpuAlgo_.getErrors());
-    // }
+    iEvent.emplace(digiPutToken_, gpuAlgo_.getDigis());//std::move(tmp.first));
+    iEvent.emplace(clusterPutToken_, gpuAlgo_.getClusters());
+    if (includeErrors_) {
+      iEvent.emplace(digiErrorPutToken_, gpuAlgo_.getErrors());
+    }
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 // define as framework plugin
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
 DEFINE_FWK_ALPAKA_MODULE(SiPixelRawToCluster);

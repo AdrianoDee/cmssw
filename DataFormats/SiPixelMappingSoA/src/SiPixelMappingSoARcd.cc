@@ -1,5 +1,4 @@
-// #include "DataFormats/SiPixelMappingSoA/interface/SiPixelMappingSoARecord.h"
-// #include "FWCore/Framework/interface/eventsetuprecord_registration_macro.h"
-// #include "FWCore/Utilities/interface/typelookup.h"
+#include "DataFormats/SiPixelMappingSoA/interface/SiPixelMappingSoARecord.h"
+#include "FWCore/Framework/interface/eventsetuprecord_registration_macro.h"
 
-// EVENTSETUP_RECORD_REG(SiPixelMappingSoARecord);
+EVENTSETUP_RECORD_REG(SiPixelMappingSoARecord);
