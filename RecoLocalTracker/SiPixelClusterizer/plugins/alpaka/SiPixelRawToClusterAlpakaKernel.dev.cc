@@ -676,14 +676,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                            threadsPerBlockOrElementsPerThread);
         const auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlockOrElementsPerThread);
 
-        alpaka::enqueue(queue,
-                        alpaka::createTaskKernel<Acc1D>(workDiv,
-                                                        gpuCalibPixel::calibDigis(),
-                                                        isRun2,
-                                                        digis_d->view(),
-                                                        clusters_d->view(),
-                                                        gains,
-                                                        wordCounter));
+        alpaka::enqueue(
+            queue,
+            alpaka::createTaskKernel<Acc1D>(
+                workDiv, gpuCalibPixel::calibDigis(), isRun2, digis_d->view(), clusters_d->view(), gains, wordCounter));
 
         // clusters_d->view().moduleStart(),
         // clusters_d->clusInModule(),
@@ -769,106 +765,96 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }  // end clusterizer scope
     }
 
-        void SiPixelRawToClusterGPUKernel::makePhase2ClustersAsync(const SiPixelClusterThresholds clusterThresholds,
-                                                                SiPixelDigisLayoutSoAView& digis_view,
-                                                                const uint32_t numDigis,
-                                                                Queue &queue) {
-        using namespace gpuClustering;
-        using pixelTopology::Phase2;
-        nDigis = numDigis;
-        constexpr int numberOfModules = pixelTopology::Phase2::numberOfModules;
-        // digis_d = SiPixelDigisDevice(numDigis, queue);
+    void SiPixelRawToClusterGPUKernel::makePhase2ClustersAsync(const SiPixelClusterThresholds clusterThresholds,
+                                                               SiPixelDigisLayoutSoAView &digis_view,
+                                                               const uint32_t numDigis,
+                                                               Queue &queue) {
+      using namespace gpuClustering;
+      using pixelTopology::Phase2;
+      nDigis = numDigis;
+      constexpr int numberOfModules = pixelTopology::Phase2::numberOfModules;
+      // digis_d = SiPixelDigisDevice(numDigis, queue);
 
-        // alpaka::memcpy(queue, digis_d->view(), digis_h_view);
-      
-        clusters_d = SiPixelClustersDevice(Phase2::numberOfModules, queue);
+      // alpaka::memcpy(queue, digis_d->view(), digis_h_view);
 
-        // nModules_Clusters_h = cms::cuda::make_host_unique<uint32_t[]>(2, stream);
+      clusters_d = SiPixelClustersDevice(Phase2::numberOfModules, queue);
 
-        const auto threadsPerBlockOrElementsPerThread = 512;
-        const auto blocks = cms::alpakatools::divide_up_by(std::max<int>(numDigis, numberOfModules),
-                                                           threadsPerBlockOrElementsPerThread);
-        const auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlockOrElementsPerThread);
+      // nModules_Clusters_h = cms::cuda::make_host_unique<uint32_t[]>(2, stream);
 
+      const auto threadsPerBlockOrElementsPerThread = 512;
+      const auto blocks =
+          cms::alpakatools::divide_up_by(std::max<int>(numDigis, numberOfModules), threadsPerBlockOrElementsPerThread);
+      const auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlockOrElementsPerThread);
 
-        alpaka::enqueue(queue,
-                alpaka::createTaskKernel<Acc1D>(workDiv,
-                                                gpuCalibPixel::calibDigisPhase2(),
-                                                digis_view,
-                                                clusters_d->view(),
-                                                numDigis));
-                                                
-
-
-    #ifdef GPU_DEBUG
-        alpaka::wait(queue);
-        std::cout << "CUDA countModules kernel launch with " << blocks << " blocks of "
-                  << threadsPerBlockOrElementsPerThread << " threadsPerBlockOrElementsPerThread\n";
-    #endif
-        alpaka::enqueue(
-            queue,
-            alpaka::createTaskKernel<Acc1D>(
-                workDiv, countModules<pixelTopology::Phase2>(), digis_view, clusters_d->view(), numDigis));
-
-        auto moduleStartFirstElement =
-            cms::alpakatools::make_device_view(alpaka::getDev(queue), clusters_d->view().moduleStart(), 1u);
-        alpaka::memcpy(queue, nModules_Clusters_h, moduleStartFirstElement);
-
-        const auto workDivMaxNumModules = cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, 256);
-
+      alpaka::enqueue(queue,
+                      alpaka::createTaskKernel<Acc1D>(
+                          workDiv, gpuCalibPixel::calibDigisPhase2(), digis_view, clusters_d->view(), numDigis));
 
 #ifdef GPU_DEBUG
-        alpaka::wait(queue);
-        std::cout << "CUDA findClus kernel launch with " << numberOfModules << " blocks of " << 256
-                  << " threadsPerBlockOrElementsPerThread\n";
+      alpaka::wait(queue);
+      std::cout << "CUDA countModules kernel launch with " << blocks << " blocks of "
+                << threadsPerBlockOrElementsPerThread << " threadsPerBlockOrElementsPerThread\n";
 #endif
-                alpaka::enqueue(queue,
-                        alpaka::createTaskKernel<Acc1D>(workDivMaxNumModules,
-                                                        findClus<pixelTopology::Phase2>(),
-                                                        digis_view,
-                                                        clusters_d->view(),
-                                                        numDigis));
+      alpaka::enqueue(queue,
+                      alpaka::createTaskKernel<Acc1D>(
+                          workDiv, countModules<pixelTopology::Phase2>(), digis_view, clusters_d->view(), numDigis));
+
+      auto moduleStartFirstElement =
+          cms::alpakatools::make_device_view(alpaka::getDev(queue), clusters_d->view().moduleStart(), 1u);
+      alpaka::memcpy(queue, nModules_Clusters_h, moduleStartFirstElement);
+
+      const auto workDivMaxNumModules = cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, 256);
+
 #ifdef GPU_DEBUG
-        alpaka::wait(queue);
+      alpaka::wait(queue);
+      std::cout << "CUDA findClus kernel launch with " << numberOfModules << " blocks of " << 256
+                << " threadsPerBlockOrElementsPerThread\n";
+#endif
+      alpaka::enqueue(
+          queue,
+          alpaka::createTaskKernel<Acc1D>(
+              workDivMaxNumModules, findClus<pixelTopology::Phase2>(), digis_view, clusters_d->view(), numDigis));
+#ifdef GPU_DEBUG
+      alpaka::wait(queue);
 #endif
 
-        // apply charge cut
-        alpaka::enqueue(queue,
-                        alpaka::createTaskKernel<Acc1D>(workDivMaxNumModules,
-                                                        ::gpuClustering::clusterChargeCut<pixelTopology::Phase2>(),
-                                                        digis_view,
-                                                        clusters_d->view(),
-                                                        clusterThresholds,
-                                                        numDigis));
+      // apply charge cut
+      alpaka::enqueue(queue,
+                      alpaka::createTaskKernel<Acc1D>(workDivMaxNumModules,
+                                                      ::gpuClustering::clusterChargeCut<pixelTopology::Phase2>(),
+                                                      digis_view,
+                                                      clusters_d->view(),
+                                                      clusterThresholds,
+                                                      numDigis));
 
-        // count the module start indices already here (instead of
-        // rechits) so that the number of clusters/hits can be made
-        // available in the rechit producer without additional points of
-        // synchronization/ExternalWork
+      // count the module start indices already here (instead of
+      // rechits) so that the number of clusters/hits can be made
+      // available in the rechit producer without additional points of
+      // synchronization/ExternalWork
 
-        // MUST be ONE block
-        const auto workDivOneBlock = cms::alpakatools::make_workdiv<Acc1D>(1u, 1024u);
-        alpaka::enqueue(
-            queue,
-            alpaka::createTaskKernel<Acc1D>(
-                workDivOneBlock, ::pixelgpudetails::fillHitsModuleStart<pixelTopology::Phase2>(), clusters_d->view()));
-        // clusters_d->clusModuleStart()));
+      // MUST be ONE block
+      const auto workDivOneBlock = cms::alpakatools::make_workdiv<Acc1D>(1u, 1024u);
+      alpaka::enqueue(
+          queue,
+          alpaka::createTaskKernel<Acc1D>(
+              workDivOneBlock, ::pixelgpudetails::fillHitsModuleStart<pixelTopology::Phase2>(), clusters_d->view()));
+      // clusters_d->clusModuleStart()));
 
-        // last element holds the number of all clusters
-        const auto clusModuleStartLastElement = cms::alpakatools::make_device_view(
-            alpaka::getDev(queue),
-            const_cast<uint32_t const *>(clusters_d->view().clusModuleStart() + numberOfModules),
-            1u);
-        constexpr int startBPIX2 = pixelTopology::Phase2::layerStart[1];
-        // element startBPIX2 hold the number of clusters until BPIX2
-        const auto bpix2ClusterStart = cms::alpakatools::make_device_view(
-            alpaka::getDev(queue), const_cast<uint32_t const *>(clusters_d->view().clusModuleStart() + startBPIX2), 1u);
-        auto nModules_Clusters_h_1 = cms::alpakatools::make_host_view(nModules_Clusters_h.data() + 1, 1u);
-        alpaka::memcpy(queue, nModules_Clusters_h_1, clusModuleStartLastElement);
+      // last element holds the number of all clusters
+      const auto clusModuleStartLastElement = cms::alpakatools::make_device_view(
+          alpaka::getDev(queue),
+          const_cast<uint32_t const *>(clusters_d->view().clusModuleStart() + numberOfModules),
+          1u);
+      constexpr int startBPIX2 = pixelTopology::Phase2::layerStart[1];
+      // element startBPIX2 hold the number of clusters until BPIX2
+      const auto bpix2ClusterStart = cms::alpakatools::make_device_view(
+          alpaka::getDev(queue), const_cast<uint32_t const *>(clusters_d->view().clusModuleStart() + startBPIX2), 1u);
+      auto nModules_Clusters_h_1 = cms::alpakatools::make_host_view(nModules_Clusters_h.data() + 1, 1u);
+      alpaka::memcpy(queue, nModules_Clusters_h_1, clusModuleStartLastElement);
 
-        auto nModules_Clusters_h_2 = cms::alpakatools::make_host_view(nModules_Clusters_h.data() + 2, 1u);
-        alpaka::memcpy(queue, nModules_Clusters_h_2, bpix2ClusterStart);
-        
-      }  //
-  }  // namespace pixelgpudetails
+      auto nModules_Clusters_h_2 = cms::alpakatools::make_host_view(nModules_Clusters_h.data() + 2, 1u);
+      alpaka::memcpy(queue, nModules_Clusters_h_2, bpix2ClusterStart);
+
+    }  //
+  }    // namespace pixelgpudetails
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

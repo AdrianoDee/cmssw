@@ -39,17 +39,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   };
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
- namespace cms::alpakatools {
+namespace cms::alpakatools {
   template <>
-  struct CopyToHost<ALPAKA_ACCELERATOR_NAMESPACE:: SiPixelClustersDevice> {
+  struct CopyToHost<ALPAKA_ACCELERATOR_NAMESPACE::SiPixelClustersDevice> {
     template <typename TQueue>
-    static auto copyAsync(TQueue& queue, ALPAKA_ACCELERATOR_NAMESPACE::SiPixelClustersDevice const& srcData) {
-      SiPixelClustersHost dstData(srcData->metadata().size(),queue);
+    static auto copyAsync(TQueue &queue, ALPAKA_ACCELERATOR_NAMESPACE::SiPixelClustersDevice const &srcData) {
+      SiPixelClustersHost dstData(srcData->metadata().size(), queue);
       alpaka::memcpy(queue, dstData.buffer(), srcData.buffer());
-      dstData.setNClusters(srcData.nClusters(),srcData.offsetBPIX2());
+      dstData.setNClusters(srcData.nClusters(), srcData.offsetBPIX2());
       return dstData;
     }
   };
- }
+}  // namespace cms::alpakatools
 
 #endif  // DataFormats_SiPixelClusterSoA_interface_SiPixelClustersDevice_h

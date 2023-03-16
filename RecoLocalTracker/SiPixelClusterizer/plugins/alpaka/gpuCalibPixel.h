@@ -69,7 +69,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             int row = dvgi.xx();
             int col = dvgi.yy();
 
-            auto ret = SiPixelGainUtilities::getPedAndGain(dvgi.moduleId(), col, row, isDeadColumn, isNoisyColumn, gains);
+            auto ret =
+                SiPixelGainUtilities::getPedAndGain(dvgi.moduleId(), col, row, isDeadColumn, isNoisyColumn, gains);
 
             float pedestal = ret.first;
             float gain = ret.second;
@@ -86,7 +87,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         });
       }
     };
-
 
     struct calibDigisPhase2 {
       template <typename TAcc>

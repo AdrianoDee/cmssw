@@ -58,9 +58,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     cms::alpakatools::SimpleVector<SiPixelErrorCompact> const* error() const { return (*error_d).data(); }
     cms::alpakatools::SimpleVector<SiPixelErrorCompact> const* c_error() const { return (*error_d).data(); }
 
-    auto& error_vector() const { return (*error_d);}
-    auto& error_data() const { return (*data_d);}
-    auto maxFedWords() const {return maxFedWords_;}
+    auto& error_vector() const { return (*error_d); }
+    auto& error_data() const { return (*data_d); }
+    auto maxFedWords() const { return maxFedWords_; }
+
   private:
     int maxFedWords_;
     SiPixelFormatterErrors formatterErrors_h;
@@ -69,25 +70,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // std::optional<cms::alpakatools::host_buffer<cms::alpakatools::SimpleVector<SiPixelErrorCompact>>> error_h;
   };
 
-  }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
-  namespace cms::alpakatools {
+namespace cms::alpakatools {
   template <>
   struct CopyToHost<ALPAKA_ACCELERATOR_NAMESPACE::SiPixelDigiErrorsDevice> {
     template <typename TQueue>
     static auto copyAsync(TQueue& queue, ALPAKA_ACCELERATOR_NAMESPACE::SiPixelDigiErrorsDevice const& srcData) {
-
       auto error_vector = srcData.error_vector();
       auto error_data_h = cms::alpakatools::make_host_buffer<SiPixelErrorCompact[]>(error_vector.data()->capacity());
       auto error_data = srcData.error_data();
 
-      if(not error_vector->empty())
-      {
+      if (not error_vector->empty()) {
         alpaka::memcpy(queue, error_data_h, error_data);
       }
 
-      SiPixelDigiErrorsHost dstData(error_vector.data()->capacity(), srcData.formatterErrors(), error_data_h );
-
+      SiPixelDigiErrorsHost dstData(error_vector.data()->capacity(), srcData.formatterErrors(), error_data_h);
 
       // alpaka::memcpy(queue, dstData.buffer(), srcData.buffer());
       return dstData;
@@ -104,7 +102,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   //     return dstData;
   //   }
   // };
-  }
+}  // namespace cms::alpakatools
 
 // }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

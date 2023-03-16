@@ -163,7 +163,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     auto const& gpuGains = iSetup.getData(gainsToken_);
 
-    auto modulesToUnpackRegional = cms::alpakatools::make_device_buffer<unsigned char[]>(iEvent.queue(), ::pixelgpudetails::MAX_SIZE);
+    auto modulesToUnpackRegional =
+        cms::alpakatools::make_device_buffer<unsigned char[]>(iEvent.queue(), ::pixelgpudetails::MAX_SIZE);
     const unsigned char* gpuModulesToUnpack;
 
     // initialize cabling map or update if necessary
@@ -290,7 +291,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   void SiPixelRawToCluster::produce(device::Event& iEvent, device::EventSetup const& iSetup) {
-
     if (nDigis_ == 0) {
       // Cannot use the default constructor here, as it would not allocate memory.
       // In the case of no digis, clusters_d are not being instantiated, but are
@@ -308,7 +308,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     // auto tmp = gpuAlgo_.getResults();
-    iEvent.emplace(digiPutToken_, gpuAlgo_.getDigis());//std::move(tmp.first));
+    iEvent.emplace(digiPutToken_, gpuAlgo_.getDigis());  //std::move(tmp.first));
     iEvent.emplace(clusterPutToken_, gpuAlgo_.getClusters());
     if (includeErrors_) {
       iEvent.emplace(digiErrorPutToken_, gpuAlgo_.getErrors());
