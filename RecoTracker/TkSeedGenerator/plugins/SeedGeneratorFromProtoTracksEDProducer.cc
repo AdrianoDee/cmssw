@@ -38,6 +38,7 @@ void SeedGeneratorFromProtoTracksEDProducer::fillDescriptions(edm::Configuration
   edm::ParameterSetDescription desc;
   desc.add<InputTag>("InputCollection", InputTag("pixelTracks"));
   desc.add<InputTag>("InputVertexCollection", InputTag(""));
+  desc.add<InputTag>("InputVertexCollectionForComplement", InputTag(""));
   desc.add<double>("originHalfLength", 1E9);
   desc.add<double>("originRadius", 1E9);
   desc.add<bool>("useProtoTrackKinematics", false);
@@ -46,6 +47,9 @@ void SeedGeneratorFromProtoTracksEDProducer::fillDescriptions(edm::Configuration
   desc.add<bool>("usePV", false);
   desc.add<bool>("includeFourthHit", false);
   desc.add<bool>("produceComplement", false);
+  desc.add<int>("maxComplementTracks",1E9);
+  desc.add<int>("maxComplementTrackVertex",1000);
+  desc.add<double>("dzMaxComplementTrackVertex", 1000.);
 
   edm::ParameterSetDescription psd0;
   psd0.add<std::string>("ComponentName", std::string("SeedFromConsecutiveHitsCreator"));
@@ -69,9 +73,14 @@ SeedGeneratorFromProtoTracksEDProducer::SeedGeneratorFromProtoTracksEDProducer(c
       usePV_(cfg.getParameter<bool>("usePV")),
       includeFourthHit_(cfg.getParameter<bool>("includeFourthHit")),
       produceComplement_(cfg.getParameter<bool>("produceComplement")),
+      maxComplementTracks_(cfg.getParameter<int>("maxComplementTracks")),
+      maxComplementTrackVertex_(cfg.getParameter<int>("maxComplementTrackVertex")),
+      dzMaxComplementTrackVertex_(cfg.getParameter<double>("dzMaxComplementTrackVertex")),
       theInputCollectionTag(consumes<reco::TrackCollection>(cfg.getParameter<InputTag>("InputCollection"))),
       theInputVertexCollectionTag(
           consumes<reco::VertexCollection>(cfg.getParameter<InputTag>("InputVertexCollection"))),
+      theInputVertexCollectionForComplementTag(
+          consumes<reco::VertexCollection>(cfg.getParameter<InputTag>("InputVertexCollectionForComplement"))),    
       seedCreator_(cfg.getParameter<edm::ParameterSet>("SeedCreatorPSet"), consumesCollector()),
       config_(consumesCollector()) {
   produces<TrajectorySeedCollection>();
@@ -88,14 +97,25 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
   ev.getByToken(theInputCollectionTag, trks);
 
   const TrackCollection& protos = *(trks.product());
-
+  
   edm::Handle<reco::VertexCollection> vertices;
   bool foundVertices = ev.getByToken(theInputVertexCollectionTag, vertices);
   //const reco::VertexCollection & vertices = *(h_vertices.product());
 
+  edm::Handle<reco::VertexCollection> verticesForComplement;
+  bool foundVerticesForComplement = ev.getByToken(theInputVertexCollectionForComplementTag, verticesForComplement);
+
   ///
   /// need optimization: all es stuff should go out of the loop
   ///
+
+  // parameters used for complement tracks
+  int complementTracksCount = 0;
+  int vertexForComplementCount = 0;
+  double dzComplementTrackVertex;
+  //int trackVertexForComplementPosition = 0;
+  //bool foundTrackVertexForComplement = false;
+
   for (TrackCollection::const_iterator it = protos.begin(); it != protos.end(); ++it) {
     const Track& proto = (*it);
     GlobalPoint vtx(proto.vertex().x(), proto.vertex().y(), proto.vertex().z());
@@ -124,8 +144,58 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
         }
       }
     }
-    if(produceComplement_ and !keepTrack)
-      (*leftTracks).push_back(proto);
+
+    
+    if(produceComplement_ && !keepTrack && (complementTracksCount < maxComplementTracks_)) {
+  
+      if(foundVerticesForComplement) { //find if the track is close (by a dz) to first N vertices (dz,N configurable parameters)
+        vertexForComplementCount = 0;
+        for(reco::VertexCollection::const_iterator iv = verticesForComplement->begin(); iv != verticesForComplement->end(); ++iv) {
+          const Vertex& ver = (*iv);
+          dzComplementTrackVertex = fabs(vtx.z() - ver.position().z());
+          if (dzComplementTrackVertex < dzMaxComplementTrackVertex_) {
+            (*leftTracks).push_back(proto);
+            complementTracksCount ++;
+            break;
+          }else if(vertexForComplementCount == maxComplementTrackVertex_){
+            break;
+          }else{
+            vertexForComplementCount++;
+          }
+        }
+      }else{
+        (*leftTracks).push_back(proto);
+        complementTracksCount ++;
+      }
+
+      // The following part of code is an alternative, for doing the association of tracks with vertices based on trackWeight() i.e. vertex fit
+      // but using it as it is does not produce any weight > 0. hence all tracks get rejected. (?)
+      /*  
+      if(foundVerticesForComplement) { //find which is the vertex the track was fitted to
+        trackVertexForComplementPosition = 0;
+        vertexForComplementCount = 0;
+        foundTrackVertexForComplement = false;
+        for(reco::VertexCollection::const_iterator iv = verticesForComplement->begin(); iv != verticesForComplement->end(); ++iv) {
+          const Vertex& ver = (*iv);
+          if (ver.trackWeight(proto.extra()) > 0) {
+            trackVertexForComplementPosition = vertexForComplementCount;
+            foundTrackVertexForComplement = true;
+            break;
+          }
+          vertexForComplementCount++;
+        }
+
+        if( foundTrackVertexForComplement &&  (trackVertexForComplementPosition < maxComplementTrackVertex_)) {
+          (*leftTracks).push_back(proto);
+          complementTracksCount ++;
+        }
+      }else{
+        (*leftTracks).push_back(proto);
+        complementTracksCount ++;
+      }
+      */
+    }
+    
     if (!keepTrack)
       continue;
 

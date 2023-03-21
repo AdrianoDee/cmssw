@@ -10,7 +10,8 @@ TrackFilterForPVFinding::TrackFilterForPVFinding(const edm::ParameterSet& conf) 
   maxNormChi2_ = conf.getParameter<double>("maxNormalizedChi2");
   minSiLayers_ = conf.getParameter<int>("minSiliconLayersWithHits");
   minPxLayers_ = conf.getParameter<int>("minPixelLayersWithHits");
-
+  minStripHits_ = conf.getParameter<int>("minValidStripHits");
+  
   // the next few lines are taken from RecoBTag/SecondaryVertex/interface/TrackSelector.h"
   std::string qualityClass = conf.getParameter<std::string>("trackQuality");
   if (qualityClass == "any" || qualityClass == "Any" || qualityClass == "ANY" || qualityClass.empty()) {
@@ -33,8 +34,9 @@ bool TrackFilterForPVFinding::operator()(const reco::TransientTrack& tk) const {
   bool nPxLayCut = tk.hitPattern().pixelLayersWithMeasurement() >= minPxLayers_;
   bool nSiLayCut = tk.hitPattern().trackerLayersWithMeasurement() >= minSiLayers_;
   bool trackQualityCut = (quality_ == reco::TrackBase::undefQuality) || tk.track().quality(quality_);
+  bool nStripHitsCut = tk.hitPattern().numberOfValidStripHits() >= minStripHits_;
 
-  return IPSigCut && pTCut && etaCut && normChi2Cut && nPxLayCut && nSiLayCut && trackQualityCut;
+  return IPSigCut && pTCut && etaCut && normChi2Cut && nPxLayCut && nSiLayCut && trackQualityCut && nStripHitsCut;
 }
 
 // select the vector of tracks that pass the filter cuts
@@ -59,4 +61,5 @@ void TrackFilterForPVFinding::fillPSetDescription(edm::ParameterSetDescription& 
   desc.add<std::string>("trackQuality", "any");
   desc.add<int>("minPixelLayersWithHits", 2);
   desc.add<int>("minSiliconLayersWithHits", 5);
+  desc.add<int>("minValidStripHits", 0);
 }
