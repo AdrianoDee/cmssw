@@ -841,10 +841,12 @@ class PatatrackWorkflow(UpgradeWorkflow):
             ('2018' in key and fragment == "TTbar_13"),
             ('2021' in key and fragment == "TTbar_14TeV" and 'FS' not in key),
             ('2023' in key and fragment == "TTbar_14TeV" and 'FS' not in key),
+            ('2021' in key and fragment == "NuGun"),
+            ('2023' in key and fragment == "NuGun"),
             ('2018' in key and fragment == "ZMM_13"),
             ('2021' in key and fragment == "ZMM_14" and 'FS' not in key),
             ('2023' in key and fragment == "ZMM_14" and 'FS' not in key),
-            ('2026' in key and fragment == "TTbar_14TeV"),
+            ('2026' in key and (fragment == "TTbar_14TeV" or fragment=="NuGun")),
             (('HI' in key) and 'Hydjet' in fragment and "PixelOnly" in self.suffix )
         ]
         result = any(selected) and hasHarvest
