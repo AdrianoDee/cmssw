@@ -141,7 +141,7 @@ void SiPixelPhase2DigiToClusterCUDA::acquire(const edm::Event& iEvent,
     }
   }
 
-  if (nDigis_==0)
+  if (nDigis_ == 0)
     return;
 
   gpuAlgo_.makePhase2ClustersAsync(clusterThresholds_,
