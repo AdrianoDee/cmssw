@@ -159,10 +159,8 @@ void SiPixelPhase2DigiToClusterCUDA::produce(edm::Event& iEvent, const edm::Even
   cms::cuda::ScopedContextProduce ctx{ctxState_};
 
   if (nDigis_ == 0) {
-    SiPixelDigisCUDA digis_d = SiPixelDigisCUDA(nDigis_, ctx.stream());
-    SiPixelClustersCUDA clusters_d = SiPixelClustersCUDA(pixelTopology::Phase2::numberOfModules, ctx.stream());
-    ctx.emplace(iEvent, digiPutToken_, std::move(digis_d));
-    ctx.emplace(iEvent, clusterPutToken_, std::move(clusters_d));
+    ctx.emplace(iEvent, digiPutToken_, nDigis_, ctx.stream());
+    ctx.emplace(iEvent, clusterPutToken_, pixelTopology::Phase2::numberOfModules, ctx.stream());
     if (includeErrors_) {
       ctx.emplace(iEvent, digiErrorPutToken_, SiPixelDigiErrorsCUDA{});
     }
