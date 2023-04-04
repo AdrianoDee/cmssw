@@ -21,6 +21,8 @@
 #include "PixelClusterizerBase.h"
 #include "SiPixelClusterThresholds.h"
 
+#define EDM_ML_DEBUG
+
 template <typename TrackerTraits>
 class SiPixelDigisClustersFromSoAT : public edm::global::EDProducer<> {
 public:
@@ -123,7 +125,8 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
       auto const& acluster = aclusters[ic];
       // in any case we cannot  go out of sync with gpu...
       if (!std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value and acluster.charge < clusterThreshold)
-        edm::LogWarning("SiPixelDigisClustersFromSoA") << "cluster below charge Threshold "
+        // edm::LogWarning("SiPixelDigisClustersFromSoA") 
+        std::cout << "cluster below charge Threshold "
                                                        << "Layer/DetId/clusId " << layer << '/' << detId << '/' << ic
                                                        << " size/charge " << acluster.isize << '/' << acluster.charge;
       // sort by row (x)
@@ -132,8 +135,8 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
 #ifdef EDM_ML_DEBUG
       ++totClustersFilled;
       const auto& cluster{spc.back()};
-      LogDebug("SiPixelDigisClustersFromSoA")
-          << "putting in this cluster " << ic << " " << cluster.charge() << " " << cluster.pixelADC().size();
+      // LogDebug("SiPixelDigisClustersFromSoA")
+      std::cout << "putting in this cluster " << ic << " " << cluster.charge() << " " << cluster.pixelADC().size();
 #endif
       std::push_heap(spc.begin(), spc.end(), [](SiPixelCluster const& cl1, SiPixelCluster const& cl2) {
         return cl1.minPixelRow() < cl2.minPixelRow();
@@ -197,7 +200,8 @@ void SiPixelDigisClustersFromSoAT<TrackerTraits>::produce(edm::StreamID,
     fillClusters(detId);
 
 #ifdef EDM_ML_DEBUG
-  LogDebug("SiPixelDigisClustersFromSoA") << "filled " << totClustersFilled << " clusters";
+  // LogDebug("SiPixelDigisClustersFromSoA") 
+  std::cout << "filled " << totClustersFilled << " clusters";
 #endif
 
   if (produceDigis_)
