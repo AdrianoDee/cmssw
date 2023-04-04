@@ -52,15 +52,46 @@ for key,value in quality.items():
 
 ntuplet = {
     '3' : "3Hits", # ==3
-    '4' : "4Hits"  # >=4 
+    '4' : "4Hits", # >=4
+    '0': "4PixHits0StripHits", # >=4 pixel hits and 0 strip
+    '1': "4PixHits1StripHits", # >=4 pixel hits and 1 strip
+    '2': "4PixHits2StripHits", # >=4 pixel hits and 2 strip
+    '5': "4PixHitsge1StripHits", # >=4 pixel hits and >=1 strip
+    '6': "4PixHitsge2StripHits", # >=4 pixel hits and >=2 strip
+    '7': "3PixHits0StripHits", # >=4 pixel hits and 0 strip
+    '8': "3PixHits1StripHits", # >=4 pixel hits and 1 strip
+    '9': "3PixHits2StripHits", # >=4 pixel hits and 2 strip
+    '10': "3PixHitsge1StripHits", # >=4 pixel hits and >=1 strip
+    '11': "3PixHitsge2StripHits" # >=4 pixel hits and >=2 strip
 }
 for kN,vN in ntuplet.items():
     for key,value in quality.items():
         label = "pixelTrks" + vN + key
 #        print label
-
-        cutstring = "numberOfValidHits == " + kN + " & quality('" + value + "')" 
-#        print cutstring
+        if 'Strip' not in vN:
+            cutstring = "numberOfValidHits == " + kN + " & quality('" + value + "')"
+        else :
+            if '4PixHits0StripHits' in vN:
+                cutstring = "numberOfValidHits >= " + str(4) + " & hitPattern.numberOfValidStripHits >=" + str(0) + " & hitPattern.numberOfValidStripHits <=" + str(0) + " & quality('" + value + "')"
+            if '4PixHits1StripHits' in vN:
+                cutstring = "numberOfValidHits >= " + str(4) + " & hitPattern.numberOfValidStripHits >=" + str(1) + " & hitPattern.numberOfValidStripHits <=" + str(1) + " & quality('" + value + "')"
+            if '4PixHits2StripHits' in vN:
+                cutstring = "numberOfValidHits >= " + str(4) + " & hitPattern.numberOfValidStripHits >=" + str(2) + " & hitPattern.numberOfValidStripHits <=" + str(2) + " & quality('" + value + "')"
+            if '4PixHitsge1StripHits' in vN:
+                cutstring = "numberOfValidHits >= " + str(4) + " & hitPattern.numberOfValidStripHits >=" + str(1) + " & quality('" + value + "')"
+            if '4PixHitsge2StripHits' in vN:
+                cutstring = "numberOfValidHits >= " + str(4) + " & hitPattern.numberOfValidStripHits >=" + str(2) + " & quality('" + value + "')"
+            if '3PixHits0StripHits' in vN:
+                cutstring = "numberOfValidHits == " + str(3) + " & hitPattern.numberOfValidStripHits >=" + str(0) + " & hitPattern.numberOfValidStripHits <=" + str(0) + " & quality('" + value + "')"
+            if '3PixHits1StripHits' in vN:
+                cutstring = "numberOfValidHits == " + str(3) + " & hitPattern.numberOfValidStripHits >=" + str(1) + " & hitPattern.numberOfValidStripHits <=" + str(1) + " & quality('" + value + "')"
+            if '3PixHits2StripHits' in vN:
+                cutstring = "numberOfValidHits == " + str(3) + " & hitPattern.numberOfValidStripHits >=" + str(2) + " & hitPattern.numberOfValidStripHits <=" + str(2) + " & quality('" + value + "')"
+            if '3PixHitsge1StripHits' in vN:
+                cutstring = "numberOfValidHits == " + str(3) + " & hitPattern.numberOfValidStripHits >=" + str(1) + " & quality('" + value + "')"
+            if '3PixHitsge2StripHits' in vN:
+                cutstring = "numberOfValidHits == " + str(3) + " & hitPattern.numberOfValidStripHits >=" + str(2) + " & quality('" + value + "')"
+            # print cutstring
         locals()[label] = _trackSelector.clone( cut = cutstring )
         locals()[label].setLabel(label)
 
@@ -90,14 +121,15 @@ pixelTracksMonitoringTask = cms.Task(
     goodPixelVertices,
 )
 
-for category in ["pixelTrks", "pixelTrks3Hits", "pixelTrks4Hits"]:
+for category in ["pixelTrks", "pixelTrks3Hits", "pixelTrks4Hits",
+                 "pixelTrks4PixHits0StripHits","pixelTrks4PixHits1StripHits","pixelTrks4PixHits2StripHits","pixelTrks4PixHitsge1StripHits", "pixelTrks4PixHitsge2StripHits" , "pixelTrks3PixHits0StripHits", "pixelTrks3PixHits1StripHits", "pixelTrks3PixHits2StripHits","pixelTrks3PixHitsge1StripHits","pixelTrks3PixHitsge2StripHits"]:
     for key in quality:
         label = category+key
 #        print label
         pixelTracksMonitoringTask.add(locals()[label])
 
 allPixelTracksMonitoring = cms.Sequence()
-for category in ["pixelTrksMonitor", "pixelTrks3HitsMonitor", "pixelTrks4HitsMonitor" ]:
+for category in ["pixelTrksMonitor", "pixelTrks3HitsMonitor", "pixelTrks4HitsMonitor","pixelTrks4PixHits0StripHitsMonitor","pixelTrks4PixHits1StripHitsMonitor","pixelTrks4PixHits2StripHitsMonitor", "pixelTrks4PixHitsge1StripHitsMonitor", "pixelTrks4PixHitsge2StripHitsMonitor" , "pixelTrks3PixHits0StripHitsMonitor", "pixelTrks3PixHits1StripHitsMonitor", "pixelTrks3PixHits2StripHitsMonitor","pixelTrks3PixHitsge1StripHitsMonitor","pixelTrks3PixHitsge2StripHitsMonitor" ]:
     for key in quality:
         label = category+key
 #        print label

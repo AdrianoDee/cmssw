@@ -25,6 +25,7 @@ def customizePixelOnlyForProfilingGPUOnly(process):
 #
 # The same customisation can be also used on the SoA CPU workflow, running up to the
 # tracks and vertices on the CPU in SoA format, without conversion to legacy format.
+# TODO: does exist a module that forces the copy to host for Alpaka?
 def customizePixelOnlyForProfilingGPUWithHostCopy(process):
 
   process.consumer = cms.EDAnalyzer("GenericConsumer",

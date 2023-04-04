@@ -6,6 +6,8 @@
 #include "RecoTracker/PixelVertexFinding/interface/PixelVertexWorkSpaceLayout.h"
 #include "RecoTracker/PixelVertexFinding/plugins/alpaka/PixelVertexWorkSpaceSoADeviceAlpaka.h"
 
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
+
 #include "vertexFinder.h"
 #include "clusterTracksDBSCAN.h"
 #include "clusterTracksIterative.h"
@@ -203,5 +205,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template class Producer<pixelTopology::Phase1>;
     template class Producer<pixelTopology::Phase2>;
     template class Producer<pixelTopology::HIonPhase1>;
+    template class Producer<pixelTopology::Phase1Strip>;
   }  // namespace vertexFinder
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
