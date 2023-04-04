@@ -11,7 +11,7 @@
 #include "DataFormats/TrackSoA/interface/TrackDefinitions.h"
 #include "DataFormats/TrackSoA/interface/TracksSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/SimpleVector.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -163,8 +163,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                        const float hardCurvCut,
                                        const float caThetaCutBarrel,
                                        const float caThetaCutForward,
+                                       const float caThetaCutStrip,
                                        const float dcaCutInnerTriplet,
-                                       const float dcaCutOuterTriplet) const {
+                                       const float dcaCutOuterTriplet,
+                                       const float dcaCutOuterTripletStrip) const {
       // detIndex of the layerStart for the Phase1 Pixel Detector:
       // [BPX1, BPX2, BPX3, BPX4,  FP1,  FP2,  FP3,  FN1,  FN2,  FN3, LAST_VALID]
       // [   0,   96,  320,  672, 1184, 1296, 1408, 1520, 1632, 1744,       1856]
@@ -177,11 +179,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto r1 = otherCell.inner_r(hh);
       auto z1 = otherCell.inner_z(hh);
       auto isBarrel = otherCell.outer_detIndex(hh) < TrackerTraits::last_barrel_detIndex;
+      bool isOT = otherCell.outer_detIndex(hh) >= TrackerTraits::numberOfPixelModules;
+      bool isOTdca = otherCell.inner_detIndex(hh) >= TrackerTraits::numberOfPixelModules;
       // TODO tune CA cuts below (theta and dca)
-      bool aligned = areAlignedRZ(r1, z1, ri, zi, ro, zo, ptmin, isBarrel ? caThetaCutBarrel : caThetaCutForward);
+      bool aligned = areAlignedRZ(r1, z1, ri, zi, ro, zo, ptmin, isOT? caThetaCutStrip: isBarrel ? caThetaCutBarrel : caThetaCutForward);
       return (aligned && dcaCut(hh,
                                 otherCell,
-                                otherCell.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? dcaCutInnerTriplet
+                                isOTdca? dcaCutOuterTripletStrip : otherCell.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? dcaCutInnerTriplet
                                                                                                   : dcaCutOuterTriplet,
                                 hardCurvCut));
     }

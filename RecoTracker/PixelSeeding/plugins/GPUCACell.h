@@ -153,7 +153,8 @@ public:
                                   const float caThetaCutBarrel,
                                   const float caThetaCutForward,
                                   const float dcaCutInnerTriplet,
-                                  const float dcaCutOuterTriplet) const {
+                                  const float dcaCutOuterTriplet,
+                                  const float dcaCutOuterTripletStrip) const {
     // detIndex of the layerStart for the Phase1 Pixel Detector:
     // [BPX1, BPX2, BPX3, BPX4,  FP1,  FP2,  FP3,  FN1,  FN2,  FN3, LAST_VALID]
     // [   0,   96,  320,  672, 1184, 1296, 1408, 1520, 1632, 1744,       1856]

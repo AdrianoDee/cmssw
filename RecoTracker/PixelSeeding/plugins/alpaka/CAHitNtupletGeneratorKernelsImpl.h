@@ -349,8 +349,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         auto zi = thisCell.inner_z(hh);
         auto ro = thisCell.outer_r(hh);
         auto zo = thisCell.outer_z(hh);
-        auto isBarrel = thisCell.inner_detIndex(hh) < TrackerTraits::last_barrel_detIndex;
-
+        auto isBarrel = thisCell.inner_detIndex(hh) < TrackerTraits::last_barrel_detIndex ;//|| (thisCell.inner_detIndex(hh) >= 1856 && thisCell.inner_detIndex(hh) <= 3392)  ;
+        bool isOT = thisCell.outer_detIndex(hh) >= TrackerTraits::numberOfPixelModules;
         // loop on inner cells
         for (uint32_t j : cms::alpakatools::independent_group_elements_x(acc, numberOfPossibleNeighbors)) {
           auto otherCell = (vi[j]);
@@ -365,11 +365,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
               ro,
               zo,
               params.ptmin_,
-              isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
+              isOT? params.CAThetaCutStrip_ : isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
           if (aligned &&
               thisCell.dcaCut(hh,
                               oc,
-                              oc.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? params.dcaCutInnerTriplet_
+                              oc.inner_detIndex(hh)>= TrackerTraits::numberOfPixelModules ? params.dcaCutOuterTripletStrip_ : oc.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? params.dcaCutInnerTriplet_
                                                                                          : params.dcaCutOuterTriplet_,
                               params.hardCurvCut_)) {  // FIXME tune cuts
             oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);

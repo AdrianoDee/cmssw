@@ -45,9 +45,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const float ptmin_;
       const float CAThetaCutBarrel_;
       const float CAThetaCutForward_;
+      const float CAThetaCutStrip_;
       const float hardCurvCut_;
       const float dcaCutInnerTriplet_;
       const float dcaCutOuterTriplet_;
+      const float dcaCutOuterTripletStrip_;
     };
 
     template <typename TrackerTraits, typename Enable = void>
@@ -60,14 +62,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     struct CAParamsT<TrackerTraits, pixelTopology::isPhase1Topology<TrackerTraits>> : public CACommon {
       /// Is is a starting layer pair?
       ALPAKA_FN_ACC ALPAKA_FN_INLINE bool startingLayerPair(int16_t pid) const {
-        return minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
+        if constexpr (std::is_same_v<TrackerTraits, pixelTopology::Phase1Strip>) {
+        return (pid < 12 || pid == 48 || pid == 53);
+        }
+        else{
+          return minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
+        }
       }
 
       /// Is this a pair with inner == 0?
       ALPAKA_FN_ACC ALPAKA_FN_INLINE bool startAt0(int16_t pid) const {
-        assert((pixelTopology::Phase1::layerPairs[pid * 2] == 0) ==
+        if constexpr (std::is_same_v<TrackerTraits, pixelTopology::Phase1Strip>) {
+        assert((pixelTopology::Phase1Strip::layerPairs[pid * 2] == 0) ==
+               (pid < 3 || pid == 8 || pid == 10 || pid == 11 || pid == 43 || pid == 44));  // to be 100% sure it's working, may be removed
+        return pixelTopology::Phase1Strip::layerPairs[pid * 2] == 0;
+        }
+        else{
+           assert((pixelTopology::Phase1::layerPairs[pid * 2] == 0) ==
                (pid < 3 || pid == 13 || pid == 15 || pid == 16));  // to be 100% sure it's working, may be removed
         return pixelTopology::Phase1::layerPairs[pid * 2] == 0;
+        }
       }
     };
 
