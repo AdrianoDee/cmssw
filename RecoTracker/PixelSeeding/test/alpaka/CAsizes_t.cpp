@@ -15,7 +15,6 @@ void print() {
 int main() {
   using namespace pixelTopology;
   using namespace caStructures;
-
   //for Phase-I
   print<CACellT<Phase1>>();
   print<CellNeighborsT<Phase1>>();

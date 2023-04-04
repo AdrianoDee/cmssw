@@ -191,7 +191,9 @@ void SiPixelMonitorTrackSoAAlpaka<T>::fillDescriptions(edm::ConfigurationDescrip
 using SiPixelPhase1MonitorTrackSoAAlpaka = SiPixelMonitorTrackSoAAlpaka<pixelTopology::Phase1>;
 using SiPixelPhase2MonitorTrackSoAAlpaka = SiPixelMonitorTrackSoAAlpaka<pixelTopology::Phase2>;
 using SiPixelHIonPhase1MonitorTrackSoAAlpaka = SiPixelMonitorTrackSoAAlpaka<pixelTopology::HIonPhase1>;
+using SiPixelPhase1StripMonitorTrackSoAAlpaka = SiPixelMonitorTrackSoAAlpaka<pixelTopology::Phase1Strip>;
 
 DEFINE_FWK_MODULE(SiPixelPhase1MonitorTrackSoAAlpaka);
 DEFINE_FWK_MODULE(SiPixelPhase2MonitorTrackSoAAlpaka);
 DEFINE_FWK_MODULE(SiPixelHIonPhase1MonitorTrackSoAAlpaka);
+DEFINE_FWK_MODULE(SiPixelPhase1StripMonitorTrackSoAAlpaka);

@@ -227,6 +227,42 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ->setComment("Cuts in phi for cells");
   }
 
+  
+  template <>
+  void CAHitNtupletGenerator<pixelTopology::Phase1Strip>::fillPSetDescription(edm::ParameterSetDescription& desc) {
+    fillDescriptionsCommon(desc);
+
+    desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase1Strip::maxNumberOfDoublets);
+    desc.add<bool>("idealConditions", true);
+    desc.add<bool>("includeJumpingForwardDoublets", false);
+    desc.add<double>("cellZ0Cut", 12.0);
+    desc.add<double>("cellPtCut", 0.5);
+
+    edm::ParameterSetDescription trackQualityCuts;
+    trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
+    trackQualityCuts.add<std::vector<double>>("chi2Coeff", {0.9, 1.8})->setComment("chi2 at 1GeV and at ptMax above");
+    trackQualityCuts.add<double>("chi2Scale", 8.)
+        ->setComment(
+            "Factor to multiply the pT-dependent chi2 cut (currently: 8 for the broken line fit, ?? for the Riemann "
+            "fit)");
+    trackQualityCuts.add<double>("tripletMinPt", 0.5)->setComment("Min pT for triplets, in GeV");
+    trackQualityCuts.add<double>("tripletMaxTip", 0.3)->setComment("Max |Tip| for triplets, in cm");
+    trackQualityCuts.add<double>("tripletMaxZip", 12.)->setComment("Max |Zip| for triplets, in cm");
+    trackQualityCuts.add<double>("quadrupletMinPt", 0.3)->setComment("Min pT for quadruplets, in GeV");
+    trackQualityCuts.add<double>("quadrupletMaxTip", 0.5)->setComment("Max |Tip| for quadruplets, in cm");
+    trackQualityCuts.add<double>("quadrupletMaxZip", 12.)->setComment("Max |Zip| for quadruplets, in cm");
+    desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)
+        ->setComment(
+            "Quality cuts based on the results of the track fit:\n  - apply a pT-dependent chi2 cut;\n  - apply "
+            "\"region "
+            "cuts\" based on the fit results (pT, Tip, Zip).");
+    
+    desc.add<std::vector<int>>(
+           "phiCuts", 
+           std::vector<int>(std::begin(phase1PixelStripTopology::phicuts), std::end(phase1PixelStripTopology::phicuts)))
+        ->setComment("Cuts in phi for cells");
+  }
+
   template <>
   void CAHitNtupletGenerator<pixelTopology::HIonPhase1>::fillPSetDescription(edm::ParameterSetDescription& desc) {
     fillDescriptionsCommon(desc);
@@ -322,7 +358,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     return tracks;
   }
 
+
   template class CAHitNtupletGenerator<pixelTopology::Phase1>;
   template class CAHitNtupletGenerator<pixelTopology::Phase2>;
   template class CAHitNtupletGenerator<pixelTopology::HIonPhase1>;
+  template class CAHitNtupletGenerator<pixelTopology::Phase1Strip>;
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
