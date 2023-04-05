@@ -557,11 +557,15 @@ namespace pixelTopology {
     static constexpr uint32_t maxNumClustersPerModules = phase1HIonPixelTopology::maxNumClustersPerModules;
     static constexpr uint32_t maxHitsInModule = phase1HIonPixelTopology::maxNumClustersPerModules;
 
-    static constexpr int16_t const *phicuts = phase1HIonPixelTopology::phicuts;
-
     static constexpr char const *nameModifier = "HIonPhase1";
   };
 
+  struct HIonPhase1Offline : public HIonPhase1
+  {
+    static constexpr int16_t const *phicuts = phase1HIonPixelTopology::phicuts;
+    static constexpr char const *nameModifier = "HIonPhase1Offline";
+  };
+  
   template <typename T>
   using isPhase1Topology = typename std::enable_if<std::is_base_of<Phase1, T>::value>::type;
 
