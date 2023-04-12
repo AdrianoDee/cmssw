@@ -16,7 +16,8 @@ struct SiPixelHitStatus {
 struct SiPixelHitStatusAndCharge {
   SiPixelHitStatus status;
   uint32_t charge : 24;
-}
+};
+
 struct SiPixelMask {
   bool used : 1;   //  ∈[0,1]
 };
