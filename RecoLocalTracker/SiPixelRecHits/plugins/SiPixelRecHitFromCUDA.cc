@@ -96,7 +96,7 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::acquire(edm::Event const& iEvent,
 
   if (0 == nHits_)
     return;
-  store32_ = inputData.store32ToHostAsync(ctx.stream());
+  store32_ = inputData.localCoordToHostAsync(ctx.stream());
 
   hitsModuleStart_ = inputData.hitsModuleStartToHostAsync(ctx.stream());
 }
