@@ -30,6 +30,8 @@ upgradeKeys[2017] = [
     '2021postEEPU',
     '2023FS',
     '2023FSPU',
+    '2023HI',
+    '2023HIRP',
 ]
 
 upgradeKeys[2026] = [
@@ -759,7 +761,8 @@ class PatatrackWorkflow(UpgradeWorkflow):
             (('2021' in key or '2023' in key) and fragment == "TTbar_14TeV" and 'FS' not in key),
             ('2018' in key and fragment == "ZMM_13"),
             (('2021' in key or '2023' in key) and fragment == "ZMM_14" and 'FS' not in key),
-            ('2026D88' in key and fragment == "TTbar_14TeV" and "PixelOnly" in self.suffix)
+            ('2026D88' in key and fragment == "TTbar_14TeV" and "PixelOnly" in self.suffix),
+            (('2023HI' in key) and 'Hydjet' in fragment and "PixelOnly" in self.suffix )
         ]
         result = any(selected) and hasHarvest
 
@@ -1369,6 +1372,36 @@ upgradeWFs['PatatrackFullRecoTripletsGPUValidation'] = PatatrackWorkflow(
     offset = 0.597,
 )
 
+class PatatrackWorkflowHI(PatatrackWorkflow):
+
+    def condition(self, fragment, stepList, key, hasHarvest):
+        # select only a subset of the workflows
+        selected = [
+            ('Hydjet_Quenched' in fragment and "PixelOnly" in self.suffix )
+        ]
+        result = any(selected) and hasHarvest
+
+        return result
+
+    def setup_(self, step, stepName, stepDict, k, properties):
+        # skip ALCA and Nano steps (but not RecoNano or HARVESTNano for Run3)
+        if 'ALCA' in step or 'Nano'==step:
+            stepDict[stepName][k] = None
+        elif 'Digi' in step:
+            if self.__digi is None:
+              stepDict[stepName][k] = None
+            else:
+              stepDict[stepName][k] = merge([self.__digi, stepDict[step][k]])
+        elif 'Reco' in step:
+            if self.__reco is None:
+              stepDict[stepName][k] = None
+            else:
+              stepDict[stepName][k] = merge([self.__reco, stepDict[step][k]])
+        elif 'HARVEST' in step:
+            if self.__harvest is None:
+              stepDict[stepName][k] = None
+            else:
+              stepDict[stepName][k] = merge([self.__harvest, stepDict[step][k]])
 
 # end of Patatrack workflows
 
@@ -2185,7 +2218,8 @@ upgradeWFs['DD4hepDB'].allowReuse = False
 
 class UpgradeWorkflow_DDDDB(UpgradeWorkflow):
     def setup_(self, step, stepName, stepDict, k, properties):
-        if 'Run3' in stepDict[step][k]['--era'] and 'Fast' not in stepDict[step][k]['--era']:
+        theEra = stepDict[step][k]['--era']
+        if 'Run3' in theEra and 'Fast' not in theEra and "Pb" not in theEra:
             # retain any other eras
             tmp_eras = stepDict[step][k]['--era'].split(',')
             tmp_eras[tmp_eras.index("Run3")] = 'Run3_DDD'
@@ -2350,6 +2384,22 @@ upgradeProperties[2017] = {
         'BeamSpot': 'Realistic25ns13p6TeVEarly2022Collision',
         'ScenToRun' : ['Gen','FastSimRun3','HARVESTFastRun3'],
     },
+    '2023HI' : {
+        'Geom' : 'DB:Extended',
+        'GT':'auto:phase1_2023_realistic_hi', 
+        'HLTmenu': '@fake2',
+        'Era':'Run3_pp_on_PbPb',
+        'BeamSpot': 'Realistic2022PbPbCollision',
+        'ScenToRun' : ['GenSim','Digi','RecoNano','HARVESTNano','ALCA'],
+    },
+    '2023HIRP' : {
+        'Geom' : 'DB:Extended',
+        'GT':'auto:phase1_2023_realistic_hi', 
+        'HLTmenu': '@fake2',
+        'Era':'Run3_pp_on_PbPb_approxSiStripClusters',
+        'BeamSpot': 'Realistic2022PbPbCollision',
+        'ScenToRun' : ['GenSim','Digi','RecoNano','HARVESTNano','ALCA'],
+    }
 }
 
 # standard PU sequences
@@ -2610,4 +2660,6 @@ upgradeFragments = OrderedDict([
     ('LbToJpsiLambda_JMM_Filter_DGamma0_TuneCP5_13p6TeV-pythia8-evtgen_cfi',UpgradeFragment(Mby(66,660000),'LbToJpsiLambda_DGamma0_13p6TeV')), #0.3%
     ('LbToJpsiXiK0sPi_JMM_Filter_DGamma0_TuneCP5_13p6TeV-pythia8-evtgen_cfi',UpgradeFragment(Mby(50,500000),'LbToJpsiXiK0sPr_DGamma0_13p6TeV')), #0.6%
     ('OmegaMinus_13p6TeV_SoftQCDInel_TuneCP5_cfi',UpgradeFragment(Mby(100,1000000),'OmegaMinus_13p6TeV')), #0.1%
+    ('Hydjet_Quenched_MinBias_5020GeV_cfi', UpgradeFragment(Kby(9,100),'HydjetQMinBias_5020GeV')),
+    ('Hydjet_Quenched_MinBias_5362GeV_cfi', UpgradeFragment(Kby(9,100),'HydjetQMinBias_5362GeV'))
 ])
