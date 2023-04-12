@@ -13,9 +13,14 @@ pixelVerticesTask = cms.Task(
 from Configuration.ProcessModifiers.pixelNtupletFit_cff import pixelNtupletFit
 from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
 
+# HIon modifiers
+from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
+from Configuration.Eras.Modifier_pp_on_PbPb_run3_cff import pp_on_PbPb_run3
+
 # build the pixel vertices in SoA format on the CPU
 from RecoTracker.PixelVertexFinding.pixelVertexProducerCUDAPhase1_cfi import pixelVertexProducerCUDAPhase1 as _pixelVerticesCUDA
 from RecoTracker.PixelVertexFinding.pixelVertexProducerCUDAPhase2_cfi import pixelVertexProducerCUDAPhase2 as _pixelVerticesCUDAPhase2
+from RecoTracker.PixelVertexFinding.pixelVertexProducerCUDAHIonPhase1_cfi import pixelVertexProducerCUDAHIonPhase1 as _pixelVerticesCUDAHIonPhase1
 
 pixelVerticesSoA = SwitchProducerCUDA(
     cpu = _pixelVerticesCUDA.clone(
@@ -28,6 +33,11 @@ phase2_tracker.toModify(pixelVerticesSoA,cpu = _pixelVerticesCUDAPhase2.clone(
     pixelTrackSrc = "pixelTracksSoA",
     onGPU = False,
     PtMin = 2.0
+))
+
+(pp_on_AA | pp_on_PbPb_run3).toModify(pixelVerticesSoA,cpu = _pixelVerticesCUDAHIonPhase1.clone(
+    pixelTrackSrc = "pixelTracksSoA",
+    onGPU = False,
 ))
 
 # convert the pixel vertices from SoA to legacy format
@@ -58,6 +68,11 @@ phase2_tracker.toReplaceWith(pixelVerticesCUDA,_pixelVerticesCUDAPhase2.clone(
     pixelTrackSrc = "pixelTracksCUDA",
     onGPU = True,
     PtMin = 2.0
+))
+
+(pp_on_AA | pp_on_PbPb_run3).toReplaceWith(pixelVerticesCUDA,_pixelVerticesCUDAHIonPhase1.clone(
+    pixelTrackSrc = "pixelTracksCUDA",
+    onGPU = True
 ))
 
 # transfer the pixel vertices in SoA format to the CPU
