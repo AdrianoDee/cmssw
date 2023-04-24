@@ -83,6 +83,7 @@ void CAHitNtupletCUDAT<TrackerTraits>::fillDescriptions(edm::ConfigurationDescri
   desc.add<bool>("onGPU", true);
   desc.add<bool>("useMask", false);
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingCUDA"));
+  desc.add<edm::InputTag>("hitMask", edm::InputTag(""));
 
   GPUAlgo::fillDescriptions(desc);
   descriptions.addWithDefaultLabel(desc);

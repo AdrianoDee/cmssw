@@ -66,6 +66,8 @@ SiPixelRecHitSoAFromLegacyT<TrackerTraits>::SiPixelRecHitSoAFromLegacyT(const ed
       dumpForMasking_(iConfig.getParameter<bool>("dumpForMasking")) {
   if (convert2Legacy_)
     produces<SiPixelRecHitCollectionNew>();
+  if (dumpForMasking_)
+    produces<MapToHit>();
 }
 
 template <typename TrackerTraits>

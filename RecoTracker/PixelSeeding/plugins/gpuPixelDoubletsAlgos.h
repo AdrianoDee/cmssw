@@ -190,7 +190,10 @@ namespace gpuPixelDoublets {
       i += offsets[inner];
 
       if(hitMask[i])
+      {
+        printf("Not Using Hit %d - %.2f - %.2f - %.2f \n",i,hh[i].xGlobal(),hh[i].yGlobal(),hh[i].zGlobal());
         continue;
+      }
       // printf("Hit in Layer %d %d %d %d\n", i, inner, pairLayerId, j);
 
       assert(i >= offsets[inner]);
