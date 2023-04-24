@@ -89,6 +89,7 @@ trackingLowPU.toReplaceWith(pixelTracksTask, _pixelTracksTask_lowPU)
 
 
 # "Patatrack" pixel ntuplets, fishbone cleaning, Broken Line fit, and density-based vertex reconstruction
+from Configuration.ProcessModifiers.pixelTrackMask_cff import pixelTrackMask
 from Configuration.ProcessModifiers.pixelNtupletFit_cff import pixelNtupletFit
 
 from RecoTracker.PixelSeeding.caHitNtupletCUDAPhase1_cfi import caHitNtupletCUDAPhase1 as _pixelTracksCUDA
@@ -106,6 +107,15 @@ pixelTracksSoA = SwitchProducerCUDA(
     )
 )
 
+pixelTracksSoAQuads = SwitchProducerCUDA(
+    cpu = _pixelTracksCUDA.clone(
+        pixelRecHitSrc = "siPixelRecHitsPreSplittingMaskSoA",
+        idealConditions = False,
+        onGPU = False,
+        minHitsPerNtuplet = cms.uint32(4)
+    )
+)
+
 # use quality cuts tuned for Run 2 ideal conditions for all Run 3 workflows
 run3_common.toModify(pixelTracksSoA.cpu,
     idealConditions = True
@@ -115,6 +125,42 @@ run3_common.toModify(pixelTracksSoA.cpu,
 from RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAPhase1_cfi import pixelTrackProducerFromSoAPhase1 as _pixelTrackProducerFromSoA
 from RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAPhase2_cfi import pixelTrackProducerFromSoAPhase2 as _pixelTrackProducerFromSoAPhase2
 
+pixelTracksQuads = _pixelTrackProducerFromSoA.clone(
+    pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
+    trackSrc = cms.InputTag('pixelTracksSoAQuads'),
+)
+
+
+pixelTrackQuadRemover = cms.EDProducer('TrackClusterRemover',
+  trajectories = cms.InputTag('pixelTracksQuads'),
+  trackClassifier = cms.InputTag('', 'QualityMasks'),
+  pixelClusters = cms.InputTag('siPixelClustersPreSplitting'),
+  stripClusters = cms.InputTag(''),
+  oldClusterRemovalInfo = cms.InputTag(''),
+  clusterKeyMapForSoA = cms.InputTag('siPixelRecHitsPreSplittingMaskCPU'),
+  TrackQuality = cms.string('any'),
+  maxChi2 = cms.double(30),
+  minNumberOfLayersWithMeasBeforeFiltering = cms.int32(0),
+  overrideTrkQuals = cms.InputTag(''),
+  mightGet = cms.optional.untracked.vstring
+)
+
+pixelTracksSoATrips = SwitchProducerCUDA(
+    cpu = _pixelTracksCUDA.clone(
+        pixelRecHitSrc = "siPixelRecHitsPreSplittingMaskSoA",
+        idealConditions = False,
+        onGPU = False,
+        minHitsPerNtuplet = cms.uint32(3),
+        useMask = True,
+        hitMask = cms.InputTag("pixelTrackQuadRemover")
+    )
+)
+
+pixelTracksTrips = _pixelTrackProducerFromSoA.clone(
+    pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
+    trackSrc = cms.InputTag('pixelTracksSoATrips'),
+)
+
 pixelNtupletFit.toReplaceWith(pixelTracks, _pixelTrackProducerFromSoA.clone(
     pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
 ))
@@ -123,9 +169,36 @@ pixelNtupletFit.toReplaceWith(pixelTracks, _pixelTrackProducerFromSoA.clone(
     pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
 ))
 
+from RecoTracker.FinalTrackSelectors.trackListMerger_cfi import trackListMerger as _trackListMerger
+
+pixelTrackMask.toReplaceWith(pixelTracks,  _trackListMerger.clone(
+    TrackProducers =['pixelTracksTrips',
+                     'pixelTracksQuads',
+                    ],
+    hasSelector = [0,0],
+    indivShareFrac = [1.0,1.0],
+    selectedTrackQuals = ["pixelTracksTrips","pixelTracksQuads"],
+    setsToMerge = cms.VPSet( cms.PSet( tLists=cms.vint32(0,1), pQual=cms.bool(True) ) 
+	),
+    copyExtras = True,
+    copyMVA = False,
+    makeReKeyedSeeds = cms.untracked.bool(False)
+    ))
+
 pixelNtupletFit.toReplaceWith(pixelTracksTask, cms.Task(
     # build the pixel ntuplets and the pixel tracks in SoA format on the GPU
     pixelTracksSoA,
+    # convert the pixel tracks from SoA to legacy format
+    pixelTracks
+))
+
+pixelTrackMask.toReplaceWith(pixelTracksTask, cms.Task(
+    # build the pixel ntuplets and the pixel tracks in SoA format on the GPU
+    pixelTracksSoAQuads,
+    pixelTracksQuads,
+    pixelTrackQuadRemover,
+    pixelTracksSoATrips,
+    pixelTracksTrips,
     # convert the pixel tracks from SoA to legacy format
     pixelTracks
 ))

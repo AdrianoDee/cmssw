@@ -19,11 +19,14 @@ siPixelRecHitsPreSplitting = SwitchProducerCUDA(
 # phase 2 tracker modifier
 from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
 
+from Configuration.ProcessModifiers.pixelTrackMask_cff import pixelTrackMask
+
 # convert the pixel rechits from legacy to SoA format on CPU
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromLegacyPhase1_cfi import siPixelRecHitSoAFromLegacyPhase1 as _siPixelRecHitsPreSplittingSoA
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitSoAFromLegacyPhase2_cfi import siPixelRecHitSoAFromLegacyPhase2 as _siPixelRecHitsPreSplittingSoAPhase2
 
 siPixelRecHitsPreSplittingCPU = _siPixelRecHitsPreSplittingSoA.clone(convertToLegacy=True)
+siPixelRecHitsPreSplittingMaskCPU = _siPixelRecHitsPreSplittingSoA.clone(convertToLegacy=True, dumpForMasking=True)
 phase2_tracker.toReplaceWith(siPixelRecHitsPreSplittingCPU, _siPixelRecHitsPreSplittingSoAPhase2.clone(convertToLegacy=True, CPE = cms.string('PixelCPEFastPhase2')))
 
 # modifier used to prompt patatrack pixel tracks reconstruction on cpu
@@ -36,6 +39,13 @@ pixelNtupletFit.toModify(siPixelRecHitsPreSplitting,
              )
 ))
 
+pixelTrackMask.toModify(siPixelRecHitsPreSplitting,
+    cpu = cms.EDAlias(
+            siPixelRecHitsPreSplittingMaskCPU = cms.VPSet(
+                 cms.PSet(type = cms.string("SiPixelRecHitedmNewDetSetVector")),
+                 cms.PSet(type = cms.string("uintAsHostProduct"))
+             )
+))
 
 siPixelRecHitsPreSplittingTask = cms.Task(
     # SwitchProducer wrapping the legacy pixel rechit producer or the cpu SoA producer
@@ -56,6 +66,15 @@ phase2_tracker.toReplaceWith(siPixelRecHitsPreSplittingCUDA,_siPixelRecHitCUDAPh
 siPixelRecHitsPreSplittingSoA = SwitchProducerCUDA(
     cpu = cms.EDAlias(
             siPixelRecHitsPreSplittingCPU = cms.VPSet(
+                 cms.PSet(type = cms.string("pixelTopologyPhase1TrackingRecHitSoAHost")),
+                 cms.PSet(type = cms.string("uintAsHostProduct"))
+             )),
+)
+
+#this is an alias for the SoA on GPU or CPU to be used for DQM
+siPixelRecHitsPreSplittingMaskSoA = SwitchProducerCUDA(
+    cpu = cms.EDAlias(
+            siPixelRecHitsPreSplittingMaskCPU = cms.VPSet(
                  cms.PSet(type = cms.string("pixelTopologyPhase1TrackingRecHitSoAHost")),
                  cms.PSet(type = cms.string("uintAsHostProduct"))
              )),
@@ -90,6 +109,16 @@ phase2_tracker.toReplaceWith(siPixelRecHitFromCUDA,_siPixelRecHitFromCUDAPhase2.
              )))
 
 
+pixelTrackMask.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
+    cms.Task(
+        # reconstruct the pixel rechits on the cpu
+        siPixelRecHitsPreSplittingMaskCPU,
+        # SwitchProducer wrapping an EDAlias on cpu or the converter from SoA to legacy on gpu
+        siPixelRecHitsPreSplittingTask.copy(),
+        # producing and converting on cpu (if needed)
+        siPixelRecHitsPreSplittingMaskSoA)
+        )
+        )
 
 pixelNtupletFit.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     cms.Task(

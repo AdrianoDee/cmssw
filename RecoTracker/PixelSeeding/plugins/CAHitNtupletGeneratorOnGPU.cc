@@ -324,8 +324,8 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
 
   CPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
-  kernels.allocateOnGPU(hits_d.nHits(), nullptr);
-  kernels.allocateMask(mask, hits_d.nHits(), nullptr);
+  kernels.allocateOnGPU(hits_h.nHits(), nullptr);
+  kernels.allocateMask(mask, hits_h.nHits(), nullptr);
 
   kernels.buildDoublets(hits_h.view(), hits_h.offsetBPIX2(), nullptr);
   kernels.launchKernels(hits_h.view(), tracks.view(), nullptr);

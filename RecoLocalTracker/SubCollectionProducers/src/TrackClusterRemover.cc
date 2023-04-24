@@ -35,7 +35,7 @@ namespace {
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
   private:
-    using IndToEdm = std::vector<uint16_t>;
+    using IndToEdm = std::vector<uint8_t>;
     using MapToHit = std::vector<std::pair<int,int>>;
 
     void produce(edm::StreamID, edm::Event& evt, const edm::EventSetup&) const override;
@@ -259,7 +259,11 @@ namespace {
                                       << std::count(collectedPixels.begin(), collectedPixels.end(), true);
       iEvent.put(std::move(removedPixelClusterMask));
       if(soaIndicesDump_)
+      {
+       for(auto& i: *indToEdmP)
+        std::cout << i << std::endl;
        iEvent.put(std::move(indToEdmP));
+      }
     }
   }
 
