@@ -159,11 +159,14 @@ namespace gpuPixelDoublets {
       auto hoff = PhiBinner::histOff(outer);
       auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
       i += offsets[inner];
-
-      if(hitMask[i])
+      
+      if(hitMask)
       {
-        printf("Not Using Hit %d - %.2f - %.2f - %.2f \n",i,hh[i].xGlobal(),hh[i].yGlobal(),hh[i].zGlobal());
-        continue;
+        if(hitMask[i])
+        {
+          printf("Not Using Hit %d - %.2f - %.2f - %.2f \n",i,hh[i].xGlobal(),hh[i].yGlobal(),hh[i].zGlobal());
+          continue;
+        }
       }
       // printf("Hit in Layer %d %d %d %d\n", i, inner, pairLayerId, j);
 

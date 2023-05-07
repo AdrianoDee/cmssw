@@ -51,7 +51,9 @@ namespace {
                        cfg.getParameter<bool>("fillStatistics"),
                        cfg.getParameter<bool>("doSharedHitCut"),
                        cfg.getParameter<bool>("dupPassThrough"),
-                       cfg.getParameter<bool>("useSimpleTripletCleaner")});
+                       cfg.getParameter<bool>("useSimpleTripletCleaner"),
+                       cfg.getParameter<bool>("useMask"),
+                       cfg.getParameter<bool>("doFit")});
   }
 
   //This is needed to have the partial specialization for  isPhase1Topology/isPhase2Topology
@@ -240,6 +242,7 @@ void CAHitNtupletGeneratorOnGPU<TrackerTraits>::fillDescriptionsCommon(edm::Para
   desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
   desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
   desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+  desc.add<bool>("doFit", true)->setComment("Performing the fit (Riemann or Broken Line)");
 }
 
 template <typename TrackerTraits>
@@ -289,7 +292,9 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
   GPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_d.nHits(), stream);
-  kernels.allocateMask(mask, hits_d.nHits(), stream);
+  
+  if(m_params.useMask_)
+    kernels.allocateMask(mask, hits_d.nHits(), stream);
   cudaCheck(cudaGetLastError());
 
   kernels.buildDoublets(hits_d.view(), hits_d.offsetBPIX2(), stream);
@@ -325,7 +330,9 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
   CPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_h.nHits(), nullptr);
-  kernels.allocateMask(mask, hits_h.nHits(), nullptr);
+
+  if(m_params.useMask_)
+    kernels.allocateMask(mask, hits_h.nHits(), nullptr);
 
   kernels.buildDoublets(hits_h.view(), hits_h.offsetBPIX2(), nullptr);
   kernels.launchKernels(hits_h.view(), tracks.view(), nullptr);
