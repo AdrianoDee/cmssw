@@ -40,7 +40,6 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits
   this->device_hitTuple_apc_ = (cms::cuda::AtomicPairCounter*)this->device_storage_.get();
   this->device_hitToTuple_apc_ = (cms::cuda::AtomicPairCounter*)this->device_storage_.get() + 1;
   this->device_nCells_ = (uint32_t*)(this->device_storage_.get() + 2);
-
   this->device_cellCuts_ = Traits::template make_unique<CellCuts>(stream);
   // FIXME: consider collapsing these 3 in one adhoc kernel
   if constexpr (std::is_same<Traits, cms::cudacompat::GPUTraits>::value) {
@@ -73,18 +72,27 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateMask(const uint8_t 
 
   if constexpr (std::is_same<Traits, cms::cudacompat::GPUTraits>::value)
   {
-    if(mask)
-      cudaCheck(cudaMemcpyAsync(this->device_hitMask_.get(), mask, sizeof(uint8_t) * nHits ,cudaMemcpyDefault,stream));
-    else
-      cudaCheck(cudaMemsetAsync(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits, stream));
+    std::cout << "This is a mask. " << std::endl; 
+    cudaCheck(cudaMemcpyAsync(this->device_hitMask_.get(), mask, sizeof(uint8_t) * nHits ,cudaMemcpyDefault,stream));
+
+    // if(this->params_.useMask_)
+    //   {
+        
+    //     }
+    // else
+    //   cudaCheck(cudaMemsetAsync(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits, stream));
   }
   else
   {
-    if(mask)
-      std::copy(mask, mask + nHits, this->device_hitMask_.get());
-    else
-      std::memset(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits); 
-      //cudaCheck(cudaMemsetAsync(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits, stream));
+    std::cout << "This is a mask. " << std::endl;
+    device_hitMask_.get() = mask;
+    //std::copy(mask, mask + nHits, this->device_hitMask_.get());
+    // if(this->params_.useMask)
+    // {
+    // }
+    // else
+    //   std::memset(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits); 
+    //   //cudaCheck(cudaMemsetAsync(this->device_hitMask_.get(), 0, sizeof(uint8_t) * nHits, stream));
   }
 #ifdef GPU_DEBUG
   cudaDeviceSynchronize();
