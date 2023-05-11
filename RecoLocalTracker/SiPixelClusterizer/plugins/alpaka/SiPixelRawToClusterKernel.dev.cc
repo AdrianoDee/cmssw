@@ -708,7 +708,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             cms::alpakatools::make_device_view(alpaka::getDev(queue), clusters_d->view().moduleStart(), 1u);
         alpaka::memcpy(queue, nModules_Clusters_h, moduleStartFirstElement);
 
-        const auto workDivMaxNumModules = cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, 256);
+        const auto workDivMaxNumModules = cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, 1);
         // NB: With present findClus() / chargeCut() algorithm,
         // threadPerBlock (GPU) or elementsPerThread (CPU) = 256 show optimal performance.
         // Though, it does not have to be the same number for CPU/GPU cases.
@@ -817,7 +817,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
-      std::cout << "CUDA findClus kernel launch with " << numberOfModules << " blocks of " << 256
+      std::cout << "findClus kernel launch with " << numberOfModules << " blocks of " << 256
                 << " threadsPerBlockOrElementsPerThread\n";
 #endif
       alpaka::enqueue(
@@ -826,6 +826,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               workDivMaxNumModules, findClus<pixelTopology::Phase2>(), digis_view, clusters_d->view(), numDigis));
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
+      std::cout << "clusterChargeCut kernel launch with " << numberOfModules << " blocks of " << 256
+                << " threadsPerBlockOrElementsPerThread\n";
 #endif
 
       // apply charge cut

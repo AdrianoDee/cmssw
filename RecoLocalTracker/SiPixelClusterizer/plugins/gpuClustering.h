@@ -120,7 +120,7 @@ namespace gpuClustering {
       assert(thisModuleId < TrackerTraits::numberOfModules);
 
 #ifdef GPU_DEBUG
-      if (thisModuleId % 100 == 1)
+      //if (thisModuleId % 100 == 1)
         if (threadIdx.x == 0)
           printf("start clusterizer for module %d in block %d\n", thisModuleId, blockIdx.x);
 #endif
@@ -396,7 +396,7 @@ namespace gpuClustering {
         }
 #endif
 #ifdef GPU_DEBUG
-        if (thisModuleId % 100 == 1)
+        //if (thisModuleId % 100 == 1)
           printf("%d clusters in module %d\n", foundClusters, thisModuleId);
 #endif
       }

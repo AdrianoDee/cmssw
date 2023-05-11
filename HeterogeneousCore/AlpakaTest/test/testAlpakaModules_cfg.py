@@ -93,19 +93,19 @@ process.alpakaStreamSynchronizingProducer = cms.EDProducer("TestAlpakaStreamSync
 
 process.alpakaGlobalConsumer = cms.EDAnalyzer("TestAlpakaAnalyzer",
     source = cms.InputTag("alpakaGlobalProducer"),
-    expectSize = cms.int32(10)
+    expectSize = cms.int32(20)
 )
 process.alpakaStreamConsumer = cms.EDAnalyzer("TestAlpakaAnalyzer",
     source = cms.InputTag("alpakaStreamProducer"),
-    expectSize = cms.int32(5)
+    expectSize = cms.int32(25)
 )
 process.alpakaStreamInstanceConsumer = cms.EDAnalyzer("TestAlpakaAnalyzer",
     source = cms.InputTag("alpakaStreamInstanceProducer", "testInstance"),
-    expectSize = cms.int32(6)
+    expectSize = cms.int32(36)
 )
 process.alpakaStreamSynchronizingConsumer = cms.EDAnalyzer("TestAlpakaAnalyzer",
     source = cms.InputTag("alpakaStreamSynchronizingProducer"),
-    expectSize = cms.int32(10)
+    expectSize = cms.int32(20)
 )
 
 if args.moduleBackend != "":

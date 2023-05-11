@@ -265,7 +265,7 @@ void SiPixelRawToClusterCUDA::acquire(const edm::Event& iEvent,
                              fedCounter,
                              useQuality_,
                              includeErrors_,
-                             edm::MessageDrop::instance()->debugEnabled,
+                             true,//edm::MessageDrop::instance()->debugEnabled,
                              ctx.stream());
 }
 
