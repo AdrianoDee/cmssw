@@ -122,19 +122,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         const uint32_t blockIdx(alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0u]);
         if (blockIdx >= clus_view[0].moduleStart())
           return;
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         auto firstPixel = clus_view[1 + blockIdx].moduleStart();
         auto thisModuleId = digi_view[firstPixel].moduleId();
         ALPAKA_ASSERT_OFFLOAD(thisModuleId < TrackerTraits::numberOfModules);
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         const uint32_t threadIdxLocal(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u]);
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
 #ifdef GPU_DEBUG
         if (thisModuleId % 100 == 1)
           // if (threadIdxLocal == 0)
             printf("start clusterizer for module %d in block %d\n", thisModuleId, blockIdx);
 #endif
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
         constexpr const uint32_t pixelStatusSize = isPhase2 ? 1 : PixelStatus::size;
 
@@ -168,22 +168,24 @@ printf("%d\n",__LINE__);
             break;
           }
         }
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         //init hist  (ymax=416 < 512 : 9bits)
         constexpr uint32_t maxPixInModule = TrackerTraits::maxPixInModule;
+        //printf("%d\n",__LINE__);
         constexpr auto nbins = TrackerTraits::clusterBinning;
         constexpr auto nbits = TrackerTraits::clusterBits;
-
+//printf("%d\n",__LINE__);
         using Hist = cms::alpakatools::HistoContainer<uint16_t, nbins, maxPixInModule, nbits, uint16_t>;
         auto& hist = alpaka::declareSharedVar<Hist, __COUNTER__>(acc);
         auto& ws = alpaka::declareSharedVar<typename Hist::Counter[32], __COUNTER__>(acc);
-
+//printf("%d\n",__LINE__);
         cms::alpakatools::for_each_element_in_block_strided(acc, Hist::totbins(), [&](uint32_t j) { hist.off[j] = 0; });
         alpaka::syncBlockThreads(acc);
-
+//printf("%d\n",__LINE__);
         ALPAKA_ASSERT_OFFLOAD((msize == numElements) or
                               ((msize < numElements) and (digi_view[msize].moduleId() != thisModuleId)));
-
+//printf("%d\n",__LINE__);
         // limit to maxPixInModule  (FIXME if recurrent (and not limited to simulation with low threshold) one will need to implement something cleverer)
         if (0 == threadIdxLocal) {
           if (msize - firstPixel > maxPixInModule) {
@@ -191,7 +193,7 @@ printf("%d\n",__LINE__);
             msize = maxPixInModule + firstPixel;
           }
         }
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         alpaka::syncBlockThreads(acc);
         ALPAKA_ASSERT_OFFLOAD(msize - firstPixel <= maxPixInModule);
 
@@ -200,9 +202,9 @@ printf("%d\n",__LINE__);
         totGood = 0;
         alpaka::syncBlockThreads(acc);
 #endif
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         // remove duplicate pixels
-        if constexpr (not isPhase2) {
+        if constexpr (not isPhase2 and false) {
           if (msize > 1) {
             cms::alpakatools::for_each_element_in_block_strided(
                 acc, PixelStatus::size, [&](uint32_t i) { status[i] = 0; });
@@ -230,7 +232,7 @@ printf("%d\n",__LINE__);
             alpaka::syncBlockThreads(acc);
           }
         }
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         // fill histo
         cms::alpakatools::for_each_element_in_block_strided(acc, msize, firstPixel, [&](uint32_t i) {
           if (digi_view[i].moduleId() != ::pixelClustering::invalidModuleId) {  // skip invalid pixels
@@ -258,7 +260,7 @@ printf("%d\n",__LINE__);
             hist.fill(acc, digi_view[i].yy(), i - firstPixel);
           }
         });
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         // Assume that we can cover the whole module with up to 16 blockDimension-wide iterations
         // This maxiter value was tuned for GPU, with 256 or 512 threads per block.
         // Hence, also works for CPU case, with 256 or 512 elements per thread.
@@ -267,7 +269,7 @@ printf("%d\n",__LINE__);
         // Hence, maxiter can be tuned accordingly to the workdiv.
         constexpr unsigned int maxiter = 16;
         ALPAKA_ASSERT_OFFLOAD((hist.size() / blockDimension) <= maxiter);
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
 #if defined(ALPAKA_ACC_GPU_CUDA_ASYNC_BACKEND) || defined(ALPAKA_ACC_GPU_HIP_ASYNC_BACKEND)
         constexpr uint32_t threadDimension = 1;
 #else
@@ -315,7 +317,7 @@ printf("%d\n",__LINE__);
         }
         alpaka::syncBlockThreads(acc);
 #endif
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         // fill NN
         uint32_t k = 0u;
         cms::alpakatools::for_each_element_in_block_strided(acc, hist.size(), [&](uint32_t j) {
@@ -342,7 +344,7 @@ printf("%d\n",__LINE__);
             }
           }
         });
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         // for each pixel, look at all the pixels until the end of the module;
         // when two valid pixels within +/- 1 in x or y are found, set their id to the minimum;
         // after the loop, all the pixel in each cluster should have the id equeal to the lowest
@@ -383,7 +385,7 @@ printf("%d\n",__LINE__);
           }
           ++nloops;
         }  // end while
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
 #ifdef GPU_DEBUG
         {
           auto& n0 = alpaka::declareSharedVar<int, __COUNTER__>(acc);
@@ -399,7 +401,7 @@ printf("%d\n",__LINE__);
               printf("# loops %d\n", nloops);
         }
 #endif
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         auto& foundClusters = alpaka::declareSharedVar<unsigned int, __COUNTER__>(acc);
         foundClusters = 0;
         alpaka::syncBlockThreads(acc);
@@ -436,7 +438,7 @@ printf("%d\n",__LINE__);
           }
         });
         alpaka::syncBlockThreads(acc);
-printf("%d\n",__LINE__);
+//printf("%d\n",__LINE__);
         if (threadIdxLocal == 0) {
           clus_view[thisModuleId].clusInModule() = foundClusters;
           clus_view[blockIdx].moduleId() = thisModuleId;

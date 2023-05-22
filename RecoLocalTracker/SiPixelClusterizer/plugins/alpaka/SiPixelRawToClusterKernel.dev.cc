@@ -389,7 +389,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           // initialize (too many coninue below)
           dvgi.pdigi() = 0;
           dvgi.rawIdArr() = 0;
-          dvgi.moduleId() = 9999;
+          constexpr uint16_t invalidModuleId = std::numeric_limits<uint16_t>::max() - 1;
+          dvgi.moduleId() = invalidModuleId;
 
           uint32_t ww = word[gIndex];  // Array containing 32 bit raw data
           if (ww == 0) {
@@ -599,24 +600,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef GPU_DEBUG
       std::cout << "decoding " << wordCounter << " digis." << std::endl;
 #endif
-      std::cout << __LINE__ << std::endl;
+      // std::cout << __LINE__ << std::endl;
       constexpr int numberOfModules = pixelTopology::Phase1::numberOfModules;
       digis_d = SiPixelDigisSoA(wordCounter, queue);
       if (includeErrors) {
 #ifdef ALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED
         digiErrors_d = SiPixelDigiErrorsSoA(wordCounter, std::move(errors));
 #else
-        std::cout << __LINE__ << std::endl;
+        // std::cout << __LINE__ << std::endl;
         std::cout << errors.begin()->first << " - " << (errors.begin()->second).size() << std::endl;
         digiErrors_d = SiPixelDigiErrorsSoA(wordCounter, std::move(errors), queue);
 #endif
       }
-      std::cout << __LINE__ << std::endl;
+      // std::cout << __LINE__ << std::endl;
       clusters_d = SiPixelClustersSoA(numberOfModules, queue);
-      std::cout << __LINE__ << std::endl;
+      // std::cout << __LINE__ << std::endl;
       if (wordCounter)  // protect in case of empty event....
       {
-        std::cout << __LINE__ << std::endl;
+        // std::cout << __LINE__ << std::endl;
 #if defined(ALPAKA_ACC_GPU_CUDA_ASYNC_BACKEND) || defined(ALPAKA_ACC_GPU_HIP_ASYNC_BACKEND)
         const int threadsPerBlockOrElementsPerThread = 512;
 #else
@@ -626,7 +627,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // fill it all
         const uint32_t blocks = cms::alpakatools::divide_up_by(wordCounter, threadsPerBlockOrElementsPerThread);
         const auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlockOrElementsPerThread);
-        std::cout << __LINE__ << std::endl;
+        // std::cout << __LINE__ << std::endl;
         ALPAKA_ASSERT_OFFLOAD(0 == wordCounter % 2);
         // wordCounter is the total no of words in each event to be trasfered on device
         auto word_d = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, wordCounter);
@@ -634,10 +635,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // However, only the first half of elements end up eventually used:
         // hence, here, only wordCounter/2 elements are allocated.
         auto fedId_d = cms::alpakatools::make_device_buffer<uint8_t[]>(queue, wordCounter / 2);
-        std::cout << __LINE__ << std::endl;
+        // std::cout << __LINE__ << std::endl;
         alpaka::memcpy(queue, word_d, wordFed.word(), wordCounter);
         alpaka::memcpy(queue, fedId_d, wordFed.fedId(), wordCounter / 2);
-        std::cout << __LINE__ << std::endl;
+        // std::cout << __LINE__ << std::endl;
         // Launch rawToDigi kernel
         alpaka::enqueue(queue,
                         alpaka::createTaskKernel<Acc1D>(workDiv,
@@ -654,13 +655,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                         // digis_d->pdigi(),
                                                         // digis_d->rawIdArr(),
                                                         // digis_d->moduleInd(),
-                                                        digiErrors_d->error(),
+                                                        nullptr,
                                                         useQualityInfo,
-                                                        includeErrors,
+                                                        false,
                                                         debug));
 
 #ifdef GPU_DEBUG
-        alpaka::wait(queue);
+        // alpaka::wait(queue);
+        std::cout << "RawToDigi_kernel was run smoothly!" << std::endl;
 #endif
 
 #ifdef TODO
@@ -686,15 +688,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                            threadsPerBlockOrElementsPerThread);
         const auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlockOrElementsPerThread);
 
-        // alpaka::enqueue(queue, alpaka::createTaskKernel<Acc1D>(workDiv, calibDigis(),
-        //                     isRun2,
-        //                     digis_d->view(),
-        //                     clusters_d->view(),
-        //                     gains,
-        //                     wordCounter));
+        alpaka::enqueue(queue, alpaka::createTaskKernel<Acc1D>(workDiv, calibDigis(),
+                            isRun2,
+                            digis_d->view(),
+                            clusters_d->view(),
+                            gains,
+                            wordCounter));
 
 #ifdef GPU_DEBUG
-        alpaka::wait(queue);
+        // alpaka::wait(queue);
         std::cout << "CUDA countModules kernel launch with " << blocks << " blocks of "
                   << threadsPerBlockOrElementsPerThread << " threadsPerBlockOrElementsPerThread\n";
 #endif
@@ -724,15 +726,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                         digis_d->view(),
                                                         clusters_d->view(),
                                                         wordCounter));
-        // template <typename TAcc>
-        //       ALPAKA_FN_ACC void operator()(
-        //           const TAcc& acc,
-        //           SiPixelDigisLayoutSoAView digi_view,
-        //           SiPixelClustersLayoutSoAView clus_view,
-        //           const unsigned int numElements)
 
 #ifdef GPU_DEBUG
-        alpaka::wait(queue);
+        // alpaka::wait(queue);
 #endif
 
         // apply charge cut
