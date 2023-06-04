@@ -1,6 +1,10 @@
 <lcgdict>
-  <class name="alpaka_cuda_async::SiPixelDigisDevice" persistent="false"/>
-  <class name="edm::Wrapper<alpaka_cuda_async::SiPixelDigisDevice>" persistent="false"/>
-  <class name="cms::alpakatools::Product<alpaka_cuda_async::Queue,alpaka_cuda_async::SiPixelDigisDevice>" persistent="false"/>
-  <class name="edm::Wrapper<cms::alpakatools::Product<alpaka_cuda_async::Queue,alpaka_cuda_async::SiPixelDigisDevice>>" persistent="false"/>
+  <class name="PortableDeviceCollection<SiPixelDigisLayoutSoA, alpaka::DevUniformCudaHipRt<alpaka::ApiCudaRt>>" persistent="false"/>
+  <class name="SiPixelDigisDevice<alpaka::DevUniformCudaHipRt<alpaka::ApiCudaRt>>" persistent="false"/>
+  <class name="edm::DeviceProduct<SiPixelDigisDevice<alpaka::DevUniformCudaHipRt<alpaka::ApiCudaRt>>>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<SiPixelDigisDevice<alpaka::DevUniformCudaHipRt<alpaka::ApiCudaRt>>>>" persistent="false"/>
+
+  <class name="SiPixelDigiErrorsDevice<alpaka::DevUniformCudaHipRt<alpaka::ApiCudaRt>>" persistent="false"/>
+  <class name="edm::DeviceProduct<SiPixelDigiErrorsDevice<alpaka::DevUniformCudaHipRt<alpaka::ApiCudaRt>>>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<SiPixelDigiErrorsDevice<alpaka::DevUniformCudaHipRt<alpaka::ApiCudaRt>>>>" persistent="false"/>
 </lcgdict>
