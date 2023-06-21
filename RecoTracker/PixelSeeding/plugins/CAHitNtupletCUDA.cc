@@ -112,7 +112,10 @@ void CAHitNtupletCUDAT<TrackerTraits>::produce(edm::StreamID streamID,
     auto& hits_d = ctx.get(hits);
     if (useMask_)
     {
+      std::cout << "useMask_" << std::endl;
       auto const& mask = iEvent.get(tokenHitMask_);
+      std::cout << mask.size() << std::endl;
+      std::cout << "PreMask GPU" << mask[0] << std::endl;
       const uint8_t* maskPtr = &mask[0];
       ctx.emplace(iEvent, tokenTrackGPU_, gpuAlgo_.makeTuplesAsync(hits_d, bf, ctx.stream(), maskPtr));
     }
@@ -122,7 +125,10 @@ void CAHitNtupletCUDAT<TrackerTraits>::produce(edm::StreamID streamID,
     auto& hits_h = iEvent.get(tokenHitCPU_);
     if (useMask_)
       {
+        std::cout << "useMask_" << std::endl;
         auto const& mask = iEvent.get(tokenHitMask_);
+        std::cout << mask.size() << std::endl;
+        std::cout << "PreMask CPU" << mask[0] << std::endl;
         const uint8_t* maskPtr = &mask[0];
         iEvent.emplace(tokenTrackCPU_, gpuAlgo_.makeTuples(hits_h, bf, maskPtr));
       }

@@ -1,7 +1,7 @@
 #include "RecoTracker/PixelSeeding/plugins/CAHitNtupletGeneratorKernelsImpl.h"
 
 #include <mutex>
-
+#define NTUPLE_DEBUG
 namespace {
   // cuda atomics are NOT atomics on CPU so protect stat update with a mutex
   // waiting for a more general solution (incuding multiple devices) to be proposed and implemented

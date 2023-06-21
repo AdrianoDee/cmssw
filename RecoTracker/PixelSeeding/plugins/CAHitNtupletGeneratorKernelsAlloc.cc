@@ -41,6 +41,8 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits
   this->device_hitToTuple_apc_ = (cms::cuda::AtomicPairCounter*)this->device_storage_.get() + 1;
   this->device_nCells_ = (uint32_t*)(this->device_storage_.get() + 2);
   this->device_cellCuts_ = Traits::template make_unique<CellCuts>(stream);
+  this->device_hitMask_ = Traits::template make_unique<uint8_t[]>(nHits, stream);
+  
   // FIXME: consider collapsing these 3 in one adhoc kernel
   if constexpr (std::is_same<Traits, cms::cudacompat::GPUTraits>::value) {
     cudaCheck(cudaMemsetAsync(this->device_nCells_, 0, sizeof(uint32_t), stream));
@@ -58,7 +60,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateOnGPU(int32_t nHits
 #endif
 }
 
-//#define GPU_DEBUG
+#define GPU_DEBUG
 template <typename TrackerTraits>
 #ifdef __CUDACC__
 void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::allocateMask(const uint8_t *mask, int32_t nHits ,cudaStream_t stream) {
@@ -68,11 +70,9 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateMask(const uint8_t 
   using Traits = cms::cudacompat::CPUTraits;
 #endif
 
-  this->device_hitMask_ = Traits::template make_unique<uint8_t[]>(nHits, stream);
-
   if constexpr (std::is_same<Traits, cms::cudacompat::GPUTraits>::value)
   {
-    std::cout << "This is a mask. " << std::endl; 
+    std::cout << "This is a GPU mask. " << std::endl; 
     cudaCheck(cudaMemcpyAsync(this->device_hitMask_.get(), mask, sizeof(uint8_t) * nHits ,cudaMemcpyDefault,stream));
 
     // if(this->params_.useMask_)
@@ -84,8 +84,8 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::allocateMask(const uint8_t 
   }
   else
   {
-    std::cout << "This is a mask. " << std::endl;
-    device_hitMask_.get() = mask;
+    std::cout << "This is a CPU mask. " << std::endl;
+    std::memcpy(this->device_hitMask_.get(), mask, sizeof(uint8_t) * nHits);
     //std::copy(mask, mask + nHits, this->device_hitMask_.get());
     // if(this->params_.useMask)
     // {
