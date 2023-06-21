@@ -29,8 +29,8 @@ namespace caHitNtupletGenerator {
     const bool doSharedHitCut_;
     const bool dupPassThrough_;
     const bool useSimpleTripletCleaner_;
-    const bool doFit_;
     const bool useMask_;
+    const bool doFit_;
   };
 
   //CAParams

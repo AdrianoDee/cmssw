@@ -286,7 +286,7 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
   using HelixFitOnGPU = HelixFitOnGPU<TrackerTraits>;
   using TrackSoA = TrackSoAHeterogeneousDevice<TrackerTraits>;
   using GPUKernels = CAHitNtupletGeneratorKernelsGPU<TrackerTraits>;
-
+  
   TrackSoA tracks(stream);
 
   GPUKernels kernels(m_params);
@@ -294,7 +294,12 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
   kernels.allocateOnGPU(hits_d.nHits(), stream);
   
   if(m_params.useMask_)
+  {
+    std::cout << "useMask_"<<std::endl;
     kernels.allocateMask(mask, hits_d.nHits(), stream);
+    std::cout << "Mask GPU -> " << mask[1] << std::endl;
+  }
+    
   cudaCheck(cudaGetLastError());
 
   kernels.buildDoublets(hits_d.view(), hits_d.offsetBPIX2(), stream);
@@ -325,6 +330,7 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
   using TrackSoA = TrackSoAHeterogeneousHost<TrackerTraits>;
   using CPUKernels = CAHitNtupletGeneratorKernelsCPU<TrackerTraits>;
 
+  
   TrackSoA tracks;
 
   CPUKernels kernels(m_params);
@@ -332,7 +338,11 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
   kernels.allocateOnGPU(hits_h.nHits(), nullptr);
 
   if(m_params.useMask_)
-    kernels.allocateMask(mask, hits_h.nHits(), nullptr);
+    { 
+      std::cout << "useMask_"<<std::endl;
+      std::cout << "Mask CPU -> " << mask[1] << std::endl;
+      kernels.allocateMask(mask, hits_h.nHits(), nullptr);
+      }
 
   kernels.buildDoublets(hits_h.view(), hits_h.offsetBPIX2(), nullptr);
   kernels.launchKernels(hits_h.view(), tracks.view(), nullptr);

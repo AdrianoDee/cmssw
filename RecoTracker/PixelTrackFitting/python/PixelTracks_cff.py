@@ -133,12 +133,12 @@ pixelTracksQuads = _pixelTrackProducerFromSoA.clone(
 
 pixelTrackQuadRemover = cms.EDProducer('TrackClusterRemover',
   trajectories = cms.InputTag('pixelTracksQuads'),
-  trackClassifier = cms.InputTag('', 'QualityMasks'),
+  trackClassifier = cms.InputTag(''),
   pixelClusters = cms.InputTag('siPixelClustersPreSplitting'),
   stripClusters = cms.InputTag(''),
   oldClusterRemovalInfo = cms.InputTag(''),
   clusterKeyMapForSoA = cms.InputTag('siPixelRecHitsPreSplittingMaskCPU'),
-  TrackQuality = cms.string('any'),
+  TrackQuality = cms.string('loose'),
   maxChi2 = cms.double(30),
   minNumberOfLayersWithMeasBeforeFiltering = cms.int32(0),
   overrideTrkQuals = cms.InputTag(''),
@@ -184,6 +184,7 @@ pixelTrackMask.toReplaceWith(pixelTracks,  _trackListMerger.clone(
     copyMVA = False,
     makeReKeyedSeeds = cms.untracked.bool(False)
     ))
+pixelTrackMask.toReplaceWith(pixelTracks,pixelTracksQuads.clone())
 
 pixelNtupletFit.toReplaceWith(pixelTracksTask, cms.Task(
     # build the pixel ntuplets and the pixel tracks in SoA format on the GPU
