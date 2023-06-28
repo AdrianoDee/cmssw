@@ -499,7 +499,7 @@ namespace pixelTopology {
     static constexpr int maxDYsize = 20;
     static constexpr int maxDYPred = 20;
 
-    static constexpr uint16_t numberOfModules = 1856;
+    static constexpr uint16_t numberOfModules = 3392;
 
     static constexpr uint16_t numRowsInRoc = 80;
     static constexpr uint16_t numColsInRoc = 52;
