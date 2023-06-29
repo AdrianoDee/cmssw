@@ -86,28 +86,47 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
   // Count strip hits
   size_t nStripHits = 0;
   for (const auto& detSet : *stripRecHitHandle) {
-    GluedGeomDet* det = trackerGeometry->idToDet(detSet.detId());
+    const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
     if (det->stereoDet()->index() < TrackerTraits::numberOfModules)
         nStripHits += detSet.size();
   }
 
-  size_t nPixelHits = pixelRecHitSoAHandle->view().size();
+  size_t nPixelHits = pixelRecHitSoAHandle->view().nHits();
 
   // Create output collection with the right size
   TrackingRecHitSoAHost<TrackerTraits> result(
     nPixelHits + nStripHits, 
-    pixelRecHitSoAHandle->offsetBPIX2,
-    pixelRecHitSoAHandle->view().cpeParams(),
+    pixelRecHitSoAHandle->view().offsetBPIX2(),
+    &pixelRecHitSoAHandle->view().cpeParams(),
     pixelRecHitSoAHandle->view().hitsModuleStart().begin()
   );
 
   // Copy pixel data
-  std::copy(pixelRecHitSoAHandle->view().begin(), pixelRecHitSoAHandle->view().end(), result.view().begin());
+  std::copy(pixelRecHitSoAHandle->view().xLocal(), pixelRecHitSoAHandle->view().xLocal() + nPixelHits, result.view().xLocal());
+  std::copy(pixelRecHitSoAHandle->view().yLocal(), pixelRecHitSoAHandle->view().yLocal() + nPixelHits, result.view().yLocal());
+  std::copy(pixelRecHitSoAHandle->view().xerrLocal(), pixelRecHitSoAHandle->view().xerrLocal() + nPixelHits, result.view().xerrLocal());
+  std::copy(pixelRecHitSoAHandle->view().yerrLocal(), pixelRecHitSoAHandle->view().yerrLocal() + nPixelHits, result.view().yerrLocal());
+  std::copy(pixelRecHitSoAHandle->view().xGlobal(), pixelRecHitSoAHandle->view().xGlobal() + nPixelHits, result.view().xGlobal());
+  std::copy(pixelRecHitSoAHandle->view().yGlobal(), pixelRecHitSoAHandle->view().yGlobal() + nPixelHits, result.view().yGlobal());
+  std::copy(pixelRecHitSoAHandle->view().zGlobal(), pixelRecHitSoAHandle->view().zGlobal() + nPixelHits, result.view().zGlobal());
+  std::copy(pixelRecHitSoAHandle->view().rGlobal(), pixelRecHitSoAHandle->view().rGlobal() + nPixelHits, result.view().rGlobal());
+  std::copy(pixelRecHitSoAHandle->view().iphi(), pixelRecHitSoAHandle->view().iphi() + nPixelHits, result.view().iphi());
+  std::copy(pixelRecHitSoAHandle->view().chargeAndStatus(), pixelRecHitSoAHandle->view().chargeAndStatus() + nPixelHits, result.view().chargeAndStatus());
+  std::copy(pixelRecHitSoAHandle->view().clusterSizeX(), pixelRecHitSoAHandle->view().clusterSizeX() + nPixelHits, result.view().clusterSizeX());
+  std::copy(pixelRecHitSoAHandle->view().clusterSizeY(), pixelRecHitSoAHandle->view().clusterSizeY() + nPixelHits, result.view().clusterSizeY());
+  std::copy(pixelRecHitSoAHandle->view().detectorIndex(), pixelRecHitSoAHandle->view().detectorIndex() + nPixelHits, result.view().detectorIndex());
+  
+  // result.view().phiBinnerStorage() = pixelRecHitSoAHandle->view().phiBinnerStorage();
+  result.view().hitsModuleStart() = pixelRecHitSoAHandle->view().hitsModuleStart();
+  result.view().hitsLayerStart() = pixelRecHitSoAHandle->view().hitsLayerStart();
+  result.view().cpeParams() = pixelRecHitSoAHandle->view().cpeParams();
+  result.view().averageGeometry() = pixelRecHitSoAHandle->view().averageGeometry();
+  result.view().phiBinner() = pixelRecHitSoAHandle->view().phiBinner();
 
   // Loop over strip RecHits
   size_t i = 0;
   for (const auto& detSet : *stripRecHitHandle) {
-    GluedGeomDet* det = trackerGeometry->idToDet(detSet.detId());
+    const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
     if (det->stereoDet()->index() < TrackerTraits::numberOfModules)
       for (const auto& recHit : detSet) {
         result.view()[nPixelHits + i].xLocal() = recHit.localPosition().x();
@@ -131,8 +150,8 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
 
 }
 
-// using SiPixelRecHitSoAFromLegacyPhase1 = SiStripRecHitSoAHost<pixelTopology::Phase1>;
-// DEFINE_FWK_MODULE(SiPixelRecHitSoAFromLegacyPhase1);
+using SiStripRecHitSoAHostPhase1 = SiStripRecHitSoAHost<pixelTopology::Phase1>;
+DEFINE_FWK_MODULE(SiStripRecHitSoAHostPhase1);
 
 // using SiPixelRecHitSoAFromLegacyPhase2 = SiStripRecHitSoAHost<pixelTopology::Phase2>;
 // DEFINE_FWK_MODULE(SiPixelRecHitSoAFromLegacyPhase2);
