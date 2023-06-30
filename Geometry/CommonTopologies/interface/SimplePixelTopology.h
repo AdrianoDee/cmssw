@@ -423,7 +423,9 @@ namespace pixelTopology {
     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 8;
     static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
     static constexpr uint32_t maxDepth = 6;
-    static constexpr uint32_t numberOfLayers = 12;
+    static constexpr uint32_t numberOfPixelLayers = 10;
+    static constexpr uint32_t numberOfStripLayers = 2;
+    static constexpr uint32_t numberOfLayers = numberOfPixelLayers + numberOfStripLayers;
 
     static constexpr uint32_t maxSizeCluster = 1023;
 
@@ -465,6 +467,8 @@ namespace pixelTopology {
     static constexpr int maxDYPred = 20;
 
     static constexpr uint16_t numberOfModules = 3392;
+    static constexpr uint16_t numberOfPixelModules = phase1PixelTopology::layerStart[numberOfPixelLayers];
+    static constexpr uint16_t numberOfStripModules = numberOfModules - numberOfPixelModules;
 
     static constexpr uint16_t numRowsInRoc = 80;
     static constexpr uint16_t numColsInRoc = 52;
