@@ -45,7 +45,7 @@ private:
   const edm::EDGetTokenT<HitsOnHost> pixelRecHitSoAToken_;
   const edm::EDGetTokenT<HMSstorage> pixelModuleStartToken_;
   const edm::EDPutTokenT<HitsOnHost> tokenHit_;
-  const edm::EDPutTokenT<HMSstorage> tokenModuleStart_;
+  // const edm::EDPutTokenT<HMSstorage> tokenModuleStart_;
 };
 
 template <typename TrackerTraits>
@@ -54,9 +54,10 @@ SiStripRecHitSoAHost<TrackerTraits>::SiStripRecHitSoAHost(const edm::ParameterSe
     //   bsGetToken_{consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))},
       recHitToken_{consumes(iConfig.getParameter<edm::InputTag>("stripRecHitSource"))},
       pixelRecHitSoAToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSoASource"))},
-      pixelModuleStartToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelModuleStartSource"))},
-      tokenHit_{produces()},
-      tokenModuleStart_{produces()} {
+      // pixelModuleStartToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelModuleStartSource"))},
+      tokenHit_{produces()}
+      // tokenModuleStart_{produces()} 
+      {
 }
 
 template <typename TrackerTraits>
@@ -64,7 +65,7 @@ void SiStripRecHitSoAHost<TrackerTraits>::fillDescriptions(edm::ConfigurationDes
   edm::ParameterSetDescription desc;
 
 //   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
-  desc.add<edm::InputTag>("src", edm::InputTag("matchedRecHit"));
+  desc.add<edm::InputTag>("stripRecHitSource", edm::InputTag("matchedRecHit"));
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -117,37 +118,65 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
   std::copy(pixelRecHitSoAHandle->view().detectorIndex(), pixelRecHitSoAHandle->view().detectorIndex() + nPixelHits, result.view().detectorIndex());
   
   // result.view().phiBinnerStorage() = pixelRecHitSoAHandle->view().phiBinnerStorage();
-  result.view().hitsModuleStart() = pixelRecHitSoAHandle->view().hitsModuleStart();
-  result.view().hitsLayerStart() = pixelRecHitSoAHandle->view().hitsLayerStart();
+  std::copy(
+    pixelRecHitSoAHandle->view().hitsModuleStart().begin(),
+    pixelRecHitSoAHandle->view().hitsModuleStart().end(),
+    result.view().hitsModuleStart().begin()
+  );
+
+  std::copy(
+    pixelRecHitSoAHandle->view().hitsModuleStart().begin(),
+    pixelRecHitSoAHandle->view().hitsModuleStart().end(),
+    result.view().hitsModuleStart().begin()
+  );
+
   result.view().cpeParams() = pixelRecHitSoAHandle->view().cpeParams();
   result.view().averageGeometry() = pixelRecHitSoAHandle->view().averageGeometry();
   result.view().phiBinner() = pixelRecHitSoAHandle->view().phiBinner();
 
   // Loop over strip RecHits
   size_t i = 0;
+  std::vector<size_t> nHitsPerModule;
+  nHitsPerModule.reserve(TrackerTraits::numberOfStripModules + 1);
+  nHitsPerModule.push_back(pixelRecHitSoAHandle->view().hitsModuleStart().back());
+  
   for (const auto& detSet : *stripRecHitHandle) {
     const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
-    if (det->stereoDet()->index() < TrackerTraits::numberOfModules)
-      for (const auto& recHit : detSet) {
-        result.view()[nPixelHits + i].xLocal() = recHit.localPosition().x();
-        result.view()[nPixelHits + i].yLocal() = recHit.localPosition().y();
-        result.view()[nPixelHits + i].xerrLocal() = recHit.localPositionError().xx();
-        result.view()[nPixelHits + i].yerrLocal() = recHit.localPositionError().yy();
-        auto globalPosition = det->toGlobal(recHit.localPosition());
-        result.view()[nPixelHits + i].xGlobal() = globalPosition.x();
-        result.view()[nPixelHits + i].yGlobal() = globalPosition.y();
-        result.view()[nPixelHits + i].zGlobal() = globalPosition.z();
-        result.view()[nPixelHits + i].rGlobal() = globalPosition.transverse();
-        // result.view()[nPixelHits + i].clusterSizeX() = recHit.monoClusterRef().cluster_strip();
-        // result.view()[nPixelHits + i].clusterSizeY() = recHit.monoClusterRef().cluster_strip();
-        result.view()[nPixelHits + i].detectorIndex() = det->stereoDet()->index();
-        // ???
-        ++i;
-      }
+    if (det->stereoDet()->index() >= TrackerTraits::numberOfModules)
+      break;
+
+    nHitsPerModule.push_back(detSet.size());
+
+    for (const auto& recHit : detSet) {
+      result.view()[nPixelHits + i].xLocal() = recHit.localPosition().x();
+      result.view()[nPixelHits + i].yLocal() = recHit.localPosition().y();
+      result.view()[nPixelHits + i].xerrLocal() = recHit.localPositionError().xx();
+      result.view()[nPixelHits + i].yerrLocal() = recHit.localPositionError().yy();
+      auto globalPosition = det->toGlobal(recHit.localPosition());
+      result.view()[nPixelHits + i].xGlobal() = globalPosition.x();
+      result.view()[nPixelHits + i].yGlobal() = globalPosition.y();
+      result.view()[nPixelHits + i].zGlobal() = globalPosition.z();
+      result.view()[nPixelHits + i].rGlobal() = globalPosition.transverse();
+      // result.view()[nPixelHits + i].clusterSizeX() = recHit.monoClusterRef().cluster_strip();
+      // result.view()[nPixelHits + i].clusterSizeY() = recHit.monoClusterRef().cluster_strip();
+      result.view()[nPixelHits + i].detectorIndex() = det->stereoDet()->index();
+      // ???
+      ++i;
+    }
+  }
+  
+  std::partial_sum(
+    nHitsPerModule.begin(), 
+    nHitsPerModule.end(), 
+    result.view().hitsModuleStart().begin() + TrackerTraits::numberOfPixelModules - 1
+  );
+
+  for (auto layer = 0U; layer < TrackerTraits::numberOfStripLayers + 1; ++layer) {
+    result.view().hitsLayerStart()[TrackerTraits::numberOfPixelLayers + i] = 
+      result.view().hitsModuleStart()[TrackerTraits::layerStart[layer]];
   }
 
   iEvent.emplace(tokenHit_, std::move(result));
-
 }
 
 using SiStripRecHitSoAHostPhase1 = SiStripRecHitSoAHost<pixelTopology::Phase1>;
