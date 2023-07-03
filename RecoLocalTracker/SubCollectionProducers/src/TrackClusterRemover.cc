@@ -213,12 +213,14 @@ namespace {
     for (auto i = 0U; i < s; ++i) {
       std::cout << "Track " << i << std::endl;
       const reco::Track& track = tracks[i];
-      bool goodTk = (pquals) ? (*pquals)[i] & qualMask : track.quality(trackQuality_);
+      bool test;
+      test = (pquals) ? (*pquals)[i] & qualMask : track.quality(trackQuality_);
+      bool goodTk = true; // (pquals) ? (*pquals)[i] & qualMask : track.quality(trackQuality_);
       if (!goodTk)
         continue;
       if (track.hitPattern().trackerLayersWithMeasurement() < minNumberOfLayersWithMeasBeforeFiltering_)
         continue;
-      std::cout << "Good Track " << i << std::endl;
+      std::cout << "Good Track " << i << " - " << trackQuality_ << " - " << track.quality(trackQuality_) << " - " << test << std::endl;
       auto const& chi2sX5 = track.extra()->chi2sX5();
       assert(chi2sX5.size() == track.recHitsSize());
       auto hb = track.recHitsBegin();
