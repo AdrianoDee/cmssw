@@ -193,7 +193,7 @@ namespace gpuPixelDoublets {
       {
         if(hitMask[i])
         {
-          printf("Not Using Hit %d - %.2f - %.2f - %.2f \n",i,hh[i].xGlobal(),hh[i].yGlobal(),hh[i].zGlobal());
+          printf("Not Using Hit %d - %.4f - %.4f - %.4f \n",i,hh[i].xGlobal(),hh[i].yGlobal(),hh[i].zGlobal());
           continue;
         }
       }
