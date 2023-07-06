@@ -831,7 +831,7 @@ class PatatrackWorkflow(UpgradeWorkflow):
             ('2018' in key and fragment == "ZMM_13"),
             ('2021' in key and fragment == "ZMM_14" and 'FS' not in key),
             ('2023' in key and fragment == "ZMM_14" and 'FS' not in key),
-            ('2026' in key and fragment == "TTbar_14TeV" in self.suffix)
+            ('2026' in key and fragment == "TTbar_14TeV" and 'FS' not in key)
         ]
         result = any(selected) and hasHarvest
 
@@ -851,6 +851,8 @@ class PatatrackWorkflow(UpgradeWorkflow):
               stepDict[stepName][k] = None
             else:
               stepDict[stepName][k] = merge([self.__reco, stepDict[step][k]])
+            if 'Phase2' in stepDict[stepName][k]['--era'] and 'DQM:@standardDQM' in stepDict[stepName][k]['-s']:
+              stepDict[stepName][k]['-s'] = stepDict[stepName][k]['-s'].replace('DQM:@standardDQM','DQM:@phase2')
         elif 'MiniAOD' in step:
             if self.__mini is None:
               stepDict[stepName][k] = None
