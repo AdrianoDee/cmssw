@@ -364,7 +364,7 @@ postProcessorTrackSummaryTrackingOnly = postProcessorTrackSummary.clone()
 postProcessorTrackSummaryTrackingOnly.subDirs.extend(["Tracking/TrackBHadron", "Tracking/TrackSeeding", "Tracking/PixelTrack", "Tracking/PixelTrackFromPV", "Tracking/PixelTrackFromPVAllTP", "Tracking/PixelTrackBHadron"])
 
 postProcessorTrackTrackingOnlyHIon = postProcessorTrackTrackingOnly.clone()
-postProcessorTrackSummaryTrackingOnlyHIon.subDirs.extend(["Tracking/HIPixelTrack/*"])
+postProcessorTrackTrackingOnlyHIon.subDirs.extend(["Tracking/HIPixelTrack/*"])
 
 postProcessorTrackSummaryTrackingOnlyHIon = postProcessorTrackSummaryTrackingOnly.clone()
 postProcessorTrackSummaryTrackingOnlyHIon.subDirs.extend(["Tracking/HIPixelTrack"])
