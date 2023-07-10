@@ -1,0 +1,15 @@
+<class name="edm::DetSetVector<SiStripRecHit2D>">
+  <!-- Add any additional specifications or transient members if needed -->
+</class>
+
+<class name="edm::Wrapper<edm::DetSetVector<SiStripRecHit2D>>">
+  <!-- Add any additional specifications or transient members if needed -->
+</class>
+<class name="edm::DetSetVector<SiStripCluster>">
+</class>
+<class name="edm::Wrapper<edm::DetSetVector<SiStripCluster>>">
+</class>
+<class name="SiStripRecHitConverter" />
+<class name="SiStripRecHit2D" />
+<class name="SiStripMatchedRecHit2D" />
+<class name="SiStripRecHit1D" />
