@@ -52,8 +52,8 @@ template <typename TrackerTraits>
 SiStripRecHitSoAHost<TrackerTraits>::SiStripRecHitSoAHost(const edm::ParameterSet& iConfig)
     : geomToken_(esConsumes()),
     //   bsGetToken_{consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))},
-      recHitToken_{consumes(iConfig.getParameter<edm::InputTag>("stripRecHitSource"))},
-      pixelRecHitSoAToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSoASource"))},
+      recHitToken_{consumes<SiStripMatchedRecHit2DCollection>(iConfig.getParameter<edm::InputTag>("stripRecHitSource"))},
+      pixelRecHitSoAToken_{consumes<HitsOnHost>(iConfig.getParameter<edm::InputTag>("pixelRecHitSoASource"))},
       // pixelModuleStartToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelModuleStartSource"))},
       tokenHit_{produces()}
       // tokenModuleStart_{produces()} 
@@ -65,15 +65,19 @@ void SiStripRecHitSoAHost<TrackerTraits>::fillDescriptions(edm::ConfigurationDes
   edm::ParameterSetDescription desc;
 
 //   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
-  desc.add<edm::InputTag>("stripRecHitSource", edm::InputTag("matchedRecHit"));
+  // desc.add<edm::InputTag>("stripRecHitSource", edm::InputTag("matchedRecHit"));
+  desc.setUnknown();
+  descriptions.addDefault(desc);
 
-  descriptions.addWithDefaultLabel(desc);
+  // descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename TrackerTraits>
 void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
                                                          edm::Event& iEvent,
                                                          const edm::EventSetup& es) const {
+  
+  std::cout << "produce" << std::endl;
   
   // Get the objects that we need
   const TrackerGeometry* trackerGeometry = &es.getData(geomToken_);
@@ -90,7 +94,9 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
     const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
     if (det->stereoDet()->index() < TrackerTraits::numberOfModules)
         nStripHits += detSet.size();
-  }
+  } 
+
+  std::cout << "nStripHits = " << nStripHits << std::endl;
 
   size_t nPixelHits = pixelRecHitSoAHandle->view().nHits();
 
