@@ -89,3 +89,6 @@ numWFIB = [10001.0,10002.0,10003.0,10004.0,10005.0,10006.0,10007.0,10008.0,10009
 for numWF in numWFIB:
     if not numWF in _upgrade_workflows: continue
     workflows[numWF] = _upgrade_workflows[numWF]
+
+# Patatrack Pixel Tracks on CPU
+workflows[160.501] = ['',['HydjetQ_MinBias_5362GeV_2023_ppReco','DIGIHI2023PPRECO','RAWPRIMESIMHI18','RECOHI2023PPRECOMB_PatatrackCPU','MINIHI2023PROD']]
