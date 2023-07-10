@@ -96,9 +96,10 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
         nStripHits += detSet.size();
   } 
 
-  std::cout << "nStripHits = " << nStripHits << std::endl;
-
   size_t nPixelHits = pixelRecHitSoAHandle->view().nHits();
+
+  std::cout << "nStripHits = " << nStripHits << std::endl;
+  std::cout << "nPixelHits = " << nPixelHits << std::endl;
 
   // Create output collection with the right size
   TrackingRecHitSoAHost<TrackerTraits> result(
@@ -122,36 +123,39 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
   std::copy(pixelRecHitSoAHandle->view().clusterSizeX(), pixelRecHitSoAHandle->view().clusterSizeX() + nPixelHits, result.view().clusterSizeX());
   std::copy(pixelRecHitSoAHandle->view().clusterSizeY(), pixelRecHitSoAHandle->view().clusterSizeY() + nPixelHits, result.view().clusterSizeY());
   std::copy(pixelRecHitSoAHandle->view().detectorIndex(), pixelRecHitSoAHandle->view().detectorIndex() + nPixelHits, result.view().detectorIndex());
-  
-  // result.view().phiBinnerStorage() = pixelRecHitSoAHandle->view().phiBinnerStorage();
-  std::copy(
-    pixelRecHitSoAHandle->view().hitsModuleStart().begin(),
-    pixelRecHitSoAHandle->view().hitsModuleStart().end(),
-    result.view().hitsModuleStart().begin()
-  );
+
+  std::copy(pixelRecHitSoAHandle->view().phiBinnerStorage(), pixelRecHitSoAHandle->view().phiBinnerStorage() + nPixelHits, result.view().phiBinnerStorage());
+
+  auto& hitsModuleStart = result.view().hitsModuleStart();
 
   std::copy(
     pixelRecHitSoAHandle->view().hitsModuleStart().begin(),
     pixelRecHitSoAHandle->view().hitsModuleStart().end(),
-    result.view().hitsModuleStart().begin()
+    hitsModuleStart.begin()
   );
 
   result.view().cpeParams() = pixelRecHitSoAHandle->view().cpeParams();
   result.view().averageGeometry() = pixelRecHitSoAHandle->view().averageGeometry();
   result.view().phiBinner() = pixelRecHitSoAHandle->view().phiBinner();
 
-  // Loop over strip RecHits
   size_t i = 0;
-  std::vector<size_t> nHitsPerModule;
-  nHitsPerModule.reserve(TrackerTraits::numberOfStripModules + 1);
-  nHitsPerModule.push_back(pixelRecHitSoAHandle->view().hitsModuleStart().back());
+  size_t lastIndex = TrackerTraits::numberOfPixelModules;
   
+  // Loop over strip RecHits
   for (const auto& detSet : *stripRecHitHandle) {
+
     const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
-    if (det->stereoDet()->index() >= TrackerTraits::numberOfModules)
+    size_t index = det->stereoDet()->index();
+    
+    if (index >= TrackerTraits::numberOfModules)
       break;
 
-    nHitsPerModule.push_back(detSet.size());
+    // no hits since lastIndex: hitsModuleStart[lastIndex:index] = hitsModuleStart[lastIndex]
+    for (auto j = lastIndex + 1; j < index; ++j)
+      hitsModuleStart[j] = hitsModuleStart[lastIndex];
+
+    hitsModuleStart[index] = hitsModuleStart[index - 1] + detSet.size();
+    lastIndex = index;
 
     for (const auto& recHit : detSet) {
       result.view()[nPixelHits + i].xLocal() = recHit.localPosition().x();
@@ -170,76 +174,14 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
       ++i;
     }
   }
-  
-  std::partial_sum(
-    nHitsPerModule.begin(), 
-    nHitsPerModule.end(), 
-    result.view().hitsModuleStart().begin() + TrackerTraits::numberOfPixelModules - 1
-  );
 
-  for (auto layer = 0U; layer < TrackerTraits::numberOfStripLayers + 1; ++layer) {
-    result.view().hitsLayerStart()[TrackerTraits::numberOfPixelLayers + i] = 
+  for (auto j = lastIndex + 1; j <= TrackerTraits::numberOfModules; ++j)
+    hitsModuleStart[j] = hitsModuleStart[lastIndex];
+
+
+  for (auto layer = 0U; layer <= TrackerTraits::numberOfLayers; ++layer) {
+    result.view().hitsLayerStart()[layer] = 
       result.view().hitsModuleStart()[TrackerTraits::layerStart[layer]];
-  }
-
-  using PhiBinner = typename TrackingRecHitSoA<TrackerTraits>::PhiBinner;
-
-  auto& hh = result.view();
-
-  auto const& __restrict__ phiBinner = hh.phiBinner();
-  uint32_t const* __restrict__ offsets = hh.hitsLayerStart().data();
-  assert(offsets);
-
-  auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };
-
-  // nPairsMax to be optimized later (originally was 64).
-  // If it should be much bigger, consider using a block-wide parallel prefix scan,
-  // e.g. see  https://nvlabs.github.io/cub/classcub_1_1_warp_scan.html
-
-  __shared__ uint32_t innerLayerCumulativeSize[TrackerTraits::nPairs];
-  __shared__ uint32_t ntot;
-  if (threadIdx.y == 0 && threadIdx.x == 0) {
-    innerLayerCumulativeSize[0] = layerSize(TrackerTraits::layerPairs[0]);
-    for (uint32_t i = 1; i < TrackerTraits::nPairs; ++i) {
-      innerLayerCumulativeSize[i] = innerLayerCumulativeSize[i - 1] + layerSize(TrackerTraits::layerPairs[2 * i]);
-    }
-    ntot = innerLayerCumulativeSize[TrackerTraits::nPairs - 1];
-  }
-  // __syncthreads();
-
-  // x runs faster
-  auto idy = blockIdx.y * blockDim.y + threadIdx.y;
-  auto first = threadIdx.x;
-  auto stride = blockDim.x;
-
-  uint32_t pairLayerId = 0;  // cannot go backward
-
-  for (auto j = idy; j < ntot; j += blockDim.y * gridDim.y) {
-    while (j >= innerLayerCumulativeSize[pairLayerId++])
-      ;
-    --pairLayerId;  // move to lower_bound ??
-
-    assert(pairLayerId < TrackerTraits::nPairs);
-    assert(j < innerLayerCumulativeSize[pairLayerId]);
-    assert(0 == pairLayerId || j >= innerLayerCumulativeSize[pairLayerId - 1]);
-
-    uint8_t inner = TrackerTraits::layerPairs[2 * pairLayerId];
-    uint8_t outer = TrackerTraits::layerPairs[2 * pairLayerId + 1];
-    assert(outer > inner);
-
-    auto hoff = PhiBinner::histOff(outer);
-    auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
-    i += offsets[inner];
-
-    printf("i = %d", i);
-    printf("inner = %d", inner);
-    printf("offsets[inner] = %d", offsets[inner]);
-    printf("offsets[inner + 1] = %d", offsets[inner + 1]);
-
-    // assert(i >= offsets[inner]);
-    std::cout << (i >= offsets[inner]) << std::endl;
-    // assert(i < offsets[inner + 1]);
-    std::cout << (i < offsets[inner + 1]) << std::endl;
   }
 
   iEvent.emplace(tokenHit_, std::move(result));
