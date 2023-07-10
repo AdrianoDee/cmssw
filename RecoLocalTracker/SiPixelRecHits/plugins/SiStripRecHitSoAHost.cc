@@ -182,6 +182,66 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
       result.view().hitsModuleStart()[TrackerTraits::layerStart[layer]];
   }
 
+  using PhiBinner = typename TrackingRecHitSoA<TrackerTraits>::PhiBinner;
+
+  auto& hh = result.view();
+
+  auto const& __restrict__ phiBinner = hh.phiBinner();
+  uint32_t const* __restrict__ offsets = hh.hitsLayerStart().data();
+  assert(offsets);
+
+  auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };
+
+  // nPairsMax to be optimized later (originally was 64).
+  // If it should be much bigger, consider using a block-wide parallel prefix scan,
+  // e.g. see  https://nvlabs.github.io/cub/classcub_1_1_warp_scan.html
+
+  __shared__ uint32_t innerLayerCumulativeSize[TrackerTraits::nPairs];
+  __shared__ uint32_t ntot;
+  if (threadIdx.y == 0 && threadIdx.x == 0) {
+    innerLayerCumulativeSize[0] = layerSize(TrackerTraits::layerPairs[0]);
+    for (uint32_t i = 1; i < TrackerTraits::nPairs; ++i) {
+      innerLayerCumulativeSize[i] = innerLayerCumulativeSize[i - 1] + layerSize(TrackerTraits::layerPairs[2 * i]);
+    }
+    ntot = innerLayerCumulativeSize[TrackerTraits::nPairs - 1];
+  }
+  // __syncthreads();
+
+  // x runs faster
+  auto idy = blockIdx.y * blockDim.y + threadIdx.y;
+  auto first = threadIdx.x;
+  auto stride = blockDim.x;
+
+  uint32_t pairLayerId = 0;  // cannot go backward
+
+  for (auto j = idy; j < ntot; j += blockDim.y * gridDim.y) {
+    while (j >= innerLayerCumulativeSize[pairLayerId++])
+      ;
+    --pairLayerId;  // move to lower_bound ??
+
+    assert(pairLayerId < TrackerTraits::nPairs);
+    assert(j < innerLayerCumulativeSize[pairLayerId]);
+    assert(0 == pairLayerId || j >= innerLayerCumulativeSize[pairLayerId - 1]);
+
+    uint8_t inner = TrackerTraits::layerPairs[2 * pairLayerId];
+    uint8_t outer = TrackerTraits::layerPairs[2 * pairLayerId + 1];
+    assert(outer > inner);
+
+    auto hoff = PhiBinner::histOff(outer);
+    auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
+    i += offsets[inner];
+
+    printf("i = %d", i);
+    printf("inner = %d", inner);
+    printf("offsets[inner] = %d", offsets[inner]);
+    printf("offsets[inner + 1] = %d", offsets[inner + 1]);
+
+    // assert(i >= offsets[inner]);
+    std::cout << (i >= offsets[inner]) << std::endl;
+    // assert(i < offsets[inner + 1]);
+    std::cout << (i < offsets[inner + 1]) << std::endl;
+  }
+
   iEvent.emplace(tokenHit_, std::move(result));
 }
 
