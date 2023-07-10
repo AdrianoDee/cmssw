@@ -1,0 +1,12 @@
+<use name="RecoLocalTracker/SiStripRecHitConverter"/>
+<use name="DataFormats/SiStripCluster"/>
+<use name="DataFormats/GeometryVector"/>
+<use name="CalibTracker/Records"/>
+<use   name="root"/>
+<use   name="rootcore"/>
+<use   name="roottmva"/>
+
+<library file="RecHitAnalyzer/RecHitAnalyzer.cc" name="RecHitAnalyzer">
+  <flags EDM_PLUGIN="1"/>
+</library>
+
