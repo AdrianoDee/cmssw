@@ -188,6 +188,11 @@ namespace gpuPixelDoublets {
       auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
       i += offsets[inner];
 
+      printf("i = %d", i);
+      printf("inner = %d", inner);
+      printf("offsets[inner] = %d", offsets[inner]);
+      printf("offsets[inner + 1] = %d", offsets[inner + 1]);
+
       assert(i >= offsets[inner]);
       assert(i < offsets[inner + 1]);
 
