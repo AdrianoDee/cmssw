@@ -195,8 +195,11 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
 
     hits.resize(nHits);
     auto b = hitIndices.begin(it);
-    for (int iHit = 0; iHit < nHits; ++iHit)
+    for (int iHit = 0; iHit < nHits; ++iHit) {
       hits[iHit] = hitmap[*(b + iHit)];
+      if (hitmap.size() >= *(b + iHit))
+        std::cout << "Invalid memory access" << std::endl;
+    }
 
     // mind: this values are respect the beamspot!
 
