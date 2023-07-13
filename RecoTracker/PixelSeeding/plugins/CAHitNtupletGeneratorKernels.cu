@@ -1,7 +1,7 @@
 #include "RecoTracker/PixelSeeding/plugins/CAHitNtupletGeneratorKernelsImpl.h"
 #include <mutex>
 
-// #define NTUPLE_DEBUG
+#define NTUPLE_DEBUG
 // #define GPU_DEBUG
 
 template <typename TrackerTraits>

@@ -2,7 +2,7 @@
 // Original Author: Felice Pantaleo, CERN
 //
 
-// #define NTUPLE_DEBUG
+#define NTUPLE_DEBUG
 // #define GPU_DEBUG
 
 #include <cmath>

@@ -2,6 +2,8 @@
 // #include <cuda_runtime.h>
 
 // #include "CUDADataFormats/BeamSpot/interface/BeamSpotCUDA.h"
+#include <cstdint>
+#include <memory>
 #include "CUDADataFormats/TrackingRecHit/interface/TrackingRecHitSoAHost.h"
 #include "CUDADataFormats/Common/interface/PortableHostCollection.h"
 #include "CUDADataFormats/Common/interface/HostProduct.h"
@@ -11,6 +13,7 @@
 #include "DataFormats/SiPixelCluster/interface/SiPixelCluster.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiStripMatchedRecHit2DCollection.h"
+#include "DataFormats/Math/interface/approx_atan2.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -43,7 +46,8 @@ private:
 //   const edm::EDGetTokenT<reco::BeamSpot> bsGetToken_;
   const edm::EDGetTokenT<SiStripMatchedRecHit2DCollection> recHitToken_;
   const edm::EDGetTokenT<HitsOnHost> pixelRecHitSoAToken_;
-  const edm::EDGetTokenT<HMSstorage> pixelModuleStartToken_;
+  // const edm::EDGetTokenT<HMSstorage> pixelModuleStartToken_;
+  const edm::EDPutTokenT<HMSstorage> moduleStartToken_;
   const edm::EDPutTokenT<HitsOnHost> tokenHit_;
   // const edm::EDPutTokenT<HMSstorage> tokenModuleStart_;
 };
@@ -51,12 +55,11 @@ private:
 template <typename TrackerTraits>
 SiStripRecHitSoAHost<TrackerTraits>::SiStripRecHitSoAHost(const edm::ParameterSet& iConfig)
     : geomToken_(esConsumes()),
-    //   bsGetToken_{consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))},
       recHitToken_{consumes<SiStripMatchedRecHit2DCollection>(iConfig.getParameter<edm::InputTag>("stripRecHitSource"))},
       pixelRecHitSoAToken_{consumes<HitsOnHost>(iConfig.getParameter<edm::InputTag>("pixelRecHitSoASource"))},
-      // pixelModuleStartToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelModuleStartSource"))},
-      tokenHit_{produces()}
-      // tokenModuleStart_{produces()} 
+      // pixelModuleStartToken_{consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitSoASource"))},
+      moduleStartToken_{produces<HMSstorage>()},
+      tokenHit_{produces<HitsOnHost>()}
       {
 }
 
@@ -64,12 +67,12 @@ template <typename TrackerTraits>
 void SiStripRecHitSoAHost<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
-//   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
-  // desc.add<edm::InputTag>("stripRecHitSource", edm::InputTag("matchedRecHit"));
-  desc.setUnknown();
-  descriptions.addDefault(desc);
+  desc.add<edm::InputTag>("stripRecHitSource", edm::InputTag("siStripMatchedRecHits", "matchedRecHit"));
+  desc.add<edm::InputTag>("pixelRecHitSoASource", edm::InputTag("siPixelRecHitsPreSplittingSoA"));
+  descriptions.addWithDefaultLabel(desc);
 
-  // descriptions.addWithDefaultLabel(desc);
+  // desc.setUnknown();
+  // descriptions.addDefault(desc);
 }
 
 template <typename TrackerTraits>
@@ -167,8 +170,11 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
       result.view()[nPixelHits + i].yGlobal() = globalPosition.y();
       result.view()[nPixelHits + i].zGlobal() = globalPosition.z();
       result.view()[nPixelHits + i].rGlobal() = globalPosition.transverse();
-      // result.view()[nPixelHits + i].clusterSizeX() = recHit.monoClusterRef().cluster_strip();
-      // result.view()[nPixelHits + i].clusterSizeY() = recHit.monoClusterRef().cluster_strip();
+      result.view()[nPixelHits + i].iphi() = unsafe_atan2s<7>(globalPosition.y(), globalPosition.x());
+      // result.view()[nPixelHits + i].chargeAndStatus().charge = ?
+      // result.view()[nPixelHits + i].chargeAndStatus().status = ?
+      // result.view()[nPixelHits + i].clusterSizeX() = ?
+      // result.view()[nPixelHits + i].clusterSizeY() = ?
       result.view()[nPixelHits + i].detectorIndex() = det->stereoDet()->index();
       // ???
       ++i;
@@ -181,10 +187,23 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
 
   for (auto layer = 0U; layer <= TrackerTraits::numberOfLayers; ++layer) {
     result.view().hitsLayerStart()[layer] = 
-      result.view().hitsModuleStart()[TrackerTraits::layerStart[layer]];
+      hitsModuleStart[TrackerTraits::layerStart[layer]];
   }
 
+  cms::cuda::fillManyFromVector(&(result.view().phiBinner()),
+                                TrackerTraits::numberOfLayers,
+                                result.view().iphi(),
+                                result.view().hitsLayerStart().data(),
+                                result.view().nHits(),
+                                256,
+                                result.view().phiBinnerStorage());
+
+  
+  auto hms = std::make_unique<uint32_t[]>(hitsModuleStart.size());
+  std::copy(hitsModuleStart.begin(), hitsModuleStart.end(), hms.get());
+
   iEvent.emplace(tokenHit_, std::move(result));
+  iEvent.emplace(moduleStartToken_, HMSstorage(std::move(hms)));
 }
 
 using SiStripRecHitSoAHostPhase1 = SiStripRecHitSoAHost<pixelTopology::Phase1>;

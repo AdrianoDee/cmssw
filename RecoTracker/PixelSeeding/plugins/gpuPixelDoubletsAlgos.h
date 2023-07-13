@@ -204,11 +204,21 @@ namespace gpuPixelDoublets {
 
       auto mez = hh[i].zGlobal();
 
-      if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
+      if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId]) {
+        if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+          printf("Z-cut failed for strip hit\n");
         continue;
+      }
 
-      if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(hh, i))
+      if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(hh, i)) {
+        if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+          printf("ClusterCut failed for strip hit\n");
         continue;
+      }
+
+      
+      // if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+      //     printf("Strip hit passed Z-cut and doClusterCut!\n");
 
       auto mep = hh[i].iphi();
       auto mer = hh[i].rGlobal();
@@ -249,33 +259,59 @@ namespace gpuPixelDoublets {
         auto const* __restrict__ p = phiBinner.begin(kk + hoff);
         auto const* __restrict__ e = phiBinner.end(kk + hoff);
         p += first;
+
+        if (p >= e) {
+          if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+            printf("phiBinner empty for strip layer\n");
+        }
+
         for (; p < e; p += stride) {
           auto oi = __ldg(p);
           assert(oi >= offsets[outer]);
           assert(oi < offsets[outer + 1]);
           auto mo = hh[oi].detectorIndex();
 
-          if (mo > gpuClustering::maxNumModules)
+          if (mo > gpuClustering::maxNumModules){
+            if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+              printf("maxNumModules cut failed for strip hit\n");
+            continue;
+          }
             continue;  //    invalid
 
-          if (doZ0Cut && z0cutoff(oi))
+          if (doZ0Cut && z0cutoff(oi)) {
+            if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+              printf("Z0Cut failed for strip hit\n");
             continue;
+          }
           auto mop = hh[oi].iphi();
           uint16_t idphi = std::min(std::abs(int16_t(mop - mep)), std::abs(int16_t(mep - mop)));
-          if (idphi > iphicut)
+          if (idphi > iphicut){
+            if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+              printf("iphicut failed for strip hit\n");
             continue;
+          }
 
-          if (doClusterCut && cuts.zSizeCut(hh, i, oi))
+          if (doClusterCut && cuts.zSizeCut(hh, i, oi)){
+            if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+              printf("zSizeCut failed for strip hit\n");
             continue;
-          if (doPtCut && ptcut(oi, idphi))
+          }
+          if (doPtCut && ptcut(oi, idphi)){
+            if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+              printf("ptcut failed for strip hit\n");
             continue;
+          }
 
           auto ind = atomicAdd(nCells, 1);
           if (ind >= maxNumOfDoublets) {
+            if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+              printf("maxNumOfDoublets cut failed for strip hit\n");
             atomicSub(nCells, 1);
             break;
           }  // move to SimpleVector??
           // int layerPairId, int doubletId, int innerHitId, int outerHitId)
+          if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+            printf("Creating hit pair with strip hit\n");
           cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, i, oi);
           isOuterHitOfCell[oi].push_back(ind);
 #ifdef GPU_DEBUG

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/Common/interface/OrphanHandle.h"
 #include "DataFormats/TrackReco/interface/Track.h"
@@ -7,6 +8,7 @@
 #include "DataFormats/TrajectoryState/interface/LocalTrajectoryParameters.h"
 #include "DataFormats/GeometrySurface/interface/Plane.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
+#include "DataFormats/TrackerRecHit2D/interface/SiStripMatchedRecHit2DCollection.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -35,6 +37,7 @@
 #include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousHost.h"
 #include "CUDADataFormats/Track/interface/TrackSoAHeterogeneousDevice.h"
 #include "CUDADataFormats/Track/interface/PixelTrackUtilities.h"
+#include "xercesc/util/regx/Op.hpp"
 
 /**
  * This class creates "leagcy"  reco::Track
@@ -61,7 +64,8 @@ private:
   // Event Data tokens
   const edm::EDGetTokenT<reco::BeamSpot> tBeamSpot_;
   const edm::EDGetTokenT<TrackSoAHost> tokenTrack_;
-  const edm::EDGetTokenT<SiPixelRecHitCollectionNew> cpuHits_;
+  const edm::EDGetTokenT<SiPixelRecHitCollectionNew> cpuPixelHits_;
+  const edm::EDGetTokenT<SiStripMatchedRecHit2DCollection> cpuStripHits_;
   const edm::EDGetTokenT<HMSstorage> hmsToken_;
   // Event Setup tokens
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> idealMagneticFieldToken_;
@@ -75,8 +79,9 @@ template <typename TrackerTraits>
 PixelTrackProducerFromSoAT<TrackerTraits>::PixelTrackProducerFromSoAT(const edm::ParameterSet &iConfig)
     : tBeamSpot_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
       tokenTrack_(consumes(iConfig.getParameter<edm::InputTag>("trackSrc"))),
-      cpuHits_(consumes<SiPixelRecHitCollectionNew>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
-      hmsToken_(consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
+      cpuPixelHits_(consumes<SiPixelRecHitCollectionNew>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
+      cpuStripHits_(consumes<SiStripMatchedRecHit2DCollection>(iConfig.getParameter<edm::InputTag>("stripRecHitLegacySrc"))),
+      hmsToken_(consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("hitModuleStartSrc"))),
       idealMagneticFieldToken_(esConsumes()),
       ttTopoToken_(esConsumes()),
       minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
@@ -104,6 +109,8 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::fillDescriptions(edm::Configurat
   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
   desc.add<edm::InputTag>("trackSrc", edm::InputTag("pixelTracksSoA"));
   desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplittingLegacy"));
+  desc.add<edm::InputTag>("hitModuleStartSrc", edm::InputTag("siPixelRecHitsPreSplittingLegacy"));
+  desc.add<edm::InputTag>("stripRecHitLegacySrc", edm::InputTag("siStripMatchedRecHits", "matchedRecHit"));
   desc.add<int>("minNumberOfHits", 0);
   desc.add<std::string>("minQuality", "loose");
   descriptions.addWithDefaultLabel(desc);
@@ -137,17 +144,44 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
   const auto &bsh = iEvent.get(tBeamSpot_);
   GlobalPoint bs(bsh.x0(), bsh.y0(), bsh.z0());
 
-  auto const &rechits = iEvent.get(cpuHits_);
-  std::vector<TrackingRecHit const *> hitmap;
-  auto const &rcs = rechits.data();
-  auto nhits = rcs.size();
+  auto const &stripRechitsDSV = iEvent.get(cpuStripHits_);
+  auto const &stripRechits = stripRechitsDSV.data();
+  // auto nStripHits = stripRechits.size();
+  // auto nStripHits = 0u;
+  // for (const auto& moduleHits : stripRechitsDSV) {
+  //   if (moduleHits[0].det()->index() > TrackerTraits::numberOfModules)
+  //     break;
+  //   nStripHits += moduleHits.size();
+  // }
 
-  hitmap.resize(nhits, nullptr);
+  auto const &pixelRecHitsDSV = iEvent.get(cpuPixelHits_);
+  auto const &pixelRechits = pixelRecHitsDSV.data();
+  auto nPixelHits = pixelRechits.size();
 
   auto const *hitsModuleStart = iEvent.get(hmsToken_).get();
   auto fc = hitsModuleStart;
 
-  for (auto const &h : rcs) {
+  auto nStripHits = hitsModuleStart[TrackerTraits::numberOfModules] - hitsModuleStart[TrackerTraits::numberOfPixelModules];
+
+  auto nhits = nPixelHits + nStripHits;
+
+  std::vector<TrackingRecHit const *> hitmap(nhits, nullptr);
+
+  std::cout <<
+    "nPixelHits = " << nPixelHits <<
+    ", nStripHits = " << nStripHits <<
+    ", nhits = " << nhits << 
+    ", numberOfPixelModules = " << TrackerTraits::numberOfPixelModules << 
+    ", numberOfModules = " << TrackerTraits::numberOfModules << 
+    ", hitModuleStart[numberOfModules] = " << hitsModuleStart[TrackerTraits::numberOfModules] 
+  << std::endl;
+
+  // std::cout << "hitsModuleStart = ";
+  // for (auto i = 0u; i < TrackerTraits::numberOfModules; ++i)
+  //   std::cout << hitsModuleStart[i] << " ";
+  // std::cout << std::endl;
+
+  for (auto const &h : pixelRechits) {
     auto const &thit = static_cast<BaseTrackerRecHit const &>(h);
     auto detI = thit.det()->index();
     auto const &clus = thit.firstClusterRef();
@@ -160,6 +194,35 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
     hitmap[i] = &h;
   }
 
+  for (const auto& moduleHits : stripRechitsDSV) {
+    auto moduleIdx = moduleHits[0].det()->index();
+    if (moduleIdx < 0 || moduleIdx > TrackerTraits::numberOfModules)
+      continue;
+    for (auto i = 0u; i < moduleHits.size(); ++i) {
+      auto j = hitsModuleStart[moduleIdx] + i;
+      if (j > hitmap.size())
+        std::cout << "invalid memory access: " <<
+          "i = " << i <<
+          ", j = " << j << 
+          ", moduleIdx = " << moduleIdx << std::endl;
+      else
+        hitmap[j] = &*(moduleHits.begin() + i);
+    }
+  }
+
+  // for (auto const &h : stripRechits) {
+  //   auto const &thit = static_cast<BaseTrackerRecHit const &>(h);
+  //   auto detI = thit.det()->index();
+  //   auto const &clus = thit.firstClusterRef();
+  //   assert(clus.isStrip());
+  //   auto i = fc[detI] + clus.stripCluster().
+  //   if (i >= hitmap.size())
+  //     hitmap.resize(i + 256, nullptr);  // only in case of hit overflow in one module
+
+  //   assert(nullptr == hitmap[i]);
+  //   hitmap[i] = &h;
+  // }
+
   std::vector<const TrackingRecHit *> hits;
   hits.reserve(5);
 
@@ -167,6 +230,9 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
   auto const *quality = tsoa.view().quality();
   auto const &hitIndices = tsoa.view().hitIndices();
   auto nTracks = tsoa.view().nTracks();
+
+  std::cout << "max hit index = " << *std::max_element(hitIndices.begin(), hitIndices.end()) << std::endl;
+  std::cout << "hitmap.size() = " << hitmap.size() << std::endl;
 
   tracks.reserve(nTracks);
 
@@ -196,9 +262,14 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
     hits.resize(nHits);
     auto b = hitIndices.begin(it);
     for (int iHit = 0; iHit < nHits; ++iHit) {
-      hits[iHit] = hitmap[*(b + iHit)];
-      if (hitmap.size() >= *(b + iHit))
-        std::cout << "Invalid memory access" << std::endl;
+      size_t idx = *(b + iHit);
+      hits[iHit] = hitmap[idx];
+      if (hitmap.size() <= idx) {
+        std::cout << "Invalid memory access: " <<
+          "it = " << it <<
+          ", ihit = " << iHit <<
+          ", idx = " << idx << std::endl;
+      }
     }
 
     // mind: this values are respect the beamspot!

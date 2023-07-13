@@ -130,6 +130,7 @@ namespace phase1PixelTopology {
   using pixelTopology::phi0p05;
   using pixelTopology::phi0p06;
   using pixelTopology::phi0p07;
+  constexpr short phi5deg = 1820;
 
   constexpr uint32_t numberOfLayers = 28;
   constexpr int nPairs = 21 + 4 + 10 ; // without jump + jumping barrel + jumping forward 
@@ -186,22 +187,22 @@ namespace phase1PixelTopology {
                                                phi0p05,
                                                phi0p05,
                                                phi0p05,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07,
-                                               phi0p07};
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg,
+                                               phi5deg};
   HOST_DEVICE_CONSTANT float minz[nPairs] = {
       -20., 0., -30., -22., 10., -30., -70., -70., -22., 15., -30, -70., -70., -20., -22., 0, -30., -70., -70.,
       -22.,-70.,-70.,-70.,-70.,-70.,-70.,-80.,-22.,-22.,-70.,-70.,-70.,-70.,-70.,-70.};
@@ -367,6 +368,8 @@ namespace pixelTopology {
     static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;
     static constexpr uint32_t maxDepth = 12;
     static constexpr uint32_t numberOfLayers = 28;
+    static constexpr uint32_t numberOfPixelLayers = 28;
+    static constexpr uint32_t numberOfStripLayers = 0;
 
     static constexpr uint32_t maxSizeCluster = 2047;
 
@@ -408,6 +411,8 @@ namespace pixelTopology {
     static constexpr int maxDYPred = 20;
 
     static constexpr uint16_t numberOfModules = 3892;
+    static constexpr uint16_t numberOfPixelModules = 3892;
+    static constexpr uint16_t numberOfStripModules = 0;
 
     static constexpr uint16_t clusterBinning = 1024;
     static constexpr uint16_t clusterBits = 10;
