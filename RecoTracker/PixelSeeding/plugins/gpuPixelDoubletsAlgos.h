@@ -260,9 +260,11 @@ namespace gpuPixelDoublets {
         auto const* __restrict__ e = phiBinner.end(kk + hoff);
         p += first;
 
-        if (p >= e) {
-          if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)
+        if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers) {
+          if (p >= e) 
             printf("phiBinner empty for strip layer\n");
+          else
+            printf("phiBinner NOT empty for strip layer\n");
         }
 
         for (; p < e; p += stride) {
@@ -276,7 +278,6 @@ namespace gpuPixelDoublets {
               printf("maxNumModules cut failed for strip hit\n");
             continue;
           }
-            continue;  //    invalid
 
           if (doZ0Cut && z0cutoff(oi)) {
             if (inner > TrackerTraits::numberOfPixelLayers || outer > TrackerTraits::numberOfPixelLayers)

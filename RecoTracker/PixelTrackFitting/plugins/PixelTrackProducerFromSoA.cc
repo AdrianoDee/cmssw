@@ -11,6 +11,7 @@
 #include "DataFormats/TrackerRecHit2D/interface/SiStripMatchedRecHit2DCollection.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/global/EDProducer.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
@@ -20,8 +21,11 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "FWCore/PluginManager/interface/ModuleDef.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
+#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
+#include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
+#include "Geometry/CommonTopologies/interface/GluedGeomDet.h"
 
 #include "TrackingTools/AnalyticalJacobians/interface/JacobianLocalToCurvilinear.h"
 #include "TrackingTools/TrajectoryParametrization/interface/GlobalTrajectoryParameters.h"
@@ -67,6 +71,7 @@ private:
   const edm::EDGetTokenT<SiPixelRecHitCollectionNew> cpuPixelHits_;
   const edm::EDGetTokenT<SiStripMatchedRecHit2DCollection> cpuStripHits_;
   const edm::EDGetTokenT<HMSstorage> hmsToken_;
+  const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
   // Event Setup tokens
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> idealMagneticFieldToken_;
   const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> ttTopoToken_;
@@ -82,6 +87,7 @@ PixelTrackProducerFromSoAT<TrackerTraits>::PixelTrackProducerFromSoAT(const edm:
       cpuPixelHits_(consumes<SiPixelRecHitCollectionNew>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
       cpuStripHits_(consumes<SiStripMatchedRecHit2DCollection>(iConfig.getParameter<edm::InputTag>("stripRecHitLegacySrc"))),
       hmsToken_(consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("hitModuleStartSrc"))),
+      geomToken_(esConsumes<TrackerGeometry, TrackerDigiGeometryRecord>()),
       idealMagneticFieldToken_(esConsumes()),
       ttTopoToken_(esConsumes()),
       minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
@@ -144,6 +150,8 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
   const auto &bsh = iEvent.get(tBeamSpot_);
   GlobalPoint bs(bsh.x0(), bsh.y0(), bsh.z0());
 
+  edm::ESHandle<TrackerGeometry> theTrackerGeometry = iSetup.getHandle(geomToken_);
+
   auto const &stripRechitsDSV = iEvent.get(cpuStripHits_);
   auto const &stripRechits = stripRechitsDSV.data();
   // auto nStripHits = stripRechits.size();
@@ -195,17 +203,21 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
   }
 
   for (const auto& moduleHits : stripRechitsDSV) {
-    auto moduleIdx = moduleHits[0].det()->index();
-    if (moduleIdx < 0 || moduleIdx > TrackerTraits::numberOfModules)
+    const GluedGeomDet* theStripDet = dynamic_cast<const GluedGeomDet*>(theTrackerGeometry->idToDet(moduleHits[0].geographicalId()));
+    int moduleIdx = (theStripDet->stereoDet())->index();
+    // auto moduleIdx = moduleHits[0].stereoHit().det()->index();
+    if (moduleIdx < 0 || moduleIdx > TrackerTraits::numberOfModules) {
+      std::cout << "Invalid module index: " << moduleIdx << std::endl;
       continue;
+    }
     for (auto i = 0u; i < moduleHits.size(); ++i) {
       auto j = hitsModuleStart[moduleIdx] + i;
-      if (j > hitmap.size())
-        std::cout << "invalid memory access: " <<
-          "i = " << i <<
-          ", j = " << j << 
-          ", moduleIdx = " << moduleIdx << std::endl;
-      else
+      // if (j > hitmap.size())
+      //   std::cout << "invalid memory access: " <<
+      //     "i = " << i <<
+      //     ", j = " << j << 
+      //     ", moduleIdx = " << moduleIdx << std::endl;
+      // else
         hitmap[j] = &*(moduleHits.begin() + i);
     }
   }
