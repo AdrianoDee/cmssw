@@ -174,10 +174,12 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
   auto nhits = nPixelHits + nStripHits;
 
   std::vector<TrackingRecHit const *> hitmap(nhits, nullptr);
+  std::vector<int> counter(nhits, 0);
 
   std::cout <<
     "nPixelHits = " << nPixelHits <<
     ", nStripHits = " << nStripHits <<
+    ", stripRechitsDSV.data().size() = " << stripRechitsDSV.data().size() <<
     ", nhits = " << nhits << 
     ", numberOfPixelModules = " << TrackerTraits::numberOfPixelModules << 
     ", numberOfModules = " << TrackerTraits::numberOfModules << 
@@ -200,16 +202,20 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
 
     assert(nullptr == hitmap[i]);
     hitmap[i] = &h;
+    ++counter[i];
   }
+
+  std::cout << "hitmap nulls:" << std::count(hitmap.begin(), hitmap.end(), nullptr) << std::endl;
 
   for (const auto& moduleHits : stripRechitsDSV) {
     const GluedGeomDet* theStripDet = dynamic_cast<const GluedGeomDet*>(theTrackerGeometry->idToDet(moduleHits[0].geographicalId()));
     int moduleIdx = (theStripDet->stereoDet())->index();
     // auto moduleIdx = moduleHits[0].stereoHit().det()->index();
-    if (moduleIdx < 0 || moduleIdx > TrackerTraits::numberOfModules) {
-      std::cout << "Invalid module index: " << moduleIdx << std::endl;
-      continue;
-    }
+    if (moduleIdx >= TrackerTraits::numberOfModules)
+      break;
+    std::cout << "module index: " << moduleIdx <<
+      ", " << moduleHits.size() << 
+      ", " << (hitsModuleStart[moduleIdx + 1] - hitsModuleStart[moduleIdx]) << std::endl;
     for (auto i = 0u; i < moduleHits.size(); ++i) {
       auto j = hitsModuleStart[moduleIdx] + i;
       // if (j > hitmap.size())
@@ -219,8 +225,23 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
       //     ", moduleIdx = " << moduleIdx << std::endl;
       // else
         hitmap[j] = &*(moduleHits.begin() + i);
+        ++counter[j];
     }
   }
+
+  std::cout << "hitmap nulls:" << std::count(hitmap.begin(), hitmap.end(), nullptr) << std::endl;
+  for (auto i = 0u; i < hitmap.size(); ++i)
+    if (!hitmap[i]) {
+      std::cout << i  << ", " << counter[i] << std::endl;
+
+    }
+  
+  std::cout << "hitsModuleStart: ";
+  for (auto i = 0u; i < TrackerTraits::numberOfModules; ++i)
+    std::cout << hitsModuleStart[i] << ", ";
+  std::cout << std::endl;
+
+
 
   // for (auto const &h : stripRechits) {
   //   auto const &thit = static_cast<BaseTrackerRecHit const &>(h);

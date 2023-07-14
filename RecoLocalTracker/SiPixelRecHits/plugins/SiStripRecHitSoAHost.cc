@@ -154,11 +154,11 @@ void SiStripRecHitSoAHost<TrackerTraits>::produce(edm::StreamID streamID,
       break;
 
     // no hits since lastIndex: hitsModuleStart[lastIndex:index] = hitsModuleStart[lastIndex]
-    for (auto j = lastIndex + 1; j < index; ++j)
+    for (auto j = lastIndex + 1; j < index + 1; ++j)
       hitsModuleStart[j] = hitsModuleStart[lastIndex];
 
-    hitsModuleStart[index] = hitsModuleStart[index - 1] + detSet.size();
-    lastIndex = index;
+    hitsModuleStart[index + 1] = hitsModuleStart[index] + detSet.size();
+    lastIndex = index + 1;
 
     for (const auto& recHit : detSet) {
       result.view()[nPixelHits + i].xLocal() = recHit.localPosition().x();
