@@ -68,7 +68,7 @@ void SiStripRecHitSoAHost<TrackerTraits>::fillDescriptions(edm::ConfigurationDes
   edm::ParameterSetDescription desc;
 
   desc.add<edm::InputTag>("stripRecHitSource", edm::InputTag("siStripMatchedRecHits", "matchedRecHit"));
-  desc.add<edm::InputTag>("pixelRecHitSoASource", edm::InputTag("siPixelRecHitsPreSplittingSoA"));
+  desc.add<edm::InputTag>("pixelRecHitSoASource", edm::InputTag("siPixelRecHitsPreSplitting"));
   descriptions.addWithDefaultLabel(desc);
 
   // desc.setUnknown();

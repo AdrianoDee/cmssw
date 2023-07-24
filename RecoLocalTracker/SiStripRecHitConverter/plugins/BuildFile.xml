@@ -1,5 +1,6 @@
 <use name="RecoLocalTracker/SiStripRecHitConverter"/>
 <use name="CalibTracker/Records"/>
+<use name="CUDADataFormats/TrackingRecHit"/>
 <library file="*.cc" name="RecoLocalTrackerSiStripRecHitConverterPlugins">
   <flags EDM_PLUGIN="1"/>
 </library>

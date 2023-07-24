@@ -281,7 +281,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
                                          << "\n";
 
   // copy pointer to data (SoA view) to allocated buffer
-  memcpy(hitsModuleStart, clusters_h.view().clusModuleStart(), nModules * sizeof(uint32_t));
+  memcpy(hitsModuleStart, clusters_h.view().clusModuleStart(), (nModules + 1) * sizeof(uint32_t));
 
   iEvent.emplace(tokenHit_, std::move(output));
   if (convert2Legacy_)

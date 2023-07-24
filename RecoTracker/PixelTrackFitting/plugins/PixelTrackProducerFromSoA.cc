@@ -69,7 +69,7 @@ private:
   const edm::EDGetTokenT<reco::BeamSpot> tBeamSpot_;
   const edm::EDGetTokenT<TrackSoAHost> tokenTrack_;
   const edm::EDGetTokenT<SiPixelRecHitCollectionNew> cpuPixelHits_;
-  const edm::EDGetTokenT<SiStripMatchedRecHit2DCollection> cpuStripHits_;
+  edm::EDGetTokenT<SiStripMatchedRecHit2DCollection> cpuStripHits_;
   const edm::EDGetTokenT<HMSstorage> hmsToken_;
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
   // Event Setup tokens
@@ -78,6 +78,7 @@ private:
 
   int32_t const minNumberOfHits_;
   pixelTrack::Quality const minQuality_;
+  const bool useStripHits;
 };
 
 template <typename TrackerTraits>
@@ -85,13 +86,13 @@ PixelTrackProducerFromSoAT<TrackerTraits>::PixelTrackProducerFromSoAT(const edm:
     : tBeamSpot_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
       tokenTrack_(consumes(iConfig.getParameter<edm::InputTag>("trackSrc"))),
       cpuPixelHits_(consumes<SiPixelRecHitCollectionNew>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
-      cpuStripHits_(consumes<SiStripMatchedRecHit2DCollection>(iConfig.getParameter<edm::InputTag>("stripRecHitLegacySrc"))),
       hmsToken_(consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("hitModuleStartSrc"))),
       geomToken_(esConsumes<TrackerGeometry, TrackerDigiGeometryRecord>()),
       idealMagneticFieldToken_(esConsumes()),
       ttTopoToken_(esConsumes()),
       minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
-      minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))) {
+      minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))),
+      useStripHits(iConfig.getParameter<bool>("useStripHits")) {
   if (minQuality_ == pixelTrack::Quality::notQuality) {
     throw cms::Exception("PixelTrackConfiguration")
         << iConfig.getParameter<std::string>("minQuality") + " is not a pixelTrack::Quality";
@@ -107,6 +108,8 @@ PixelTrackProducerFromSoAT<TrackerTraits>::PixelTrackProducerFromSoAT(const edm:
   // around a rare race condition in framework scheduling
   produces<reco::TrackCollection>();
   produces<IndToEdm>();
+  if (useStripHits)
+    cpuStripHits_ = consumes<SiStripMatchedRecHit2DCollection>(iConfig.getParameter<edm::InputTag>("stripRecHitLegacySrc"));
 }
 
 template <typename TrackerTraits>
@@ -114,8 +117,9 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::fillDescriptions(edm::Configurat
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
   desc.add<edm::InputTag>("trackSrc", edm::InputTag("pixelTracksSoA"));
-  desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplittingLegacy"));
-  desc.add<edm::InputTag>("hitModuleStartSrc", edm::InputTag("siPixelRecHitsPreSplittingLegacy"));
+  desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplittingSoA"));
+  desc.add<edm::InputTag>("hitModuleStartSrc", edm::InputTag("siPixelRecHitsPreSplittingSoA"));
+  desc.add<bool>("useStripHits", false);
   desc.add<edm::InputTag>("stripRecHitLegacySrc", edm::InputTag("siStripMatchedRecHits", "matchedRecHit"));
   desc.add<int>("minNumberOfHits", 0);
   desc.add<std::string>("minQuality", "loose");
@@ -152,16 +156,6 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
 
   edm::ESHandle<TrackerGeometry> theTrackerGeometry = iSetup.getHandle(geomToken_);
 
-  auto const &stripRechitsDSV = iEvent.get(cpuStripHits_);
-  auto const &stripRechits = stripRechitsDSV.data();
-  // auto nStripHits = stripRechits.size();
-  // auto nStripHits = 0u;
-  // for (const auto& moduleHits : stripRechitsDSV) {
-  //   if (moduleHits[0].det()->index() > TrackerTraits::numberOfModules)
-  //     break;
-  //   nStripHits += moduleHits.size();
-  // }
-
   auto const &pixelRecHitsDSV = iEvent.get(cpuPixelHits_);
   auto const &pixelRechits = pixelRecHitsDSV.data();
   auto nPixelHits = pixelRechits.size();
@@ -169,27 +163,32 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
   auto const *hitsModuleStart = iEvent.get(hmsToken_).get();
   auto fc = hitsModuleStart;
 
-  auto nStripHits = hitsModuleStart[TrackerTraits::numberOfModules] - hitsModuleStart[TrackerTraits::numberOfPixelModules];
+  // std::cout << "hitsModuleStart = ";
+  // for (auto i = 0u; i < TrackerTraits::numberOfModules + 1; ++i)
+  //   std::cout << hitsModuleStart[i] << " ";
+  // std::cout << std::endl;
 
-  auto nhits = nPixelHits + nStripHits;
+  size_t nStripHits = 0;
+  const edmNew::DetSetVector<SiStripMatchedRecHit2D>* stripRechitsDSV = nullptr;
 
+  if (useStripHits) {
+    stripRechitsDSV = &iEvent.get(cpuStripHits_);
+    nStripHits = hitsModuleStart[TrackerTraits::numberOfModules] - hitsModuleStart[TrackerTraits::numberOfPixelModules];
+  }
+
+  size_t nhits = nPixelHits + nStripHits;
   std::vector<TrackingRecHit const *> hitmap(nhits, nullptr);
   std::vector<int> counter(nhits, 0);
 
   std::cout <<
     "nPixelHits = " << nPixelHits <<
     ", nStripHits = " << nStripHits <<
-    ", stripRechitsDSV.data().size() = " << stripRechitsDSV.data().size() <<
+    ", stripRechitsDSV.data().size() = " << (useStripHits ? stripRechitsDSV->data().size() : 0) <<
     ", nhits = " << nhits << 
     ", numberOfPixelModules = " << TrackerTraits::numberOfPixelModules << 
     ", numberOfModules = " << TrackerTraits::numberOfModules << 
     ", hitModuleStart[numberOfModules] = " << hitsModuleStart[TrackerTraits::numberOfModules] 
   << std::endl;
-
-  // std::cout << "hitsModuleStart = ";
-  // for (auto i = 0u; i < TrackerTraits::numberOfModules; ++i)
-  //   std::cout << hitsModuleStart[i] << " ";
-  // std::cout << std::endl;
 
   for (auto const &h : pixelRechits) {
     auto const &thit = static_cast<BaseTrackerRecHit const &>(h);
@@ -207,54 +206,29 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::produce(edm::StreamID streamID,
 
   std::cout << "hitmap nulls:" << std::count(hitmap.begin(), hitmap.end(), nullptr) << std::endl;
 
-  for (const auto& moduleHits : stripRechitsDSV) {
-    const GluedGeomDet* theStripDet = dynamic_cast<const GluedGeomDet*>(theTrackerGeometry->idToDet(moduleHits[0].geographicalId()));
-    int moduleIdx = (theStripDet->stereoDet())->index();
-    // auto moduleIdx = moduleHits[0].stereoHit().det()->index();
-    if (moduleIdx >= TrackerTraits::numberOfModules)
-      break;
-    std::cout << "module index: " << moduleIdx <<
-      ", " << moduleHits.size() << 
-      ", " << (hitsModuleStart[moduleIdx + 1] - hitsModuleStart[moduleIdx]) << std::endl;
-    for (auto i = 0u; i < moduleHits.size(); ++i) {
-      auto j = hitsModuleStart[moduleIdx] + i;
-      // if (j > hitmap.size())
-      //   std::cout << "invalid memory access: " <<
-      //     "i = " << i <<
-      //     ", j = " << j << 
-      //     ", moduleIdx = " << moduleIdx << std::endl;
-      // else
-        hitmap[j] = &*(moduleHits.begin() + i);
-        ++counter[j];
+  if (useStripHits) {
+    for (const auto& moduleHits : *stripRechitsDSV) {
+      const GluedGeomDet* theStripDet = dynamic_cast<const GluedGeomDet*>(theTrackerGeometry->idToDet(moduleHits[0].geographicalId()));
+      int moduleIdx = (theStripDet->stereoDet())->index();
+      // auto moduleIdx = moduleHits[0].stereoHit().det()->index();
+      if (moduleIdx >= TrackerTraits::numberOfModules)
+        break;
+      // std::cout << "module index: " << moduleIdx <<
+      //   ", " << moduleHits.size() << 
+      //   ", " << (hitsModuleStart[moduleIdx + 1] - hitsModuleStart[moduleIdx]) << std::endl;
+      for (auto i = 0u; i < moduleHits.size(); ++i) {
+        auto j = hitsModuleStart[moduleIdx] + i;
+        // if (j > hitmap.size())
+        //   std::cout << "invalid memory access: " <<
+        //     "i = " << i <<
+        //     ", j = " << j << 
+        //     ", moduleIdx = " << moduleIdx << std::endl;
+        // else
+          hitmap[j] = &*(moduleHits.begin() + i);
+          ++counter[j];
+      }
     }
   }
-
-  std::cout << "hitmap nulls:" << std::count(hitmap.begin(), hitmap.end(), nullptr) << std::endl;
-  for (auto i = 0u; i < hitmap.size(); ++i)
-    if (!hitmap[i]) {
-      std::cout << i  << ", " << counter[i] << std::endl;
-
-    }
-  
-  std::cout << "hitsModuleStart: ";
-  for (auto i = 0u; i < TrackerTraits::numberOfModules; ++i)
-    std::cout << hitsModuleStart[i] << ", ";
-  std::cout << std::endl;
-
-
-
-  // for (auto const &h : stripRechits) {
-  //   auto const &thit = static_cast<BaseTrackerRecHit const &>(h);
-  //   auto detI = thit.det()->index();
-  //   auto const &clus = thit.firstClusterRef();
-  //   assert(clus.isStrip());
-  //   auto i = fc[detI] + clus.stripCluster().
-  //   if (i >= hitmap.size())
-  //     hitmap.resize(i + 256, nullptr);  // only in case of hit overflow in one module
-
-  //   assert(nullptr == hitmap[i]);
-  //   hitmap[i] = &h;
-  // }
 
   std::vector<const TrackingRecHit *> hits;
   hits.reserve(5);

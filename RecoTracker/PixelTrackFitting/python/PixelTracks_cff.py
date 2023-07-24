@@ -203,3 +203,29 @@ from Configuration.ProcessModifiers.gpuValidationPixel_cff import gpuValidationP
 (pixelNtupletFit & gpu & gpuValidationPixel).toModify(pixelTracksSoA.cpu,
     pixelRecHitSrc = "siPixelRecHitsPreSplittingSoA@cpu"
     )
+
+
+# Patatrack with strip hits
+
+from Configuration.ProcessModifiers.stripNtupletFit_cff import stripNtupletFit
+from RecoLocalTracker.Configuration.RecoLocalTracker_cff import striptrackerlocalrecoTask
+from RecoLocalTracker.SiPixelRecHits.siStripRecHitSoAHostPhase1_cfi import siStripRecHitSoAHostPhase1
+from SimTracker.TrackAssociatorProducers.quickTrackAssociatorByHits_cfi import quickTrackAssociatorByHits, quickTrackAssociatorByHitsTrackerHitAssociator
+from Validation.RecoTrack.TrackValidation_cff import quickTrackAssociatorByHitsPreSplitting
+
+(pixelNtupletFit & stripNtupletFit).toModify(pixelTracksSoA.cpu, pixelRecHitSrc = cms.InputTag("siStripRecHitSoAHostPhase1"))
+(pixelNtupletFit & stripNtupletFit).toModify(pixelTracks, useStripHits = cms.bool(True), hitModuleStartSrc = cms.InputTag("siStripRecHitSoAHostPhase1"))
+(pixelNtupletFit & stripNtupletFit).toReplaceWith(quickTrackAssociatorByHits, quickTrackAssociatorByHitsTrackerHitAssociator)
+(pixelNtupletFit & stripNtupletFit).toReplaceWith(quickTrackAssociatorByHits, quickTrackAssociatorByHitsTrackerHitAssociator.clone(cluster2TPSrc = "tpClusterProducerPreSplitting"))
+
+(pixelNtupletFit & stripNtupletFit).toModify(pixelTracks, hitModuleStartSrc = cms.InputTag("siStripRecHitSoAHostPhase1"))
+(pixelNtupletFit & stripNtupletFit).toReplaceWith(pixelTracksTask, cms.Task(
+    # build strip hits
+    striptrackerlocalrecoTask,
+    # mix pixel and strip hits
+    siStripRecHitSoAHostPhase1,
+    # build the pixel ntuplets and the pixel tracks in SoA format on the GPU
+    pixelTracksSoA,
+    # convert the pixel tracks from SoA to legacy format
+    pixelTracks
+))
