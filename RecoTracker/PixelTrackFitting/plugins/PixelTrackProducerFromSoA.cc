@@ -70,7 +70,7 @@ private:
   const edm::EDGetTokenT<TrackSoAHost> tokenTrack_;
   const edm::EDGetTokenT<SiPixelRecHitCollectionNew> cpuPixelHits_;
   edm::EDGetTokenT<SiStripMatchedRecHit2DCollection> cpuStripHits_;
-  const edm::EDGetTokenT<HMSstorage> hmsToken_;
+  edm::EDGetTokenT<HMSstorage> hmsToken_;
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
   // Event Setup tokens
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> idealMagneticFieldToken_;
@@ -86,7 +86,7 @@ PixelTrackProducerFromSoAT<TrackerTraits>::PixelTrackProducerFromSoAT(const edm:
     : tBeamSpot_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
       tokenTrack_(consumes(iConfig.getParameter<edm::InputTag>("trackSrc"))),
       cpuPixelHits_(consumes<SiPixelRecHitCollectionNew>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
-      hmsToken_(consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("hitModuleStartSrc"))),
+      hmsToken_(consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"))),
       geomToken_(esConsumes<TrackerGeometry, TrackerDigiGeometryRecord>()),
       idealMagneticFieldToken_(esConsumes()),
       ttTopoToken_(esConsumes()),
@@ -108,8 +108,13 @@ PixelTrackProducerFromSoAT<TrackerTraits>::PixelTrackProducerFromSoAT(const edm:
   // around a rare race condition in framework scheduling
   produces<reco::TrackCollection>();
   produces<IndToEdm>();
-  if (useStripHits)
+  if (useStripHits) {
     cpuStripHits_ = consumes<SiStripMatchedRecHit2DCollection>(iConfig.getParameter<edm::InputTag>("stripRecHitLegacySrc"));
+    hmsToken_ = consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("hitModuleStartSrc"));
+  }
+  else {
+    hmsToken_ = consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"));
+  }
 }
 
 template <typename TrackerTraits>
@@ -117,8 +122,8 @@ void PixelTrackProducerFromSoAT<TrackerTraits>::fillDescriptions(edm::Configurat
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
   desc.add<edm::InputTag>("trackSrc", edm::InputTag("pixelTracksSoA"));
-  desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplittingSoA"));
-  desc.add<edm::InputTag>("hitModuleStartSrc", edm::InputTag("siPixelRecHitsPreSplittingSoA"));
+  desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplitting"));
+  desc.add<edm::InputTag>("hitModuleStartSrc", edm::InputTag("siPixelRecHitsPreSplitting"));
   desc.add<bool>("useStripHits", false);
   desc.add<edm::InputTag>("stripRecHitLegacySrc", edm::InputTag("siStripMatchedRecHits", "matchedRecHit"));
   desc.add<int>("minNumberOfHits", 0);
