@@ -14,4 +14,5 @@ autoHLT = {
   'relval2023' : 'GRun',
   'relval2026' : '75e33',
   'test'       : 'GRun',
+  'relval2022strips': '2022v15_strips'
 }
