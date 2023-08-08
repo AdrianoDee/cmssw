@@ -9,4 +9,7 @@
 <library file="RecHitAnalyzer/RecHitAnalyzer.cc" name="RecHitAnalyzer">
   <flags EDM_PLUGIN="1"/>
 </library>
+<library file="RecHitAnalyzer/RecHitAnalyzerTracks.cc" name="RecHitAnalyzerTracks">
+  <flags EDM_PLUGIN="1"/>
+</library>
 
