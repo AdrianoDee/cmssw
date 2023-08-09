@@ -137,18 +137,30 @@ void RecHitAnalyzerTracks::analyze(const edm::Event& iEvent, const edm::EventSet
   iEvent.getByToken(pixelTracksToken_, pixelTracks);
   // Loop over each individual reco Track
     for (auto const &track : *pixelTracks) {
+      std::cout << "############ New Track ################" << std::endl;
       for ( auto const &recHit : track.recHits()){
       const GeomDet* thePixelDet = dynamic_cast<const GeomDet*>(theTrackerGeometry->idToDet(recHit->geographicalId()));
+      const GeomDet* thePixelDet_outermost = dynamic_cast<const GeomDet*>(theTrackerGeometry->idToDet(track.recHit(track.numberOfValidHits()-1)->geographicalId()));
       GlobalPoint GP = thePixelDet->surface().toGlobal(recHit->localPosition());
+      //GlobalPoint GP = recHit->globalPosition();
+      //std::cout << "Pixels Local Position: " << recHit->localPosition().x() << ", " << recHit->localPosition().y() << ", " << recHit->localPosition().z()<< ", " << sqrt(recHit->localPosition().x()*recHit->localPosition().x() + recHit->localPosition().y() + recHit->localPosition().y()) << std::endl;
       float xGlobal_pixel = GP.x();                                                                                    
 	    float yGlobal_pixel = GP.y();
 	    float zGlobal_pixel = GP.z();
+      float rGlobal_pixel = sqrt(xGlobal_pixel*xGlobal_pixel + yGlobal_pixel*yGlobal_pixel);
       int indexPixel = thePixelDet->index();
       int sequentialId = 0;
-      std::cout << "Pixels Global Position: " << xGlobal_pixel << ", " << yGlobal_pixel << ", " << zGlobal_pixel << std::endl;
-      float rGlobal_pixel = sqrt(xGlobal_pixel*xGlobal_pixel + yGlobal_pixel*yGlobal_pixel);
-	    plotRecHitPositionGlobalRZ(rGlobal_pixel,zGlobal_pixel);
+      GlobalPoint GP_outerPosition = thePixelDet_outermost->surface().toGlobal((track.recHit(track.numberOfValidHits()-1)->localPosition()));
+      float xGlobal_pixel_outerPosition = GP_outerPosition.x();                                                                                    
+	    float yGlobal_pixel_outerPosition = GP_outerPosition.y();
+	    float zGlobal_pixel_outerPosition = GP_outerPosition.z(); 
+      float rGlobal_pixel_outerPosition = sqrt(xGlobal_pixel_outerPosition*xGlobal_pixel_outerPosition + yGlobal_pixel_outerPosition*yGlobal_pixel_outerPosition);
+      //std::cout << "Pixels Global Outer Position: " << xGlobal_pixel_outerPosition << ", " << yGlobal_pixel_outerPosition << ", " << zGlobal_pixel_outerPosition << ", " << rGlobal_pixel_outerPosition << std::endl;
+	    if ( track.numberOfValidHits() >= 6 && rGlobal_pixel_outerPosition >= 20.){
+      std::cout << "Pixels Rec Hit Global Position: " << xGlobal_pixel << ", " << yGlobal_pixel << ", " << zGlobal_pixel << ", " << rGlobal_pixel << std::endl;
+      plotRecHitPositionGlobalRZ(rGlobal_pixel,zGlobal_pixel);
 	    plotRecHitGlobalPosition(xGlobal_pixel, yGlobal_pixel, zGlobal_pixel);
+      }
       int detId = thePixelDet->geographicalId().rawId();
       if (detIdToSequentialNumber_.find(detId) == detIdToSequentialNumber_.end()) {                                                                                          
 	    sequentialId = indexPixel; // Get the current size as the sequential number                                                        
@@ -266,9 +278,10 @@ void RecHitAnalyzerTracks::beginJob() {
    zSequentialNumberHist_->GetXaxis()->SetTitle("Sequential Number");
    zSequentialNumberHist_->GetYaxis()->SetTitle("z [cm]");
 
-  recHitPositionGlobalRZHist_ = new TH2F("recHitPositionGlobalRZHist", "RecHit Position Global in rz", 600, -300., 300.0, 600, 0., 120);
+  recHitPositionGlobalRZHist_ = new TH2F("recHitPositionGlobalRZHist", "RecHit Position Global in rz", 600, -300., 300.0, 600, 0., 40.);
   recHitPositionGlobalRZHist_->GetXaxis()->SetTitle("z [cm]");
   recHitPositionGlobalRZHist_->GetYaxis()->SetTitle("r [cm]");
+  recHitPositionGlobalRZHist_->SetMarkerStyle(24);
 
   recHitErrorsHist_ = new TH2F("recHitErrorsHist", "RecHit Errors", 100, -0.001, 0.2, 500, -0.5, 30.0);
   recHitErrorsHist_->GetXaxis()->SetTitle("x [cm]");
