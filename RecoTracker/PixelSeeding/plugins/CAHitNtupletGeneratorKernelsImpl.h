@@ -333,9 +333,9 @@ namespace caHitNtupletGeneratorKernels {
       auto ro = thisCell.outer_r(hh);
       auto zo = thisCell.outer_z(hh);
 
-      auto expEta = 0.5 * abs(ro-ri)/abs(zo-zi);
-      if( expEta > 0.41) continue;
-      if( expEta < 0.19) continue;
+      // auto expEta = 0.5 * abs(ro-ri)/abs(zo-zi);
+      // if( expEta > 0.41) continue;
+      // if( expEta < 0.19) continue;
       
       auto isBarrel = thisCell.inner_detIndex(hh) < last_barrel_detIndex;
 

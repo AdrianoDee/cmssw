@@ -457,7 +457,8 @@ initialStepSeedsSoA = SwitchProducerCUDA(
     cpu = _pixelSeedsCUDA.clone(
         pixelRecHitSrc = "siPixelRecHits",
         idealConditions = False,
-        onGPU = False
+        onGPU = False,
+        minHitsPerNtuplet = 3
     ),
     cuda = _pixelSeedsSoA.clone(src = cms.InputTag('initialStepSeedsCUDA'))
 )
@@ -466,6 +467,7 @@ initialStepSeedsCUDA = _pixelSeedsCUDA.clone(
     pixelRecHitSrc = "siPixelRecHitsCUDA",
     idealConditions = False,
     onGPU = True,
+    minHitsPerNtuplet = 3
 )
 
 initialStepPixelSeeds = _pixelSeedsProducerFromSoA.clone(

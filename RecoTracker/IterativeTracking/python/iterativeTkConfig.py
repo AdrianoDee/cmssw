@@ -4,7 +4,7 @@
 import FWCore.ParameterSet.Config as cms
 
 _defaultEraName = ""
-_nonDefaultEraNames = ["trackingLowPU", "trackingPhase1", "trackingPhase2PU140"]
+_nonDefaultEraNames = ["trackingLowPU", "trackingPhase1", "trackingPhase2PU140", "trackingPhase1GPU"]
 
 # name, postfix, era
 _defaultEra = (_defaultEraName, "", None)
@@ -48,10 +48,23 @@ _iterations_trackingPhase1 = [
     "TobTecStep",
 ]
 
+_iterations_trackingPhase1GPU = [
+    "InitialStep",
+    "LowPtQuadStep",
+    "LowPtTripletStep",
+    "DetachedQuadStep",
+    "DetachedTripletStep",
+    "PixelPairStep",
+    "MixedTripletStep",
+    "PixelLessStep",
+    "TobTecStep",
+]
+
 from Configuration.ProcessModifiers.displacedTracking_cff import displacedTracking
 displacedTracking.toModify(_iterations_trackingPhase1, func=lambda x: x.append('DisplacedGeneralStep'))
 
 _iterations_trackingPhase1.append('JetCoreRegionalStep')
+_iterations_trackingPhase1GPU = [x for x in _iterations_trackingPhase1 if "HighPtTriplet" not in x]
 
 _iterations_trackingPhase2PU140 = [
     "InitialStep",
@@ -88,6 +101,7 @@ _multipleSeedProducers_trackingPhase1 = {
     "MixedTripletStep": ["A", "B"],
     "TobTecStep": ["Pair", "Tripl"],
 }
+
 from Configuration.ProcessModifiers.seedingDeepCore_cff import seedingDeepCore
 seedingDeepCore.toModify(_multipleSeedProducers_trackingPhase1, func=lambda x: x.update({"JetCoreRegionalStep": ["Barrel","Endcap"]}))
 
@@ -106,6 +120,9 @@ _oldStyleHasSelector = set([
 from Configuration.ProcessModifiers.displacedRegionalTracking_cff import displacedRegionalTracking
 displacedRegionalTracking.toModify(_iterations_muonSeeded_trackingPhase1, func=lambda x: x.append('DisplacedRegionalStep'))
 displacedRegionalTracking.toModify(_multipleSeedProducers_trackingPhase1, func=lambda x: x.update({'DisplacedRegionalStep': ['Pair', 'Tripl']}))
+
+_multipleSeedProducers_trackingPhase1GPU = _multipleSeedProducers_trackingPhase1
+_iterations_muonSeeded_trackingPhase1GPU = _iterations_muonSeeded_trackingPhase1
 
 from RecoLocalTracker.SubCollectionProducers.trackClusterRemover_cfi import trackClusterRemover as _trackClusterRemover
 _trackClusterRemoverBase = _trackClusterRemover.clone(

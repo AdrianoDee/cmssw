@@ -266,7 +266,7 @@ namespace gpuPixelDoublets {
         p += first;
         for (; p < e; p += stride) {
           auto oi = __ldg(p);
-          if(hitMask[oi])
+          if(useMask and hitMask[oi])
             continue;
           assert(oi >= offsets[outer]);
           assert(oi < offsets[outer + 1]);
