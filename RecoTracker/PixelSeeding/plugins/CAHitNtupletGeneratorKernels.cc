@@ -1,7 +1,7 @@
 #include "RecoTracker/PixelSeeding/plugins/CAHitNtupletGeneratorKernelsImpl.h"
 
 #include <mutex>
-
+// #define NTUPLE_DEBUG
 namespace {
   // cuda atomics are NOT atomics on CPU so protect stat update with a mutex
   // waiting for a more general solution (incuding multiple devices) to be proposed and implemented
@@ -70,6 +70,7 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::buildDoublets(const HitsCon
                                       this->device_theCellNeighbors_.get(),
                                       this->device_theCellTracks_.get(),
                                       hh,
+                                      this->device_hitMask_.get(),
                                       this->isOuterHitOfCell_,
                                       nActualPairs,
                                       this->params_.caParams_.maxNumberOfDoublets_,
@@ -149,7 +150,9 @@ void CAHitNtupletGeneratorKernelsCPU<TrackerTraits>::classifyTuples(const HitsCo
   int32_t nhits = hh.metadata().size();
 
   // classify tracks based on kinematics
-  kernel_classifyTracks<TrackerTraits>(tracks_view, this->params_.qualityCuts_);
+  if (this->params_.doFit_)
+    kernel_classifyTracks<TrackerTraits>(tracks_view, this->params_.qualityCuts_);
+
   if (this->params_.lateFishbone_) {
     // apply fishbone cleaning to good tracks
     kernel_fishboneCleaner<TrackerTraits>(this->device_theCells_.get(), this->device_nCells_, tracks_view);

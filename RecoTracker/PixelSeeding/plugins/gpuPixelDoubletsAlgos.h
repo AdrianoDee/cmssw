@@ -44,6 +44,7 @@ namespace gpuPixelDoublets {
     CellCutsT(const bool doClusterCut,
               const bool doZ0Cut,
               const bool doPtCut,
+              const bool useMask,
               const bool idealConditions,
               const float z0Cut,
               const float ptCut,
@@ -51,6 +52,7 @@ namespace gpuPixelDoublets {
         : doClusterCut_(doClusterCut),
           doZ0Cut_(doZ0Cut),
           doPtCut_(doPtCut),
+          useMask_(useMask),
           idealConditions_(idealConditions),
           z0Cut_(z0Cut),
           ptCut_(ptCut) {
@@ -61,6 +63,7 @@ namespace gpuPixelDoublets {
     bool doClusterCut_;
     bool doZ0Cut_;
     bool doPtCut_;
+    bool useMask_;
     bool idealConditions_;  //this is actually not used by phase2
 
     float z0Cut_;
@@ -126,6 +129,7 @@ namespace gpuPixelDoublets {
                                                     CellNeighborsVector<TrackerTraits>* cellNeighbors,
                                                     CellTracksVector<TrackerTraits>* cellTracks,
                                                     HitsConstView<TrackerTraits> hh,
+                                                    const uint8_t* hitMask,
                                                     OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
                                                     CellCutsT<TrackerTraits> const& cuts) {
     // ysize cuts (z in the barrel)  times 8
@@ -134,6 +138,7 @@ namespace gpuPixelDoublets {
     const bool doClusterCut = cuts.doClusterCut_;
     const bool doZ0Cut = cuts.doZ0Cut_;
     const bool doPtCut = cuts.doPtCut_;
+    const bool useMask = cuts.useMask_;
 
     const float z0cut = cuts.z0Cut_;      // cm
     const float hardPtCut = cuts.ptCut_;  // GeV
@@ -187,6 +192,16 @@ namespace gpuPixelDoublets {
       auto hoff = PhiBinner::histOff(outer);
       auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
       i += offsets[inner];
+      
+      if(useMask)
+      {
+        if(hitMask[i])
+        {
+          printf("Not Using Hit %d - %.4f - %.4f - %.4f \n",i,hh[i].xGlobal(),hh[i].yGlobal(),hh[i].zGlobal());
+          continue;
+        }
+      }
+      // printf("Hit in Layer %d %d %d %d\n", i, inner, pairLayerId, j);
 
       assert(i >= offsets[inner]);
       assert(i < offsets[inner + 1]);
@@ -251,6 +266,8 @@ namespace gpuPixelDoublets {
         p += first;
         for (; p < e; p += stride) {
           auto oi = __ldg(p);
+          if(useMask and hitMask[oi])
+            continue;
           assert(oi >= offsets[outer]);
           assert(oi < offsets[outer + 1]);
           auto mo = hh[oi].detectorIndex();

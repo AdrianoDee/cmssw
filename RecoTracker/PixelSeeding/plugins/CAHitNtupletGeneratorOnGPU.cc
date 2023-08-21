@@ -51,7 +51,9 @@ namespace {
                        cfg.getParameter<bool>("fillStatistics"),
                        cfg.getParameter<bool>("doSharedHitCut"),
                        cfg.getParameter<bool>("dupPassThrough"),
-                       cfg.getParameter<bool>("useSimpleTripletCleaner")});
+                       cfg.getParameter<bool>("useSimpleTripletCleaner"),
+                       cfg.getParameter<bool>("useMask"),
+                       cfg.getParameter<bool>("doFit")});
   }
 
   //This is needed to have the partial specialization for  isPhase1Topology/isPhase2Topology
@@ -127,6 +129,7 @@ namespace {
     return CellCutsT<TrackerTraits>{cfg.getParameter<bool>("doClusterCut"),
                                     cfg.getParameter<bool>("doZ0Cut"),
                                     cfg.getParameter<bool>("doPtCut"),
+                                    cfg.getParameter<bool>("useMask"),
                                     cfg.getParameter<bool>("idealConditions"),
                                     (float)cfg.getParameter<double>("z0Cut"),
                                     (float)cfg.getParameter<double>("ptCut"),
@@ -293,6 +296,7 @@ void CAHitNtupletGeneratorOnGPU<TrackerTraits>::fillDescriptionsCommon(edm::Para
   desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
   desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
   desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+  desc.add<bool>("doFit", true)->setComment("Performing the fit (Riemann or Broken Line)");
 }
 
 template <typename TrackerTraits>
@@ -332,27 +336,39 @@ void CAHitNtupletGeneratorOnGPU<TrackerTraits>::endJob() {
 
 template <typename TrackerTraits>
 TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits>::makeTuplesAsync(
-    HitsOnDevice const& hits_d, float bfield, cudaStream_t stream) const {
+    HitsOnDevice const& hits_d, float bfield, cudaStream_t stream, const uint8_t* mask) const {
   using HelixFitOnGPU = HelixFitOnGPU<TrackerTraits>;
   using TrackSoA = TrackSoAHeterogeneousDevice<TrackerTraits>;
   using GPUKernels = CAHitNtupletGeneratorKernelsGPU<TrackerTraits>;
-
+  
   TrackSoA tracks(stream);
 
   GPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_d.nHits(), stream);
+  
+  if(m_params.useMask_)
+  {
+    std::cout << "useMask_"<<std::endl;
+    kernels.allocateMask(mask, hits_d.nHits(), stream);
+    std::cout << "Mask GPU -> " << mask[1] << std::endl;
+  }
+    
+  cudaCheck(cudaGetLastError());
 
   kernels.buildDoublets(hits_d.view(), hits_d.offsetBPIX2(), stream);
 
   kernels.launchKernels(hits_d.view(), tracks.view(), stream);
 
-  HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
-  fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
-  if (m_params.useRiemannFit_) {
-    fitter.launchRiemannKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
-  } else {
-    fitter.launchBrokenLineKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
+  if (m_params.doFit_)
+  { 
+    HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
+    fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
+    if (m_params.useRiemannFit_) {
+      fitter.launchRiemannKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
+    } else {
+      fitter.launchBrokenLineKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
+    }
   }
   kernels.classifyTuples(hits_d.view(), tracks.view(), stream);
 #ifdef GPU_DEBUG
@@ -366,16 +382,24 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
 
 template <typename TrackerTraits>
 TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTraits>::makeTuples(HitsOnHost const& hits_h,
-                                                                                               float bfield) const {
+                                                                                               float bfield, const uint8_t* mask) const {
   using HelixFitOnGPU = HelixFitOnGPU<TrackerTraits>;
   using TrackSoA = TrackSoAHeterogeneousHost<TrackerTraits>;
   using CPUKernels = CAHitNtupletGeneratorKernelsCPU<TrackerTraits>;
 
+  
   TrackSoA tracks;
 
   CPUKernels kernels(m_params);
   kernels.setCounters(m_counters);
   kernels.allocateOnGPU(hits_h.nHits(), nullptr);
+
+  if(m_params.useMask_)
+    { 
+      std::cout << "useMask_"<<std::endl;
+      std::cout << "Mask CPU -> " << mask[1] << std::endl;
+      kernels.allocateMask(mask, hits_h.nHits(), nullptr);
+      }
 
   kernels.buildDoublets(hits_h.view(), hits_h.offsetBPIX2(), nullptr);
   kernels.launchKernels(hits_h.view(), tracks.view(), nullptr);
@@ -384,17 +408,19 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
     return tracks;
 
   // now fit
-  HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
-  fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
+  if(m_params.doFit_)
+  { 
+    HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
+    fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
 
-  if (m_params.useRiemannFit_) {
-    fitter.launchRiemannKernelsOnCPU(hits_h.view(), hits_h.nHits(), TrackerTraits::maxNumberOfQuadruplets);
-  } else {
-    fitter.launchBrokenLineKernelsOnCPU(hits_h.view(), hits_h.nHits(), TrackerTraits::maxNumberOfQuadruplets);
+    if (m_params.useRiemannFit_) {
+      fitter.launchRiemannKernelsOnCPU(hits_h.view(), hits_h.nHits(), TrackerTraits::maxNumberOfQuadruplets);
+    } else {
+      fitter.launchBrokenLineKernelsOnCPU(hits_h.view(), hits_h.nHits(), TrackerTraits::maxNumberOfQuadruplets);
+    }
   }
 
   kernels.classifyTuples(hits_h.view(), tracks.view(), nullptr);
-
 #ifdef GPU_DEBUG
   std::cout << "finished building pixel tracks on CPU" << std::endl;
 #endif
