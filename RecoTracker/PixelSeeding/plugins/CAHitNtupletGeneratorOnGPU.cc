@@ -361,8 +361,7 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
   kernels.launchKernels(hits_d.view(), tracks.view(), stream);
 
   if (m_params.doFit_)
-  {
-    std::cout << "Doing fit" << std::endl;
+  { 
     HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
     fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
     if (m_params.useRiemannFit_) {
@@ -410,8 +409,7 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
 
   // now fit
   if(m_params.doFit_)
-  {
-    std::cout << "Doing fit" << std::endl;
+  { 
     HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
     fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
 
