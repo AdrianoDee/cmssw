@@ -258,8 +258,10 @@ void CAHitNtupletGeneratorKernelsGPU<TrackerTraits>::classifyTuples(const HitsCo
 
   // classify tracks based on kinematics
   auto numberOfBlocks = this->nQuadrupletBlocks(blockSize);
-  kernel_classifyTracks<TrackerTraits>
-      <<<numberOfBlocks, blockSize, 0, cudaStream>>>(tracks_view, this->params_.qualityCuts_);
+
+  if (this->params_.doFit_)
+    kernel_classifyTracks<TrackerTraits>
+        <<<numberOfBlocks, blockSize, 0, cudaStream>>>(tracks_view, this->params_.qualityCuts_);
 
   if (this->params_.lateFishbone_) {
     // apply fishbone cleaning to good tracks

@@ -52,6 +52,9 @@ private:
   const edm::EDPutTokenT<HMSstorage> tokenModuleStart_;
   const bool convert2Legacy_;
   const bool dumpForMasking_;
+
+  static constexpr uint16_t invalidClusterId = std::numeric_limits<uint16_t>::max(); //From legacy SiPixelCluster dataformat
+
 };
 
 template <typename TrackerTraits>
@@ -219,6 +222,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
     ndigi = 0;
     //filling digis
     for (auto const& clust : dsv) {
+      
       assert(clust.size() > 0);
       for (int i = 0, nd = clust.size(); i < nd; ++i) {
         auto px = clust.pixel(i);
@@ -226,6 +230,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
         digis_h.view()[ndigi].yy() = px.y;
         digis_h.view()[ndigi].adc() = px.adc;
         digis_h.view()[ndigi].moduleId() = gind;
+
+        if( clust.originalId() == invalidClusterId) // some clusters are invalid
+          digis_h.view()[ndigi].moduleId() = gpuClustering::invalidModuleId;
         digis_h.view()[ndigi].clus() = ic;
         ++ndigi;
       }

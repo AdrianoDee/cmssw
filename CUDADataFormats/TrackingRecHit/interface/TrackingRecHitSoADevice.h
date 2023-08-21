@@ -23,6 +23,9 @@ public:
   using AverageGeometry = typename hitSoA::AverageGeometry;
   using ParamsOnGPU = typename hitSoA::ParamsOnGPU;
 
+  explicit TrackingRecHitSoADevice(uint32_t nHits, cudaStream_t stream)
+      : cms::cuda::PortableDeviceCollection<TrackingRecHitLayout<TrackerTraits>>(nHits, stream) {}
+
   // Constructor which specifies the SoA size
   explicit TrackingRecHitSoADevice(uint32_t nHits,
                                    int32_t offsetBPIX2,

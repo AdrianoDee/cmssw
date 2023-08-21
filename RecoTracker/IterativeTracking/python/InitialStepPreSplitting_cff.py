@@ -1,5 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.Eras.Modifier_tracker_apv_vfp30_2016_cff import tracker_apv_vfp30_2016 as _tracker_apv_vfp30_2016
+from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
 
 ### STEP 0 ###
 
@@ -233,6 +234,59 @@ InitialStepPreSplittingTask = cms.Task(trackerClusterCheckPreSplitting,
                                        siPixelRecHits,
                                        MeasurementTrackerEvent,
                                        siPixelClusterShapeCache)
+
+from Configuration.ProcessModifiers.gpuOfflineCA_cff import gpuOfflineCA 
+from RecoTracker.PixelSeeding.caHitNtupletCUDAPhase1_cfi import caHitNtupletCUDAPhase1 as _pixelSeedsCUDA
+from RecoTracker.PixelTrackFitting.pixelTrackSoAFromCUDAPhase1_cfi import pixelTrackSoAFromCUDAPhase1 as _pixelSeedsSoA
+from RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAPhase1_cfi import pixelTrackProducerFromSoAPhase1 as _pixelSeedsProducerFromSoA
+from RecoTracker.TkSeedGenerator.SeedGeneratorFromProtoTracksEDProducer_cfi import SeedGeneratorFromProtoTracksEDProducer as _seedProducer
+
+initialStepPreSplittingSeedsSoA = SwitchProducerCUDA(
+    cpu = _pixelSeedsCUDA.clone(
+        pixelRecHitSrc = "siPixelRecHitsPreSplittingSoA",
+        idealConditions = False,
+        onGPU = False
+    ),
+    cuda = _pixelSeedsSoA.clone(src = cms.InputTag('initialStepPreSplittingSeedsCUDA'))
+)
+
+initialStepPreSplittingSeedsCUDA = _pixelSeedsCUDA.clone(
+    pixelRecHitSrc = "siPixelRecHitsPreSplittingCUDA",
+    idealConditions = False,
+    onGPU = True,
+)
+
+initialStepPreSplittingPixelSeeds = _pixelSeedsProducerFromSoA.clone(
+    pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
+    trackSrc = "initialStepPreSplittingSeedsSoA",
+)
+
+gpuOfflineCA.toReplaceWith(initialStepSeedsPreSplitting, _seedProducer.clone(
+    InputCollection = 'initialStepPreSplittingPixelSeeds',
+    #useProtoTrackKinematics = True,
+    includeFourthHit = True
+))
+
+InitialStepPreSplittingTaskGPU = cms.Task(trackerClusterCheckPreSplitting,
+                                          initialStepPreSplittingSeedsCUDA,
+                                          initialStepPreSplittingSeedsSoA,
+                                          initialStepPreSplittingPixelSeeds,
+                                          initialStepPreSplittingPixelSeeds,
+                                          initialStepSeedsPreSplitting,
+                                          initialStepTrackCandidatesPreSplitting,
+                                          initialStepTracksPreSplitting,
+                                          firstStepPrimaryVerticesPreSplitting,
+                                          initialStepTrackRefsForJetsPreSplitting,
+                                          caloTowerForTrkPreSplitting,
+                                          ak4CaloJetsForTrkPreSplitting,
+                                          jetsForCoreTrackingPreSplitting,
+                                          siPixelClusters,
+                                          siPixelRecHits,
+                                          MeasurementTrackerEvent,
+                                          siPixelClusterShapeCache)
+
+gpuOfflineCA.toReplaceWith(InitialStepPreSplittingTask,InitialStepPreSplittingTaskGPU)     
+                          
 InitialStepPreSplitting = cms.Sequence(InitialStepPreSplittingTask)
 _InitialStepPreSplittingTask_trackingPhase1 = InitialStepPreSplittingTask.copy()
 _InitialStepPreSplittingTask_trackingPhase1.replace(initialStepHitTripletsPreSplitting, cms.Task(initialStepHitTripletsPreSplitting,initialStepHitQuadrupletsPreSplitting))

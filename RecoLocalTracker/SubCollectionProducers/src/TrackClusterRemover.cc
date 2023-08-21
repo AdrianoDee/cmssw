@@ -91,7 +91,7 @@ namespace {
         trajectories_(iConfig.getParameter<edm::InputTag>("trajectories"), consumesCollector())
 
   {
-    std::cout << "STOCAZZO" << std::endl;
+    // std::cout << "STOCAZZO" << std::endl;
     auto const& pixelClusters = iConfig.getParameter<edm::InputTag>("pixelClusters");
     auto const& stripClusters = iConfig.getParameter<edm::InputTag>("stripClusters");
 
@@ -107,7 +107,7 @@ namespace {
       produces<edm::ContainerMask<edmNew::DetSetVector<SiStripCluster>>>();
     }
     auto const& clusterKeyMapForSoAInput = iConfig.getParameter<edm::InputTag>("clusterKeyMapForSoA");
-    std::cout << "clusterKeyMapForSoAInput " << clusterKeyMapForSoAInput.label() << std::endl;
+    // std::cout << "clusterKeyMapForSoAInput " << clusterKeyMapForSoAInput.label() << std::endl;
     if(!clusterKeyMapForSoAInput.label().empty())
     {
       soaIndicesDump_ = true;
@@ -211,21 +211,21 @@ namespace {
     }
     // if (!pquals) std::cout << "no qual collection" << std::endl;
     for (auto i = 0U; i < s; ++i) {
-      std::cout << "Track " << i << std::endl;
+      // std::cout << "Track " << i << std::endl;
       const reco::Track& track = tracks[i];
-      bool test;
-      test = (pquals) ? (*pquals)[i] & qualMask : track.quality(trackQuality_);
-      bool goodTk = true; // (pquals) ? (*pquals)[i] & qualMask : track.quality(trackQuality_);
+      // bool test;
+      // test = (pquals) ? (*pquals)[i] & qualMask : track.quality(trackQuality_);
+      bool goodTk = (pquals) ? (*pquals)[i] & qualMask : track.quality(trackQuality_);
       if (!goodTk)
         continue;
       if (track.hitPattern().trackerLayersWithMeasurement() < minNumberOfLayersWithMeasBeforeFiltering_)
         continue;
-      std::cout << "Good Track " << i << " - " << trackQuality_ << " - " << track.quality(trackQuality_) << " - " << test << std::endl;
+      // std::cout << "Good Track " << i << " - " << trackQuality_ << " - " << track.quality(trackQuality_) << " - " << test << std::endl;
       auto const& chi2sX5 = track.extra()->chi2sX5();
       assert(chi2sX5.size() == track.recHitsSize());
       auto hb = track.recHitsBegin();
       for (unsigned int h = 0; h < track.recHitsSize(); h++) {
-        std::cout << ">>>> hit " << h << std::endl;
+        // std::cout << ">>>> hit " << h << std::endl;
         auto recHit = *(hb + h);
         auto const& hit = *recHit;
         if (!trackerHitRTTI::isFromDet(hit))
@@ -243,7 +243,7 @@ namespace {
           {
   	    auto key = std::lower_bound(clusterKeyMapP->begin(), clusterKeyMapP->end(), cluster.key(), [](const auto& p, int v) {return p.first < v;});
             auto ij = key->second;
-            std::cout << "soaIndicesDump_ " << ij << " -> " << key->second << std::endl;
+            // std::cout << "soaIndicesDump_ " << ij << " -> " << key->second << std::endl;
             indToEdm[ij] = 1;
 	  }
         }

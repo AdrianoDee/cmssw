@@ -207,8 +207,8 @@ namespace {
       auto const& chi2sX5 = track.extra()->chi2sX5();
       assert(chi2sX5.size() == track.recHitsSize());
       auto hb = track.recHitsBegin();
-      if(soaIndicesDump_)
-        std::cout <<  "MASK HITS track no. " << i << " ---> ";
+      // if(soaIndicesDump_)
+      //   std::cout <<  "MASK HITS track no. " << i << " ---> ";
       for (unsigned int h = 0; h < track.recHitsSize(); h++) {
         auto const hit = *(hb + h);
         if (!hit->isValid())
@@ -227,10 +227,10 @@ namespace {
             auto key = std::lower_bound(clusterKeyMapP->begin(), clusterKeyMapP->end(), cluster.key(), [](const auto& p, int v) {return p.first < v;});
             auto ij = key->second;
             indToEdm[ij] = 1;
-            std::cout << "hit - " << ij << " - " << thit.globalPosition().x()<< " - ";
-            std::cout << thit.globalPosition().y()<< " - ";
-            std::cout << thit.globalPosition().z()<< " - ";
-            std::cout << std::endl;
+            // std::cout << "hit - " << ij << " - " << thit.globalPosition().x()<< " - ";
+            // std::cout << thit.globalPosition().y()<< " - ";
+            // std::cout << thit.globalPosition().z()<< " - ";
+            // std::cout << std::endl;
           }
 
 

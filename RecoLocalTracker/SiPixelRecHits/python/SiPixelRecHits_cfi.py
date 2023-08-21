@@ -1,13 +1,14 @@
 import FWCore.ParameterSet.Config as cms
 from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuOfflineCA_cff import gpuOfflineCA 
 
 # legacy pixel rechit producer
 siPixelRecHits = cms.EDProducer("SiPixelRecHitConverter",
-    src = cms.InputTag("siPixelClusters"),
-    CPE = cms.string('PixelCPEGeneric'),
-    VerboseLevel = cms.untracked.int32(0)
-)
+        src = cms.InputTag("siPixelClusters"),
+        CPE = cms.string('PixelCPEGeneric'),
+        VerboseLevel = cms.untracked.int32(0)
+    )
 
 # SwitchProducer wrapping the legacy pixel rechit producer
 siPixelRecHitsPreSplitting = SwitchProducerCUDA(
@@ -115,7 +116,7 @@ from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDAPhase1_cfi import siPi
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDAHIonPhase1_cfi import siPixelRecHitFromCUDAHIonPhase1 as _siPixelRecHitFromCUDAHIonPhase1
 from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromCUDAPhase2_cfi import siPixelRecHitFromCUDAPhase2 as _siPixelRecHitFromCUDAPhase2
 
-(gpu & pixelNtupletFit).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDA.clone())
+((gpu & pixelNtupletFit) | gpuOfflineCA).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDA.clone())
 (gpu & pixelNtupletFit & pp_on_AA).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDAHIonPhase1.clone())
 (gpu & pixelNtupletFit & phase2_tracker).toModify(siPixelRecHitsPreSplitting, cuda = _siPixelRecHitFromCUDAPhase2.clone())
 
@@ -144,14 +145,16 @@ pixelNtupletFit.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
 
 #(gpu & pixelNtupletFit & phase2_tracker).toReplaceWith(siPixelRecHitsPreSplitting , cuda = _siPixelRecHitFromCUDAPhase2.clone())
 
-(gpu & pixelNtupletFit).toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
+((gpu & pixelNtupletFit) | gpuOfflineCA).toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     # reconstruct the pixel rechits on the gpu or on the cpu
     # (normally only one of the two is run because only one is consumed from later stages)
     siPixelRecHitsPreSplittingCUDA,
-    siPixelRecHitsPreSplittingCPU,
-    siPixelRecHitFromCUDA,
+    siPixelRecHitsPreSplittingCPU, 
     # SwitchProducer wrapping an EDAlias on cpu or the converter from SoA to legacy on gpu
     siPixelRecHitsPreSplittingTask.copy(),
     # producing and converting on cpu (if needed)
     siPixelRecHitsPreSplittingSoA
 ))
+
+gpuOfflineCA.toReplaceWith(siPixelRecHits,
+                           _siPixelRecHitsPreSplittingSoA.clone(convertToLegacy=True, src = cms.InputTag('siPixelClusters')))

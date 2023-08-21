@@ -203,10 +203,10 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
       edm::Ref<edmNew::DetSetVector<SiPixelCluster>, SiPixelCluster> cluster = edmNew::makeRefTo(hclusters, &clust);
       // Make a RecHit and add it to the DetSet
 
-      std::cout << "hit - " << ij << " - " << xg[ij]<< " - ";
-      std::cout << yg[ij]<< " - ";
-      std::cout << zg[ij]<< " - ";
-      std::cout << std::endl;
+      // std::cout << "hit - " << ij << " - " << xg[ij]<< " - ";
+      // std::cout << yg[ij]<< " - ";
+      // std::cout << zg[ij]<< " - ";
+      // std::cout << std::endl;
 
       if(dumpForMasking_)
         mapToHit.emplace_back(std::pair<uint32_t,uint32_t>(cluster.key(),ij));

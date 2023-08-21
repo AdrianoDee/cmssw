@@ -129,6 +129,7 @@ namespace {
     return CellCutsT<TrackerTraits>{cfg.getParameter<bool>("doClusterCut"),
                                     cfg.getParameter<bool>("doZ0Cut"),
                                     cfg.getParameter<bool>("doPtCut"),
+                                    cfg.getParameter<bool>("useMask"),
                                     cfg.getParameter<bool>("idealConditions"),
                                     (float)cfg.getParameter<double>("z0Cut"),
                                     (float)cfg.getParameter<double>("ptCut"),
@@ -359,12 +360,16 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
 
   kernels.launchKernels(hits_d.view(), tracks.view(), stream);
 
-  HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
-  fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
-  if (m_params.useRiemannFit_) {
-    fitter.launchRiemannKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
-  } else {
-    fitter.launchBrokenLineKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
+  if (m_params.doFit_)
+  {
+    std::cout << "Doing fit" << std::endl;
+    HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
+    fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
+    if (m_params.useRiemannFit_) {
+      fitter.launchRiemannKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
+    } else {
+      fitter.launchBrokenLineKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
+    }
   }
   kernels.classifyTuples(hits_d.view(), tracks.view(), stream);
 #ifdef GPU_DEBUG
@@ -404,17 +409,20 @@ TrackSoAHeterogeneousHost<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTrait
     return tracks;
 
   // now fit
-  HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
-  fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
+  if(m_params.doFit_)
+  {
+    std::cout << "Doing fit" << std::endl;
+    HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
+    fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
 
-  if (m_params.useRiemannFit_) {
-    fitter.launchRiemannKernelsOnCPU(hits_h.view(), hits_h.nHits(), TrackerTraits::maxNumberOfQuadruplets);
-  } else {
-    fitter.launchBrokenLineKernelsOnCPU(hits_h.view(), hits_h.nHits(), TrackerTraits::maxNumberOfQuadruplets);
+    if (m_params.useRiemannFit_) {
+      fitter.launchRiemannKernelsOnCPU(hits_h.view(), hits_h.nHits(), TrackerTraits::maxNumberOfQuadruplets);
+    } else {
+      fitter.launchBrokenLineKernelsOnCPU(hits_h.view(), hits_h.nHits(), TrackerTraits::maxNumberOfQuadruplets);
+    }
   }
 
   kernels.classifyTuples(hits_h.view(), tracks.view(), nullptr);
-
 #ifdef GPU_DEBUG
   std::cout << "finished building pixel tracks on CPU" << std::endl;
 #endif
