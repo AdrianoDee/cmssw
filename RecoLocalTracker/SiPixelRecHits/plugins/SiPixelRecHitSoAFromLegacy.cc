@@ -39,6 +39,7 @@ public:
   using HitModuleStart = std::array<uint32_t, TrackerTraits::numberOfModules + 1>;
   using HMSstorage = HostProduct<uint32_t[]>;
   using HitsOnHost = TrackingRecHitSoAHost<TrackerTraits>;
+  using MapToHit = std::vector<std::pair<int,int>>;
 
 private:
   void produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
@@ -50,6 +51,10 @@ private:
   const edm::EDPutTokenT<HitsOnHost> tokenHit_;
   const edm::EDPutTokenT<HMSstorage> tokenModuleStart_;
   const bool convert2Legacy_;
+  const bool dumpForMasking_;
+
+  static constexpr uint16_t invalidClusterId = std::numeric_limits<uint16_t>::max(); //From legacy SiPixelCluster dataformat
+
 };
 
 template <typename TrackerTraits>
@@ -60,9 +65,12 @@ SiPixelRecHitSoAFromLegacyT<TrackerTraits>::SiPixelRecHitSoAFromLegacyT(const ed
       clusterToken_{consumes<SiPixelClusterCollectionNew>(iConfig.getParameter<edm::InputTag>("src"))},
       tokenHit_{produces<HitsOnHost>()},
       tokenModuleStart_{produces<HMSstorage>()},
-      convert2Legacy_(iConfig.getParameter<bool>("convertToLegacy")) {
+      convert2Legacy_(iConfig.getParameter<bool>("convertToLegacy")),
+      dumpForMasking_(iConfig.getParameter<bool>("dumpForMasking")) {
   if (convert2Legacy_)
     produces<SiPixelRecHitCollectionNew>();
+  if (dumpForMasking_)
+    produces<MapToHit>();
 }
 
 template <typename TrackerTraits>
@@ -75,6 +83,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::fillDescriptions(edm::Configura
   cpeName += TrackerTraits::nameModifier;
   desc.add<std::string>("CPE", cpeName);
   desc.add<bool>("convertToLegacy", false);
+  desc.add<bool>("dumpForMasking", false);
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -112,6 +121,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
   // move the HostProduct to the Event, without reallocating the buffer or affecting hitsModuleStart
   iEvent.put(tokenModuleStart_, std::move(hms));
 
+  auto mapToHitP = std::make_unique<MapToHit>();
+  auto &mapToHit = *mapToHitP;
+
   // legacy output
   auto legacyOutput = std::make_unique<SiPixelRecHitCollectionNew>();
 
@@ -148,6 +160,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
         clusters_h.view()[i - 1].clusModuleStart() + clusters_h.view()[i - 1].clusInModule();
   }
 
+  if(dumpForMasking_)
+   mapToHit.reserve(numberOfClusters);
+   
   assert((uint32_t)numberOfClusters == clusters_h.view()[nModules].clusModuleStart());
   // output SoA
   // element 96 is the start of BPIX2 (i.e. the number of clusters in BPIX1)
@@ -207,6 +222,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
     ndigi = 0;
     //filling digis
     for (auto const& clust : dsv) {
+      
       assert(clust.size() > 0);
       for (int i = 0, nd = clust.size(); i < nd; ++i) {
         auto px = clust.pixel(i);
@@ -214,6 +230,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
         digis_h.view()[ndigi].yy() = px.y;
         digis_h.view()[ndigi].adc() = px.adc;
         digis_h.view()[ndigi].moduleId() = gind;
+
+        if( clust.originalId() == invalidClusterId) // some clusters are invalid
+          digis_h.view()[ndigi].moduleId() = gpuClustering::invalidModuleId;
         digis_h.view()[ndigi].clus() = ic;
         ++ndigi;
       }
@@ -250,6 +269,9 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
 
         SiPixelRecHitQuality::QualWordType rqw = 0;
         SiPixelRecHit hit(lp, le, rqw, *genericDet, clusterRef[ih]);
+        if(dumpForMasking_)
+          mapToHit.emplace_back(std::pair<uint32_t,uint32_t>(h,ih));
+
         recHitsOnDetUnit.push_back(hit);
       }
     }
@@ -274,6 +296,7 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
                                 256,
                                 output.view().phiBinnerStorage());
 
+
   LogDebug("SiPixelRecHitSoAFromLegacy") << "created HitSoa for " << numberOfClusters << " clusters in "
                                          << numberOfDetUnits << " Dets"
                                          << "\n";
@@ -284,6 +307,11 @@ void SiPixelRecHitSoAFromLegacyT<TrackerTraits>::produce(edm::StreamID streamID,
   iEvent.emplace(tokenHit_, std::move(output));
   if (convert2Legacy_)
     iEvent.put(std::move(legacyOutput));
+  if(dumpForMasking_)
+  {
+    std::sort(mapToHit.begin(), mapToHit.end());
+    iEvent.put(std::move(mapToHitP));
+  }
 }
 
 using SiPixelRecHitSoAFromLegacyPhase1 = SiPixelRecHitSoAFromLegacyT<pixelTopology::Phase1>;

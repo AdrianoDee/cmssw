@@ -29,6 +29,8 @@ namespace caHitNtupletGenerator {
     const bool doSharedHitCut_;
     const bool dupPassThrough_;
     const bool useSimpleTripletCleaner_;
+    const bool useMask_;
+    const bool doFit_;
   };
 
   //CAParams
@@ -224,6 +226,8 @@ public:
 
   using CACell = GPUCACellT<TrackerTraits>;
 
+  // using HitMask = uint8_t;
+
   using Quality = pixelTrack::Quality;
   using HitContainer = typename TrackSoA<TrackerTraits>::HitContainer;
 
@@ -240,6 +244,7 @@ public:
 
   void buildDoublets(const HitsConstView& hh, cudaStream_t stream);
   void allocateOnGPU(int32_t nHits, cudaStream_t stream);
+  void allocateMask(const uint8_t *mask, int32_t nHits ,cudaStream_t stream);
   void cleanup(cudaStream_t cudaStream);
 
   static void printCounters(Counters const* counters);
@@ -265,6 +270,7 @@ protected:
   typename HitToTuple::View hitToTupleView_;
 
   unique_ptr<CellCuts> device_cellCuts_;
+  unique_ptr<uint8_t[]> device_hitMask_;
 
   cms::cuda::AtomicPairCounter* device_hitToTuple_apc_ = nullptr;
 
@@ -315,6 +321,7 @@ public:
   void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, cudaStream_t cudaStream);
   void buildDoublets(const HitsConstView& hh, int32_t offsetBPIX2, cudaStream_t stream);
   void allocateOnGPU(int32_t nHits, cudaStream_t stream);
+  void allocateMask(const uint8_t *mask, int32_t nHits ,cudaStream_t stream);
   static void printCounters(Counters const* counters);
 };
 
@@ -342,6 +349,7 @@ public:
   void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, cudaStream_t cudaStream);
   void buildDoublets(const HitsConstView& hh, int32_t offsetBPIX2, cudaStream_t stream);
   void allocateOnGPU(int32_t nHits, cudaStream_t stream);
+  void allocateMask(const uint8_t *mask, int32_t nHits ,cudaStream_t stream);
   static void printCounters(Counters const* counters);
 };
 
