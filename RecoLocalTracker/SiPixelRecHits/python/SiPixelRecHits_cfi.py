@@ -36,7 +36,7 @@ phase2_tracker.toReplaceWith(siPixelRecHitsPreSplittingCPU, _siPixelRecHitsPreSp
 
 # modifier used to prompt patatrack pixel tracks reconstruction on cpu
 from Configuration.ProcessModifiers.pixelNtupletFit_cff import pixelNtupletFit
-pixelNtupletFit.toModify(siPixelRecHitsPreSplitting,
+(pixelNtupletFit | gpuOfflineCA).toModify(siPixelRecHitsPreSplitting,
     cpu = cms.EDAlias(
             siPixelRecHitsPreSplittingCPU = cms.VPSet(
                  cms.PSet(type = cms.string("SiPixelRecHitedmNewDetSetVector")),

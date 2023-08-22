@@ -6,6 +6,8 @@ from RecoVertex.BeamSpotProducer.offlineBeamSpotToCUDA_cfi import offlineBeamSpo
 offlineBeamSpotTask = cms.Task(offlineBeamSpot)
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuOfflineCA_cff import gpuOfflineCA 
+
 _offlineBeamSpotTask_gpu = offlineBeamSpotTask.copy()
 _offlineBeamSpotTask_gpu.add(offlineBeamSpotToCUDA)
-gpu.toReplaceWith(offlineBeamSpotTask, _offlineBeamSpotTask_gpu)
+(gpu | gpuOfflineCA).toReplaceWith(offlineBeamSpotTask, _offlineBeamSpotTask_gpu)
