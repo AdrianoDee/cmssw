@@ -37,10 +37,13 @@ for _eraName, _postfix, _era in _cfg.allEras():
     locals()["_seedProducers"+_postfix] = _cfg.seedProducers(_postfix)
     locals()["_trackProducers"+_postfix] = _cfg.trackProducers(_postfix)
 
-    if _eraName != "trackingPhase2PU140":
-        locals()["_electronSeedProducers"+_postfix] = ["tripletElectronSeeds", "pixelPairElectronSeeds", "stripPairElectronSeeds"]
-    else:
+    if _eraName == "trackingPhase2PU140":
         locals()["_electronSeedProducers"+_postfix] = ["tripletElectronSeeds"]
+    elif _eraName == "trackingPhase1GPU":
+        locals()["_electronSeedProducers"+_postfix] = ["pixelPairElectronSeeds", "stripPairElectronSeeds"]
+    else:
+        locals()["_electronSeedProducers"+_postfix] = ["tripletElectronSeeds", "pixelPairElectronSeeds", "stripPairElectronSeeds"]
+        
 
 _removeForFastSimSeedProducers =["initialStepSeedsPreSplitting",
                                  "jetCoreRegionalStepSeeds",
