@@ -42,6 +42,44 @@ namespace {
 namespace pixelgpudetails {
 
   template <typename TrackerTraits>
+  TrackingRecHitSoADevice<TrackerTraits> PixelRecHitGPUKernel<TrackerTraits>::fillHitsAsync(
+    TrackingRecHitSoAHost<TrackerTraits> const& hits_h,
+    pixelCPEforGPU::ParamsOnGPUT<TrackerTraits> const* cpeParams,
+    cudaStream_t stream) const
+  {
+    auto nHits = hits_h.nHits();
+    constexpr auto nLayers = TrackerTraits::numberOfLayers;
+
+    TrackingRecHitSoADevice<TrackerTraits> hits_d(nHits, stream);
+
+    cudaCheck(cudaMemcpyAsync(hits_d.buffer().get(),
+                              hits_h.const_buffer().get(),
+                              hits_h.bufferSize(),
+                              cudaMemcpyHostToDevice,
+                              stream));  // Copy data from Device to Host
+
+    
+    cudaCheck(cudaMemcpyAsync(&(hits_d.view().cpeParams()), cpeParams, int(sizeof(pixelCPEforGPU::ParamsOnGPUT<TrackerTraits>)), cudaMemcpyDefault, stream));
+
+    cms::cuda::fillManyFromVector(&(hits_d.view().phiBinner()),
+                                        nLayers,
+                                        hits_d.view().iphi(),
+                                        hits_d.view().hitsLayerStart().data(),
+                                        nHits,
+                                        256,
+                                        hits_d.view().phiBinnerStorage(),
+                                        stream); 
+    cudaCheck(cudaGetLastError());
+
+    #ifdef GPU_DEBUG
+        cudaCheck(cudaDeviceSynchronize());
+    #endif
+
+    return hits_d;
+
+  }
+
+  template <typename TrackerTraits>
   TrackingRecHitSoADevice<TrackerTraits> PixelRecHitGPUKernel<TrackerTraits>::makeHitsAsync(
       SiPixelDigisCUDA const& digis_d,
       SiPixelClustersCUDA const& clusters_d,

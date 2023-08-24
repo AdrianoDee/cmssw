@@ -2,8 +2,8 @@
 // Original Author: Felice Pantaleo, CERN
 //
 // 0.41 (eta = 0.9) 0.19 (eta=1.6)
-// #define NTUPLE_DEBUG
-// #define GPU_DEBUG
+//#define NTUPLE_DEBUG
+//#define GPU_DEBUG
 
 #include <cmath>
 #include <cstdint>

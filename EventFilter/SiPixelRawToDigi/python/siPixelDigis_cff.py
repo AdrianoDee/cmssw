@@ -31,8 +31,9 @@ phase1Pixel.toModify(siPixelDigiErrors,
 
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuOfflineCA_cff import gpuOfflineCA 
 from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
-(gpu & ~phase2_tracker).toReplaceWith(siPixelDigisTask, cms.Task(
+((gpu | gpuOfflineCA) & ~phase2_tracker).toReplaceWith(siPixelDigisTask, cms.Task(
     # copy the pixel digis (except errors) and clusters to the host
     siPixelDigisSoA,
     # copy the pixel digis errors to the host

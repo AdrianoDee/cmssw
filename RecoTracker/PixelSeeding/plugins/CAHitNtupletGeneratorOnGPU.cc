@@ -364,10 +364,24 @@ TrackSoAHeterogeneousDevice<TrackerTraits> CAHitNtupletGeneratorOnGPU<TrackerTra
   { 
     HelixFitOnGPU fitter(bfield, m_params.fitNas4_);
     fitter.allocateOnGPU(kernels.tupleMultiplicity(), tracks.view());
+
+    #ifdef GPU_DEBUG
+      cudaDeviceSynchronize();
+      cudaCheck(cudaGetLastError());
+      std::cout << "fitter allocated on GPU" << std::endl;
+    #endif
+
     if (m_params.useRiemannFit_) {
       fitter.launchRiemannKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
     } else {
       fitter.launchBrokenLineKernels(hits_d.view(), hits_d.nHits(), TrackerTraits::maxNumberOfQuadruplets, stream);
+      
+      #ifdef GPU_DEBUG
+        cudaDeviceSynchronize();
+        cudaCheck(cudaGetLastError());
+        std::cout << "launchBrokenLineKernels on GPU run" << std::endl;
+      #endif
+
     }
   }
   kernels.classifyTuples(hits_d.view(), tracks.view(), stream);

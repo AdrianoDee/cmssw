@@ -145,7 +145,7 @@ void SiPixelRecHitFromCUDAT<TrackerTraits>::produce(edm::Event& iEvent, edm::Eve
   if(dumpForMasking_)
     mapToHit.reserve(nHits_);
 
-  std::cout <<  "RecHits from CUDA ---> ";
+  // std::cout <<  "RecHits from CUDA ---> ";
   for (auto const& dsv : input) {
     numberOfDetUnits++;
     unsigned int detid = dsv.detId();

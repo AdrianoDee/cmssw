@@ -11,8 +11,9 @@ siPixelClustersPreSplitting = SwitchProducerCUDA(
 )
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.gpuOfflineCA_cff import gpuOfflineCA 
 # SwitchProducer wrapping the legacy pixel cluster producer or an alias for the pixel clusters information converted from SoA
-gpu.toModify(siPixelClustersPreSplitting,
+(gpu | gpuOfflineCA).toModify(siPixelClustersPreSplitting,
     # ensure the same results when running on GPU (which supports only the 'HLT' payload) and CPU
     cpu = dict(
         payloadType = 'HLT'
