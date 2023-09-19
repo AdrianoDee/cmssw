@@ -361,7 +361,7 @@ private:
   std::vector<std::string> seedingLayerSetNames;
   using SeedingLayerId =
       std::tuple<SeedingLayerSetsBuilder::SeedingLayerId, bool>;  // last bool for strip mono (true) or not (false)
-  using SeedingLayerSetId = std::array<SeedingLayerId, 4>;
+  using SeedingLayerSetId = std::array<SeedingLayerId, 12>;
   std::map<SeedingLayerSetId, unsigned int> seedingLayerSetToBin;
 };
 
