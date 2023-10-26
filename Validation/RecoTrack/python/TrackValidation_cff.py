@@ -1072,6 +1072,28 @@ pixelTracks4pix1striphits = trackRefSelector.clone( cut = cutstring )
 cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits <= 2 & hitPattern.numberOfValidStripHits >= 2"
 pixelTracks4pix2striphits = trackRefSelector.clone( cut = cutstring )
 
+cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits >= 1"
+pixelTracks4pixge1striphits = trackRefSelector.clone( cut = cutstring )
+
+cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits >= 2"
+pixelTracks4pixge2striphits = trackRefSelector.clone( cut = cutstring )
+
+cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits <= 0 & hitPattern.numberOfValidStripHits >= 0"
+pixelTracks3pix0striphits = trackRefSelector.clone( cut = cutstring )
+
+cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits <= 1 & hitPattern.numberOfValidStripHits >= 1"
+pixelTracks3pix1striphits = trackRefSelector.clone( cut = cutstring )
+
+cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits <= 2 & hitPattern.numberOfValidStripHits >= 2"
+pixelTracks3pix2striphits = trackRefSelector.clone( cut = cutstring )
+
+cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits >= 1"
+pixelTracks3pixge1striphits = trackRefSelector.clone( cut = cutstring )
+
+cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits >= 2"
+pixelTracks3pixge2striphits = trackRefSelector.clone( cut = cutstring )
+
+
 cutstring = "pt > 0.9"
 pixelTracksPt09 = trackRefSelector.clone( cut = cutstring )
 #pixelTracksPt09 = generalTracksPt09.clone(quality = ["undefQuality"], **_pixelTracksCustom)
@@ -1088,10 +1110,10 @@ pixelTracksFromPV4hits = pixelTracksFromPV.clone( numberOfValidPixelHits = 4 )
 trackValidatorPixelTrackingOnly = trackValidator.clone(
     dirName = "Tracking/PixelTrack/",
     label = [
-        "pixelTracks", "pixelTracksPt09", "pixelTracks3hits", "pixelTracks4hits", "pixelTracks4pix0striphits", "pixelTracks4pix1striphits", "pixelTracks4pix2striphits",
-        "pixelTracksL", "pixelTracksPt09L", "pixelTracks3hitsL", "pixelTracks4hitsL", "pixelTracks4pix0striphitsL","pixelTracks4pix1striphitsL","pixelTracks4pix2striphitsL",
-        "pixelTracksT", "pixelTracksPt09T", "pixelTracks3hitsT", "pixelTracks4hitsT", "pixelTracks4pix0striphitsT","pixelTracks4pix1striphitsT","pixelTracks4pix2striphitsT",
-        "pixelTracksHP", "pixelTracksPt09HP", "pixelTracks3hitsHP", "pixelTracks4hitsHP", "pixelTracks4pix0striphitsHP","pixelTracks4pix1striphitsHP","pixelTracks4pix2striphitsHP"
+        "pixelTracks", "pixelTracksPt09", "pixelTracks3hits", "pixelTracks4hits", "pixelTracks4pix0striphits", "pixelTracks4pix1striphits", "pixelTracks4pix2striphits", "pixelTracks4pixge1striphits", "pixelTracks4pixge2striphits", "pixelTracks3pix0striphits","pixelTracks3pix1striphits", "pixelTracks3pix2striphits", "pixelTracks3pixge1striphits", "pixelTracks3pixge2striphits",
+        "pixelTracksL", "pixelTracksPt09L", "pixelTracks3hitsL", "pixelTracks4hitsL", "pixelTracks4pix0striphitsL","pixelTracks4pix1striphitsL","pixelTracks4pix2striphitsL", "pixelTracks4pixge1striphitsL", "pixelTracks4pixge2striphitsL", "pixelTracks3pix0striphitsL","pixelTracks3pix1striphitsL", "pixelTracks3pix2striphitsL", "pixelTracks3pixge1striphitsL", "pixelTracks3pixge2striphitsL",
+        "pixelTracksT", "pixelTracksPt09T", "pixelTracks3hitsT", "pixelTracks4hitsT", "pixelTracks4pix0striphitsT","pixelTracks4pix1striphitsT","pixelTracks4pix2striphitsT", "pixelTracks4pixge1striphitsT", "pixelTracks4pixge2striphitsT", "pixelTracks3pix0striphitsT","pixelTracks3pix1striphitsT", "pixelTracks3pix2striphitsT", "pixelTracks3pixge1striphitsT", "pixelTracks3pixge2striphitsT",
+        "pixelTracksHP", "pixelTracksPt09HP", "pixelTracks3hitsHP", "pixelTracks4hitsHP", "pixelTracks4pix0striphitsHP","pixelTracks4pix1striphitsHP","pixelTracks4pix2striphitsHP","pixelTracks4pixge1striphitsHP", "pixelTracks4pixge2striphitsHP", "pixelTracks3pix0striphitsHP","pixelTracks3pix1striphitsHP", "pixelTracks3pix2striphitsHP", "pixelTracks3pixge1striphitsHP", "pixelTracks3pixge2striphitsHP"
     ],
     doResolutionPlotsForLabels = [],
     trackCollectionForDrCalculation = "pixelTracks",
@@ -1156,6 +1178,13 @@ tracksValidationTruthPixelTrackingOnly.add( pixelTracksFromPV4hits )
 tracksValidationTruthPixelTrackingOnly.add(pixelTracks4pix0striphits)
 tracksValidationTruthPixelTrackingOnly.add(pixelTracks4pix1striphits)
 tracksValidationTruthPixelTrackingOnly.add(pixelTracks4pix2striphits)
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks4pixge1striphits) 
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks4pixge2striphits)  
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks3pix0striphits) 
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks3pix1striphits)  
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks3pix2striphits)  
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks3pixge1striphits)  
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks3pixge2striphits) 
 
 tracksPreValidationPixelTrackingOnly = cms.Task(
     tracksValidationTruthPixelTrackingOnly,
@@ -1222,6 +1251,42 @@ for key,value in quality.items():
     cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits >= 2 & hitPattern.numberOfValidStripHits <= 2 & qualityMask <= 7 & qualityMask >= " + str(qualityBit)
     locals()[label] = trackRefSelector.clone( cut = cutstring )
     tracksPreValidationPixelTrackingOnly.add(locals()[label])
+    
+    label = "pixelTracks4pixge1striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits >= 1"
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+
+    label = "pixelTracks4pixge2striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits >= 2"
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+
+    label = "pixelTracks3pix0striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits <= 0 & hitPattern.numberOfValidStripHits >= 0"
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+
+    label = "pixelTracks3pix1striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits <= 1 & hitPattern.numberOfValidStripHits >= 1"
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+
+    label = "pixelTracks3pix2striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits <= 2 & hitPattern.numberOfValidStripHits >= 2"
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+
+    label = "pixelTracks3pixge1striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits >= 1"
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+
+    label = "pixelTracks3pixge2striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & hitPattern.numberOfValidStripHits >= 2"
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+
      
 tracksValidationPixelTrackingOnly = cms.Sequence(
     trackValidatorPixelTrackingOnly +
