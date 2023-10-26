@@ -1063,6 +1063,15 @@ pixelTracks3hits = trackRefSelector.clone( cut = cutstring )
 cutstring = "hitPattern.trackerLayersWithMeasurement >= 4"
 pixelTracks4hits = trackRefSelector.clone( cut = cutstring )
 
+cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits <= 0 & hitPattern.numberOfValidStripHits >= 0"
+pixelTracks4pix0striphits = trackRefSelector.clone( cut = cutstring )
+
+cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits <= 1 & hitPattern.numberOfValidStripHits >= 1"
+pixelTracks4pix1striphits = trackRefSelector.clone( cut = cutstring )
+
+cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits <= 2 & hitPattern.numberOfValidStripHits >= 2"
+pixelTracks4pix2striphits = trackRefSelector.clone( cut = cutstring )
+
 cutstring = "pt > 0.9"
 pixelTracksPt09 = trackRefSelector.clone( cut = cutstring )
 #pixelTracksPt09 = generalTracksPt09.clone(quality = ["undefQuality"], **_pixelTracksCustom)
@@ -1079,10 +1088,10 @@ pixelTracksFromPV4hits = pixelTracksFromPV.clone( numberOfValidPixelHits = 4 )
 trackValidatorPixelTrackingOnly = trackValidator.clone(
     dirName = "Tracking/PixelTrack/",
     label = [
-        "pixelTracks", "pixelTracksPt09", "pixelTracks3hits", "pixelTracks4hits",
-        "pixelTracksL", "pixelTracksPt09L", "pixelTracks3hitsL", "pixelTracks4hitsL",
-        "pixelTracksT", "pixelTracksPt09T", "pixelTracks3hitsT", "pixelTracks4hitsT",
-        "pixelTracksHP", "pixelTracksPt09HP", "pixelTracks3hitsHP", "pixelTracks4hitsHP",
+        "pixelTracks", "pixelTracksPt09", "pixelTracks3hits", "pixelTracks4hits", "pixelTracks4pix0striphits", "pixelTracks4pix1striphits", "pixelTracks4pix2striphits",
+        "pixelTracksL", "pixelTracksPt09L", "pixelTracks3hitsL", "pixelTracks4hitsL", "pixelTracks4pix0striphitsL","pixelTracks4pix1striphitsL","pixelTracks4pix2striphitsL",
+        "pixelTracksT", "pixelTracksPt09T", "pixelTracks3hitsT", "pixelTracks4hitsT", "pixelTracks4pix0striphitsT","pixelTracks4pix1striphitsT","pixelTracks4pix2striphitsT",
+        "pixelTracksHP", "pixelTracksPt09HP", "pixelTracks3hitsHP", "pixelTracks4hitsHP", "pixelTracks4pix0striphitsHP","pixelTracks4pix1striphitsHP","pixelTracks4pix2striphitsHP"
     ],
     doResolutionPlotsForLabels = [],
     trackCollectionForDrCalculation = "pixelTracks",
@@ -1144,6 +1153,9 @@ tracksValidationTruthPixelTrackingOnly.add( pixelTracksPt09 )
 tracksValidationTruthPixelTrackingOnly.add( pixelTracksFromPV )
 tracksValidationTruthPixelTrackingOnly.add( pixelTracksFromPVPt09 )
 tracksValidationTruthPixelTrackingOnly.add( pixelTracksFromPV4hits )
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks4pix0striphits)
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks4pix1striphits)
+tracksValidationTruthPixelTrackingOnly.add(pixelTracks4pix2striphits)
 
 tracksPreValidationPixelTrackingOnly = cms.Task(
     tracksValidationTruthPixelTrackingOnly,
@@ -1193,6 +1205,21 @@ for key,value in quality.items():
 #--------    
     label = "pixelTracks3hits"+key
     cutstring = "hitPattern.trackerLayersWithMeasurement == 3 & qualityMask <= 7 & qualityMask >= " + str(qualityBit)
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+    
+    label = "pixelTracks4pix0striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits >= 0 & hitPattern.numberOfValidStripHits <= 0 & qualityMask <= 7 & qualityMask >= " + str(qualityBit)
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+    
+    label = "pixelTracks4pix1striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits >= 1 & hitPattern.numberOfValidStripHits <= 1 & qualityMask <= 7 & qualityMask >= " + str(qualityBit)
+    locals()[label] = trackRefSelector.clone( cut = cutstring )
+    tracksPreValidationPixelTrackingOnly.add(locals()[label])
+    
+    label = "pixelTracks4pix2striphits"+key
+    cutstring = "hitPattern.trackerLayersWithMeasurement >= 4 & hitPattern.numberOfValidStripHits >= 2 & hitPattern.numberOfValidStripHits <= 2 & qualityMask <= 7 & qualityMask >= " + str(qualityBit)
     locals()[label] = trackRefSelector.clone( cut = cutstring )
     tracksPreValidationPixelTrackingOnly.add(locals()[label])
      
