@@ -52,14 +52,24 @@ for key,value in quality.items():
 
 ntuplet = {
     '3' : "3Hits", # ==3
-    '4' : "4Hits"  # >=4 
+    '4' : "4Hits", # >=4
+    '0': "4PixHits0StripHits", # >=4 pixel hits and 1 strip
+    '1': "4PixHits1StripHits", # >=4 pixel hits and 1 strip
+    '2': "4PixHits2StripHits" # >=4 pixel hits and 2 strip
 }
 for kN,vN in ntuplet.items():
     for key,value in quality.items():
         label = "pixelTrks" + vN + key
 #        print label
-
-        cutstring = "numberOfValidHits == " + kN + " & quality('" + value + "')" 
+        if 'Strip' not in vN:
+            cutstring = "numberOfValidHits == " + kN + " & quality('" + value + "')"
+        else :
+            if '4PixHits0StripHits' in vN:
+                cutstring = "numberOfValidHits >= " + str(4) + " & hitPattern.numberOfValidStripHits >=" + kN + " & quality('" + value + "')"
+            if '4PixHits1StripHits' in vN:
+                cutstring = "numberOfValidHits >= " + str(4) + " & hitPattern.numberOfValidStripHits >=" + kN + " & quality('" + value + "')"
+            if '4PixHits2StripHits' in vN:
+                cutstring = "numberOfValidHits >= " + str(4) + " & hitPattern.numberOfValidStripHits >=" + kN + " & quality('" + value + "')"
 #        print cutstring
         locals()[label] = _trackSelector.clone( cut = cutstring )
         locals()[label].setLabel(label)
@@ -90,14 +100,14 @@ pixelTracksMonitoringTask = cms.Task(
     goodPixelVertices,
 )
 
-for category in ["pixelTrks", "pixelTrks3Hits", "pixelTrks4Hits"]:
+for category in ["pixelTrks", "pixelTrks3Hits", "pixelTrks4Hits","pixelTrks4PixHits0StripHits","pixelTrks4PixHits1StripHits","pixelTrks4PixHits2StripHits"]:
     for key in quality:
         label = category+key
 #        print label
         pixelTracksMonitoringTask.add(locals()[label])
 
 allPixelTracksMonitoring = cms.Sequence()
-for category in ["pixelTrksMonitor", "pixelTrks3HitsMonitor", "pixelTrks4HitsMonitor" ]:
+for category in ["pixelTrksMonitor", "pixelTrks3HitsMonitor", "pixelTrks4HitsMonitor","pixelTrks4PixHits0StripHitsMonitor","pixelTrks4PixHits1StripHitsMonitor","pixelTrks4PixHits2StripHitsMonitor" ]:
     for key in quality:
         label = category+key
 #        print label
