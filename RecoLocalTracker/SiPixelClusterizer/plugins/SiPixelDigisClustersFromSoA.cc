@@ -21,7 +21,7 @@
 #include "PixelClusterizerBase.h"
 #include "SiPixelClusterThresholds.h"
 
-#define EDM_ML_DEBUG
+//#define EDM_ML_DEBUG
 
 template <typename TrackerTraits>
 class SiPixelDigisClustersFromSoAT : public edm::global::EDProducer<> {

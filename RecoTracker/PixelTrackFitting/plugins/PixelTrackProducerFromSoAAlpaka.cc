@@ -245,10 +245,12 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
   //store the index of the SoA: indToEdm[index_SoAtrack] -> index_edmTrack (if it exists)
   indToEdm.resize(sortIdxs.size(), -1);
   for (const auto &it : sortIdxs) {
+    
     auto nHits = tracksHelpers::nHits(tsoa.view(), it);
     assert(nHits >= 3);
     auto q = quality[it];
 
+    std::cout << " nHits " << nHits << " quality: " << int(q) << std::endl; 
     if (q < minQuality_)
       continue;
     if (nHits < minNumberOfHits_)  //move to nLayers?
@@ -319,6 +321,7 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
     track->setQuality(tkq);
     // filter???
     tracks.emplace_back(track.release(), hits);
+    
   }
   #ifdef GPU_DEBUG
     std::cout << "processed " << nt << " good tuples " << tracks.size() << " out of " << indToEdm.size() << std::endl;

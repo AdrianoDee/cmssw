@@ -14,7 +14,7 @@
 #include "PixelRecHitGPUKernel.h"
 #include "PixelRecHits.h"
 
-#define GPU_DEBUG
+//#define GPU_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   using namespace cms::alpakatools;

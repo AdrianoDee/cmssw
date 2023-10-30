@@ -53,7 +53,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using Counters = caHitNtupletGenerator::Counters;
 
     using ParamsOnDevice = pixelCPEforDevice::ParamsOnDeviceT<pixelTopology::base_traits_t<TrackerTraits>>;
-
+    using FrameOnDevice = FrameSoACollection;
   public:
     CAHitNtupletGenerator(const edm::ParameterSet& cfg); 
 
@@ -61,7 +61,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     static void fillDescriptionsCommon(edm::ParameterSetDescription& desc);
 
     TkSoADevice makeTuplesAsync(HitsOnDevice const& hits_d,
-                                ParamsOnDevice const* cpeParams,
+                                FrameOnDevice const& frame_d,
+                                // ParamsOnDevice const* cpeParams,
                                 float bfield,
                                 Queue& queue) const;
 

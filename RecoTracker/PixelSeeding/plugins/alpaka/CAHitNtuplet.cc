@@ -3,7 +3,6 @@
 
 #include "DataFormats/TrackSoA/interface/TrackHostSoA.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TrackSoACollection.h"
-//#include "DataFormats/TrackSoA/interface/TrackSoADevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitSoACollection.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -24,6 +23,9 @@
 #include "RecoTracker/TkMSParametrization/interface/PixelRecoUtilities.h"
 #include "RecoLocalTracker/Records/interface/PixelCPEFastParamsRecord.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/alpaka/PixelCPEFastParamsCollection.h"
+
+#include "RecoLocalTracker/Records/interface/FrameSoARecord.h"
+#include "RecoLocalTracker/ClusterParameterEstimator/interface/alpaka/FrameSoACollection.h"
 
 #include "CAHitNtupletGenerator.h"
 
@@ -51,7 +53,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
  
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> tokenField_;
-    const device::ESGetToken<PixelCPEFastParams<pixelTopology::base_traits_t<TrackerTraits>>, PixelCPEFastParamsRecord> cpeToken_; 
+    // const device::ESGetToken<PixelCPEFastParams<pixelTopology::base_traits_t<TrackerTraits>>, PixelCPEFastParamsRecord> cpeToken_; 
+    const device::ESGetToken<FrameSoACollection, FrameSoARecord> frameToken_; 
     const device::EDGetToken<HitsOnDevice> tokenHit_;
     const device::EDPutToken<TkSoADevice> tokenTrack_;
 
@@ -61,7 +64,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TrackerTraits>
   CAHitNtupletAlpaka<TrackerTraits>::CAHitNtupletAlpaka(const edm::ParameterSet& iConfig)
       : tokenField_(esConsumes()),
-        cpeToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("CPE")))),
+        frameToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("frameSoA")))),
         tokenHit_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
         tokenTrack_(produces()),
         algo_(iConfig) {
@@ -74,9 +77,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingAlpaka"));
 
-    std::string cpe = "PixelCPEFastParams";
-    cpe += TrackerTraits::nameModifier;
-    desc.add<std::string>("CPE", cpe);
+    std::string frame = "FrameSoA";
+    frame += TrackerTraits::nameModifier;
+    desc.add<std::string>("frameSoA", frame);
 
     Algo::fillPSetDescription(desc);
     descriptions.addWithDefaultLabel(desc);
@@ -86,11 +89,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void CAHitNtupletAlpaka<TrackerTraits>::produce(device::Event& iEvent, const device::EventSetup& es) {
     auto bf = 1. / es.getData(tokenField_).inverseBzAtOriginInGeV();
 
-    auto& fcpe = es.getData(cpeToken_);
+    auto const& frame = es.getData(frameToken_);
 
     auto const& hits = iEvent.get(tokenHit_);
 
-    iEvent.emplace(tokenTrack_, algo_.makeTuplesAsync(hits, fcpe.const_buffer().data(), bf, iEvent.queue()));
+    iEvent.emplace(tokenTrack_, algo_.makeTuplesAsync(hits, frame, bf, iEvent.queue()));
 
   }
 
