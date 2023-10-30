@@ -20,4 +20,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
+namespace cms::alpakatools {
+  template <>
+  struct CopyToDevice<FrameSoAHost> {
+    template <typename TQueue>
+    static auto copyAsync(TQueue& queue, FrameSoAHost const& srcData) {
+      using TDevice = typename alpaka::trait::DevType<TQueue>::type;
+      FrameSoADevice<TDevice> dstData (srcData->metadata().size(), queue);
+      alpaka::memcpy(queue, dstData.buffer(), srcData.buffer());
+      return dstData;
+    }
+  };
+}  // namespace cms::alpakatools
+
 #endif  // RecoLocalTracker_ClusterParameterEstimator_interface_alpaka_FrameSoACollection_h
