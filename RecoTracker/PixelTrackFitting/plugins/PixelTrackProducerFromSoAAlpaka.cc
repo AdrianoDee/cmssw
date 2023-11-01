@@ -196,28 +196,19 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
     for (const auto& moduleHits : *stripRechitsDSV) {
       const GluedGeomDet* theStripDet = dynamic_cast<const GluedGeomDet*>(theTrackerGeometry->idToDet(moduleHits[0].geographicalId()));
       int moduleIdx = (theStripDet->stereoDet())->index();
-      // auto moduleIdx = moduleHits[0].stereoHit().det()->index();
       if (moduleIdx >= TrackerTraits::numberOfModules)
         break;
-      // std::cout << "module index: " << moduleIdx <<
-      //   ", " << moduleHits.size() << 
-      //   ", " << (hitsModuleStart[moduleIdx + 1] - hitsModuleStart[moduleIdx]) << std::endl;
-      for (auto i = 0u; i < moduleHits.size(); ++i) {
+        for (auto i = 0u; i < moduleHits.size(); ++i) {
         auto j = hitsModuleStart[moduleIdx] + i;
-        // if (j > hitmap.size())
-        //   std::cout << "invalid memory access: " <<
-        //     "i = " << i <<
-        //     ", j = " << j << 
-        //     ", moduleIdx = " << moduleIdx << std::endl;
-        // else
           hitmap[j] = &*(moduleHits.begin() + i);
           ++counter[j];
       }
     }
   }
 
+  #ifdef GPU_DEBUG
   std::cout << "hitmap nulls:" << std::count(hitmap.begin(), hitmap.end(), nullptr) << std::endl;
-  
+  #endif
   std::vector<const TrackingRecHit *> hits;
   hits.reserve(5); //TODO: Move to the average depending on tracker traits
 
@@ -226,8 +217,10 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
   auto const &hitIndices = tsoa.view().hitIndices();
   auto nTracks = tsoa.view().nTracks();
 
+  #ifdef GPU_DEBUG
   std::cout << "max hit index = " << *std::max_element(hitIndices.begin(), hitIndices.end()) << std::endl;
   std::cout << "hitmap.size() = " << hitmap.size() << std::endl;
+  #endif
 
   tracks.reserve(nTracks);
 
@@ -247,8 +240,9 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
     auto nHits = tracksHelpers::nHits(tsoa.view(), it);
     assert(nHits >= 3);
     auto q = quality[it];
-
+    #ifdef GPU_DEBUG
     std::cout << " nHits " << nHits << " quality: " << int(q) << std::endl; 
+    #endif
     if (q < minQuality_)
       continue;
     if (nHits < minNumberOfHits_)  //move to nLayers?
