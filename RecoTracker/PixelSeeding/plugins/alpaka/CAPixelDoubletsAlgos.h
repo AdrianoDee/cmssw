@@ -16,8 +16,8 @@
 #include "CAStructures.h"
 #include "CACell.h"
 
-#define GPU_DEBUG
-#define NTUPLE_DEBUG
+// #define GPU_DEBUG
+// #define NTUPLE_DEBUG
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace caPixelDoublets {
     using namespace cms::alpakatools;
@@ -55,6 +55,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             idealConditions_(idealConditions),
             z0Cut_(z0Cut),
             ptCut_(ptCut) {
+ 
         assert(phiCutsV.size() == TrackerTraits::nPairs);
         std::copy(phiCutsV.begin(), phiCutsV.end(), &phiCuts[0]);
       }
@@ -224,7 +225,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
           continue;
 
-        if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(acc, hh, i))
+        if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(acc, hh, i) && outer < TrackerTraits::numberOfPixelLayers)
           continue;
 
         auto mep = hh[i].iphi();

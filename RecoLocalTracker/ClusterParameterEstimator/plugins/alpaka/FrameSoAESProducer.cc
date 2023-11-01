@@ -70,9 +70,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     for (unsigned i = 0; i != n_detectors; ++i) {
       auto det = detUnits[i];
-      if (not (det->type().isTrackerPixel() and det->type().isTrackerStrip()))
-        edm::LogWarning("TrackerDetectorMismatch") << "Detector no." << i << " in the TrackerGeometry has both isTrackerPixel() and isTrackerStrip() false." << "\n";
-      
       auto vv = det->surface().position();
       auto rr = Rotation(det->surface().rotation());
       product->view()[i].detFrame() =  Frame(vv.x(), vv.y(), vv.z(), rr); 

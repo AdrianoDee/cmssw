@@ -26,7 +26,7 @@
 
 #include "vertexFinder.h"
 
-#define PIXVERTEX_DEBUG_PRODUCE
+//#define PIXVERTEX_DEBUG_PRODUCE
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 

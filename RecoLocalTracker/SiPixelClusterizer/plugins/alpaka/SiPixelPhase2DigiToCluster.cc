@@ -36,7 +36,7 @@
 #include "RecoLocalTracker/SiPixelClusterizer/plugins/SiPixelClusterThresholds.h"
 #include "SiPixelRawToClusterKernel.h"
 
-#define GPU_DEBUG
+// #define GPU_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 

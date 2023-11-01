@@ -20,7 +20,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/traits.h"
 #include "RecoLocalTracker/SiPixelClusterizer/plugins/SiPixelClusterThresholds.h"
 
-#define GPU_DEBUG
+// #define GPU_DEBUG
 
 namespace calibPixel {
   using namespace cms::alpakatools;

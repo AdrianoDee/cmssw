@@ -1,7 +1,6 @@
 #ifndef RecoPixelVertexing_PixelTriplets_CAHitNtupletGeneratorKernels_h
 #define RecoPixelVertexing_PixelTriplets_CAHitNtupletGeneratorKernels_h
 
-#define GPU_DEBUG
 #include <alpaka/alpaka.hpp>
 #include <cstdint>
 #include "CACell.h"
@@ -17,6 +16,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 // #define DUMP_GPU_TK_TUPLES
+// #define GPU_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace caHitNtupletGenerator {

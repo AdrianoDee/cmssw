@@ -2,8 +2,8 @@
 // Author: Felice Pantaleo, CERN
 //
 
-#define BROKENLINE_DEBUG
-#define BL_DUMP_HITS
+// #define BROKENLINE_DEBUG
+// #define BL_DUMP_HITS
 #include <alpaka/alpaka.hpp>
 #include <cstdint>
 
