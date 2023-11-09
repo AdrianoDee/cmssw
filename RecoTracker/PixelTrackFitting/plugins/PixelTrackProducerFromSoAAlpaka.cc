@@ -1,3 +1,5 @@
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
@@ -189,7 +191,8 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
     if (idx >= hitmap.size())
       hitmap.resize(idx + 256, nullptr);  // only in case of hit overflow in one module
 
-    assert(nullptr == hitmap[idx]);
+    if (nullptr != hitmap[idx])
+      throw std::runtime_error("duplicate hit id: " + std::to_string(idx));
     hitmap[idx] = &hit;
     ++counter[idx];
   }
@@ -197,13 +200,13 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
   if (useStripHits_) {
     for (const auto& moduleHits : *stripRechitsDSV) {
       const GluedGeomDet* theStripDet = dynamic_cast<const GluedGeomDet*>(theTrackerGeometry->idToDet(moduleHits[0].geographicalId()));
-      int moduleIdx = (theStripDet->stereoDet())->index();
+      int moduleIdx = TrackerTraits:: mapIndex(theStripDet->stereoDet()->index());
       if (moduleIdx >= TrackerTraits::numberOfModules)
         break;
-        for (auto i = 0u; i < moduleHits.size(); ++i) {
+      for (auto i = 0u; i < moduleHits.size(); ++i) {
         auto j = hitsModuleStart[moduleIdx] + i;
-          hitmap[j] = &*(moduleHits.begin() + i);
-          ++counter[j];
+        hitmap[j] = &*(moduleHits.begin() + i);
+        ++counter[j];
       }
     }
   }

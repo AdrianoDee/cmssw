@@ -119,7 +119,7 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
   size_t nStripHits = 0;
   for (const auto& detSet : stripHits) {
     const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
-    if (det->stereoDet()->index() < TrackerTraits::numberOfModules)
+    if (TrackerTraits::mapIndex(det->stereoDet()->index()) < TrackerTraits::numberOfModules)
         nStripHits += detSet.size();
   } 
 
@@ -165,7 +165,17 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
     pixelHitsHost.view().hitsModuleStart().begin(),
     pixelHitsHost.view().hitsModuleStart().end(),
     hitsModuleStart.begin()
-  );
+  );  
+  
+  // std::cout << "layerStart: " << std::endl;
+  // for (auto i = 0u; i < phase1PixelStripTopology::layerStart.size(); ++i) {
+  //   std::cout << i << " -> " << phase1PixelStripTopology::layerStart[i] << std::endl;
+  // }
+
+  // std::cout << "indexMap: " << std::endl;
+  // for (auto i = 0u; i < phase1PixelStripTopology::indexMap.size(); ++i) {
+  //   std::cout << i << " -> " << phase1PixelStripTopology::indexMap[i] << std::endl;
+  // }
 
   size_t i = 0;
   size_t lastIndex = TrackerTraits::numberOfPixelModules;
@@ -174,7 +184,7 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
   for (const auto& detSet : stripHits) {
 
     const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
-    size_t index = det->stereoDet()->index();
+    size_t index = TrackerTraits::mapIndex(det->stereoDet()->index());
     
     if (index >= TrackerTraits::numberOfModules)
       break;
@@ -201,7 +211,7 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
       // allHitsHost.view()[nPixelHits + i].chargeAndStatus().status = ?
       // allHitsHost.view()[nPixelHits + i].clusterSizeX() = ?
       // allHitsHost.view()[nPixelHits + i].clusterSizeY() = ?
-      allHitsHost.view()[nPixelHits + i].detectorIndex() = det->stereoDet()->index();
+      allHitsHost.view()[nPixelHits + i].detectorIndex() = index;
       // ???
       ++i;
     }
