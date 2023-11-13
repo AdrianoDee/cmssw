@@ -2,8 +2,10 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/BeamSpot/interface/BeamSpotPOD.h"
 #include "DataFormats/BeamSpot/interface/alpaka/BeamSpotDeviceProduct.h"
+#include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisDevice.h"
 #include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisCollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitSoADevice.h"
@@ -76,8 +78,9 @@ private:
 
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
   const edm::EDGetTokenT<SiStripMatchedRecHit2DCollection> recHitToken_;
-  
+  const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken;
   const edm::EDGetTokenT<PixelHitsHost> pixelRecHitSoAToken_;
+
   const device::EDPutToken<StripHits> stripSoA_;
   const edm::EDPutTokenT<std::vector<uint32_t>> hmsToken_;
 
@@ -88,6 +91,7 @@ template <typename TrackerTraits>
 SiStripRecHitSoA<TrackerTraits>::SiStripRecHitSoA(const edm::ParameterSet& iConfig)
     : geomToken_(esConsumes()),
       recHitToken_{consumes(iConfig.getParameter<edm::InputTag>("stripRecHitSource"))},
+      beamSpotToken(consumes(edm::InputTag("offlineBeamSpot"))),
       pixelRecHitSoAToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSoASource"))},
       stripSoA_{produces()},
       hmsToken_{produces()}
@@ -114,6 +118,7 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
   const TrackerGeometry* trackerGeometry = &iSetup.getData(geomToken_);
   auto const& stripHits = iEvent.get(recHitToken_);
   auto const& pixelHitsHost = iEvent.get(pixelRecHitSoAToken_);
+  auto& bs = iEvent.get(beamSpotToken);
 
   // Count strip hits
   size_t nStripHits = 0;
@@ -166,16 +171,6 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
     pixelHitsHost.view().hitsModuleStart().end(),
     hitsModuleStart.begin()
   );  
-  
-  // std::cout << "layerStart: " << std::endl;
-  // for (auto i = 0u; i < phase1PixelStripTopology::layerStart.size(); ++i) {
-  //   std::cout << i << " -> " << phase1PixelStripTopology::layerStart[i] << std::endl;
-  // }
-
-  // std::cout << "indexMap: " << std::endl;
-  // for (auto i = 0u; i < phase1PixelStripTopology::indexMap.size(); ++i) {
-  //   std::cout << i << " -> " << phase1PixelStripTopology::indexMap[i] << std::endl;
-  // }
 
   size_t i = 0;
   size_t lastIndex = TrackerTraits::numberOfPixelModules;
@@ -202,11 +197,14 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
       allHitsHost.view()[nPixelHits + i].xerrLocal() = recHit.localPositionError().xx();
       allHitsHost.view()[nPixelHits + i].yerrLocal() = recHit.localPositionError().yy();
       auto globalPosition = det->toGlobal(recHit.localPosition());
-      allHitsHost.view()[nPixelHits + i].xGlobal() = globalPosition.x();
-      allHitsHost.view()[nPixelHits + i].yGlobal() = globalPosition.y();
-      allHitsHost.view()[nPixelHits + i].zGlobal() = globalPosition.z();
-      allHitsHost.view()[nPixelHits + i].rGlobal() = globalPosition.transverse();
-      allHitsHost.view()[nPixelHits + i].iphi() = unsafe_atan2s<7>(globalPosition.y(), globalPosition.x());
+      double gx = globalPosition.x() - bs.x0();
+      double gy = globalPosition.y() - bs.y0();
+      double gz = globalPosition.z() - bs.z0();
+      allHitsHost.view()[nPixelHits + i].xGlobal() = gx;
+      allHitsHost.view()[nPixelHits + i].yGlobal() = gy;
+      allHitsHost.view()[nPixelHits + i].zGlobal() = gz;
+      allHitsHost.view()[nPixelHits + i].rGlobal() = sqrt(gx * gx + gy * gy);
+      allHitsHost.view()[nPixelHits + i].iphi() = unsafe_atan2s<7>(gy, gx);
       // allHitsHost.view()[nPixelHits + i].chargeAndStatus().charge = ?
       // allHitsHost.view()[nPixelHits + i].chargeAndStatus().status = ?
       // allHitsHost.view()[nPixelHits + i].clusterSizeX() = ?
