@@ -1,6 +1,5 @@
 #include <alpaka/alpaka.hpp>
 
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/ESHandle.h"

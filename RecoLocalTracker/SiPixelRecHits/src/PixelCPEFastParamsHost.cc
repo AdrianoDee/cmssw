@@ -4,7 +4,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "DataFormats/SiPixelClusterSoA/interface/ClusteringConstants.h"
 #include "DataFormats/GeometrySurface/interface/SOARotation.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
 #include "DataFormats/TrackingRecHitSoA/interface/SiPixelHitStatus.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEFastParamsHost.h"
 #include "CondFormats/SiPixelTransient/interface/SiPixelGenError.h"
