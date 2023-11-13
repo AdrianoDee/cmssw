@@ -1,16 +1,18 @@
 #include <memory>
 #include <string>
 #include <alpaka/alpaka.hpp>
+#include <type_traits>
 
 #include "DataFormats/GeometrySurface/interface/SOARotation.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
+#include "Geometry/CommonTopologies/interface/TrackerGeomDet.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
 
 #include "Geometry/CommonDetUnit/interface/GeomDetType.h"
 #include "Geometry/CommonDetUnit/interface/PixelGeomDetUnit.h"
@@ -42,6 +44,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   private:
     edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geometry_;
+    edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topology_;
   };
 
   using namespace edm;
@@ -53,6 +56,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     auto cc = setWhatProduced(this, myname);
     geometry_ = cc.consumes();
+    topology_ = cc.consumes();
   }
 
   template <typename TrackerTraits>
@@ -60,19 +64,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const FrameSoARecord& iRecord) {
 
     const TrackerGeometry* geometry = &iRecord.get(geometry_); 
+    const TrackerTopology* topology = &iRecord.get(topology_); 
 
     auto const& detUnits = geometry->detUnits();
-    constexpr auto n_detectors = TrackerTraits::numberOfModules; // converting only up to the modules used in the CA topology
-
-    assert(n_detectors < detUnits.size()); //still there shouldn't be more modules than what we have from the TrackerGeometry
 
     auto product = std::make_unique<FrameSoAHost>(TrackerTraits::numberOfModules, cms::alpakatools::host());
+    
+    if constexpr (std::is_same_v<TrackerTraits, pixelTopology::Phase1Strip>) {
+      int i = 0;
+      for (auto layer : phase1PixelStripTopology::layerData) {
+        auto step = layer.isStrip2D ? 2 : 1;
+        for (auto j = layer.start; j != layer.end; j += step) {
+          auto& s = layer.isStrip2D ? 
+            geometry->idToDet(topology->glued(detUnits[i]->geographicalId()))->surface() :
+            detUnits[j]->surface();
+          product->view()[i].detFrame() = Frame(s.position().x(), s.position().y(), s.position().z(), s.rotation()); 
+          ++i;
+        }
+      }
+    }
+    else {
+      constexpr auto n_detectors = TrackerTraits::numberOfModules; // converting only up to the modules used in the CA topology
 
-    for (unsigned i = 0; i != n_detectors; ++i) {
-      auto det = detUnits[i];
-      auto vv = det->surface().position();
-      auto rr = Rotation(det->surface().rotation());
-      product->view()[i].detFrame() =  Frame(vv.x(), vv.y(), vv.z(), rr); 
+      assert(n_detectors < detUnits.size()); //still there shouldn't be more modules than what we have from the TrackerGeometry
+
+      for (unsigned i = 0; i != n_detectors; ++i) {
+        auto det = detUnits[i];
+        auto vv = det->surface().position();
+        auto rr = Rotation(det->surface().rotation());
+        product->view()[i].detFrame() =  Frame(vv.x(), vv.y(), vv.z(), rr); 
+      }
     }
 
 
