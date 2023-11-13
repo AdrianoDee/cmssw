@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <alpaka/alpaka.hpp>
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "DataFormats/TrackSoA/interface/TrackLayout.h"
 #include "DataFormats/TrackSoA/interface/TrackDefinitions.h"

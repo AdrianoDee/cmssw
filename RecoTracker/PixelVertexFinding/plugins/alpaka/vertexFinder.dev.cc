@@ -7,6 +7,8 @@
 #include "RecoTracker/PixelVertexFinding/interface/PixelVertexWorkSpaceLayout.h"
 #include "RecoTracker/PixelVertexFinding/plugins/alpaka/PixelVertexWorkSpaceSoADeviceAlpaka.h"
 
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
+
 #include "vertexFinder.h"
 #include "clusterTracksDBSCAN.h"
 #include "clusterTracksIterative.h"

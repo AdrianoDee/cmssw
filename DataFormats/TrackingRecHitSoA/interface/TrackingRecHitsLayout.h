@@ -5,7 +5,7 @@
 
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 #include "DataFormats/TrackingRecHitSoA/interface/SiPixelHitStatus.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
 
