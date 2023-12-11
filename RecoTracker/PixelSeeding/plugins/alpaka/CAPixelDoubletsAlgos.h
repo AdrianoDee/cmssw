@@ -52,7 +52,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
               const bool idealConditions,
               const float z0Cut,
               const float ptCut,
-              const std::vector<int>& phiCutsV)
+              const std::vector<int>& phiCutsV,
+              const std::vector<int>& minzV,
+              const std::vector<int>& maxzV,
+              const std::vector<int>& maxrV)
         : doClusterCut_(doClusterCut),
           doZ0Cut_(doZ0Cut),
           doPtCut_(doPtCut),
@@ -61,6 +64,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           ptCut_(ptCut) {
       assert(phiCutsV.size() == TrackerTraits::nPairs);
       std::copy(phiCutsV.begin(), phiCutsV.end(), &phiCuts[0]);
+      assert(minzV.size() == TrackerTraits::nPairs);
+      std::copy(minzV.begin(), minzV.end(), &minz[0]);
+      assert(maxrV.size() == TrackerTraits::nPairs);
+      std::copy(maxrV.begin(), maxrV.end(), &maxr[0]);
     }
 
     bool doClusterCut_;
@@ -72,6 +79,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     float ptCut_;
 
     int phiCuts[T::nPairs];
+    int minz[T::nPairs];
+    int maxz[T::nPairs];
+    int maxr[T::nPairs];
 
     template <typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool __attribute__((always_inline))
@@ -216,8 +226,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
       auto mez = hh[i].zGlobal();
 
-      if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
-        continue;
+        if (mez < cuts.minz[pairLayerId] || mez > cuts.maxz[pairLayerId])
+          continue;
 
       if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(acc, hh, i))
         continue;
@@ -225,20 +235,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       auto mep = hh[i].iphi();
       auto mer = hh[i].rGlobal();
 
-      // all cuts: true if fails
-      auto ptcut = [&](int j, int16_t idphi) {
-        auto r2t4 = minRadius2T4;
-        auto ri = mer;
-        auto ro = hh[j].rGlobal();
-        auto dphi = short2phi(idphi);
-        return dphi * dphi * (r2t4 - ri * ro) > (ro - ri) * (ro - ri);
-      };
-      auto z0cutoff = [&](int j) {
-        auto zo = hh[j].zGlobal();
-        auto ro = hh[j].rGlobal();
-        auto dr = ro - mer;
-        return dr > TrackerTraits::maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
-      };
+        // all cuts: true if fails
+        auto ptcut = [&](int j, int16_t idphi) {
+          auto r2t4 = minRadius2T4;
+          auto ri = mer;
+          auto ro = hh[j].rGlobal();
+          auto dphi = short2phi(idphi);
+          return dphi * dphi * (r2t4 - ri * ro) > (ro - ri) * (ro - ri);
+        };
+        auto z0cutoff = [&](int j) {
+          auto zo = hh[j].zGlobal();
+          auto ro = hh[j].rGlobal();
+          auto dr = ro - mer;
+          return dr > cuts.maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
+        };
 
       auto iphicut = cuts.phiCuts[pairLayerId];
 
@@ -306,18 +316,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       }
 //      #endif
 #ifdef GPU_DEBUG
-      if (tooMany > 0 or tot > 0)
-        printf("OuterHitOfCell for %d in layer %d/%d, %d,%d %d, %d %.3f %.3f %s\n",
-               i,
-               inner,
-               outer,
-               nmin,
-               tot,
-               tooMany,
-               iphicut,
-               TrackerTraits::minz[pairLayerId],
-               TrackerTraits::maxz[pairLayerId],
-               tooMany > 0 ? "FULL!!" : "not full.");
+        if (tooMany > 0 or tot > 0)
+          printf("OuterHitOfCell for %d in layer %d/%d, %d,%d %d, %d %.3f %.3f %s\n",
+                 i,
+                 inner,
+                 outer,
+                 nmin,
+                 tot,
+                 tooMany,
+                 iphicut,
+                 cuts.minz[pairLayerId],
+                 cuts.maxz[pairLayerId],
+                 tooMany > 0 ? "FULL!!" : "not full.");
 #endif
     }  // loop in block...
   }
