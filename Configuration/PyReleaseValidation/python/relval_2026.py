@@ -41,6 +41,8 @@ numWFIB.extend([27234.0]) #2026D104
 #CloseByPGun for HGCAL
 numWFIB.extend([24896.0]) #CE_E_Front_120um D98
 numWFIB.extend([24900.0]) #CE_H_Coarse_Scint D98
+# NuGun 
+numWFIB.extend([20061.0]) #Nu Gun 2026D88
 
 for numWF in numWFIB:
     workflows[numWF] = _upgrade_workflows[numWF]

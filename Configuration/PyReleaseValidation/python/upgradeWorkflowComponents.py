@@ -780,10 +780,13 @@ upgradeWFs['photonDRN'].step3 = {
 #   - 2018 conditions, TTbar
 #   - 2018 conditions, Z->mumu
 #   - 2022 conditions (labelled "2021"), TTbar
+#   - 2022 conditions (labelled "2021"), NuGun
 #   - 2022 conditions (labelled "2021"), Z->mumu
 #   - 2023 conditions, TTbar
+#   - 2023 conditions, NuGun
 #   - 2023 conditions, Z->mumu
 #   - 2026 conditions, TTbar
+#   - 2026 conditions, NuGu
 class PatatrackWorkflow(UpgradeWorkflow):
     def __init__(self, digi = {}, reco = {}, mini = {}, harvest = {}, **kwargs):
         # adapt the parameters for the UpgradeWorkflow init method
