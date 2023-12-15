@@ -66,6 +66,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       std::copy(phiCutsV.begin(), phiCutsV.end(), &phiCuts[0]);
       assert(minzV.size() == TrackerTraits::nPairs);
       std::copy(minzV.begin(), minzV.end(), &minz[0]);
+      assert(maxzV.size() == TrackerTraits::nPairs);
+      std::copy(maxzV.begin(), maxzV.end(), &maxz[0]);
       assert(maxrV.size() == TrackerTraits::nPairs);
       std::copy(maxrV.begin(), maxrV.end(), &maxr[0]);
     }
