@@ -386,6 +386,15 @@ namespace edm {
   std::vector<unsigned long long> ParameterSet::getParameter<std::vector<unsigned long long>>(
       std::string const& name) const;
 
+// ----------------------------------------------------------------------
+  // Float, vFloat
+
+  template <>
+  float ParameterSet::getParameter<float>(std::string const& name) const;
+
+  template <>
+  std::vector<float> ParameterSet::getParameter<std::vector<float>>(std::string const& name) const;
+
   // ----------------------------------------------------------------------
   // Double, vDouble
 
