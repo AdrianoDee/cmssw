@@ -423,7 +423,7 @@ class UpgradeWorkflow_trackingMkFit(UpgradeWorkflowTracking):
         if 'Digi' in step: stepDict[stepName][k] = merge([self.step2, stepDict[step][k]])
         if 'Reco' in step: stepDict[stepName][k] = merge([self.step3, stepDict[step][k]])
     def condition_(self, fragment, stepList, key, hasHarvest):
-        return ('2017' in key or '2021' in key or '2023' in key or '2024' in key) and ('FS' not in key)
+        return ('2017' in key or '2021' in key or '2023' in key) and ('FS' not in key)
 upgradeWFs['trackingMkFit'] = UpgradeWorkflow_trackingMkFit(
     steps = [
         'Digi',
@@ -787,16 +787,10 @@ upgradeWFs['photonDRN'].step3 = {
 
 
 # Patatrack workflows (NoPU and PU):
-#   - 2018 conditions, TTbar
-#   - 2018 conditions, Z->mumu
-#   - 2022 conditions (labelled "2021"), TTbar
-#   - 2022 conditions (labelled "2021"), NuGun
-#   - 2022 conditions (labelled "2021"), Z->mumu
-#   - 2023 conditions, TTbar
-#   - 2023 conditions, NuGun
-#   - 2023 conditions, Z->mumu
-#   - 2026 conditions, TTbar
-#   - 2026 conditions, NuGu
+#   - TTbar_14, ZMM_14", ZEE_14, ZTT_14, NuGun, SingleMu, QCD_Pt15To7000_Flat for
+#       > 2021, 2022, 2023, 2024 and 2026 conditions, TTbar
+#   - Hydjet for HI conditions
+
 class PatatrackWorkflow(UpgradeWorkflow):
     def __init__(self, digi = {}, reco = {}, mini = {}, harvest = {}, **kwargs):
         # adapt the parameters for the UpgradeWorkflow init method
@@ -850,17 +844,11 @@ class PatatrackWorkflow(UpgradeWorkflow):
 
     def condition(self, fragment, stepList, key, hasHarvest):
         # select only a subset of the workflows
+        years = ['2021','2023','2024','2026']
+        fragments = ["TTbar_14","ZMM_14","ZEE_14","ZTT_14","NuGun","SingleMu","QCD_Pt15To7000_Flat"]
         selected = [
-            ('2018' in key and fragment == "TTbar_13"),
-            ('2021' in key and fragment == "TTbar_14TeV" and 'FS' not in key),
-            ('2023' in key and fragment == "TTbar_14TeV" and 'FS' not in key),
-            ('2021' in key and fragment == "NuGun"),
-            ('2023' in key and fragment == "NuGun"),
-            ('2018' in key and fragment == "ZMM_13"),
-            ('2021' in key and fragment == "ZMM_14" and 'FS' not in key),
-            ('2023' in key and fragment == "ZMM_14" and 'FS' not in key),
-            ('2026' in key and (fragment == "TTbar_14TeV" or fragment=="NuGun")),
-            (('HI' in key) and 'Hydjet' in fragment and "PixelOnly" in self.suffix )
+            (any(y in key for y in years) and ('FS' not in key) and any( f in fragment for f in fragments)),
+            (('HI' in key) and ('Hydjet' in fragment) and ("PixelOnly" in self.suffix) )
         ]
         result = any(selected) and hasHarvest
 
@@ -1069,7 +1057,7 @@ upgradeWFs['PatatrackPixelOnlyTripletsGPUProfiling'] = PatatrackWorkflow(
 upgradeWFs['PatatrackECALOnlyAlpaka'] = PatatrackWorkflow(
     digi = {
         # customize the ECAL Local Reco part of the HLT menu for Alpaka
-        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka
+        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka 
     },
     reco = {
         '-s': 'RAW2DIGI:RawToDigi_ecalOnly,RECO:reconstruction_ecalOnly,VALIDATION:@ecalOnlyValidation,DQM:@ecalOnly',
@@ -1236,78 +1224,6 @@ upgradeWFs['PatatrackHCALOnlyGPUProfiling'] = PatatrackWorkflow(
     harvest = None,
     suffix = 'Patatrack_HCALOnlyGPU_Profiling',
     offset = 0.524,
-)
-
-# HCAL-PF Only workflow running HCAL local reco on GPU and PF with Alpaka with DQM and Validation
-# - HLT-alpaka
-# - HCAL-only reconstruction using Alpaka with DQM and Validation
-upgradeWFs['PatatrackHCALOnlyAlpakaValidation'] = PatatrackWorkflow(
-    digi = {
-        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka
-    },
-    reco = {
-        '-s': 'RAW2DIGI:RawToDigi_hcalOnly,RECO:reconstruction_hcalOnly,VALIDATION:@hcalOnlyValidation,DQM:@hcalOnly+@hcal2Only',
-        '--procModifiers': 'alpaka'
-    },
-    harvest = {
-        '-s': 'HARVESTING:@hcalOnlyValidation'
-    },
-    suffix = 'Patatrack_HCALOnlyAlpaka_Validation',
-    offset = 0.422,
-)
-
-# HCAL-PF Only workflow running HCAL local reco and PF with Alpaka with cluster level-validation
-# - HLT-alpaka
-# - HCAL-only reconstruction using GPU and Alpaka with DQM and Validation for PF Alpaka vs CPU comparisons
-upgradeWFs['PatatrackHCALOnlyGPUandAlpakaValidation'] = PatatrackWorkflow(
-    digi = {
-        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka
-    },
-    reco = {
-        '-s': 'RAW2DIGI:RawToDigi_hcalOnly,RECO:reconstruction_hcalOnlyLegacy+reconstruction_hcalOnly,VALIDATION:@hcalOnlyValidation+pfClusterHBHEOnlyAlpakaComparisonSequence,DQM:@hcalOnly+@hcal2Only',
-        '--procModifiers': 'alpaka'
-    },
-    harvest = {
-        '-s': 'HARVESTING:@hcalOnlyValidation'
-    },
-    suffix = 'Patatrack_HCALOnlyGPUandAlpaka_Validation',
-    offset = 0.423,
-)
-
-# HCAL-PF Only workflow running HCAL local reco on CPU and PF with Alpaka slimmed for benchmarking
-# - HLT-alpaka
-# - HCAL-only reconstruction using Alpaka
-upgradeWFs['PatatrackHCALOnlyAlpakaProfiling'] = PatatrackWorkflow(
-    digi = {
-        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka
-    },
-    reco = {
-        '-s': 'RAW2DIGI:RawToDigi_hcalOnly,RECO:reconstruction_hcalOnly',
-        '--procModifiers': 'alpaka'
-    },
-    harvest = None,
-    suffix = 'Patatrack_HCALOnlyAlpaka_Profiling',
-    offset = 0.424,
-)
-
-# Workflow running the Pixel quadruplets, ECAL and HCAL reconstruction on GPU (optional), PF using Alpaka, together with the full offline reconstruction on CPU
-#  - HLT on GPU (optional)
-#  - reconstruction on Alpaka, with DQM and validation
-#  - harvesting
-upgradeWFs['PatatrackFullRecoAlpaka'] = PatatrackWorkflow(
-    digi = {
-        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka
-    },
-    reco = {
-        # skip the @pixelTrackingOnlyValidation which cannot run together with the full reconstruction
-        '-s': 'RAW2DIGI:RawToDigi+RawToDigi_pixelOnly,L1Reco,RECO:reconstruction+reconstruction_pixelTrackingOnly,RECOSIM,PAT,VALIDATION:@standardValidation+@miniAODValidation,DQM:@standardDQM+@ExtraHLT+@miniAODDQM+@pixelTrackingOnlyDQM',
-        '--procModifiers': 'alpaka,pixelNtupletFit'
-    },
-    harvest = {
-        # skip the @pixelTrackingOnlyDQM harvesting
-    },
-    suffix = 'Patatrack_FullRecoAlpaka',
-    offset = 0.492,
 )
 
 # Workflow running the Pixel quadruplets, ECAL and HCAL reconstruction on CPU
@@ -1619,7 +1535,7 @@ upgradeWFs['PatatrackFullRecoTripletsGPUValidation'] = PatatrackWorkflow(
 
 upgradeWFs['PatatrackPixelOnlyAlpaka'] = PatatrackWorkflow(
     digi = {
-        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka
+        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka 
     },
     reco = {
         '-s': 'RAW2DIGI:RawToDigi_pixelOnly,RECO:reconstruction_pixelTrackingOnly,VALIDATION:@pixelTrackingOnlyValidation,DQM:@pixelTrackingOnlyDQM',
@@ -1634,7 +1550,7 @@ upgradeWFs['PatatrackPixelOnlyAlpaka'] = PatatrackWorkflow(
 
 upgradeWFs['PatatrackPixelOnlyAlpakaValidation'] = PatatrackWorkflow(
     digi = {
-        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka
+        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka 
     },
     reco = {
         '-s': 'RAW2DIGI:RawToDigi_pixelOnly,RECO:reconstruction_pixelTrackingOnly,VALIDATION:@pixelTrackingOnlyValidation,DQM:@pixelTrackingOnlyDQM',
@@ -1649,7 +1565,7 @@ upgradeWFs['PatatrackPixelOnlyAlpakaValidation'] = PatatrackWorkflow(
 
 upgradeWFs['PatatrackPixelOnlyAlpakaProfiling'] = PatatrackWorkflow(
     digi = {
-        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka
+        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka 
     },
     reco = {
         '-s': 'RAW2DIGI:RawToDigi_pixelOnly,RECO:reconstruction_pixelTrackingOnly',
@@ -1659,6 +1575,52 @@ upgradeWFs['PatatrackPixelOnlyAlpakaProfiling'] = PatatrackWorkflow(
     harvest = None,
     suffix = 'Patatrack_PixelOnlyAlpaka_Profiling',
     offset = 0.404,
+)
+
+upgradeWFs['PatatrackPixelOnlyTripletsAlpaka'] = PatatrackWorkflow(
+    digi = {
+        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka 
+    },
+    reco = {
+        '-s': 'RAW2DIGI:RawToDigi_pixelOnly,RECO:reconstruction_pixelTrackingOnly,VALIDATION:@pixelTrackingOnlyValidation,DQM:@pixelTrackingOnlyDQM',
+        '--procModifiers': 'alpaka',
+        '--customise' : 'RecoTracker/Configuration/customizePixelTracksForTriplets.customizePixelTracksForTriplets'
+    },
+    harvest = {
+        '-s': 'HARVESTING:@trackingOnlyValidation+@pixelTrackingOnlyDQM'
+    },
+    suffix = 'Patatrack_PixelOnlyAlpaka',
+    offset = 0.406,
+)
+
+upgradeWFs['PatatrackPixelOnlyTripletsAlpakaValidation'] = PatatrackWorkflow(
+    digi = {
+        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka 
+    },
+    reco = {
+        '-s': 'RAW2DIGI:RawToDigi_pixelOnly,RECO:reconstruction_pixelTrackingOnly,VALIDATION:@pixelTrackingOnlyValidation,DQM:@pixelTrackingOnlyDQM',
+        '--procModifiers': 'alpakaValidation',
+        '--customise' : 'RecoTracker/Configuration/customizePixelTracksForTriplets.customizePixelTracksForTriplets'
+    },
+    harvest = {
+        '-s': 'HARVESTING:@trackingOnlyValidation+@pixelTrackingOnlyDQM'
+    },
+    suffix = 'Patatrack_PixelOnlyAlpaka_Validation',
+    offset = 0.407,
+)
+
+upgradeWFs['PatatrackPixelOnlyTripletsAlpakaProfiling'] = PatatrackWorkflow(
+    digi = {
+        '--procModifiers': 'alpaka', # alpaka modifier activates customiseHLTForAlpaka 
+    },
+    reco = {
+        '-s': 'RAW2DIGI:RawToDigi_pixelOnly,RECO:reconstruction_pixelTrackingOnly',
+        '--procModifiers': 'alpaka',
+        '--customise' : 'RecoTracker/Configuration/customizePixelOnlyForProfiling.customizePixelOnlyForProfilingGPUOnly,RecoTracker/Configuration/customizePixelTracksForTriplets.customizePixelTracksForTriplets'
+    },
+    harvest = None,
+    suffix = 'Patatrack_PixelOnlyAlpaka_Profiling',
+    offset = 0.408,
 )
 
 # end of Patatrack workflows
@@ -2724,7 +2686,7 @@ class UpgradeWorkflow_SonicTriton(UpgradeWorkflow):
     def setup_(self, step, stepName, stepDict, k, properties):
         stepDict[stepName][k] = merge([{'--procModifiers': 'allSonicTriton'}, stepDict[step][k]])
     def condition(self, fragment, stepList, key, hasHarvest):
-        return ((fragment=='TTbar_13' or fragment=='TTbar_14TeV') and '2021' in key) \
+        return (fragment=='TTbar_13' and '2021' in key) \
             or (fragment=='TTbar_14TeV' and '2026' in key)
 upgradeWFs['SonicTriton'] = UpgradeWorkflow_SonicTriton(
     steps = [
