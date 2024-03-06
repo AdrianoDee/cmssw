@@ -122,7 +122,7 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::fillDescriptions(edm::Confi
   desc.add<int>("minNumberOfHits", 0);
   desc.add<std::string>("minQuality", "loose");
 
-  desc.add<edm::InputTag>("hitModuleStartSrc", edm::InputTag("siPixelRecHitsPreSplitting"));
+  desc.add<edm::InputTag>("hitModuleStartSrc", edm::InputTag("siPixelRecHitsPreSplittingAlpaka"));
   desc.add<bool>("useStripHits", false);
   desc.add<edm::InputTag>("stripRecHitLegacySrc", edm::InputTag("siStripMatchedRecHits", "matchedRecHit"));
 
