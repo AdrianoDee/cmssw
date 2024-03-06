@@ -36,8 +36,6 @@
   </bin>
 
 </iftool>
-
-</iftool>
  
 <bin file="cpuVertexFinder_t.cpp" name="cpuVertexFinderByDensity_t">
   <flags CXXFLAGS="-g  -DGPU_DEBUG"/>

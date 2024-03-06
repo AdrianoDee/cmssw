@@ -53,9 +53,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
               const float z0Cut,
               const float ptCut,
               const std::vector<int>& phiCutsV,
-              const std::vector<int>& minzV,
-              const std::vector<int>& maxzV,
-              const std::vector<int>& maxrV)
+              const std::vector<double>& minzV,
+              const std::vector<double>& maxzV,
+              const std::vector<double>& maxrV)
         : doClusterCut_(doClusterCut),
           doZ0Cut_(doZ0Cut),
           doPtCut_(doPtCut),

@@ -213,6 +213,9 @@ monitorPixelTracksAlpakaStrip = cms.Sequence( siPixelTrackSoAMonitorSerialStrip 
 
 from Configuration.ProcessModifiers.stripNtupletFit_cff import stripNtupletFit
 stripNtupletFit.toReplaceWith(monitorPixelTracksAlpaka, monitorPixelTracksAlpakaStrip)
+stripNtupletFit.toReplaceWith(siPixelPhase1CompareTrackSoAAlpaka, siPixelPhase1StripCompareTrackSoAAlpaka)
+stripNtupletFit.toReplaceWith(siPixelTrackSoAMonitorSerial, siPixelTrackSoAMonitorSerialStrip)
+stripNtupletFit.toReplaceWith(siPixelTrackSoAMonitorDevice, siPixelTrackSoAMonitorDeviceStrip)
 
 # Run-3 sequence
 monitorpixelSoACompareSource = cms.Sequence(siPixelPhase1MonitorRawDataACPU *

@@ -32,7 +32,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   Tuples<TrackerTraits> const *__restrict__ foundNtuplets,
                                   TupleMultiplicity<TrackerTraits> const *__restrict__ tupleMultiplicity,
                                   uint32_t nHits,
-                                  TrackingRecHitAlpakaSoAConstView<TrackerTraits> hh,
+                                  TrackingRecHitSoAConstView<TrackerTraits> hh,
                                   FrameSoAConstView fr,
                                   // pixelCPEforDevice::ParamsOnDeviceT<pixelTopology::base_traits_t<TrackerTraits>> const *__restrict__ cpeParams,
                                   double *__restrict__ phits,
@@ -212,7 +212,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TrackerTraits>
   // void HelixFit<TrackerTraits>::launchRiemannKernels(const TrackingRecHitSoAConstView<TrackerTraits> &hv,
   //                                                    pixelCPEforDevice::ParamsOnDeviceT<TrackerTraits> const *cpeParams,
-  void HelixFit<TrackerTraits>::launchRiemannKernels(const TrackingRecHitAlpakaSoAConstView<TrackerTraits> &hv,
+  void HelixFit<TrackerTraits>::launchRiemannKernels(const TrackingRecHitSoAConstView<TrackerTraits> &hv,
                                                      const FrameSoAConstView &fr,
                                                     //  pixelCPEforDevice::ParamsOnDeviceT<pixelTopology::base_traits_t<TrackerTraits>> const *cpeParams,
                                                      uint32_t nhits,

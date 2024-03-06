@@ -4,12 +4,12 @@
 #include <vector>
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/BeamSpot/interface/BeamSpotPOD.h"
-#include "DataFormats/BeamSpot/interface/alpaka/BeamSpotDeviceProduct.h"
+#include "DataFormats/BeamSpot/interface/alpaka/BeamSpotDevice.h"
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisDevice.h"
-#include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisCollection.h"
-#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitSoADevice.h"
-#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitSoACollection.h"
+#include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -58,8 +58,8 @@ class SiStripRecHitSoA : public stream::SynchronizingEDProducer<> {
 
   using PixelBase = typename TrackerTraits::PixelBase;
 
-  using StripHits = TrackingRecHitAlpakaCollection<TrackerTraits>;
-  using PixelHits = TrackingRecHitAlpakaCollection<PixelBase>;
+  using StripHits = TrackingRecHitsSoACollection<TrackerTraits>;
+  using PixelHits = TrackingRecHitsSoACollection<PixelBase>;
 
   using StripHitsHost = TrackingRecHitHost<TrackerTraits>;
   using PixelHitsHost = TrackingRecHitHost<PixelBase>;
@@ -140,10 +140,10 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
   // alpaka::memcpy(iEvent.queue(), pixelHitsHost.buffer(), pixelHits.buffer());
 
   StripHitsHost allHitsHost(
+    iEvent.queue(),
     nPixelHits + nStripHits, 
     pixelHitsHost.view().offsetBPIX2(),
-    pixelHitsHost.view().hitsModuleStart().data(),
-    iEvent.queue());
+    pixelHitsHost.view().hitsModuleStart().data());
   
   // Copy pixel data
   std::copy(pixelHitsHost.view().xLocal(), pixelHitsHost.view().xLocal() + nPixelHits, allHitsHost.view().xLocal());

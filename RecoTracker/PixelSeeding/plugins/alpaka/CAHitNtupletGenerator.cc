@@ -21,6 +21,8 @@
 #include "CAPixelDoublets.h"
 #include "CAPixelDoubletsAlgos.h"
 
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace {
 
@@ -151,9 +153,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                       (float)cfg.getParameter<double>("cellZ0Cut"),
                                       (float)cfg.getParameter<double>("cellPtCut"),
                                       cfg.getParameter<std::vector<int>>("phiCuts"),
-                                      cfg.getParameter<std::vector<float>>("minz"),
-                                      cfg.getParameter<std::vector<float>>("maxz"),
-                                      cfg.getParameter<std::vector<float>>("maxr")
+                                      cfg.getParameter<std::vector<double>>("minz"),
+                                      cfg.getParameter<std::vector<double>>("maxz"),
+                                      cfg.getParameter<std::vector<double>>("maxr")
                                       };
     }
 
@@ -230,14 +232,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             std::vector<int>(std::begin(phase1PixelTopology::phicuts), std::end(phase1PixelTopology::phicuts)))
         ->setComment("Cuts in phi for cells");
         
-    desc.add<std::vector<float>>(
-           "minz", std::vector<float>(std::begin(phase1PixelTopology::minz), std::end(phase1PixelTopology::minz)))
+    desc.add<std::vector<double>>(
+           "minz", std::vector<double>(std::begin(phase1PixelTopology::minz), std::end(phase1PixelTopology::minz)))
        ->setComment("Cuts in minz for cells");
-    desc.add<std::vector<float>>(
-           "maxz", std::vector<float>(std::begin(phase1PixelTopology::maxz), std::end(phase1PixelTopology::maxz)))
+    desc.add<std::vector<double>>(
+           "maxz", std::vector<double>(std::begin(phase1PixelTopology::maxz), std::end(phase1PixelTopology::maxz)))
        ->setComment("Cuts in maxz for cells");
-    desc.add<std::vector<float>>(
-           "maxr", std::vector<float>(std::begin(phase1PixelTopology::maxr), std::end(phase1PixelTopology::maxr)))
+    desc.add<std::vector<double>>(
+           "maxr", std::vector<double>(std::begin(phase1PixelTopology::maxr), std::end(phase1PixelTopology::maxr)))
        ->setComment("Cuts in maxr for cells");
   }
 
@@ -274,14 +276,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     desc.add<std::vector<int>>(
            "phiCuts", std::vector<int>(std::begin(phase1PixelStripTopology::phicuts), std::end(phase1PixelStripTopology::phicuts)))
        ->setComment("Cuts in phi for cells");
-    desc.add<std::vector<float>>(
-           "minz", std::vector<float>(std::begin(phase1PixelStripTopology::minz), std::end(phase1PixelStripTopology::minz)))
+    desc.add<std::vector<double>>(
+           "minz", std::vector<double>(std::begin(phase1PixelStripTopology::minz), std::end(phase1PixelStripTopology::minz)))
        ->setComment("Cuts in minz for cells");
-    desc.add<std::vector<float>>(
-           "maxz", std::vector<float>(std::begin(phase1PixelStripTopology::maxz), std::end(phase1PixelStripTopology::maxz)))
+    desc.add<std::vector<double>>(
+           "maxz", std::vector<double>(std::begin(phase1PixelStripTopology::maxz), std::end(phase1PixelStripTopology::maxz)))
        ->setComment("Cuts in maxz for cells");
-    desc.add<std::vector<float>>(
-           "maxr", std::vector<float>(std::begin(phase1PixelStripTopology::maxr), std::end(phase1PixelStripTopology::maxr)))
+    desc.add<std::vector<double>>(
+           "maxr", std::vector<double>(std::begin(phase1PixelStripTopology::maxr), std::end(phase1PixelStripTopology::maxr)))
        ->setComment("Cuts in maxr for cells");
   }
 
@@ -320,14 +322,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             std::vector<int>(std::begin(phase1PixelTopology::phicuts), std::end(phase1PixelTopology::phicuts)))
         ->setComment("Cuts in phi for cells");
          
-   desc.add<std::vector<float>>(
-           "minz", std::vector<float>(std::begin(phase1PixelTopology::minz), std::end(phase1PixelTopology::minz)))
+   desc.add<std::vector<double>>(
+           "minz", std::vector<double>(std::begin(phase1PixelTopology::minz), std::end(phase1PixelTopology::minz)))
        ->setComment("Cuts in minz for cells");
-    desc.add<std::vector<float>>(
-           "maxz", std::vector<float>(std::begin(phase1PixelTopology::maxz), std::end(phase1PixelTopology::maxz)))
+    desc.add<std::vector<double>>(
+           "maxz", std::vector<double>(std::begin(phase1PixelTopology::maxz), std::end(phase1PixelTopology::maxz)))
        ->setComment("Cuts in maxz for cells");
-    desc.add<std::vector<float>>(
-           "maxr", std::vector<float>(std::begin(phase1PixelTopology::maxr), std::end(phase1PixelTopology::maxr)))
+    desc.add<std::vector<double>>(
+           "maxr", std::vector<double>(std::begin(phase1PixelTopology::maxr), std::end(phase1PixelTopology::maxr)))
        ->setComment("Cuts in maxr for cells");
   }
 
@@ -355,14 +357,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     desc.add<std::vector<int>>(
            "phiCuts", std::vector<int>(std::begin(phase2PixelTopology::phicuts), std::end(phase2PixelTopology::phicuts)))
        ->setComment("Cuts in phi for cells");
-    desc.add<std::vector<float>>(
-           "minz", std::vector<float>(std::begin(phase2PixelTopology::minz), std::end(phase2PixelTopology::minz)))
+    desc.add<std::vector<double>>(
+           "minz", std::vector<double>(std::begin(phase2PixelTopology::minz), std::end(phase2PixelTopology::minz)))
        ->setComment("Cuts in minz for cells");
-    desc.add<std::vector<float>>(
-           "maxz", std::vector<float>(std::begin(phase2PixelTopology::maxz), std::end(phase2PixelTopology::maxz)))
+    desc.add<std::vector<double>>(
+           "maxz", std::vector<double>(std::begin(phase2PixelTopology::maxz), std::end(phase2PixelTopology::maxz)))
        ->setComment("Cuts in maxz for cells");
-    desc.add<std::vector<float>>(
-           "maxr", std::vector<float>(std::begin(phase2PixelTopology::maxr), std::end(phase2PixelTopology::maxr)))
+    desc.add<std::vector<double>>(
+           "maxr", std::vector<double>(std::begin(phase2PixelTopology::maxr), std::end(phase2PixelTopology::maxr)))
        ->setComment("Cuts in maxr for cells");
   }
 

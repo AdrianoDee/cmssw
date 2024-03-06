@@ -6,14 +6,14 @@
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/BeamSpot/interface/BeamSpotPOD.h"
-#include "DataFormats/SiPixelClusterSoA/interface/alpaka/SiPixelClustersCollection.h"
+#include "DataFormats/SiPixelClusterSoA/interface/alpaka/SiPixelClustersSoACollection.h"
 #include "DataFormats/SiPixelClusterSoA/interface/SiPixelClustersDevice.h"
 #include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisDevice.h"
-#include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisCollection.h"
-#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitSoADevice.h"
-#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitSoACollection.h"
+#include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
@@ -23,7 +23,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template <typename TrackerTraits>
     class SiStripRecHitSoAKernel {
 
-      using StripHits = TrackingRecHitAlpakaCollection<TrackerTraits>;
+      using StripHits = TrackingRecHitsSoACollection<TrackerTraits>;
       using StripHitsHost = TrackingRecHitHost<TrackerTraits>;
 
     public:

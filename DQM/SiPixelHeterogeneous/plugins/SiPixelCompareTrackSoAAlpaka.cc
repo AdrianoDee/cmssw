@@ -17,6 +17,8 @@
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
 
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
+
 namespace {
   // same logic used for the MTV:
   // cf https://github.com/cms-sw/cmssw/blob/master/Validation/RecoTrack/src/MTVHistoProducerAlgoForTracker.cc

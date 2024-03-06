@@ -19,6 +19,8 @@
 #include "DataFormats/VertexSoA/interface/ZVertexDevice.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
 
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
+
 #include "vertexFinder.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
