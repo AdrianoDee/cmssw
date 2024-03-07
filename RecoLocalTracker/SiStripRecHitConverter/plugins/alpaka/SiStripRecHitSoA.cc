@@ -172,14 +172,26 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
     hitsModuleStart.begin()
   );  
 
-  size_t i = 0;
-  size_t lastIndex = TrackerTraits::numberOfPixelModules;
-  
+  std::map<size_t, edmNew::DetSet<SiStripMatchedRecHit2D>> mappedModuleHits;
+
   // Loop over strip RecHits
-  for (const auto& detSet : stripHits) {
+  for (auto detSet : stripHits) {
 
     const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
     size_t index = TrackerTraits::mapIndex(det->stereoDet()->index());
+    
+    if (index >= TrackerTraits::numberOfModules)
+      continue;
+
+    mappedModuleHits[index] = detSet;
+  }
+
+  size_t i = 0;
+  size_t lastIndex = TrackerTraits::numberOfPixelModules;
+
+  for (auto& [index, detSet] : mappedModuleHits) {
+
+    const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
     
     if (index >= TrackerTraits::numberOfModules)
       break;

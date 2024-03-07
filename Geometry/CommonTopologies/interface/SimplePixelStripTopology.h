@@ -154,6 +154,8 @@ namespace phase1PixelStripTopology {
 
   constexpr IndexMap makeIndexMap() {
     IndexMap indexMap = {{0}};
+    for (auto& i : indexMap)
+      i = numberOfModules;
     int newIndex = 0;
     for (const auto& layer : layerData) {
       for (auto i = layer.start; i < layer.end; ++i) {

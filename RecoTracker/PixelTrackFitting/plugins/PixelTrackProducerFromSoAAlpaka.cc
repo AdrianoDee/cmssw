@@ -178,33 +178,50 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
   size_t nhits = nPixelHits + nStripHits;
 
   std::vector<TrackingRecHit const *> hitmap(nhits, nullptr);
-  std::vector<int> counter(nhits, 0);
+  // std::vector<int> counter(nhits, 0);
 
-  for (auto const &hit : pixelRechits) {
-    auto const &thit = static_cast<BaseTrackerRecHit const &>(hit);
-    auto const detI = thit.det()->index();
-    auto const &clus = thit.firstClusterRef();
-    assert(clus.isPixel());
-    auto const idx = hitsModuleStart[detI] + clus.pixelCluster().originalId();
-    if (idx >= hitmap.size())
-      hitmap.resize(idx + 256, nullptr);  // only in case of hit overflow in one module
+  for (const auto& moduleHits : pixelRecHitsDSV) {
+    auto* det = theTrackerGeometry->idToDet(moduleHits.detId());
+    const auto detI = det->index();
+    for (const auto& hit : moduleHits) {
+      auto const &clus = hit.firstClusterRef();
+      auto const idx = hitsModuleStart[detI] + clus.pixelCluster().originalId();
+      
+      if (idx >= hitsModuleStart[detI]) {
+        std::cout << "excess pixel hit" << std::endl;
+        continue;
+      }
 
-    if (nullptr != hitmap[idx])
-      throw std::runtime_error("duplicate hit id: " + std::to_string(idx));
-    hitmap[idx] = &hit;
-    ++counter[idx];
+      hitmap[idx] = &hit;
+      // ++counter[idx];
+    }
   }
+
+  // for (auto const &hit : pixelRechits) {
+  //   auto const &thit = static_cast<BaseTrackerRecHit const &>(hit);
+  //   auto const detI = thit.det()->index();
+  //   auto const &clus = thit.firstClusterRef();
+  //   assert(clus.isPixel());
+  //   auto const idx = hitsModuleStart[detI] + clus.pixelCluster().originalId();
+  //   if (idx >= hitmap.size())
+  //     hitmap.resize(idx + 256, nullptr);  // only in case of hit overflow in one module
+
+  //   if (nullptr != hitmap[idx])
+  //     throw std::runtime_error("duplicate hit id: " + std::to_string(idx));
+  //   hitmap[idx] = &hit;
+  //   ++counter[idx];
+  // }
 
   if (useStripHits_) {
     for (const auto& moduleHits : *stripRechitsDSV) {
       const GluedGeomDet* theStripDet = dynamic_cast<const GluedGeomDet*>(theTrackerGeometry->idToDet(moduleHits[0].geographicalId()));
       int moduleIdx = TrackerTraits:: mapIndex(theStripDet->stereoDet()->index());
       if (moduleIdx >= TrackerTraits::numberOfModules)
-        break;
+        continue;
       for (auto i = 0u; i < moduleHits.size(); ++i) {
         auto j = hitsModuleStart[moduleIdx] + i;
         hitmap[j] = &*(moduleHits.begin() + i);
-        ++counter[j];
+        // ++counter[j];
       }
     }
   }
