@@ -141,9 +141,8 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
 
   StripHitsHost allHitsHost(
     iEvent.queue(),
-    nPixelHits + nStripHits, 
-    pixelHitsHost.view().offsetBPIX2(),
-    pixelHitsHost.view().hitsModuleStart().data());
+    nPixelHits + nStripHits
+  );
   
   // Copy pixel data
   std::copy(pixelHitsHost.view().xLocal(), pixelHitsHost.view().xLocal() + nPixelHits, allHitsHost.view().xLocal());
