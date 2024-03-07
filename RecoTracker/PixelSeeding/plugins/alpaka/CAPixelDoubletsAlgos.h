@@ -231,7 +231,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         if (mez < cuts.minz[pairLayerId] || mez > cuts.maxz[pairLayerId])
           continue;
 
-      if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(acc, hh, i))
+      if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(acc, hh, i) && outer < TrackerTraits::numberOfPixelLayers)
         continue;
 
       auto mep = hh[i].iphi();
