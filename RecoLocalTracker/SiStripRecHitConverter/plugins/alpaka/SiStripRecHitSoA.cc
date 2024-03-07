@@ -191,9 +191,6 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
   for (auto& [index, detSet] : mappedModuleHits) {
 
     const GluedGeomDet* det = static_cast<const GluedGeomDet*>(trackerGeometry->idToDet(detSet.detId()));
-    
-    if (index >= TrackerTraits::numberOfModules)
-      break;
 
     // no hits since lastIndex: hitsModuleStart[lastIndex:index] = hitsModuleStart[lastIndex]
     for (auto j = lastIndex + 1; j < index + 1; ++j)

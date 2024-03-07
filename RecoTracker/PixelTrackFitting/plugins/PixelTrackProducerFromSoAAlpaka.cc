@@ -187,7 +187,7 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
       auto const &clus = hit.firstClusterRef();
       auto const idx = hitsModuleStart[detI] + clus.pixelCluster().originalId();
       
-      if (idx >= hitsModuleStart[detI]) {
+      if (idx >= hitsModuleStart[detI + 1]) {
         std::cout << "excess pixel hit" << std::endl;
         continue;
       }
