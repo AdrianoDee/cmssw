@@ -130,8 +130,8 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
 
   size_t nPixelHits = pixelHitsHost.view().metadata().size();
 
-  std::cout << "nStripHits = " << nStripHits << std::endl;
-  std::cout << "nPixelHits = " << nPixelHits << std::endl;
+  //std::cout << "nStripHits = " << nStripHits << std::endl;
+  //std::cout << "nPixelHits = " << nPixelHits << std::endl;
 
   // HostView<const PixelHits, PixelHitsHost> pixelHitsHostView(pixelHits, iEvent.queue());
   // PixelHitsHost& pixelHitsHost = pixelHitsHostView.get();
@@ -237,7 +237,7 @@ void SiStripRecHitSoA<TrackerTraits>::produce(device::Event& iEvent, device::Eve
 
   iEvent.emplace(stripSoA_, Algo_.fillHitsAsync(allHitsHost, iEvent.queue()));
 
-  std::cout << "produce done" << std::endl;
+  //std::cout << "produce done" << std::endl;
   
 }
   using SiStripRecHitSoAPhase1 = SiStripRecHitSoA<pixelTopology::Phase1Strip>;

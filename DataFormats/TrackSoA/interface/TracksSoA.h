@@ -7,6 +7,7 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/OneToManyAssoc.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 #include "DataFormats/TrackSoA/interface/TrackDefinitions.h"
 
@@ -66,6 +67,10 @@ namespace reco {
   struct IsTrackSoAConstView<TrackSoAConstView<pixelTopology::HIonPhase1>> : std::true_type {};
   template <>
   struct IsTrackSoAConstView<TrackSoAView<pixelTopology::HIonPhase1>> : std::true_type {};
+  template <>
+  struct IsTrackSoAConstView<TrackSoAConstView<pixelTopology::Phase1Strip>> : std::true_type {};
+  template <>
+  struct IsTrackSoAConstView<TrackSoAView<pixelTopology::Phase1Strip>> : std::true_type {};
 
   template <typename T>
   constexpr bool isTrackSoAConstView = IsTrackSoAConstView<T>::value;
