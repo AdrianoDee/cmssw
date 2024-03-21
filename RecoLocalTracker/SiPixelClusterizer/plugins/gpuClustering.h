@@ -101,9 +101,29 @@ namespace gpuClustering {
                            uint32_t* __restrict__ nClustersInModule,  // output: number of clusters found in each module
                            uint32_t* __restrict__ moduleId,           // output: module id of each module
                            int32_t* __restrict__ clusterId,           // output: cluster id of each pixel
-                           int numElements) {
+                           int numElements, clock_t *timings) {
     // status is only used for Phase-1, but it cannot be declared conditionally only if isPhase2 is false;
     // to minimize the impact on Phase-2 reconstruction it is declared with a very small size.
+
+    constexpr uint16_t timingSteps = 20;
+    int32_t tIndex = threadIdx.x + blockIdx.x * blockDim.x;
+    auto timeIndex = tIndex*timingSteps;
+    uint16_t tCounter = 0;
+    
+
+    if (threadIdx.x == 0 and blockIdx.x == 0) 
+    {
+      for(uint32_t i = 0; i < blockDim.x*TrackerTraits::numberOfModules; i++)
+        {
+          for(uint32_t j = 0; j < timingSteps; j++)
+          {
+            timings[j + i*timingSteps] = 0;
+          }
+        }
+    }
+    __syncthreads();
+    timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+
     constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
     constexpr const uint32_t pixelStatusSize = isPhase2 ? 1 : pixelStatus::size;
     __shared__ uint32_t status[pixelStatusSize];  // packed words array used to store the PixelStatus of each pixel
@@ -130,6 +150,12 @@ namespace gpuClustering {
       // find the index of the first pixel not belonging to this module (or invalid)
       msize = numElements;
       __syncthreads();
+      //1
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
 
       // skip threads not associated to an existing pixel
       for (int i = first; i < numElements; i += blockDim.x) {
@@ -154,6 +180,12 @@ namespace gpuClustering {
         hist.off[j] = 0;
       }
       __syncthreads();
+      //2
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
 
       assert((msize == numElements) or ((msize < numElements) and (id[msize] != thisModuleId)));
 
@@ -169,6 +201,11 @@ namespace gpuClustering {
       }
 
       __syncthreads();
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
       assert(msize - firstPixel <= maxPixInModule);
 
 #ifdef GPU_DEBUG
@@ -184,6 +221,11 @@ namespace gpuClustering {
             status[i] = 0;
           }
           __syncthreads();
+          timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
           for (int i = first; i < msize - 1; i += blockDim.x) {
             // skip invalid pixels
             if (id[i] == invalidModuleId)
@@ -191,6 +233,11 @@ namespace gpuClustering {
             pixelStatus::promote(status, x[i], y[i]);
           }
           __syncthreads();
+          timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
           for (int i = first; i < msize - 1; i += blockDim.x) {
             // skip invalid pixels
             if (id[i] == invalidModuleId)
@@ -202,6 +249,11 @@ namespace gpuClustering {
             }
           }
           __syncthreads();
+          timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
         }
       }
 
@@ -215,11 +267,26 @@ namespace gpuClustering {
 #endif
       }
       __syncthreads();
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
       if (threadIdx.x < 32)
         ws[threadIdx.x] = 0;  // used by prefix scan...
       __syncthreads();
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
       hist.finalize(ws);
       __syncthreads();
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
 #ifdef GPU_DEBUG
       assert(hist.size() == totGood);
       if (thisModuleId % 100 == 1)
@@ -253,6 +320,11 @@ namespace gpuClustering {
         nnn[k] = 0;
 
       __syncthreads();  // for hit filling!
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
 
 #ifdef GPU_DEBUG
       // look for anomalous high occupancy
@@ -299,6 +371,13 @@ namespace gpuClustering {
         }
       }
 
+      __syncthreads(); 
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+      // if (threadIdx.x == 0 and blockIdx.x == 0) 
+      // {
+      //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+      // }
+      
       // for each pixel, look at all the pixels until the end of the module;
       // when two valid pixels within +/- 1 in x or y are found, set their id to the minimum;
       // after the loop, all the pixel in each cluster should have the id equeal to the lowest
@@ -331,10 +410,18 @@ namespace gpuClustering {
                 more = true;
               }
               atomicMin_block(&clusterId[i], old);
-            }  // nnloop
+            //  if (threadIdx.x == 0 and blockIdx.x == 0) 
+	          //     printf("%d %d %d\n",tIndex,nloops,k);
+	    }  // nnloop
           }    // pixel loop
         }
         ++nloops;
+
+    //     if (threadIdx.x == 0 and blockIdx.x == 0 or true) 
+    //     {
+    //       printf("%ld: %d->%d %d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,nloops, __LINE__);
+	  // //printf("%lld: %d->%d %d\n",clock(), tCounter-1,nloops, __LINE__);
+    //     }
       }  // end while
 
 #ifdef GPU_DEBUG
@@ -354,6 +441,11 @@ namespace gpuClustering {
       __shared__ unsigned int foundClusters;
       foundClusters = 0;
       __syncthreads();
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d %d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,nloops, __LINE__);
+    // }
 
       // find the number of different clusters, identified by a pixels with clus[i] == i;
       // mark these pixels with a negative id.
@@ -366,6 +458,11 @@ namespace gpuClustering {
         }
       }
       __syncthreads();
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
 
       // propagate the negative id to all the pixels in the cluster.
       for (int i = first; i < msize; i += blockDim.x) {
@@ -377,6 +474,11 @@ namespace gpuClustering {
         }
       }
       __syncthreads();
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
 
       // adjust the cluster id to be a positive value starting from 0
       for (int i = first; i < msize; i += blockDim.x) {
@@ -387,6 +489,11 @@ namespace gpuClustering {
         clusterId[i] = -clusterId[i] - 1;
       }
       __syncthreads();
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
 
       if (threadIdx.x == 0) {
         nClustersInModule[thisModuleId] = foundClusters;
@@ -403,7 +510,40 @@ namespace gpuClustering {
           printf("%d clusters in module %d\n", foundClusters, thisModuleId);
 #endif
       }
+      timings[timeIndex+tCounter] = clock(); ++tCounter; assert(tCounter < timingSteps);
+    // if (threadIdx.x == 0 and blockIdx.x == 0) 
+    // {
+    //   printf("%ld: %d->%d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,__LINE__);
+    // }
     }  // module loop
+
+          __syncthreads();
+      if (threadIdx.x == 0 and blockIdx.x == 0) {
+
+        clock_t time_sums[timingSteps];
+        
+        for(uint32_t j = 0; j < timingSteps; j++)
+          time_sums[j] = 0;
+
+        for(uint32_t i = 0; i < blockDim.x*TrackerTraits::numberOfModules; i++)
+        {
+          if(timings[i*timingSteps] == 0) continue;
+          for(uint32_t j = 0; j < timingSteps; j++)
+          {
+            time_sums[j] = time_sums[j] + timings[j + i*timingSteps];
+          }
+        }
+
+        printf("thead_timings_;");
+        for(uint32_t j = 1; j < timingSteps; j++)
+        {
+          printf("%ld;",time_sums[j]-time_sums[0]);
+        }
+         printf("\n"); 
+
+        
+      }
+
   }
 }  // namespace gpuClustering
 

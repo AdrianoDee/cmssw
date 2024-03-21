@@ -642,15 +642,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         alpaka::memcpy(queue, nModules_Clusters_h, moduleStartFirstElement);
 
         const auto elementsPerBlockFindClus = FindClus<TrackerTraits>::maxElementsPerBlock;
+        std::cout << "elementsPerBlockFindClus " << elementsPerBlockFindClus << std::endl;
         const auto workDivMaxNumModules =
             cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, elementsPerBlockFindClus);
 #ifdef GPU_DEBUG
         std::cout << " FindClus kernel launch with " << numberOfModules << " blocks of " << elementsPerBlockFindClus
                   << " threadsPerBlockOrElementsPerThread\n";
 #endif
+        auto timings = cms::alpakatools::make_device_buffer<clock_t[]>(queue, FindClus<TrackerTraits>::timingSteps*elementsPerBlockFindClus*numberOfModules);
         alpaka::exec<Acc1D>(
-            queue, workDivMaxNumModules, FindClus<TrackerTraits>{}, digis_d->view(), clusters_d->view(), wordCounter);
+            queue, workDivMaxNumModules, FindClus<TrackerTraits>{}, digis_d->view(), clusters_d->view(), wordCounter, timings.data());
 #ifdef GPU_DEBUG
+
         alpaka::wait(queue);
 #endif
 
@@ -738,8 +741,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::cout << "FindClus kernel launch with " << numberOfModules << " blocks of " << elementsPerBlockFindClus
                 << " threadsPerBlockOrElementsPerThread\n";
 #endif
+      auto timings = cms::alpakatools::make_device_buffer<clock_t[]>(queue, 10);
       alpaka::exec<Acc1D>(
-          queue, workDivMaxNumModules, FindClus<TrackerTraits>{}, digis_view, clusters_d->view(), numDigis);
+          queue, workDivMaxNumModules, FindClus<TrackerTraits>{}, digis_view, clusters_d->view(), numDigis, timings.data());
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
 #endif

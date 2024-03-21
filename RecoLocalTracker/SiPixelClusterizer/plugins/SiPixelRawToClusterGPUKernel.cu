@@ -610,10 +610,12 @@ namespace pixelgpudetails {
       // should be larger than maxPixInModule/16 aka (maxPixInModule/maxiter in the kernel)
       threadsPerBlock = ((TrackerTraits::maxPixInModule / 16 + 128 - 1) / 128) * 128;
       blocks = TrackerTraits::numberOfModules;
+      std::cout << "elementsPerBlockFindClus " << threadsPerBlock << std::endl;
 #ifdef GPU_DEBUG
       std::cout << "CUDA findClus kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";
 #endif
-
+     static constexpr uint16_t timingSteps = 20;
+      auto timings = cms::cuda::make_device_unique<clock_t[]>(timingSteps*threadsPerBlock*blocks, stream);
       findClus<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(digis_d->rawIdArr(),
                                                                       digis_d->moduleId(),
                                                                       digis_d->xx(),
@@ -622,7 +624,7 @@ namespace pixelgpudetails {
                                                                       clusters_d->clusInModule(),
                                                                       clusters_d->moduleId(),
                                                                       digis_d->clus(),
-                                                                      wordCounter);
+                                                                      wordCounter, timings.get());
 
       cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG
@@ -723,6 +725,8 @@ namespace pixelgpudetails {
     cudaCheck(cudaStreamSynchronize(stream));
     std::cout << "CUDA findClus kernel launch with " << blocks << " blocks of " << threadsPerBlock << " threads\n";
 #endif
+   static constexpr uint16_t timingSteps = 20;
+    auto timings = cms::cuda::make_device_unique<clock_t[]>(timingSteps*threadsPerBlock*blocks, stream);
     findClus<TrackerTraits><<<blocks, threadsPerBlock, 0, stream>>>(digis_d->rawIdArr(),
                                                                     digis_d->moduleId(),
                                                                     digis_d->xx(),
@@ -731,7 +735,7 @@ namespace pixelgpudetails {
                                                                     clusters_d->clusInModule(),
                                                                     clusters_d->moduleId(),
                                                                     digis_d->clus(),
-                                                                    numDigis);
+                                                                    numDigis,timings.get());
 
     cudaCheck(cudaGetLastError());
 #ifdef GPU_DEBUG

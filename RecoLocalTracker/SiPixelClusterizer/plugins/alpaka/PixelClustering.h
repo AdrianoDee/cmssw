@@ -130,6 +130,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
 
   template <typename TrackerTraits>
   struct FindClus {
+
     // assume that we can cover the whole module with up to 16 blockDimension-wide iterations
     static constexpr uint32_t maxIterGPU = 16;
 
@@ -137,17 +138,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
     static constexpr uint32_t maxElementsPerBlock =
         cms::alpakatools::round_up_by(TrackerTraits::maxPixInModule / maxIterGPU, 128);
 
+    static constexpr uint16_t timingSteps = 20; //iters + steps + few spare
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(const TAcc& acc,
                                   SiPixelDigisSoAView digi_view,
                                   SiPixelClustersSoAView clus_view,
-                                  const unsigned int numElements) const {
+                                  const unsigned int numElements, clock_t *timings) const {
+      
+      uint32_t const threadIdx(alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u]);
+      uint32_t const blockThreadIdx(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u]);
+      uint32_t const blockDimension(alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[0u]);
+      
+      auto tIndex = threadIdx + blockThreadIdx * blockDimension;
+      auto timeIndex = tIndex*timingSteps;
+
+      if (cms::alpakatools::once_per_grid(acc)) {
+
+        for(uint32_t i = 0; i < blockDimension*TrackerTraits::numberOfModules; i++)
+        {
+          for(uint32_t j = 0; j < timingSteps; j++)
+          {
+            timings[j + i*timingSteps] = 0;
+          }
+        }
+      }
+
+      alpaka::syncBlockThreads(acc);
+      uint16_t tCounter = 0; timings[timeIndex+tCounter] = clock(); ++tCounter; 
+
       static_assert(TrackerTraits::numberOfModules < ::pixelClustering::maxNumModules);
 
       auto& lastPixel = alpaka::declareSharedVar<unsigned int, __COUNTER__>(acc);
 
       const uint32_t lastModule = clus_view[0].moduleStart();
       for (uint32_t module : cms::alpakatools::independent_groups(acc, lastModule)) {
+        
         auto firstPixel = clus_view[1 + module].moduleStart();
         uint32_t thisModuleId = digi_view[firstPixel].moduleId();
         ALPAKA_ASSERT_ACC(thisModuleId < TrackerTraits::numberOfModules);
@@ -159,11 +184,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
                    thisModuleId,
                    alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0u]);
 #endif
-
+        
         // find the index of the first pixel not belonging to this module (or invalid)
         lastPixel = numElements;
         alpaka::syncBlockThreads(acc);
-
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+         
         // skip threads not associated to an existing pixel
         for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, numElements)) {
           auto id = digi_view[i].moduleId();
@@ -177,6 +203,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           }
         }
 
+
         using Hist = cms::alpakatools::HistoContainer<uint16_t,
                                                       TrackerTraits::clusterBinning,
                                                       TrackerTraits::maxPixInModule,
@@ -188,7 +215,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           hist.off[j] = 0;
         }
         alpaka::syncBlockThreads(acc);
-
+         timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
         ALPAKA_ASSERT_ACC((lastPixel == numElements) or
                           ((lastPixel < numElements) and (digi_view[lastPixel].moduleId() != thisModuleId)));
         // limit to maxPixInModule  (FIXME if recurrent (and not limited to simulation with low threshold) one will need to implement something cleverer)
@@ -202,6 +230,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           }
         }
         alpaka::syncBlockThreads(acc);
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
         ALPAKA_ASSERT_ACC(lastPixel - firstPixel <= TrackerTraits::maxPixInModule);
 
 #ifdef GPU_DEBUG
@@ -221,7 +251,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
               status[i] = 0;
             }
             alpaka::syncBlockThreads(acc);
-
+            timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
             for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
               // skip invalid pixels
               if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
@@ -229,7 +260,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
               pixelStatus::promote(acc, status, digi_view[i].xx(), digi_view[i].yy());
             }
             alpaka::syncBlockThreads(acc);
-
+            timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
             for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
               // skip invalid pixels
               if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
@@ -240,6 +272,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
               }
             }
             alpaka::syncBlockThreads(acc);
+            timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
           }
         }
 
@@ -254,12 +288,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           }
         }
         alpaka::syncBlockThreads(acc);  // FIXME this can be removed
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
         for (uint32_t i : cms::alpakatools::independent_group_elements(acc, 32u)) {
           ws[i] = 0;  // used by prefix scan...
         }
         alpaka::syncBlockThreads(acc);
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
         hist.finalize(acc, ws);
         alpaka::syncBlockThreads(acc);
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
 #ifdef GPU_DEBUG
         ALPAKA_ASSERT_ACC(hist.size() == totGood);
         if (thisModuleId % 100 == 1)
@@ -319,6 +359,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
         }
 
         alpaka::syncBlockThreads(acc);  // for hit filling!
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
 
         // fill the nearest neighbours
         uint32_t k = 0;
@@ -346,19 +388,31 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           ++k;
         }
 
+        alpaka::syncBlockThreads(acc);  // for hit filling!
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+        
+        
         // for each pixel, look at all the pixels until the end of the module;
         // when two valid pixels within +/- 1 in x or y are found, set their id to the minimum;
         // after the loop, all the pixel in each cluster should have the id equeal to the lowest
         // pixel in the cluster ( clus[i] == i ).
         bool more = true;
-        /*
-          int nloops = 0;
-          */
+        int nloops = 0;
+        
         while (alpaka::syncBlockThreadsPredicate<alpaka::BlockOr>(acc, more)) {
-          /*
-            if (nloops % 2 == 0) {
-              // even iterations of the outer loop
-            */
+
+          if (1 == nloops % 2) {
+          for (uint32_t j : cms::alpakatools::independent_group_elements(acc, hist.size())) {
+            auto p = hist.begin() + j;
+            auto i = *p + firstPixel;
+            auto m = digi_view[i].clus();
+            while (m != digi_view[m].clus())
+              m = digi_view[m].clus();
+            digi_view[i].clus() = m;
+          }
+          }
+         else
+         {
           more = false;
           uint32_t k = 0;
           for (uint32_t j : cms::alpakatools::independent_group_elements(acc, hist.size())) {
@@ -379,43 +433,39 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
               alpaka::atomicMin(acc, &digi_view[i].clus(), old, alpaka::hierarchy::Blocks{});
             }  // neighbours loop
             ++k;
+	    // if (cms::alpakatools::once_per_grid(acc))  
+		  //   printf("%d -> %d %d\n",tIndex,nloops,k);
           }  // pixel loop
-             /*
-              // use the outer loop to force a synchronisation
-            } else {
-              // odd iterations of the outer loop
-            */
-          alpaka::syncBlockThreads(acc);
-          for (uint32_t j : cms::alpakatools::independent_group_elements(acc, hist.size())) {
-            auto p = hist.begin() + j;
-            auto i = *p + firstPixel;
-            auto m = digi_view[i].clus();
-            while (m != digi_view[m].clus())
-              m = digi_view[m].clus();
-            digi_view[i].clus() = m;
-          }
-          /*
-            }
-            ++nloops;
-            */
+         }
+         ++nloops;
+          // alpaka::syncBlockThreads(acc);
+        // printf("%d \n",tCounter);
+        // timings[timeIndex+tCounter] = clock(); ++tCounter; 
+        // printf("%d \n",tCounter); ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+
         }  // end while
 
-        /*
-            // check that all threads in the block have executed the same number of iterations
-            auto& n0 = alpaka::declareSharedVar<int, __COUNTER__>(acc);
-            if (cms::alpakatools::once_per_block(acc))
-              n0 = nloops;
-            alpaka::syncBlockThreads(acc);
-            ALPAKA_ASSERT_ACC(alpaka::syncBlockThreadsPredicate<alpaka::BlockAnd>(acc, nloops == n0));
-            if (thisModuleId % 100 == 1)
-              if (cms::alpakatools::once_per_block(acc))
-                printf("# loops %d\n", nloops);
-          */
-
+        
+        // check that all threads in the block have executed the same number of iterations
+        #ifdef GPU_DEBUG
+        auto& n0 = alpaka::declareSharedVar<int, __COUNTER__>(acc);
+        if (cms::alpakatools::once_per_block(acc))
+          n0 = nloops;
+        alpaka::syncBlockThreads(acc);
+        ALPAKA_ASSERT_ACC(alpaka::syncBlockThreadsPredicate<alpaka::BlockAnd>(acc, nloops == n0));
+        if (thisModuleId % 100 == 1)
+          if (cms::alpakatools::once_per_block(acc))
+            printf("# loops %d\n", nloops);
+        #endif
+        
         auto& foundClusters = alpaka::declareSharedVar<unsigned int, __COUNTER__>(acc);
         foundClusters = 0;
         alpaka::syncBlockThreads(acc);
-
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+        // if (cms::alpakatools::once_per_grid(acc))
+        // {
+        //   printf("%ld: %d->%d %d\n",timings[timeIndex+tCounter-1]-timings[timeIndex+tCounter-2], tCounter-1,nloops, __LINE__);
+        // }  
         // find the number of different clusters, identified by a pixels with clus[i] == i;
         // mark these pixels with a negative id.
         for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel)) {
@@ -428,7 +478,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           }
         }
         alpaka::syncBlockThreads(acc);
-
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
         // propagate the negative id to all the pixels in the cluster.
         for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel)) {
           // skip invalid pixels
@@ -440,7 +491,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           }
         }
         alpaka::syncBlockThreads(acc);
-
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
         // adjust the cluster id to be a positive value starting from 0
         for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel)) {
           if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId) {
@@ -451,7 +503,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           }
         }
         alpaka::syncBlockThreads(acc);
-
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
         if (cms::alpakatools::once_per_block(acc)) {
           clus_view[thisModuleId].clusInModule() = foundClusters;
           clus_view[module].moduleId() = thisModuleId;
@@ -465,7 +518,42 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
             printf("%d clusters in module %d\n", foundClusters, thisModuleId);
 #endif
         }
+        timings[timeIndex+tCounter] = clock(); ++tCounter; ALPAKA_ASSERT_ACC(tCounter < timingSteps);
+          
       }  // module loop
+
+      alpaka::syncBlockThreads(acc);
+      if (cms::alpakatools::once_per_grid(acc)) {
+
+        clock_t time_sums[timingSteps];
+
+        for(uint32_t j = 0; j < timingSteps; j++)
+          time_sums[j] = 0;
+        
+        printf("thead_0_timings_;");
+        for(uint32_t j = 0; j < timingSteps; j++)
+           printf("%ld;",timings[timeIndex + j]);
+        printf("\n");     
+        for(uint32_t i = 0; i < blockDimension*TrackerTraits::numberOfModules; i++)
+        {
+          if(timings[i*timingSteps] == 0) continue;
+          // printf("thead_timings_%d;",i);
+          for(uint32_t j = 0; j < timingSteps; j++)
+          {
+            time_sums[j] = time_sums[j] + timings[j + i*timingSteps];
+            
+          }
+         
+        }
+
+        printf("thead_timings_;");
+        for(uint32_t j = 1; j < timingSteps; j++)
+        {
+          printf("%ld;",time_sums[j]-time_sums[0]);
+        }
+         printf("\n");        
+      }
+
     }
   };
 
