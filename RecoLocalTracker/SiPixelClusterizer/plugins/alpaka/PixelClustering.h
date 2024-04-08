@@ -146,6 +146,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
 
       auto& lastPixel = alpaka::declareSharedVar<unsigned int, __COUNTER__>(acc);
 
+      // packed words array used to store the pixelStatus of each pixel
+      // remove duplicate pixels
+      constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
+      constexpr const uint32_t pixelStatusSize = isPhase2 ? 1 : pixelStatus::size;
+      auto& status = alpaka::declareSharedVar<uint32_t[pixelStatusSize], __COUNTER__>(acc);
+
       const uint32_t lastModule = clus_view[0].moduleStart();
       for (uint32_t module : cms::alpakatools::independent_groups(acc, lastModule)) {
         auto firstPixel = clus_view[1 + module].moduleStart();
@@ -210,11 +216,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
         alpaka::syncBlockThreads(acc);
 #endif
 
-        // remove duplicate pixels
-        constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
-        if constexpr (not isPhase2) {
-          // packed words array used to store the pixelStatus of each pixel
-          auto& status = alpaka::declareSharedVar<uint32_t[pixelStatus::size], __COUNTER__>(acc);
+        if constexpr (not isPhase2) { 
 
           if (lastPixel > 1) {
             for (uint32_t i : cms::alpakatools::independent_group_elements(acc, pixelStatus::size)) {
@@ -222,24 +224,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
             }
             alpaka::syncBlockThreads(acc);
 
-            for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
-              // skip invalid pixels
-              if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
-                continue;
-              pixelStatus::promote(acc, status, digi_view[i].xx(), digi_view[i].yy());
-            }
-            alpaka::syncBlockThreads(acc);
+            // for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
+            //   // skip invalid pixels
+            //   if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
+            //     continue;
+            //   pixelStatus::promote(acc, status, digi_view[i].xx(), digi_view[i].yy());
+            // }
+            // alpaka::syncBlockThreads(acc);
 
-            for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
-              // skip invalid pixels
-              if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
-                continue;
-              if (pixelStatus::isDuplicate(status, digi_view[i].xx(), digi_view[i].yy())) {
-                digi_view[i].moduleId() = ::pixelClustering::invalidModuleId;
-                digi_view[i].rawIdArr() = 0;
-              }
-            }
-            alpaka::syncBlockThreads(acc);
+            // for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
+            //   // skip invalid pixels
+            //   if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
+            //     continue;
+            //   if (pixelStatus::isDuplicate(status, digi_view[i].xx(), digi_view[i].yy())) {
+            //     digi_view[i].moduleId() = ::pixelClustering::invalidModuleId;
+            //     digi_view[i].rawIdArr() = 0;
+            //   }
+            // }
+            // alpaka::syncBlockThreads(acc);
           }
         }
 
