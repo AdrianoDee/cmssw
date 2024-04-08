@@ -178,7 +178,7 @@ namespace gpuClustering {
 #endif
 
       // remove duplicate pixels
-      if constexpr (not isPhase2) {
+      if constexpr (not isPhase2 and false) {
         if (msize > 1) {
           for (uint32_t i = threadIdx.x; i < pixelStatus::size; i += blockDim.x) {
             status[i] = 0;

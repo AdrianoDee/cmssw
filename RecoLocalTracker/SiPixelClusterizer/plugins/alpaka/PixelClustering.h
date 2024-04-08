@@ -212,7 +212,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
 
         // remove duplicate pixels
         constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
-        if constexpr (not isPhase2) {
+        if constexpr (not isPhase2 and false) {
           // packed words array used to store the pixelStatus of each pixel
           auto& status = alpaka::declareSharedVar<uint32_t[pixelStatus::size], __COUNTER__>(acc);
 
