@@ -211,37 +211,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
 #endif
 
         // remove duplicate pixels
-        constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
-        if constexpr (not isPhase2) {
-          // packed words array used to store the pixelStatus of each pixel
-          auto& status = alpaka::declareSharedVar<uint32_t[pixelStatus::size], __COUNTER__>(acc);
+        // constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
+        // if constexpr (not isPhase2) {
+        //   // packed words array used to store the pixelStatus of each pixel
+        //   auto& status = alpaka::declareSharedVar<uint32_t[pixelStatus::size], __COUNTER__>(acc);
 
-          if (lastPixel > 1) {
-            for (uint32_t i : cms::alpakatools::independent_group_elements(acc, pixelStatus::size)) {
-              status[i] = 0;
-            }
-            alpaka::syncBlockThreads(acc);
+        //   if (lastPixel > 1) {
+        //     for (uint32_t i : cms::alpakatools::independent_group_elements(acc, pixelStatus::size)) {
+        //       status[i] = 0;
+        //     }
+        //     alpaka::syncBlockThreads(acc);
 
-            for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
-              // skip invalid pixels
-              if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
-                continue;
-              pixelStatus::promote(acc, status, digi_view[i].xx(), digi_view[i].yy());
-            }
-            alpaka::syncBlockThreads(acc);
+        //     for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
+        //       // skip invalid pixels
+        //       if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
+        //         continue;
+        //       pixelStatus::promote(acc, status, digi_view[i].xx(), digi_view[i].yy());
+        //     }
+        //     alpaka::syncBlockThreads(acc);
 
-            for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
-              // skip invalid pixels
-              if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
-                continue;
-              if (pixelStatus::isDuplicate(status, digi_view[i].xx(), digi_view[i].yy())) {
-                digi_view[i].moduleId() = ::pixelClustering::invalidModuleId;
-                digi_view[i].rawIdArr() = 0;
-              }
-            }
-            alpaka::syncBlockThreads(acc);
-          }
-        }
+        //     for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel - 1)) {
+        //       // skip invalid pixels
+        //       if (digi_view[i].moduleId() == ::pixelClustering::invalidModuleId)
+        //         continue;
+        //       if (pixelStatus::isDuplicate(status, digi_view[i].xx(), digi_view[i].yy())) {
+        //         digi_view[i].moduleId() = ::pixelClustering::invalidModuleId;
+        //         digi_view[i].rawIdArr() = 0;
+        //       }
+        //     }
+        //     alpaka::syncBlockThreads(acc);
+        //   }
+        // }
 
         // fill histo
         for (uint32_t i : cms::alpakatools::independent_group_elements(acc, firstPixel, lastPixel)) {
@@ -326,8 +326,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           ALPAKA_ASSERT_ACC(k < maxIter);
           auto p = hist.begin() + j;
           auto i = *p + firstPixel;
-          ALPAKA_ASSERT_ACC(digi_view[i].moduleId() != ::pixelClustering::invalidModuleId);
-          ALPAKA_ASSERT_ACC(digi_view[i].moduleId() == thisModuleId);  // same module
+
+          ALPAKA_ASSERT_ACC(digi_view[i].moduleId() == thisModuleId or digi_view[i].moduleId() == ::pixelClustering::invalidModuleId);  // same module or duplicate
           auto bin = Hist::bin(digi_view[i].yy() + 1);
           auto end = hist.end(bin);
           ++p;
@@ -337,11 +337,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
             ALPAKA_ASSERT_ACC(m != i);
             ALPAKA_ASSERT_ACC(int(digi_view[m].yy()) - int(digi_view[i].yy()) >= 0);
             ALPAKA_ASSERT_ACC(int(digi_view[m].yy()) - int(digi_view[i].yy()) <= 1);
-            if (std::abs(int(digi_view[m].xx()) - int(digi_view[i].xx())) <= 1) {
-              auto l = nnn[k]++;
-              ALPAKA_ASSERT_ACC(l < maxNeighbours);
-              nn[k][l] = *p;
-            }
+
+            auto distX = std::abs(int(digi_view[m].xx()) - int(digi_view[i].xx()));
+            if (distX > 1) continue;
+            auto l = nnn[k]++;
+            ALPAKA_ASSERT_ACC(l < maxNeighbours);
+            nn[k][l] = *p;
+            if (distX > 0) continue;
+            if(std::abs(int(digi_view[m].yy()) - int(digi_view[i].yy())) > 0) continue;
+
+            //printf("found dup: %d - %d %d - %d %d - %d %d\n",digi_view[m].moduleId(),  i, m, digi_view[m].xx(), digi_view[i].xx(), digi_view[m].yy(), digi_view[i].yy());
+            auto dupId = std::max(i,m);
+            digi_view[dupId].moduleId() = ::pixelClustering::invalidModuleId;
+            digi_view[dupId].rawIdArr() = 0;
           }
           ++k;
         }

@@ -104,9 +104,9 @@ namespace gpuClustering {
                            int numElements) {
     // status is only used for Phase-1, but it cannot be declared conditionally only if isPhase2 is false;
     // to minimize the impact on Phase-2 reconstruction it is declared with a very small size.
-    constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
-    constexpr const uint32_t pixelStatusSize = isPhase2 ? 1 : pixelStatus::size;
-    __shared__ uint32_t status[pixelStatusSize];  // packed words array used to store the PixelStatus of each pixel
+    // constexpr bool isPhase2 = std::is_base_of<pixelTopology::Phase2, TrackerTraits>::value;
+    // constexpr const uint32_t pixelStatusSize = isPhase2 ? 1 : pixelStatus::size;
+    // __shared__ uint32_t status[pixelStatusSize];  // packed words array used to store the PixelStatus of each pixel
     __shared__ int msize;
 
     auto firstModule = blockIdx.x;
@@ -178,32 +178,32 @@ namespace gpuClustering {
 #endif
 
       // remove duplicate pixels
-      if constexpr (not isPhase2) {
-        if (msize > 1) {
-          for (uint32_t i = threadIdx.x; i < pixelStatus::size; i += blockDim.x) {
-            status[i] = 0;
-          }
-          __syncthreads();
-          for (int i = first; i < msize - 1; i += blockDim.x) {
-            // skip invalid pixels
-            if (id[i] == invalidModuleId)
-              continue;
-            pixelStatus::promote(status, x[i], y[i]);
-          }
-          __syncthreads();
-          for (int i = first; i < msize - 1; i += blockDim.x) {
-            // skip invalid pixels
-            if (id[i] == invalidModuleId)
-              continue;
-            if (pixelStatus::isDuplicate(status, x[i], y[i])) {
-              // printf("found dup %d %d %d %d\n", i, id[i], x[i], y[i]);
-              id[i] = invalidModuleId;
-              rawIdArr[i] = 0;
-            }
-          }
-          __syncthreads();
-        }
-      }
+      // if constexpr (not isPhase2) {
+      //   if (msize > 1) {
+      //     for (uint32_t i = threadIdx.x; i < pixelStatus::size; i += blockDim.x) {
+      //       status[i] = 0;
+      //     }
+      //     __syncthreads();
+      //     for (int i = first; i < msize - 1; i += blockDim.x) {
+      //       // skip invalid pixels
+      //       if (id[i] == invalidModuleId)
+      //         continue;
+      //       pixelStatus::promote(status, x[i], y[i]);
+      //     }
+      //     __syncthreads();
+      //     for (int i = first; i < msize - 1; i += blockDim.x) {
+      //       // skip invalid pixels
+      //       if (id[i] == invalidModuleId)
+      //         continue;
+      //       if (pixelStatus::isDuplicate(status, x[i], y[i])) {
+      //         // printf("found dup %d %d %d %d\n", i, id[i], x[i], y[i]);
+      //         id[i] = invalidModuleId;
+      //         rawIdArr[i] = 0;
+      //       }
+      //     }
+      //     __syncthreads();
+      //   }
+      // }
 
       // fill histo
       for (int i = first; i < msize; i += blockDim.x) {
@@ -280,8 +280,8 @@ namespace gpuClustering {
         assert(k < maxiter);
         auto p = hist.begin() + j;
         auto i = *p + firstPixel;
-        assert(id[i] != invalidModuleId);
-        assert(id[i] == thisModuleId);  // same module
+
+        assert(id[i] == thisModuleId or id[i] == invalidModuleId);  // same module or duplicate
         int be = Hist::bin(y[i] + 1);
         auto e = hist.end(be);
         ++p;
@@ -291,11 +291,22 @@ namespace gpuClustering {
           assert(m != i);
           assert(int(y[m]) - int(y[i]) >= 0);
           assert(int(y[m]) - int(y[i]) <= 1);
-          if (std::abs(int(x[m]) - int(x[i])) > 1)
+          auto distX = std::abs(int(x[m]) - int(x[i]));
+          if ( distX > 1)
             continue;
           auto l = nnn[k]++;
           assert(l < maxNeighbours);
           nn[k][l] = *p;
+
+          if(distX > 0) continue;
+                    
+          if(std::abs(int(y[m]) - int(y[i])) > 0) continue;
+
+          //keep only one
+          auto dupId = std::max(i,m);
+          id[dupId] = invalidModuleId;
+          rawIdArr[dupId] = 0;
+
         }
       }
 
