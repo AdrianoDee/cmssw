@@ -4466,9 +4466,26 @@ for year,k in [(year,k) for year in upgradeKeys for k in upgradeKeys[year]]:
                     upgradeStepDict[stepNamePU][k] = None
                 else:
                     upgradeStepDict[stepNamePU][k]=merge([PUDataSets[k2],upgradeStepDict[stepName][k]])
-
             # in case special WF has PU-specific changes: apply *after* basic PU step is created
             specialWF.setupPU(upgradeStepDict, k, upgradeProperties[year][k])
+    
+aging_custom = 'SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000'
+for specialType,specialWF in upgradeWFs.items():
+    ## only for baseline, all the others inherits it
+    if specialType != "baseline":
+        continue
+    for step in specialWF.steps + specialWF.PU:
+        if "Digi" in step or "Reco" in step:
+            stepName = specialWF.getStepName(step)
+            for k in upgradeStepDict[stepName]:
+                if '2026' not in k:
+                    continue
+                if "--customise" in upgradeStepDict[stepName][k]:
+                    if "aging" in upgradeStepDict[stepName][k]['--customise']: # avoid duplicates and overwriting
+                        continue
+                    upgradeStepDict[stepName][k]['--customise'] = upgradeStepDict[stepName][k]["--customise"] + "," + aging_custom
+                else:
+                    upgradeStepDict[stepName][k] = merge([{'--customise': aging_custom}, upgradeStepDict[stepName][k]])
 
 for step in upgradeStepDict.keys():
     # we need to do this for each fragment

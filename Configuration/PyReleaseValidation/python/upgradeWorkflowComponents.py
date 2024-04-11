@@ -2213,15 +2213,44 @@ upgradeWFs['JMENano'] = UpgradeWorkflow_JMENano(
 )
 
 
-# common operations for aging workflows
+# # common operations for no aging and higher than 1000 fb{-1} workflows
 class UpgradeWorkflowAging(UpgradeWorkflow):
     def setup_(self, step, stepName, stepDict, k, properties):
         if 'Digi' in step or 'Reco' in step:
-            stepDict[stepName][k] = merge([{'--customise': 'SLHCUpgradeSimulations/Configuration/aging.customise_aging_'+self.lumi}, stepDict[step][k]])
+            
+            custom = 'SLHCUpgradeSimulations/Configuration/aging.customise_aging_'+self.lumi
+            no_aging = self.lumi == '0'
+            print(custom)
+            print(stepName)
+            print(stepDict[stepName])
+            print(k)
+            if "--customise" in stepDict[stepName][k]:
+                # Overwriting default aging
+                print("here")
+                if "aging.customise_aging_" in stepDict[stepName][k]["--customise"]:
+                    all_custom = stepDict[stepName][k]["--customise"].split(",")
+                    
+                    print(stepName)
+                    if len(all_custom)==1:
+                        if no_aging:
+                            del stepDict[stepName][k]["--customise"]
+                        else:
+                            stepDict[stepName][k]["--customise"] = custom
+                    else:
+                        new_custom = [c for c in all_custom if "aging.customise_aging_" not in c]
+                        if no_aging:
+                            stepDict[stepName][k]["--customise"] = ",".join(new_custom)
+                        else:
+                            stepDict[stepName][k]["--customise"] = ",".join(new_custom + [custom])
+            elif not no_aging:
+                print(stepName)
+                stepDict[stepName][k] = merge([{'--customise': custom}, stepDict[step][k]])
+
+            # print(stepDict[stepName][k])
     def condition(self, fragment, stepList, key, hasHarvest):
         return '2026' in key
 # define several of them
-upgradeWFs['Aging1000'] = UpgradeWorkflowAging(
+upgradeWFs['NoAging'] = UpgradeWorkflowAging(
     steps =  [
         'Digi',
         'DigiTrigger',
@@ -2238,11 +2267,11 @@ upgradeWFs['Aging1000'] = UpgradeWorkflowAging(
         'RecoFakeHLT',
         'RecoGlobal',
     ],
-    suffix = 'Aging1000',
-    offset = 0.101,
+    suffix = 'NoAging',
+    offset = 0.102,
 )
-upgradeWFs['Aging1000'].lumi = '1000'
-upgradeWFs['Aging3000'] = deepcopy(upgradeWFs['Aging1000'])
+upgradeWFs['NoAging'].lumi = '0'
+upgradeWFs['Aging3000'] = deepcopy(upgradeWFs['NoAging'])
 upgradeWFs['Aging3000'].suffix = 'Aging3000'
 upgradeWFs['Aging3000'].offset = 0.103
 upgradeWFs['Aging3000'].lumi = '3000'
