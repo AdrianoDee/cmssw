@@ -45,9 +45,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const float ptmin_;
       const float CAThetaCutBarrel_;
       const float CAThetaCutForward_;
+      const float CAThetaCutStrip_;
       const float hardCurvCut_;
       const float dcaCutInnerTriplet_;
       const float dcaCutOuterTriplet_;
+      const float dcaCutOuterTripletStrip_;
     };
 
     template <typename TrackerTraits, typename Enable = void>
@@ -61,7 +63,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       /// Is is a starting layer pair?
       ALPAKA_FN_ACC ALPAKA_FN_INLINE bool startingLayerPair(int16_t pid) const {
         if constexpr (std::is_same_v<TrackerTraits, pixelTopology::Phase1Strip>) {
-        return (pid < 23);
+        return (pid < 12);
         }
         else{
           return minHitsPerNtuplet_ > 3 ? pid < 3 : pid < 8 || pid > 12;
@@ -72,7 +74,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       ALPAKA_FN_ACC ALPAKA_FN_INLINE bool startAt0(int16_t pid) const {
         if constexpr (std::is_same_v<TrackerTraits, pixelTopology::Phase1Strip>) {
         assert((pixelTopology::Phase1Strip::layerPairs[pid * 2] == 0) ==
-               (pid < 3 || pid == 13 || pid == 15 || pid == 16 || pid == 19 || pid == 20));  // to be 100% sure it's working, may be removed
+               (pid < 3 || pid == 8 || pid == 10 || pid == 11));  // to be 100% sure it's working, may be removed
         return pixelTopology::Phase1Strip::layerPairs[pid * 2] == 0;
         }
         else{

@@ -44,15 +44,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
       desc.add<double>("CAThetaCutBarrel", 0.002f)->setComment("Cut on RZ alignement for Barrel");
       desc.add<double>("CAThetaCutForward", 0.003f)->setComment("Cut on RZ alignment for Forward");
+      desc.add<double>("CAThetaCutStrip", 0.003f)->setComment("Cut on RZ alignment for Strip");
       desc.add<double>("hardCurvCut", 1.f / (0.35 * 87.f))
           ->setComment("Cut on minimum curvature, used in DCA ntuplet selection");
       desc.add<double>("dcaCutInnerTriplet", 0.15f)->setComment("Cut on origin radius when the inner hit is on BPix1");
       desc.add<double>("dcaCutOuterTriplet", 0.25f)->setComment("Cut on origin radius when the outer hit is on BPix1");
+      desc.add<double>("dcaCutOuterTripletStrip", 0.25f)->setComment("Cut on origin radius when the outer hit is on BPix1");
       desc.add<bool>("earlyFishbone", true);
       desc.add<bool>("lateFishbone", false);
       desc.add<bool>("fillStatistics", false);
       desc.add<unsigned int>("minHitsPerNtuplet", 4);
-      desc.add<unsigned int>("minHitsForSharingCut", 10)
+      desc.add<unsigned int>("minHitsForSharingCut", 4)
           ->setComment("Maximum number of hits in a tuple to clean also if the shared hit is on bpx1");
 
       desc.add<bool>("fitNas4", false)->setComment("fit only 4 hits out of N");
@@ -90,9 +92,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                          (float)cfg.getParameter<double>("ptmin"),
                                          (float)cfg.getParameter<double>("CAThetaCutBarrel"),
                                          (float)cfg.getParameter<double>("CAThetaCutForward"),
+                                         (float)cfg.getParameter<double>("CAThetaCutStrip"),
                                          (float)cfg.getParameter<double>("hardCurvCut"),
                                          (float)cfg.getParameter<double>("dcaCutInnerTriplet"),
-                                         (float)cfg.getParameter<double>("dcaCutOuterTriplet")}};
+                                         (float)cfg.getParameter<double>("dcaCutOuterTriplet"),
+                                         (float)cfg.getParameter<double>("dcaCutOuterTripletStrip")}};
       };
 
       static constexpr ::pixelTrack::QualityCutsT<TrackerTraits> makeQualityCuts(edm::ParameterSet const& pset) {
@@ -125,9 +129,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                          (float)cfg.getParameter<double>("ptmin"),
                                          (float)cfg.getParameter<double>("CAThetaCutBarrel"),
                                          (float)cfg.getParameter<double>("CAThetaCutForward"),
+                                         (float)cfg.getParameter<double>("CAThetaCutStrip"),
                                          (float)cfg.getParameter<double>("hardCurvCut"),
                                          (float)cfg.getParameter<double>("dcaCutInnerTriplet"),
-                                         (float)cfg.getParameter<double>("dcaCutOuterTriplet")},
+                                         (float)cfg.getParameter<double>("dcaCutOuterTriplet"),
+                                         (float)cfg.getParameter<double>("dcaCutOuterTripletStrip")},
                                         {(bool)cfg.getParameter<bool>("includeFarForwards")}};
       }
 
@@ -248,7 +254,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void CAHitNtupletGenerator<pixelTopology::Phase1Strip>::fillPSetDescription(edm::ParameterSetDescription& desc) {
     fillDescriptionsCommon(desc);
 
-    desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase1Strip::maxNumberOfDoublets);
+    desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase1::maxNumberOfDoublets);
     desc.add<bool>("idealConditions", true);
     desc.add<bool>("includeJumpingForwardDoublets", false);
     desc.add<double>("cellZ0Cut", 12.0);
@@ -261,10 +267,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ->setComment(
             "Factor to multiply the pT-dependent chi2 cut (currently: 8 for the broken line fit, ?? for the Riemann "
             "fit)");
-    trackQualityCuts.add<double>("tripletMinPt", 0.5)->setComment("Min pT for triplets, in GeV");
+    trackQualityCuts.add<double>("tripletMinPt", 1.0)->setComment("Min pT for triplets, in GeV");
     trackQualityCuts.add<double>("tripletMaxTip", 0.3)->setComment("Max |Tip| for triplets, in cm");
     trackQualityCuts.add<double>("tripletMaxZip", 12.)->setComment("Max |Zip| for triplets, in cm");
-    trackQualityCuts.add<double>("quadrupletMinPt", 0.3)->setComment("Min pT for quadruplets, in GeV");
+    trackQualityCuts.add<double>("quadrupletMinPt", 0.5)->setComment("Min pT for quadruplets, in GeV");
     trackQualityCuts.add<double>("quadrupletMaxTip", 0.5)->setComment("Max |Tip| for quadruplets, in cm");
     trackQualityCuts.add<double>("quadrupletMaxZip", 12.)->setComment("Max |Zip| for quadruplets, in cm");
     desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)

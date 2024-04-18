@@ -255,7 +255,7 @@ from RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpakaPhase1Strip_cf
 
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase1Strip_cfi import caHitNtupletAlpakaPhase1Strip as _pixelTracksAlpakaPhase1Strip
 
-(alpaka & stripNtupletFit & ~phase2_tracker).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpakaPhase1Strip.clone(useStripHits = cms.bool(True), hitModuleStartSrc = cms.InputTag("siStripRecHitSoAPhase1")))
+(alpaka & stripNtupletFit & ~phase2_tracker).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpakaPhase1Strip.clone(useStripHits = cms.bool(True), minQuality = cms.string('highPurity'),hitModuleStartSrc = cms.InputTag("siStripRecHitSoAPhase1")))
 
 (alpaka & stripNtupletFit & ~phase2_tracker).toReplaceWith(pixelTracksAlpaka, _pixelTracksAlpakaPhase1Strip.clone(pixelRecHitSrc = cms.InputTag("siStripRecHitSoAPhase1")))
 

@@ -40,6 +40,7 @@ namespace caHitNtupletGenerator {
     const float hardCurvCut_;
     const float dcaCutInnerTriplet_;
     const float dcaCutOuterTriplet_;
+    const float dcaCutOuterTripletStrip_;
   };
 
   template <typename TrackerTraits, typename Enable = void>

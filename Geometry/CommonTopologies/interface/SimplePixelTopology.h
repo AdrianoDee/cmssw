@@ -426,7 +426,7 @@ namespace pixelTopology {
   struct Phase1 {
     // types
     using hindex_type = uint32_t;  // FIXME from siPixelRecHitsHeterogeneousProduct
-    using tindex_type = uint16_t;  // for tuples
+    using tindex_type = uint32_t;  // for tuples
     using cindex_type = uint32_t;  // for cells
 
     static constexpr uint32_t maxNumberOfHits = 48 * 1024;

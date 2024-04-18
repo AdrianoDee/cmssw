@@ -103,8 +103,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       auto dz = hh[i].zGlobal() - hh[o].zGlobal();
       auto dr = hh[i].rGlobal() - hh[o].rGlobal();
 
-      auto innerBarrel = mi < T::last_barrel_detIndex;
-      auto onlyBarrel = mo < T::last_barrel_detIndex;
+      auto innerBarrel = mi < T::last_barrel_detIndex; //|| (mi >= 1856 && mi <=3392);
+      auto onlyBarrel = mo < T::last_barrel_detIndex ;//|| (mo >= 1856 && mo <=3392);
 
       if (not innerBarrel and not onlyBarrel)
         return false;
@@ -217,7 +217,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       ALPAKA_ASSERT_ACC(i < offsets[inner + 1]);
 
       // found hit corresponding to our worker thread, now do the job
-      if (hh[i].detectorIndex() > pixelClustering::maxNumModules)
+      if (hh[i].detectorIndex() > 5356)//pixelClustering::maxNumModules)
         continue;  // invalid
 
       /* maybe clever, not effective when zoCut is on
@@ -284,7 +284,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           auto mo = hh[oi].detectorIndex();
 
           // invalid
-          if (mo > pixelClustering::maxNumModules)
+          if (mo > 5356)//pixelClustering::maxNumModules) //4000
             continue;
 
           if (doZ0Cut && z0cutoff(oi))

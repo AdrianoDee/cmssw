@@ -523,7 +523,21 @@ def customizeHLTforAlpakaPixelRecoLocal(process):
     #  - SiPixelDigisSoACollection
     # produces
     #  - TrackingRecHitsSoACollection<TrackerTraits>
-    process.hltSiPixelRecHitsSoA = cms.EDProducer('SiPixelRecHitAlpakaPhase1@alpaka',
+    
+    
+    process.hltSiStripMatchedRecHitsFull = cms.EDProducer( "SiStripRecHitConverter",
+    ClusterProducer = cms.InputTag( "hltHITrackingSiStripRawToClustersFacilityFullZeroSuppression" ),
+    rphiRecHits = cms.string( "rphiRecHit" ),
+    stereoRecHits = cms.string( "stereoRecHit" ),
+    matchedRecHits = cms.string( "matchedRecHit" ),
+    useSiStripQuality = cms.bool( False ),
+    MaskBadAPVFibers = cms.bool( False ),
+    doMatching = cms.bool( True ),
+    StripCPE = cms.ESInputTag( "hltESPStripCPEfromTrackAngle","hltESPStripCPEfromTrackAngle" ),
+    Matcher = cms.ESInputTag( "SiStripRecHitMatcherESProducer","StandardMatcher" ),
+    siStripQualityLabel = cms.ESInputTag( "","" )
+    )
+    process.hltSiPixelOnlyRecHitsSoA = cms.EDProducer('SiPixelRecHitAlpakaPhase1@alpaka',
         beamSpot = cms.InputTag('hltOnlineBeamSpotDevice'),
         src = cms.InputTag('hltSiPixelClustersSoA'),
         CPE = cms.string('PixelCPEFastParams'),
@@ -533,9 +547,19 @@ def customizeHLTforAlpakaPixelRecoLocal(process):
             backend = cms.untracked.string('')
         )
     )
+    
+    process.hltSiPixelRecHitsSoA = cms.EDProducer('SiStripRecHitSoAPhase1@alpaka',
+      stripRecHitSource = cms.InputTag('hltSiStripMatchedRecHitsFull', 'matchedRecHit'),
+      pixelRecHitSoASource = cms.InputTag('hltSiPixelOnlyRecHitsSoA'),
+      mightGet = cms.optional.untracked.vstring,
+      
+      alpaka = cms.untracked.PSet(
+        backend = cms.untracked.string('')
+      )
+    )
 
     process.hltSiPixelRecHits = cms.EDProducer('SiPixelRecHitFromSoAAlpakaPhase1',
-        pixelRecHitSrc = cms.InputTag('hltSiPixelRecHitsSoA'),
+        pixelRecHitSrc = cms.InputTag('hltSiPixelOnlyRecHitsSoA'),
         src = cms.InputTag('hltSiPixelClusters'),
     )
 
@@ -548,6 +572,8 @@ def customizeHLTforAlpakaPixelRecoLocal(process):
         process.hltSiPixelClusters,   # was: hltSiPixelClusters
         process.hltSiPixelClustersCache,          # really needed ??
         process.hltSiPixelDigis, # was: hltSiPixelDigis
+        process.hltSiStripMatchedRecHitsFull,
+        process.hltSiPixelOnlyRecHitsSoA,
         process.hltSiPixelRecHitsSoA,
         process.hltSiPixelRecHits,    # was: hltSiPixelRecHits
     )
@@ -605,36 +631,31 @@ def customizeHLTforAlpakaPixelRecoTracking(process):
     #  - TrackingRecHitsSoACollection<TrackerTraits>
     # produces
     #  - TkSoADevice
-    process.frameSoAESProducerPhase1 = cms.ESProducer('FrameSoAESProducerPhase1@alpaka',
-      ComponentName = cms.string('FrameSoAPhase1'),
+    
+    process.frameSoAESProducerPhase1Strip = cms.ESProducer('FrameSoAESProducerPhase1Strip@alpaka',
+      ComponentName = cms.string('FrameSoAPhase1Strip'),
       appendToDataLabel = cms.string(''),
       alpaka = cms.untracked.PSet(
         backend = cms.untracked.string('')
       )
     )
-    
-    process.hltPixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase1@alpaka',
+    process.hltPixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase1Strip@alpaka',
         pixelRecHitSrc = cms.InputTag('hltSiPixelRecHitsSoA'),
+        frameSoA = cms.string('FrameSoAPhase1Strip'),
         #CPE = cms.string('PixelCPEFastParams'),
-        frameSoA = cms.string('FrameSoAPhase1'),
-        ptmin = cms.double(0.9),
-        CAThetaCutBarrel = cms.double(0.002),
-        CAThetaCutForward = cms.double(0.003),
-        hardCurvCut = cms.double(0.0328407225),
-        dcaCutInnerTriplet = cms.double(0.15),
+        ptmin = cms.double(0.89999997615814209),
+        CAThetaCutBarrel = cms.double(0.0020000000949949026),
+        CAThetaCutForward = cms.double(0.0030000000260770321),
+        CAThetaCutStrip = cms.double(0.0030000000260770321),
+        hardCurvCut = cms.double(0.032840722495894911),
+        dcaCutInnerTriplet = cms.double(0.15000000596046448),
         dcaCutOuterTriplet = cms.double(0.25),
+        dcaCutOuterTripletStrip = cms.double(0.25),
         earlyFishbone = cms.bool(True),
         lateFishbone = cms.bool(False),
         fillStatistics = cms.bool(False),
-        minHitsPerNtuplet = cms.uint32(3),
-        phiCuts = cms.vint32(
-            522, 730, 730, 522, 626,
-            626, 522, 522, 626, 626,
-            626, 522, 522, 522, 522,
-            522, 522, 522, 522
-        ),
-        maxNumberOfDoublets = cms.uint32(524288),
-        minHitsForSharingCut = cms.uint32(10),
+        minHitsPerNtuplet = cms.uint32(4),
+        minHitsForSharingCut = cms.uint32(4),
         fitNas4 = cms.bool(False),
         doClusterCut = cms.bool(True),
         doZ0Cut = cms.bool(True),
@@ -643,18 +664,204 @@ def customizeHLTforAlpakaPixelRecoTracking(process):
         doSharedHitCut = cms.bool(True),
         dupPassThrough = cms.bool(False),
         useSimpleTripletCleaner = cms.bool(True),
-        idealConditions = cms.bool(False),
-        includeJumpingForwardDoublets = cms.bool(True),
+        maxNumberOfDoublets = cms.uint32(524288),
+        idealConditions = cms.bool(True),
+        includeJumpingForwardDoublets = cms.bool(False),
+        cellZ0Cut = cms.double(12),
+        cellPtCut = cms.double(0.5),
         trackQualityCuts = cms.PSet(
-            chi2MaxPt = cms.double(10),
-            chi2Coeff = cms.vdouble(0.9, 1.8),
-            chi2Scale = cms.double(8),
-            tripletMinPt = cms.double(0.5),
-            tripletMaxTip = cms.double(0.3),
-            tripletMaxZip = cms.double(12),
-            quadrupletMinPt = cms.double(0.3),
-            quadrupletMaxTip = cms.double(0.5),
-            quadrupletMaxZip = cms.double(12)
+          chi2MaxPt = cms.double(10),
+          chi2Coeff = cms.vdouble(
+            0.9,
+            1.8
+          ),
+          chi2Scale = cms.double(8),
+          tripletMinPt = cms.double(0.5),
+          tripletMaxTip = cms.double(0.3),
+          tripletMaxZip = cms.double(12),
+          quadrupletMinPt = cms.double(0.3),
+          quadrupletMaxTip = cms.double(0.5),
+          quadrupletMaxZip = cms.double(12)
+        ),
+        phiCuts = cms.vint32(
+        900,
+        730,
+        730,
+        900,
+        900,
+        900,
+        730,
+        730,
+        900,
+        900,
+        730,
+        730,
+        1820,
+        1820,
+        900,
+        730,
+        730,
+        730,
+        730,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        900,
+        900,
+        900,
+        900,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820,
+        1820
+        ),
+        minz = cms.vdouble(
+        -20,
+        0,
+        -30,
+        -22,
+        10,
+        -30,
+        -70,
+        -70,
+        -20,
+        -22,
+        0,
+        -30,
+        -70,
+        -70,
+        -22,
+        15,
+        -30,
+        -70,
+        -70,
+        -22,
+        -22,
+        -22,
+        -55,
+        -70,
+        -70,
+        -70,
+        -70,
+        -70,
+        -70,
+        -70,
+        -70,
+        -70,
+        -70,
+        -1000,
+        -1000,
+        -1000,
+        -1000,
+        0,
+        -55,
+        0,
+        -55,
+        -22,
+        -22
+        ),
+        maxz = cms.vdouble(
+        20,
+        30,
+        0,
+        22,
+        30,
+        -10,
+        70,
+        70,
+        20,
+        22,
+        30,
+        0,
+        70,
+        70,
+        22,
+        30,
+        -15,
+        70,
+        70,
+        22,
+        22,
+        22,
+        55,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        70,
+        1000,
+        1000,
+        1000,
+        1000,
+        55,
+        0,
+        55,
+        0,
+        0,
+        0
+        ),
+        maxr = cms.vdouble(
+            20,
+            9,
+            9,
+            20,
+            7,
+            7,
+            5,
+            5,
+            20,
+            20,
+            9,
+            9,
+            50,
+            50,
+            20,
+            6,
+            6,
+            5,
+            5,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50
         ),
         # autoselect the alpaka backend
         alpaka = cms.untracked.PSet(
@@ -667,12 +874,16 @@ def customizeHLTforAlpakaPixelRecoTracking(process):
         alpaka = dict( backend = 'serial_sync' )
     )
 
-    process.hltPixelTracks = cms.EDProducer("PixelTrackProducerFromSoAAlpakaPhase1",
+    process.hltPixelTracks = cms.EDProducer("PixelTrackProducerFromSoAAlpakaPhase1Strip",
         beamSpot = cms.InputTag("hltOnlineBeamSpot"),
         minNumberOfHits = cms.int32(0),
-        minQuality = cms.string('loose'),
+        minQuality = cms.string('highPurity'),
         pixelRecHitLegacySrc = cms.InputTag("hltSiPixelRecHits"),
-        trackSrc = cms.InputTag("hltPixelTracksSoA")
+        trackSrc = cms.InputTag("hltPixelTracksSoA"),
+        useStripHits = cms.bool(True), 
+        hitModuleStartSrc = cms.InputTag("siStripRecHitSoAPhase1"),     
+        stripRecHitLegacySrc = cms.InputTag('siStripMatchedRecHits', 'matchedRecHit'),
+        mightGet = cms.optional.untracked.vstring
     )
 
     process.hltPixelTracksLegacyFormatCPUSerial = process.hltPixelTracks.clone(
@@ -681,7 +892,7 @@ def customizeHLTforAlpakaPixelRecoTracking(process):
     )
 
     process.HLTRecoPixelTracksTask = cms.ConditionalTask(
-        process.frameSoAESProducerPhase1,
+        process.frameSoAESProducerPhase1Strip,
         process.hltPixelTracksSoA,
         process.hltPixelTracks,
     )
@@ -704,7 +915,7 @@ def customizeHLTforAlpakaPixelRecoVertexing(process):
     #  - TkSoADevice
     # produces
     #  - ZVertexDevice
-    process.hltPixelVerticesSoA = cms.EDProducer('PixelVertexProducerAlpakaPhase1@alpaka',
+    process.hltPixelVerticesSoA = cms.EDProducer('PixelVertexProducerAlpakaPhase1Strip@alpaka',
         oneKernel = cms.bool(True),
         useDensity = cms.bool(True),
         useDBSCAN = cms.bool(False),
