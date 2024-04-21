@@ -8,7 +8,11 @@
 <use name="DataFormats/TrackReco"/>
 <use name="DataFormats/TrackerRecHit2D"/>
 <use name="DataFormats/TrackingRecHit"/>
+<use name="DataFormats/TrackingRecHitSoA"/>
+<use name="DataFormats/TrackSoA"/>
 <use name="DataFormats/VertexReco"/>
+<use name="CUDADataFormats/Vertex"/>
+<use name="CUDADataFormats/Track"/>
 <use name="FWCore/Framework"/>
 <use name="FWCore/MessageLogger"/>
 <use name="FWCore/ParameterSet"/>

@@ -17,6 +17,8 @@
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
 
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
+
 namespace {
   // same logic used for the MTV:
   // cf https://github.com/cms-sw/cmssw/blob/master/Validation/RecoTrack/src/MTVHistoProducerAlgoForTracker.cc
@@ -302,7 +304,9 @@ void SiPixelCompareTrackSoAAlpaka<T>::fillDescriptions(edm::ConfigurationDescrip
 using SiPixelPhase1CompareTrackSoAAlpaka = SiPixelCompareTrackSoAAlpaka<pixelTopology::Phase1>;
 using SiPixelPhase2CompareTrackSoAAlpaka = SiPixelCompareTrackSoAAlpaka<pixelTopology::Phase2>;
 using SiPixelHIonPhase1CompareTrackSoAAlpaka = SiPixelCompareTrackSoAAlpaka<pixelTopology::HIonPhase1>;
+using SiPixelPhase1StripCompareTrackSoAAlpaka = SiPixelCompareTrackSoAAlpaka<pixelTopology::Phase1Strip>;
 
 DEFINE_FWK_MODULE(SiPixelPhase1CompareTrackSoAAlpaka);
 DEFINE_FWK_MODULE(SiPixelPhase2CompareTrackSoAAlpaka);
 DEFINE_FWK_MODULE(SiPixelHIonPhase1CompareTrackSoAAlpaka);
+DEFINE_FWK_MODULE(SiPixelPhase1StripCompareTrackSoAAlpaka);

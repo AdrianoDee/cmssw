@@ -3,10 +3,10 @@
 
 #include <cstdint>
 #include <alpaka/alpaka.hpp>
-#include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "DataFormats/TrackSoA/interface/TracksSoA.h"
 #include "DataFormats/TrackSoA/interface/TrackDefinitions.h"
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
 
 // TODO: The class is created via inheritance of the PortableHostCollection.
 // This is generally discouraged, and should be done via composition.
@@ -36,6 +36,7 @@ namespace pixelTrack {
   using TracksHostPhase1 = TracksHost<pixelTopology::Phase1>;
   using TracksHostPhase2 = TracksHost<pixelTopology::Phase2>;
   using TracksHostHIonPhase1 = TracksHost<pixelTopology::HIonPhase1>;
+  using TracksHostPhase1Strip = TracksHost<pixelTopology::Phase1Strip>;
 
 }  // namespace pixelTrack
 

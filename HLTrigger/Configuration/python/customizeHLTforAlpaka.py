@@ -605,9 +605,18 @@ def customizeHLTforAlpakaPixelRecoTracking(process):
     #  - TrackingRecHitsSoACollection<TrackerTraits>
     # produces
     #  - TkSoADevice
+    process.frameSoAESProducerPhase1 = cms.ESProducer('FrameSoAESProducerPhase1@alpaka',
+      ComponentName = cms.string('FrameSoAPhase1'),
+      appendToDataLabel = cms.string(''),
+      alpaka = cms.untracked.PSet(
+        backend = cms.untracked.string('')
+      )
+    )
+    
     process.hltPixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase1@alpaka',
         pixelRecHitSrc = cms.InputTag('hltSiPixelRecHitsSoA'),
-        CPE = cms.string('PixelCPEFastParams'),
+        #CPE = cms.string('PixelCPEFastParams'),
+        frameSoA = cms.string('FrameSoAPhase1'),
         ptmin = cms.double(0.9),
         CAThetaCutBarrel = cms.double(0.002),
         CAThetaCutForward = cms.double(0.003),
@@ -672,6 +681,7 @@ def customizeHLTforAlpakaPixelRecoTracking(process):
     )
 
     process.HLTRecoPixelTracksTask = cms.ConditionalTask(
+        process.frameSoAESProducerPhase1,
         process.hltPixelTracksSoA,
         process.hltPixelTracks,
     )

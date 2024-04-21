@@ -1,0 +1,16 @@
+
+# in: /data/user/adiflori/stripCA/cmssw_133_backup/src dryRun for 'cd 11824.9001_TTbar_13+2021PU_SonicTriton
+ cmsDriver.py TTbar_13TeV_TuneCUETP8M1_cfi  -s GEN,SIM -n 10 --conditions auto:phase1_2022_realistic --beamspot Realistic25ns13p6TeVEOY2022Collision --datatier GEN-SIM --eventcontent FEVTDEBUG --geometry DB:Extended --era Run3 --procModifiers allSonicTriton --relval 9000,50 --fileout file:step1.root  > step1_TTbar_13+2021PU_SonicTriton.log  2>&1
+ 
+
+# in: /data/user/adiflori/stripCA/cmssw_133_backup/src dryRun for 'cd 11824.9001_TTbar_13+2021PU_SonicTriton
+ cmsDriver.py step2  -s DIGI:pdigi_valid,L1,DIGI2RAW,HLT:@relval2022 --conditions auto:phase1_2022_realistic --datatier GEN-SIM-DIGI-RAW -n 10 --eventcontent FEVTDEBUGHLT --geometry DB:Extended --era Run3 --procModifiers allSonicTriton --pileup Run3_Flat55To75_PoissonOOTPU --pileup_input das:/RelValMinBias_14TeV/CMSSW_13_1_0_pre1-130X_mcRun3_2022_realistic_withNewBSFromEOY2022Data_v2_RV186-v1/GEN-SIM --filein  file:step1.root  --fileout file:step2.root  > step2_TTbar_13+2021PU_SonicTriton.log  2>&1
+ 
+
+# in: /data/user/adiflori/stripCA/cmssw_133_backup/src dryRun for 'cd 11824.9001_TTbar_13+2021PU_SonicTriton
+ cmsDriver.py step3  -s RAW2DIGI,L1Reco,RECO,RECOSIM,PAT,NANO,VALIDATION:@standardValidationNoHLT+@miniAODValidation,DQM:@standardDQMFakeHLT+@miniAODDQM+@nanoAODDQM --conditions auto:phase1_2022_realistic --datatier GEN-SIM-RECO,MINIAODSIM,NANOAODSIM,DQMIO -n 10 --eventcontent RECOSIM,MINIAODSIM,NANOEDMAODSIM,DQM --geometry DB:Extended --era Run3 --procModifiers allSonicTriton --pileup Run3_Flat55To75_PoissonOOTPU --pileup_input das:/RelValMinBias_14TeV/CMSSW_13_1_0_pre1-130X_mcRun3_2022_realistic_withNewBSFromEOY2022Data_v2_RV186-v1/GEN-SIM --filein  file:step2.root  --fileout file:step3.root  > step3_TTbar_13+2021PU_SonicTriton.log  2>&1
+ 
+
+# in: /data/user/adiflori/stripCA/cmssw_133_backup/src dryRun for 'cd 11824.9001_TTbar_13+2021PU_SonicTriton
+ cmsDriver.py step4  -s HARVESTING:@standardValidationNoHLT+@standardDQMFakeHLT+@miniAODValidation+@miniAODDQM+@nanoAODDQM --conditions auto:phase1_2022_realistic --mc  --geometry DB:Extended --scenario pp --filetype DQM --era Run3 --procModifiers allSonicTriton -n 10 --pileup Run3_Flat55To75_PoissonOOTPU --pileup_input das:/RelValMinBias_14TeV/CMSSW_13_1_0_pre1-130X_mcRun3_2022_realistic_withNewBSFromEOY2022Data_v2_RV186-v1/GEN-SIM --filein file:step3_inDQM.root --fileout file:step4.root  > step4_TTbar_13+2021PU_SonicTriton.log  2>&1
+ 
