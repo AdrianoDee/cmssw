@@ -257,9 +257,13 @@ def customizeHLTforCMSSW(process, menuType="GRun"):
 
     # Alpaka HLT
     from Configuration.ProcessModifiers.alpaka_cff import alpaka 
+    from Configuration.ProcessModifiers.stripNtupletFit_cff import stripNtupletFit
+    
     from Configuration.Eras.Modifier_run3_common_cff import run3_common
     from HLTrigger.Configuration.customizeHLTforAlpaka import customizeHLTforAlpaka
-    (alpaka & run3_common).makeProcessModifier(customizeHLTforAlpaka).apply(process)
+    from HLTrigger.Configuration.customizeHLTforAlpakaStrip import customizeHLTforAlpakaStrips
+    (alpaka & run3_common & ~stripNtupletFit).makeProcessModifier(customizeHLTforAlpaka).apply(process)
+    (alpaka & run3_common & stripNtupletFit).makeProcessModifier(customizeHLTforAlpakaStrips).apply(process)
 
     # add call to action function in proper order: newest last!
     # process = customiseFor12718(process)

@@ -1139,7 +1139,7 @@ def customizeHLTforAlpakaEcalLocalReco(process):
 
     return process
 
-def customizeHLTforAlpaka(process):
+def customizeHLTforAlpakaStrips(process):
 
     process.load("HeterogeneousCore.AlpakaCore.ProcessAcceleratorAlpaka_cfi")
     process.load('Configuration.StandardSequences.Accelerators_cff')
