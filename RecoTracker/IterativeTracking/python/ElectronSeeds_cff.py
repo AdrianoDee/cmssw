@@ -225,7 +225,7 @@ stripPairElectronSeedLayers = _mod.seedingLayersEDProducer.clone(
     )
 )
 
-trackingPhase1GPU.toModify(pixelPairElectronSeedLayers,
+trackingPhase1GPU.toModify(stripPairElectronSeedLayers,
     TIB = dict(skipClusters = cms.InputTag('pixelLessStepSeedClusterMask')),
     TID = dict(skipClusters = cms.InputTag('pixelLessStepSeedClusterMask')),
     TEC = dict(skipClusters = cms.InputTag('pixelLessStepSeedClusterMask')) 
