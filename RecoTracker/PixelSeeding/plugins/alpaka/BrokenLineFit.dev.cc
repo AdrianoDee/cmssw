@@ -296,42 +296,31 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       if (fitNas4_) {
         // fit all as 4
-        riemannFit::rolling_fits<4, TrackerTraits::maxHitsOnTrack, 1>([this,
-                                                                       &hv,
-                                                                       &cpeParams,
-                                                                       &tkidDevice,
-                                                                       &hitsDevice,
-                                                                       &hits_geDevice,
-                                                                       &fast_fit_resultsDevice,
-                                                                       &offset,
-                                                                       &queue,
-                                                                       &workDivQuadsPenta](auto i) {
-          alpaka::exec<Acc1D>(queue,
-                              workDivQuadsPenta,
-                              Kernel_BLFastFit<4, TrackerTraits>{},
-                              tuples_,
-                              tupleMultiplicity_,
-                              hv,
-                              cpeParams,
-                              tkidDevice.data(),
-                              hitsDevice.data(),
-                              hits_geDevice.data(),
-                              fast_fit_resultsDevice.data(),
-                              4,
-                              4,
-                              offset);
+        alpaka::exec<Acc1D>(queue,
+                      workDivQuadsPenta,
+                      Kernel_BLFastFit<4, TrackerTraits>{},
+                      tuples_,
+                      tupleMultiplicity_,
+                      hv,
+                      cpeParams,
+                      tkidDevice.data(),
+                      hitsDevice.data(),
+                      hits_geDevice.data(),
+                      fast_fit_resultsDevice.data(),
+                      4,
+                      TrackerTraits::maxHitsOnTrack,
+                      offset);
 
-          alpaka::exec<Acc1D>(queue,
-                              workDivQuadsPenta,
-                              Kernel_BLFit<4, TrackerTraits>{},
-                              tupleMultiplicity_,
-                              bField_,
-                              outputSoa_,
-                              tkidDevice.data(),
-                              hitsDevice.data(),
-                              hits_geDevice.data(),
-                              fast_fit_resultsDevice.data());
-        });
+        alpaka::exec<Acc1D>(queue,
+                            workDivQuadsPenta,
+                            Kernel_BLFit<4, TrackerTraits>{},
+                            tupleMultiplicity_,
+                            bField_,
+                            outputSoa_,
+                            tkidDevice.data(),
+                            hitsDevice.data(),
+                            hits_geDevice.data(),
+                            fast_fit_resultsDevice.data());
 
       } else {
         riemannFit::rolling_fits<4, TrackerTraits::maxHitsOnTrackForFullFit, 1>([this,
