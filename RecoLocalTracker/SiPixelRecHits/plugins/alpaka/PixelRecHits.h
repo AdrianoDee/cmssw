@@ -21,7 +21,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
 
-//#define GPU_DEBUG
+#define GPU_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace pixelRecHits {
@@ -174,7 +174,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             first = clusters[me].clusModuleStart() + startClus;
             for (uint32_t ic : cms::alpakatools::independent_group_elements(acc, nClusInIter)) {
               auto h = first + ic;  // output index in global memory
-
               assert(h < (uint32_t)hits.metadata().size());
               assert(h < clusters[me + 1].clusModuleStart());
 
