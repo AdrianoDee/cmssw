@@ -426,6 +426,7 @@ workflows[136.8862] = ['',['RunEGamma2018Dml2','HLTDR2_2018ml','RECODR2_2018reHL
 #### Test of tau embed
 workflows[136.9] = ['', ['RunDoubleMuon2016C', 'RAWRECOTE16', 'RAWRECOLHECLEANTE16', 'EMBEDHADTE16', 'EMBEDMINIAOD16']]
 
+
 ### run 2021 collisions ###
 workflows[139.001] = ['RunMinimumBias2021',['RunMinimumBias2021','HLTDR3_2022','RECODR3_reHLT_MinBiasOffline','HARVESTD2021MB_reHLT']]
 workflows[139.002] = ['',['RunZeroBias2021','HLTDR3_2022','RECODR3_reHLT_ZBOffline','HARVESTD2021ZB_reHLT']]
@@ -568,6 +569,21 @@ workflows[141.902] = ['',['RunUPC2023','RECODR3_2023_HIN','HARVESTDPROMPTR3']]
 
 ### run3-2023 (2023 HI data RawPrime with re-HLT)
 workflows[142.0] = ['',['RunHIPhysicsRawPrime2023A','HLTDR3_HI2023ARawprime','RECOHIRUN3_reHLT_2023','HARVESTRUN3_HI2023A']]
+
+## 2024 Data Workflows
+base_wf_number_2024 = 2024.0
+offset_era = 0.1 # less than 10 eras
+offset_pd = 0.001 # less than 100 pds
+
+for e_n,era in enumerate(eras_2024):
+    for p_n,pd in enumerate(pds_2024):
+        wf_number = base_wf_number_2024
+        wf_number = wf_number + offset_era * e_n
+        wf_number = wf_number + offset_pd * p_n
+        wf_number = wf_number + 0.0001 * 0.05 
+        wf_number = round(wf_number,6)
+        step_name = "Run" + pd + era.split("Run")[1] + "_50k"
+        workflows[wf_number] = ['',[step_name,'HLTDR3_2024','AODNANORUN3_reHLT_2024','HARVESTRUN3_2024']]
 
 ### fastsim ###
 workflows[5.1] = ['TTbarFS', ['TTbarFS','HARVESTFS']]
