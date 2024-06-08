@@ -227,6 +227,7 @@ namespace cms {
       assert(pixDet);
       SiPixelRecHitCollectionNew::FastFiller recHitsOnDetUnit(output, detid);
 
+      std::cout << "detId : " << detid << std::endl;
       edmNew::DetSet<SiPixelCluster>::const_iterator clustIt = dsv.begin(), clustEnd = dsv.end();
 
       for (; clustIt != clustEnd; clustIt++) {

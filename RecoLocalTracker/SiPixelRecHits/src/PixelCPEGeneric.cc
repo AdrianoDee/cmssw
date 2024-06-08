@@ -252,7 +252,7 @@ LocalPoint PixelCPEGeneric::localPosition(DetParam const& theDetParam, ClusterPa
   if (theVerboseLevel > 20)
     cout << "\t >>> Generic:: processing X" << endl;
 #endif
-
+  std::cout << " x -> ";
   float xPos = siPixelUtils::generic_position_formula(
       theClusterParam.theCluster->sizeX(),
       q_f_X,
@@ -276,7 +276,8 @@ LocalPoint PixelCPEGeneric::localPosition(DetParam const& theDetParam, ClusterPa
   if (theVerboseLevel > 20)
     cout << "\t >>> Generic:: processing Y" << endl;
 #endif
-
+  
+  std::cout << " y -> ";
   float yPos = siPixelUtils::generic_position_formula(
       theClusterParam.theCluster->sizeY(),
       q_f_Y,
@@ -409,7 +410,7 @@ LocalError PixelCPEGeneric::localError(DetParam const& theDetParam, ClusterParam
       if (theDetParam.theRecTopol->isItBigPixelInY(icol + minPixelCol))
         ++n_bigy;
     }
-
+    std::cout << "theDetParam.thePitchX = " << theDetParam.thePitchX << " theDetParam.thePitchY = " << theDetParam.thePitchY << std::endl; 
     xerr = (float)(sizex + n_bigx) * theDetParam.thePitchX / std::sqrt(12.0f);
     yerr = (float)(sizey + n_bigy) * theDetParam.thePitchY / std::sqrt(12.0f);
   }
