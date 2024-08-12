@@ -31,6 +31,12 @@ def das_do_command(cmd):
     out = subprocess.check_output(cmd, shell=True, executable="/bin/bash").decode('utf8')
     return out
 
+def das_file_site(file):
+    cmd = "dasgoclient --query='site file = %s'"%(site)
+    out = subprocess.check_output(cmd, shell=True, executable="/bin/bash").decode('utf8')
+
+    return out
+
 def das_file_data(dataset,opt=""):
     cmd = "dasgoclient --query='file dataset=%s %s| grep file.name, file.nevents'"%(dataset,opt)
     
@@ -145,10 +151,23 @@ if __name__ == '__main__':
         n_lumis = np.array([len(l) for l in df_r.lumis])
         df_rs.append(df_r[good_lumis==n_lumis])
 
+    if len(df_rs) == 0:
+        print("No intersection between:")
+        print(" - json   : ", best_json)
+        print(" - dataset: ", dataset)
+        print("Exiting.")
+        sys.exit(1)
+
     df = pd.concat(df_rs)
     df.loc[:,"min_lumi"] = [min(f) for f in df.lumis]
     df.loc[:,"max_lumi"] = [max(f) for f in df.lumis]
     df = df.sort_values(["run","min_lumi","max_lumi"])
+
+    if site!="":
+        site_ok = []
+        for f in df.file:
+            site_ok = [site in das_file_site(f)]
+        df = df[site_ok]
 
     if args.pandas:
         df.to_csv(dataset.replace("/","")+".csv")
