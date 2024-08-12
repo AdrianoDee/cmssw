@@ -34,8 +34,9 @@ def das_do_command(cmd):
 def das_file_site(dataset, site):
     cmd = "dasgoclient --query='file dataset=%s site=%s'"%(dataset,site)
     out = subprocess.check_output(cmd, shell=True, executable="/bin/bash").decode('utf8')
+    df = pd.DataFrame(out,columns=["file"])
 
-    return out
+    return df
 
 def das_file_data(dataset,opt=""):
     cmd = "dasgoclient --query='file dataset=%s %s| grep file.name, file.nevents'"%(dataset,opt)
@@ -164,7 +165,7 @@ if __name__ == '__main__':
     df = df.sort_values(["run","min_lumi","max_lumi"])
 
     if site is not None:
-        df = df.merge(das_file_site(args.site),on="file",how="inner")
+        df = df.merge(das_file_site(dataset,site),on="file",how="inner")
 
     if args.pandas:
         df.to_csv(dataset.replace("/","")+".csv")
