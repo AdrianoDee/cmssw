@@ -164,7 +164,7 @@ if __name__ == '__main__':
     df = df.sort_values(["run","min_lumi","max_lumi"])
 
     if site is not None:
-        df = das_lumi_data(dataset).merge(das_file_site(args.site),on="file",how="inner")
+        df = df.merge(das_file_site(args.site),on="file",how="inner")
 
     if args.pandas:
         df.to_csv(dataset.replace("/","")+".csv")
