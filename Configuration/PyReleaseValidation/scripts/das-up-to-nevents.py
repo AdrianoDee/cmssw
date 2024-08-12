@@ -31,8 +31,8 @@ def das_do_command(cmd):
     out = subprocess.check_output(cmd, shell=True, executable="/bin/bash").decode('utf8')
     return out
 
-def das_file_site(file):
-    cmd = "dasgoclient --query='site file = %s'"%(site)
+def das_file_site(dataset, site):
+    cmd = "dasgoclient --query='file dataset=%s site=%s'"%(dataset,site)
     out = subprocess.check_output(cmd, shell=True, executable="/bin/bash").decode('utf8')
 
     return out
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     events    = args.events
     threshold = args.threshold
     outfile   = args.outfile
-    site      = "site="+args.site if args.site is not None else ""
+    site      = args.site
 
     ## get the greatest golden json
     year = dataset.split("Run")[1][2:4] # from 20XX to XX
@@ -163,11 +163,8 @@ if __name__ == '__main__':
     df.loc[:,"max_lumi"] = [max(f) for f in df.lumis]
     df = df.sort_values(["run","min_lumi","max_lumi"])
 
-    if site!="":
-        site_ok = []
-        for f in df.file:
-            site_ok = [site in das_file_site(f)]
-        df = df[site_ok]
+    if site is not None:
+        df = das_lumi_data(dataset).merge(das_file_site(args.site),on="file",how="inner")
 
     if args.pandas:
         df.to_csv(dataset.replace("/","")+".csv")
