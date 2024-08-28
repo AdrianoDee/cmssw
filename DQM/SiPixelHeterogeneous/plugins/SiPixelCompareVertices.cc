@@ -21,7 +21,6 @@
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DataFormats/VertexSoA/interface/ZVertexHost.h"
-#include "CUDADataFormats/Vertex/interface/ZVertexSoAHeterogeneousHost.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 // TODO: change class name to SiPixelCompareVerticesSoA when CUDA code is removed
