@@ -119,10 +119,9 @@ def get_page_header(directory=None, standalone=False, additional_header=""):
   html='<html>'+\
        '<head>'+\
        '<title>RelMon Summary</title>'+\
-       '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>' + \
+       '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>' +\
        '<link rel="stylesheet" href="%s/screen.css" type="text/css" media="screen, projection">'%blueprint_location+\
        '<link rel="stylesheet" href="%s/print.css" type="text/css" media="print">'%blueprint_location+\
-      #  '<link rel="stylesheet" href="%s/fancy-type-screen.css" type="text/css" media="screen, projection">'%style_location+\
        '<style type="text/css">'+\
        '.rotation {display: block;-webkit-transform: rotate(-90deg);-moz-transform: rotate(-90deg); }'+\
        '%s'%style+\
