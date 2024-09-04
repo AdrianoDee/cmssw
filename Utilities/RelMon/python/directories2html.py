@@ -80,7 +80,7 @@ def fairy_url_single(run,sample,version,plot_path,tier,draw_opts="",h=250,w=200)
  
 #-------------------------------------------------------------------------------
 def get_page_header(directory=None, standalone=False, additional_header=""):
-  
+
   javascripts=''
   style=''
   tablestyle=''
@@ -116,9 +116,9 @@ def get_page_header(directory=None, standalone=False, additional_header=""):
   html='<html>'+\
        '<head>'+\
        '<title>RelMon Summary</title>'+\
-       '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>' + \
-       '<link rel="stylesheet" href="screen.css" type="text/css" media="screen, projection">' +\
-       '<link rel="stylesheet" href="print.css" type="text/css" media="print">' +\
+       '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>' +\
+       '<link rel="stylesheet" href="screen.css" type="text/css" media="screen, projection">' +\ 
+       '<link rel="stylesheet" href="print.css" type="text/css" media="print">'+\
        '<link rel="stylesheet" href="plugins/fancy-type/screen.css" type="text/css" media="screen, projection">' +\
        '<style type="text/css">'+\
        '.rotation {display: block;-webkit-transform: rotate(-90deg);-moz-transform: rotate(-90deg); }'+\
