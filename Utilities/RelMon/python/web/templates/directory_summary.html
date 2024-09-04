@@ -95,7 +95,7 @@
     {% if successful_histos %}
         <div class="span-20"><h2 class="alt">Successful Comparisons</h2></div>
     {% for name, p_value, url1, url2, overlay in successful_histos %}
-        <div class="span-6  colborder {% if loop.index is divisibleby 3 %}last{% endif %}"><p>{{ name }}</p>
+        <div class="span-6  colborder {% if loop.index is divisibleby 12 %}last{% endif %}"><p>{{ name }}</p>
             <p class="alt">Chi2: {{ p_value }}</p>
             <div><a href="{{ url1 }}" class="black_link">{{ release1 }}</a></div>
             <div><a href="{{ url2 }}">{{ release2 }}</a></div>
