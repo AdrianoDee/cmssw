@@ -17,28 +17,21 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
 
-  using VtxSoAView = ::reco::ZVertexSoAView;
-  using TrkSoAView = ::reco::ZVertexTracksSoAView;
-  using WsSoAView = ::vertexFinder::PixelVertexWorkSpaceSoAView;
-  // this algo does not really scale as it works in a single block...
-  // enough for <10K tracks we have
+  // This algo does not really scale as it works in a single block...
+  // It should be good enough for <10K tracks we have.
   //
-  // based on Rodrighez&Laio algo
-  //
+  // Based on Rodrighez&Laio algo.
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void __attribute__((always_inline)) clusterTracksByDensity(
-      const TAcc& acc,
-      VtxSoAView& pdata,
-      TrkSoAView& ptrkdata,
-      WsSoAView& pws,
-      int minT,      // min number of neighbours to be "seed"
-      float eps,     // max absolute distance to cluster
-      float errmax,  // max error to be "seed"
-      float chi2max  // max normalized distance to cluster
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void clusterTracksByDensity(const TAcc& acc,
+                                                             VtxSoAView& data,
+                                                             TrkSoAView& trkdata,
+                                                             WsSoAView& ws,
+                                                             int minT,      // min number of neighbours to be "seed"
+                                                             float eps,     // max absolute distance to cluster
+                                                             float errmax,  // max error to be "seed"
+                                                             float chi2max  // max normalized distance to cluster
   ) {
-    using namespace vertexFinder;
-    constexpr bool verbose = false;  // in principle the compiler should optmize out if false
-    const uint32_t threadIdxLocal(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u]);
+    constexpr bool verbose = false;
 
     if constexpr (verbose) {
       if (cms::alpakatools::once_per_block(acc))
@@ -46,25 +39,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
     }
     auto er2mx = errmax * errmax;
 
-    auto& __restrict__ data = pdata;
-    auto& __restrict__ trkdata = ptrkdata;
-    auto& __restrict__ ws = pws;
     auto nt = ws.ntrks();
+    ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= ws.metadata().size());
+    ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= trkdata.metadata().size());
+
     float const* __restrict__ zt = ws.zt();
     float const* __restrict__ ezt2 = ws.ezt2();
-
-    uint32_t& nvFinal = data.nvFinal();
-    uint32_t& nvIntermediate = ws.nvIntermediate();
-
     uint8_t* __restrict__ izt = ws.izt();
-    int32_t* __restrict__ nn = trkdata.ndof();
     int32_t* __restrict__ iv = ws.iv();
-
+    int32_t* __restrict__ nn = trkdata.ndof();
     ALPAKA_ASSERT_ACC(zt);
     ALPAKA_ASSERT_ACC(ezt2);
     ALPAKA_ASSERT_ACC(izt);
-    ALPAKA_ASSERT_ACC(nn);
     ALPAKA_ASSERT_ACC(iv);
+    ALPAKA_ASSERT_ACC(nn);
 
     using Hist = cms::alpakatools::HistoContainer<uint8_t, 256, 16000, 8, uint16_t>;
     auto& hist = alpaka::declareSharedVar<Hist, __COUNTER__>(acc);
@@ -72,6 +60,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
 
     for (auto j : cms::alpakatools::uniform_elements(acc, Hist::totbins())) {
       hist.off[j] = 0;
+    }
+    for (auto j : cms::alpakatools::uniform_elements(acc, 32)) {
+      hws[j] = 0;  // used by prefix scan in hist.finalize()
     }
     alpaka::syncBlockThreads(acc);
 
@@ -82,14 +73,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
 
     ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= std::numeric_limits<Hist::index_type>::max());
     ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= hist.capacity());
-    ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= ws.metadata().size());
-    ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= trkdata.metadata().size());
 
-    // fill hist  (bin shall be wider than "eps")
+    // fill hist (bin shall be wider than "eps")
     for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
       int iz = int(zt[i] * 10.);  // valid if eps<=0.1
-      // iz = std::clamp(iz, INT8_MIN, INT8_MAX);  // sorry c++17 only
-      iz = std::min(std::max(iz, INT8_MIN), INT8_MAX);
+      iz = std::clamp(iz, INT8_MIN, INT8_MAX);
       izt[i] = iz - INT8_MIN;
       ALPAKA_ASSERT_ACC(iz - INT8_MIN >= 0);
       ALPAKA_ASSERT_ACC(iz - INT8_MIN < 256);
@@ -98,16 +86,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
       nn[i] = 0;
     }
     alpaka::syncBlockThreads(acc);
-    if (threadIdxLocal < 32)
-      hws[threadIdxLocal] = 0;  // used by prefix scan...
-    alpaka::syncBlockThreads(acc);
+
     hist.finalize(acc, hws);
     alpaka::syncBlockThreads(acc);
+
     ALPAKA_ASSERT_ACC(hist.size() == nt);
     for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
       hist.fill(acc, izt[i], uint16_t(i));
     }
     alpaka::syncBlockThreads(acc);
+
     // count neighbours
     for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
       if (ezt2[i] > er2mx)
@@ -174,7 +162,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
 #endif
 
 #ifdef GPU_DEBUG
-    // and verify that we did not spit any cluster...
+    // and verify that we did not split any cluster...
     for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
       auto minJ = i;
       auto mdist = eps;
@@ -233,12 +221,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
       iv[i] = -iv[i] - 1;
     }
 
-    nvIntermediate = nvFinal = foundClusters;
+    ws.nvIntermediate() = foundClusters;
+    data.nvFinal() = foundClusters;
+
     if constexpr (verbose) {
       if (cms::alpakatools::once_per_block(acc))
         printf("found %d proto vertices\n", foundClusters);
     }
   }
+
   class ClusterTracksByDensityKernel {
   public:
     template <typename TAcc>
