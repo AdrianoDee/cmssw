@@ -73,6 +73,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
 
       ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= std::numeric_limits<Hist::index_type>::max());
       ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= hist.capacity());
+      ALPAKA_ASSERT_ACC(eps <= 0.1);  // see below
 
       // fill hist (bin shall be wider than "eps")
       for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
@@ -100,7 +101,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
       for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
         if (ezt2[i] > er2mx)
           continue;
-        auto loop = [&](uint32_t j) {
+        cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](uint32_t j) {
           if (i == j)
             return;
           auto dist = std::abs(zt[i] - zt[j]);
@@ -109,9 +110,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
           if (dist * dist > chi2max * (ezt2[i] + ezt2[j]))
             return;
           nn[i]++;
-        };
-
-        cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+        });
       }
 
       auto& nloops = alpaka::declareSharedVar<int, __COUNTER__>(acc);
@@ -132,11 +131,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
           more = false;
           for (auto k : cms::alpakatools::uniform_elements(acc, hist.size())) {
             auto p = hist.begin() + k;
-            auto i = (*p);
-            auto be = std::min(Hist::bin(izt[i]) + 1, int(hist.nbins() - 1));
+            auto i = *p;
             if (nn[i] < minT)
               continue;  // DBSCAN core rule
-            auto loop = [&](uint32_t j) {
+            ++p;
+            auto be = std::min(Hist::bin(izt[i]) + 1, int(hist.nbins() - 1));
+            for (; p < hist.end(be); ++p) {
+              uint32_t j = *p;
               ALPAKA_ASSERT_ACC(i != j);
               if (nn[j] < minT)
                 return;  // DBSCAN core rule
@@ -151,11 +152,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
                 more = true;
               }
               alpaka::atomicMin(acc, &iv[i], old, alpaka::hierarchy::Blocks{});
-            };
-            ++p;
-            for (; p < hist.end(be); ++p)
-              loop(*p);
-          }  // for i
+            }  // inner loop on p (and j)
+          }  // outer loop on k (and i)
         }
         if (cms::alpakatools::once_per_block(acc))
           ++nloops;
@@ -167,7 +165,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
         if (nn[i] >= minT)
           continue;  // DBSCAN edge rule
         float mdist = eps;
-        auto loop = [&](int j) {
+        cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](int j) {
           if (nn[j] < minT)
             return;  // DBSCAN core rule
           auto dist = std::abs(zt[i] - zt[j]);
@@ -177,8 +175,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
             return;  // needed?
           mdist = dist;
           iv[i] = iv[j];  // assign to cluster (better be unique??)
-        };
-        cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+        });
       }
 
       auto& foundClusters = alpaka::declareSharedVar<unsigned int, __COUNTER__>(acc);

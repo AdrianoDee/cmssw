@@ -73,14 +73,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
 
     ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= std::numeric_limits<Hist::index_type>::max());
     ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= hist.capacity());
+    ALPAKA_ASSERT_ACC(eps <= 0.1);  // see below
 
     // fill hist (bin shall be wider than "eps")
     for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
-      int iz = int(zt[i] * 10.);  // valid if eps<=0.1
+      int iz = static_cast<int>(zt[i] * 10.f);  // valid if eps <= 0.1
       iz = std::clamp(iz, INT8_MIN, INT8_MAX);
-      izt[i] = iz - INT8_MIN;
       ALPAKA_ASSERT_ACC(iz - INT8_MIN >= 0);
       ALPAKA_ASSERT_ACC(iz - INT8_MIN < 256);
+      izt[i] = iz - INT8_MIN;
       hist.count(acc, izt[i]);
       iv[i] = i;
       nn[i] = 0;
@@ -100,7 +101,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
     for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
       if (ezt2[i] > er2mx)
         continue;
-      auto loop = [&](uint32_t j) {
+      cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](uint32_t j) {
         if (i == j)
           return;
         auto dist = std::abs(zt[i] - zt[j]);
@@ -109,16 +110,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
         if (dist * dist > chi2max * (ezt2[i] + ezt2[j]))
           return;
         nn[i]++;
-      };
-
-      cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+      });
     }
     alpaka::syncBlockThreads(acc);
 
     // find closest above me .... (we ignore the possibility of two j at same distance from i)
     for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
       float mdist = eps;
-      auto loop = [&](uint32_t j) {
+      cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](uint32_t j) {
         if (nn[j] < nn[i])
           return;
         if (nn[j] == nn[i] && zt[j] >= zt[i])
@@ -130,8 +129,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
           return;  // (break natural order???)
         mdist = dist;
         iv[i] = j;  // assign to cluster (better be unique??)
-      };
-      cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+      });
     }
     alpaka::syncBlockThreads(acc);
 
@@ -166,7 +164,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
     for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
       auto minJ = i;
       auto mdist = eps;
-      auto loop = [&](uint32_t j) {
+      cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](uint32_t j) {
         if (nn[j] < nn[i])
           return;
         if (nn[j] == nn[i] && zt[j] >= zt[i])
@@ -178,8 +176,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
           return;
         mdist = dist;
         minJ = j;
-      };
-      cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+      });
+
       // should belong to the same cluster...
       ALPAKA_ASSERT_ACC(iv[i] == iv[minJ]);
       ALPAKA_ASSERT_ACC(nn[i] <= nn[iv[i]]);

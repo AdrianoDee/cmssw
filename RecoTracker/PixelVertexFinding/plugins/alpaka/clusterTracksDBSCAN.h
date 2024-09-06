@@ -73,6 +73,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
 
       ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= std::numeric_limits<Hist::index_type>::max());
       ALPAKA_ASSERT_ACC(static_cast<int>(nt) <= hist.capacity());
+      ALPAKA_ASSERT_ACC(eps <= 0.1);  // see below
 
       // fill hist (bin shall be wider than "eps")
       for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
@@ -100,16 +101,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
       for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
         if (ezt2[i] > er2mx)
           continue;
-        auto loop = [&](uint32_t j) {
+        cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](uint32_t j) {
           if (i == j)
             return;
           auto dist = std::abs(zt[i] - zt[j]);
           if (dist > eps)
             return;
           nn[i]++;
-        };
-
-        cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+        });
       }
       alpaka::syncBlockThreads(acc);
 
@@ -118,7 +117,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
         if (nn[i] < minT)
           continue;  // DBSCAN core rule
         float mz = zt[i];
-        auto loop = [&](uint32_t j) {
+        cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](uint32_t j) {
           if (zt[j] >= mz)
             return;
           if (nn[j] < minT)
@@ -128,8 +127,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
             return;
           mz = zt[j];
           iv[i] = j;  // assign to cluster (better be unique??)
-        };
-        cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+        });
       }
       alpaka::syncBlockThreads(acc);
 
@@ -166,7 +164,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
         if (nn[i] < minT)
           continue;  // DBSCAN core rule
         ALPAKA_ASSERT_ACC(zt[iv[i]] <= zt[i]);
-        auto loop = [&](uint32_t j) {
+        cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](uint32_t j) {
           if (nn[j] < minT)
             return;  // DBSCAN core rule
           auto dist = std::abs(zt[i] - zt[j]);
@@ -178,8 +176,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
             printf("      %d %d %f %f %d\n", j, iv[j], zt[j], zt[iv[j]], iv[iv[j]]);
           }
           ALPAKA_ASSERT_ACC(iv[i] == iv[j]);
-        };
-        cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+        });
       }
       alpaka::syncBlockThreads(acc);
 #endif
@@ -190,7 +187,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
         if (nn[i] >= minT)
           continue;  // DBSCAN edge rule
         float mdist = eps;
-        auto loop = [&](uint32_t j) {
+        cms::alpakatools::forEachInBins(hist, izt[i], 1, [&](uint32_t j) {
           if (nn[j] < minT)
             return;  // DBSCAN core rule
           auto dist = std::abs(zt[i] - zt[j]);
@@ -200,8 +197,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
             return;  // needed?
           mdist = dist;
           iv[i] = iv[j];  // assign to cluster (better be unique??)
-        };
-        cms::alpakatools::forEachInBins(hist, izt[i], 1, loop);
+        });
       }
 
       auto& foundClusters = alpaka::declareSharedVar<unsigned int, __COUNTER__>(acc);
