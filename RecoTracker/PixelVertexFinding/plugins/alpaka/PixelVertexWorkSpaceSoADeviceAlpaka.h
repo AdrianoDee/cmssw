@@ -4,7 +4,6 @@
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
-#include "DataFormats/VertexSoA/interface/ZVertexDefinitions.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/PixelVertexFinding/interface/PixelVertexWorkSpaceLayout.h"
 #include "RecoTracker/PixelVertexFinding/plugins/PixelVertexWorkSpaceSoAHostAlpaka.h"
