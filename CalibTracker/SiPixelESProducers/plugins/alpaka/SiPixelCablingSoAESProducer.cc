@@ -48,7 +48,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         auto qualityInfo = iRecord.getTransientHandle(qualityToken_);
         quality = qualityInfo.product();
       }
-
       auto geom = iRecord.getTransientHandle(geometryToken_);
       SiPixelMappingHost product(pixelgpudetails::MAX_SIZE, cms::alpakatools::host());
       std::vector<unsigned int> const& fedIds = cablingMap->fedIds();

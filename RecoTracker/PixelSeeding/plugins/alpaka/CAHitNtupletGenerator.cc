@@ -21,6 +21,8 @@
 #include "CAPixelDoublets.h"
 #include "CAPixelDoubletsAlgos.h"
 
+#include "Geometry/CommonTopologies/interface/SimplePixelStripTopology.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace {
 
@@ -42,10 +44,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
       desc.add<double>("CAThetaCutBarrel", 0.002f)->setComment("Cut on RZ alignement for Barrel");
       desc.add<double>("CAThetaCutForward", 0.003f)->setComment("Cut on RZ alignment for Forward");
+      desc.add<double>("CAThetaCutStrip", 0.003f)->setComment("Cut on RZ alignment for Strip");
       desc.add<double>("hardCurvCut", 1.f / (0.35 * 87.f))
           ->setComment("Cut on minimum curvature, used in DCA ntuplet selection");
       desc.add<double>("dcaCutInnerTriplet", 0.15f)->setComment("Cut on origin radius when the inner hit is on BPix1");
       desc.add<double>("dcaCutOuterTriplet", 0.25f)->setComment("Cut on origin radius when the outer hit is on BPix1");
+      desc.add<double>("dcaCutOuterTripletStrip", 0.25f)->setComment("Cut on origin radius when the outer hit is on BPix1");
       desc.add<bool>("earlyFishbone", true);
       desc.add<bool>("lateFishbone", false);
       desc.add<bool>("fillStatistics", false);
@@ -88,9 +92,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                          (float)cfg.getParameter<double>("ptmin"),
                                          (float)cfg.getParameter<double>("CAThetaCutBarrel"),
                                          (float)cfg.getParameter<double>("CAThetaCutForward"),
+                                         (float)cfg.getParameter<double>("CAThetaCutStrip"),
                                          (float)cfg.getParameter<double>("hardCurvCut"),
                                          (float)cfg.getParameter<double>("dcaCutInnerTriplet"),
-                                         (float)cfg.getParameter<double>("dcaCutOuterTriplet")}};
+                                         (float)cfg.getParameter<double>("dcaCutOuterTriplet"),
+                                         (float)cfg.getParameter<double>("dcaCutOuterTripletStrip")}};
       };
 
       static constexpr ::pixelTrack::QualityCutsT<TrackerTraits> makeQualityCuts(edm::ParameterSet const& pset) {
@@ -123,9 +129,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                          (float)cfg.getParameter<double>("ptmin"),
                                          (float)cfg.getParameter<double>("CAThetaCutBarrel"),
                                          (float)cfg.getParameter<double>("CAThetaCutForward"),
+                                         (float)cfg.getParameter<double>("CAThetaCutStrip"),
                                          (float)cfg.getParameter<double>("hardCurvCut"),
                                          (float)cfg.getParameter<double>("dcaCutInnerTriplet"),
-                                         (float)cfg.getParameter<double>("dcaCutOuterTriplet")},
+                                         (float)cfg.getParameter<double>("dcaCutOuterTriplet"),
+                                         (float)cfg.getParameter<double>("dcaCutOuterTripletStrip")},
                                         {(bool)cfg.getParameter<bool>("includeFarForwards")}};
       }
 
@@ -150,7 +158,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                       cfg.getParameter<bool>("idealConditions"),
                                       (float)cfg.getParameter<double>("cellZ0Cut"),
                                       (float)cfg.getParameter<double>("cellPtCut"),
-                                      cfg.getParameter<std::vector<int>>("phiCuts")};
+                                      cfg.getParameter<std::vector<int>>("phiCuts"),
+                                      cfg.getParameter<std::vector<double>>("minz"),
+                                      cfg.getParameter<std::vector<double>>("maxz"),
+                                      cfg.getParameter<std::vector<double>>("maxr")
+                                      };
     }
 
   }  // namespace
@@ -197,7 +209,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     fillDescriptionsCommon(desc);
 
     desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase1::maxNumberOfDoublets);
-    desc.add<bool>("idealConditions", true);
+    desc.add<bool>("idealConditions", false);
     desc.add<bool>("includeJumpingForwardDoublets", false);
     desc.add<double>("cellZ0Cut", 12.0);
     desc.add<double>("cellPtCut", 0.5);
@@ -225,6 +237,60 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             "phiCuts",
             std::vector<int>(std::begin(phase1PixelTopology::phicuts), std::end(phase1PixelTopology::phicuts)))
         ->setComment("Cuts in phi for cells");
+        
+    desc.add<std::vector<double>>(
+           "minz", std::vector<double>(std::begin(phase1PixelTopology::minz), std::end(phase1PixelTopology::minz)))
+       ->setComment("Cuts in minz for cells");
+    desc.add<std::vector<double>>(
+           "maxz", std::vector<double>(std::begin(phase1PixelTopology::maxz), std::end(phase1PixelTopology::maxz)))
+       ->setComment("Cuts in maxz for cells");
+    desc.add<std::vector<double>>(
+           "maxr", std::vector<double>(std::begin(phase1PixelTopology::maxr), std::end(phase1PixelTopology::maxr)))
+       ->setComment("Cuts in maxr for cells");
+  }
+
+  
+  template <>
+  void CAHitNtupletGenerator<pixelTopology::Phase1Strip>::fillPSetDescription(edm::ParameterSetDescription& desc) {
+    fillDescriptionsCommon(desc);
+
+    desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase1::maxNumberOfDoublets);
+    desc.add<bool>("idealConditions", false);
+    desc.add<bool>("includeJumpingForwardDoublets", false);
+    desc.add<double>("cellZ0Cut", 12.0);
+    desc.add<double>("cellPtCut", 0.5);
+
+    edm::ParameterSetDescription trackQualityCuts;
+    trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
+    trackQualityCuts.add<std::vector<double>>("chi2Coeff", {0.9, 1.8})->setComment("chi2 at 1GeV and at ptMax above");
+    trackQualityCuts.add<double>("chi2Scale", 8.)
+        ->setComment(
+            "Factor to multiply the pT-dependent chi2 cut (currently: 8 for the broken line fit, ?? for the Riemann "
+            "fit)");
+    trackQualityCuts.add<double>("tripletMinPt", 1.0)->setComment("Min pT for triplets, in GeV");
+    trackQualityCuts.add<double>("tripletMaxTip", 0.3)->setComment("Max |Tip| for triplets, in cm");
+    trackQualityCuts.add<double>("tripletMaxZip", 12.)->setComment("Max |Zip| for triplets, in cm");
+    trackQualityCuts.add<double>("quadrupletMinPt", 0.5)->setComment("Min pT for quadruplets, in GeV");
+    trackQualityCuts.add<double>("quadrupletMaxTip", 0.5)->setComment("Max |Tip| for quadruplets, in cm");
+    trackQualityCuts.add<double>("quadrupletMaxZip", 12.)->setComment("Max |Zip| for quadruplets, in cm");
+    desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)
+        ->setComment(
+            "Quality cuts based on the results of the track fit:\n  - apply a pT-dependent chi2 cut;\n  - apply "
+            "\"region "
+            "cuts\" based on the fit results (pT, Tip, Zip).");
+    
+    desc.add<std::vector<int>>(
+           "phiCuts", std::vector<int>(std::begin(phase1PixelStripTopology::phicuts), std::end(phase1PixelStripTopology::phicuts)))
+       ->setComment("Cuts in phi for cells");
+    desc.add<std::vector<double>>(
+           "minz", std::vector<double>(std::begin(phase1PixelStripTopology::minz), std::end(phase1PixelStripTopology::minz)))
+       ->setComment("Cuts in minz for cells");
+    desc.add<std::vector<double>>(
+           "maxz", std::vector<double>(std::begin(phase1PixelStripTopology::maxz), std::end(phase1PixelStripTopology::maxz)))
+       ->setComment("Cuts in maxz for cells");
+    desc.add<std::vector<double>>(
+           "maxr", std::vector<double>(std::begin(phase1PixelStripTopology::maxr), std::end(phase1PixelStripTopology::maxr)))
+       ->setComment("Cuts in maxr for cells");
   }
 
   template <>
@@ -261,6 +327,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             "phiCuts",
             std::vector<int>(std::begin(phase1PixelTopology::phicuts), std::end(phase1PixelTopology::phicuts)))
         ->setComment("Cuts in phi for cells");
+         
+   desc.add<std::vector<double>>(
+           "minz", std::vector<double>(std::begin(phase1PixelTopology::minz), std::end(phase1PixelTopology::minz)))
+       ->setComment("Cuts in minz for cells");
+    desc.add<std::vector<double>>(
+           "maxz", std::vector<double>(std::begin(phase1PixelTopology::maxz), std::end(phase1PixelTopology::maxz)))
+       ->setComment("Cuts in maxz for cells");
+    desc.add<std::vector<double>>(
+           "maxr", std::vector<double>(std::begin(phase1PixelTopology::maxr), std::end(phase1PixelTopology::maxr)))
+       ->setComment("Cuts in maxr for cells");
   }
 
   template <>
@@ -285,14 +361,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             "Zip).");
 
     desc.add<std::vector<int>>(
-            "phiCuts",
-            std::vector<int>(std::begin(phase2PixelTopology::phicuts), std::end(phase2PixelTopology::phicuts)))
-        ->setComment("Cuts in phi for cells");
+           "phiCuts", std::vector<int>(std::begin(phase2PixelTopology::phicuts), std::end(phase2PixelTopology::phicuts)))
+       ->setComment("Cuts in phi for cells");
+    desc.add<std::vector<double>>(
+           "minz", std::vector<double>(std::begin(phase2PixelTopology::minz), std::end(phase2PixelTopology::minz)))
+       ->setComment("Cuts in minz for cells");
+    desc.add<std::vector<double>>(
+           "maxz", std::vector<double>(std::begin(phase2PixelTopology::maxz), std::end(phase2PixelTopology::maxz)))
+       ->setComment("Cuts in maxz for cells");
+    desc.add<std::vector<double>>(
+           "maxr", std::vector<double>(std::begin(phase2PixelTopology::maxr), std::end(phase2PixelTopology::maxr)))
+       ->setComment("Cuts in maxr for cells");
   }
 
   template <typename TrackerTraits>
   TracksSoACollection<TrackerTraits> CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
-      HitsOnDevice const& hits_d, ParamsOnDevice const* cpeParams, float bfield, Queue& queue) const {
+    //   HitsOnDevice const& hits_d, ParamsOnDevice const* cpeParams, float bfield, Queue& queue) const {
+      HitsOnDevice const& hits_d, FrameOnDevice const& frame, float bfield, Queue& queue) const {
     using HelixFit = HelixFit<TrackerTraits>;
     using TrackSoA = TracksSoACollection<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
@@ -315,10 +400,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     fitter.allocate(kernels.tupleMultiplicity(), tracks.view());
     if (m_params.useRiemannFit_) {
       fitter.launchRiemannKernels(
-          hits_d.view(), cpeParams, hits_d.view().metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
+          hits_d.view(), frame.view(), hits_d.view().metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
     } else {
       fitter.launchBrokenLineKernels(
-          hits_d.view(), cpeParams, hits_d.view().metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
+          hits_d.view(), frame.view(), hits_d.view().metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
     }
     kernels.classifyTuples(hits_d.view(), tracks.view(), queue);
 #ifdef GPU_DEBUG
@@ -329,7 +414,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     return tracks;
   }
 
+
   template class CAHitNtupletGenerator<pixelTopology::Phase1>;
   template class CAHitNtupletGenerator<pixelTopology::Phase2>;
   template class CAHitNtupletGenerator<pixelTopology::HIonPhase1>;
+  template class CAHitNtupletGenerator<pixelTopology::Phase1Strip>;
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
