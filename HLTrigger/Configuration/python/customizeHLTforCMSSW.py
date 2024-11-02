@@ -62,6 +62,34 @@ def customiseHLTFor46647(process):
             if hasattr(prod, "TripletCollection"):
                 delattr(prod, "TripletCollection")
 
+def customizeHLTforXXX(process):
+    if not hasattr(process, 'HLTRecoPixelTracksSequence'):
+        return process
+
+    process.frameSoAESProducerPhase1 = cms.ESProducer('FrameSoAESProducerPhase1@alpaka',
+      ComponentName = cms.string('FrameSoAPhase1'),
+      appendToDataLabel = cms.string(''),
+      alpaka = cms.untracked.PSet(
+        backend = cms.untracked.string('')
+      )
+    )
+
+    for producer in producers_by_type(process, "CAHitNtupletAlpakaPhase1@alpaka"):
+        #print("entered the producers loop")
+        if hasattr(producer, "CPE"):
+            print("found CPE stuff")
+            delattr(producer, "CPE")
+        if not hasattr(producer, 'frameSoA'):
+            setattr(producer, 'frameSoA', cms.string('FrameSoAPhase1'))
+
+    for producer in producers_by_type(process, "alpaka_serial_sync::CAHitNtupletAlpakaPhase1"):
+        #print("entered the producers loop")
+        if hasattr(producer, "CPE"):
+            print("found CPE stuff")
+            delattr(producer, "CPE")
+        if not hasattr(producer, 'frameSoA'):
+            setattr(producer, 'frameSoA', cms.string('FrameSoAPhase1'))
+    
     return process
 
 # CMSSW version specific customizations
@@ -71,6 +99,7 @@ def customizeHLTforCMSSW(process, menuType="GRun"):
 
     # add call to action function in proper order: newest last!
     # process = customiseFor12718(process)
+    process = customizeHLTforXXX(process)
 
     process = customiseHLTFor46647(process)
     

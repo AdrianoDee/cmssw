@@ -16,31 +16,193 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/PixelSeeding/interface/CircleEq.h"
+#include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
 
 #include "CAStructures.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
+
+  using namespace ::caStructures;
+
+  template <typename TrackerTraits>
+  class CASimpleCell {
+
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE void init(const HitsConstView& hh,
+                                             int layerPairId,
+                                             uint8_t theInnerLayer,
+                                             uint8_t theOuterLayer,
+                                             hindex_type innerHitId,
+                                             hindex_type outerHitId) {
+      theInnerHitId = innerHitId;
+      theOuterHitId = outerHitId;
+      theLayerPairId_ = layerPairId;
+      theInnerLayer_ = theInnerLayer;
+      theOuterLayer_ = theOuterLayer;
+      theStatus_ = 0;
+      theFishboneId = invalidHitId;
+
+      // optimization that depends on access pattern
+      theInnerZ = hh[innerHitId].zGlobal();
+      theInnerR = hh[innerHitId].rGlobal();
+    }
+
+    using hindex_type = typename TrackerTraits::hindex_type;
+    using tindex_type = typename TrackerTraits::tindex_type;
+    static constexpr auto invalidHitId = std::numeric_limits<hindex_type>::max();
+
+    using TmpTuple = cms::alpakatools::VecArray<uint32_t, TrackerTraits::maxDepth>;
+    using HitContainer = HitContainerT<TrackerTraits>;
+
+    using Quality = ::pixelTrack::Quality;
+    static constexpr auto bad = ::pixelTrack::Quality::bad;
+
+    enum class StatusBit : uint16_t { kUsed = 1, kInTrack = 2, kKilled = 1 << 15 };
+
+    CASimpleCell() = default;
+
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float inner_x(const HitsConstView& hh) const { return hh[theInnerHitId].xGlobal(); }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float outer_x(const HitsConstView& hh) const { return hh[theOuterHitId].xGlobal(); }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float inner_y(const HitsConstView& hh) const { return hh[theInnerHitId].yGlobal(); }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float outer_y(const HitsConstView& hh) const { return hh[theOuterHitId].yGlobal(); }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float inner_z(const HitsConstView& hh) const { return theInnerZ; }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float outer_z(const HitsConstView& hh) const { return hh[theOuterHitId].zGlobal(); }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float inner_r(const HitsConstView& hh) const { return theInnerR; }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float outer_r(const HitsConstView& hh) const { return hh[theOuterHitId].rGlobal(); }
+
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE auto inner_iphi(const HitsConstView& hh) const { return hh[theInnerHitId].iphi(); }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE auto outer_iphi(const HitsConstView& hh) const { return hh[theOuterHitId].iphi(); }
+
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float inner_detIndex(const HitsConstView& hh) const {
+    //   return hh[theInnerHitId].detectorIndex();
+    // }
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE float outer_detIndex(const HitsConstView& hh) const {
+    //   return hh[theOuterHitId].detectorIndex();
+    // }
+
+    // constexpr unsigned int inner_hit_id() const { return theInnerHitId; }
+    // constexpr unsigned int outer_hit_id() const { return theOuterHitId; }
+
+    // ALPAKA_FN_ACC void print_cell() const {
+    //   printf("printing cell: on layerPair: %d, innerHitId: %d, outerHitId: %d \n",
+    //          theLayerPairId_,
+    //          theInnerHitId,
+    //          theOuterHitId);
+    // }
+
+    // ALPAKA_FN_ACC bool check_alignment(const HitsConstView& hh,
+    //                                    CACellT const& otherCell,
+    //                                    const float ptmin,
+    //                                    const float hardCurvCut,
+    //                                    const float caThetaCutBarrel,
+    //                                    const float caThetaCutForward,
+    //                                    const float dcaCutInnerTriplet,
+    //                                    const float dcaCutOuterTriplet) const {
+    //   // detIndex of the layerStart for the Phase1 Pixel Detector:
+    //   // [BPX1, BPX2, BPX3, BPX4,  FP1,  FP2,  FP3,  FN1,  FN2,  FN3, LAST_VALID]
+    //   // [   0,   96,  320,  672, 1184, 1296, 1408, 1520, 1632, 1744,       1856]
+    //   auto ri = inner_r(hh);
+    //   auto zi = inner_z(hh);
+
+    //   auto ro = outer_r(hh);
+    //   auto zo = outer_z(hh);
+
+    //   auto r1 = otherCell.inner_r(hh);
+    //   auto z1 = otherCell.inner_z(hh);
+    //   auto isBarrel = otherCell.outer_detIndex(hh) < TrackerTraits::last_barrel_detIndex;
+    //   // TODO tune CA cuts below (theta and dca)
+    //   bool aligned = areAlignedRZ(r1, z1, ri, zi, ro, zo, ptmin, isBarrel ? caThetaCutBarrel : caThetaCutForward);
+    //   return (aligned && dcaCut(hh,
+    //                             otherCell,
+    //                             otherCell.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? dcaCutInnerTriplet
+    //                                                                                               : dcaCutOuterTriplet,
+    //                             hardCurvCut));
+    // }
+
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE __attribute__((always_inline)) static bool areAlignedRZ(
+    //     float r1, float z1, float ri, float zi, float ro, float zo, const float ptmin, const float thetaCut) {
+    //   float radius_diff = std::abs(r1 - ro);
+    //   float distance_13_squared = radius_diff * radius_diff + (z1 - zo) * (z1 - zo);
+
+    //   float pMin = ptmin * std::sqrt(distance_13_squared);  // this needs to be divided by
+    //                                                         // radius_diff later
+
+    //   float tan_12_13_half_mul_distance_13_squared = fabs(z1 * (ri - ro) + zi * (ro - r1) + zo * (r1 - ri));
+    //   return tan_12_13_half_mul_distance_13_squared * pMin <= thetaCut * distance_13_squared * radius_diff;
+    // }
+
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE bool dcaCut(const HitsConstView& hh,
+    //                                            CACellT const& otherCell,
+    //                                            const float region_origin_radius_plus_tolerance,
+    //                                            const float maxCurv) const {
+    //   auto x1 = otherCell.inner_x(hh);
+    //   auto y1 = otherCell.inner_y(hh);
+
+    //   auto x2 = inner_x(hh);
+    //   auto y2 = inner_y(hh);
+
+    //   auto x3 = outer_x(hh);
+    //   auto y3 = outer_y(hh);
+
+    //   CircleEq<float> eq(x1, y1, x2, y2, x3, y3);
+
+    //   if (eq.curvature() > maxCurv)
+    //     return false;
+
+    //   return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
+    // }
+
+    // ALPAKA_FN_ACC ALPAKA_FN_INLINE __attribute__((always_inline)) static bool dcaCutH(
+    //     float x1,
+    //     float y1,
+    //     float x2,
+    //     float y2,
+    //     float x3,
+    //     float y3,
+    //     const float region_origin_radius_plus_tolerance,
+    //     const float maxCurv) {
+    //   CircleEq<float> eq(x1, y1, x2, y2, x3, y3);
+
+    //   if (eq.curvature() > maxCurv)
+    //     return false;
+
+    //   return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
+    // }
+
+
+    protected:
+      int16_t theLayerPairId_;
+      uint8_t theInnerLayer_;
+      uint8_t theOuterLayer_;
+      uint16_t theStatus_;  // tbd
+
+      float theInnerZ;
+      float theInnerR;
+      hindex_type theInnerHitId;
+      hindex_type theOuterHitId;
+      hindex_type theFishboneId;
+
+  };
+  
   template <typename TrackerTraits>
   class CACellT {
   public:
     using PtrAsInt = unsigned long long;
 
     static constexpr auto maxCellsPerHit = TrackerTraits::maxCellsPerHit;
-    using OuterHitOfCellContainer = caStructures::OuterHitOfCellContainerT<TrackerTraits>;
-    using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
-    using CellNeighbors = caStructures::CellNeighborsT<TrackerTraits>;
-    using CellTracks = caStructures::CellTracksT<TrackerTraits>;
-    using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
-    using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+    using OuterHitOfCellContainer = OuterHitOfCellContainerT<TrackerTraits>;
+    using OuterHitOfCell = OuterHitOfCellT<TrackerTraits>;
+    using CellNeighbors = CellNeighborsT<TrackerTraits>;
+    using CellTracks = CellTracksT<TrackerTraits>;
+    using CellNeighborsVector = CellNeighborsVectorT<TrackerTraits>;
+    using CellTracksVector = CellTracksVectorT<TrackerTraits>;
 
-    using HitsConstView = TrackingRecHitSoAConstView<TrackerTraits>;
     using hindex_type = typename TrackerTraits::hindex_type;
     using tindex_type = typename TrackerTraits::tindex_type;
     static constexpr auto invalidHitId = std::numeric_limits<hindex_type>::max();
 
     using TmpTuple = cms::alpakatools::VecArray<uint32_t, TrackerTraits::maxDepth>;
+    using HitContainer = HitContainerT<TrackerTraits>;
 
-    using HitContainer = typename reco::TrackSoA<TrackerTraits>::HitContainer;
     using Quality = ::pixelTrack::Quality;
     static constexpr auto bad = ::pixelTrack::Quality::bad;
 
@@ -52,11 +214,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                              CellTracksVector& cellTracks,
                                              const HitsConstView& hh,
                                              int layerPairId,
+                                             uint8_t theInnerLayer,
+                                             uint8_t theOuterLayer,
                                              hindex_type innerHitId,
                                              hindex_type outerHitId) {
       theInnerHitId = innerHitId;
       theOuterHitId = outerHitId;
       theLayerPairId_ = layerPairId;
+      theInnerLayer_ = theInnerLayer;
+      theOuterLayer_ = theOuterLayer;
       theStatus_ = 0;
       theFishboneId = invalidHitId;
 
@@ -236,6 +402,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
     }
 
+    /*
+    // These functions have never been used in production
+    // They need an AverageGeometry to be filled 
+    // Commenting for the moment since they are the only reason we 
+    // fill the AverageGeometry and attach to the hit SoA
+    // keeping them commented for future usage and memory
+
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool hole0(const HitsConstView& hh, CACellT const& innerCell) const {
       using namespace phase1PixelTopology;
 
@@ -279,20 +452,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto holeN = z4 < hh.averageGeometry().ladderMinZ[il] && z4 > hh.averageGeometry().endCapZ[1];
       return gap || holeP || holeN;
     }
+    */
 
     // trying to free the track building process from hardcoded layers, leaving
     // the visit of the graph based on the neighborhood connections between cells.
     template <int DEPTH, typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void find_ntuplets(TAcc const& acc,
                                                       const HitsConstView& hh,
+                                                      const ::reco::CACellsSoAConstView &cc,
                                                       CACellT* __restrict__ cells,
                                                       CellTracksVector& cellTracks,
                                                       HitContainer& foundNtuplets,
+                                                      // GenericContainer const *__restrict__ cellNeighborsHisto,
                                                       cms::alpakatools::AtomicPairCounter& apc,
                                                       Quality* __restrict__ quality,
                                                       TmpTuple& tmpNtuplet,
-                                                      const unsigned int minHitsPerNtuplet,
-                                                      bool startAt0) const {
+                                                      const unsigned int minHitsPerNtuplet) const {
       // the building process for a track ends if:
       // it has no right neighbor
       // it has no compatible neighbor
@@ -308,17 +483,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ALPAKA_ASSERT_ACC(tmpNtuplet.size() <= int(TrackerTraits::maxHitsOnTrack - 3));
 
         bool last = true;
+        // for (auto o = cellNeighborsHisto->begin(doubletId); o != cellNeighborsHisto->end(doubletId); ++o)
+        //  printf("doubletIdHisto: %ld -> %d\n",doubletId,*o);
+          
         for (unsigned int otherCell : outerNeighbors()) {
+          printf("doubletId: %ld -> %d\n",doubletId,otherCell);
           if (cells[otherCell].isKilled())
             continue;  // killed by earlyFishbone
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
-              acc, hh, cells, cellTracks, foundNtuplets, apc, quality, tmpNtuplet, minHitsPerNtuplet, startAt0);
+              acc, hh, cc, cells, cellTracks, foundNtuplets, /*cellNeighborsHisto,*/ apc, quality, tmpNtuplet, minHitsPerNtuplet);
         }
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
 #ifdef ONLY_TRIPLETS_IN_HOLE
             // triplets accepted only pointing to the hole
+            auto startAt0 = cc[this->layerPairId()].graph()[0] == 0;
             if (tmpNtuplet.size() >= 3 || (startAt0 && hole4(hh, cells[tmpNtuplet[0]])) ||
                 ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
 #endif
@@ -355,6 +535,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool isKilled() const { return theStatus_ & uint16_t(StatusBit::kKilled); }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t layerPairId() const { return theLayerPairId_; }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t innerLayer() const { return theInnerLayer_; }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t outerLayer() const { return theOuterLayer_; }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool unused() const { return 0 == (uint16_t(StatusBit::kUsed) & theStatus_); }
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void setStatusBits(StatusBit mask) { theStatus_ |= uint16_t(mask); }
@@ -380,6 +562,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     CellTracks* theTracks;
 
     int16_t theLayerPairId_;
+    uint8_t theInnerLayer_;
+    uint8_t theOuterLayer_;
     uint16_t theStatus_;  // tbd
 
     float theInnerZ;
