@@ -1,8 +1,8 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 
-//#define GPU_DEBUG
-//#define NTUPLE_DEBUG
+#define GPU_DEBUG
+#define NTUPLE_DEBUG
 
 // C++ includes
 #include <cmath>
@@ -30,6 +30,8 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
+  using namespace ::caStructures;
+
   constexpr uint32_t tkNotFound = std::numeric_limits<uint16_t>::max();
   constexpr float maxScore = std::numeric_limits<float>::max();
   constexpr float nSigma2 = 25.f;
@@ -37,45 +39,84 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   // all of these below are mostly to avoid brining around the relative namespace
 
   template <typename TrackerTraits>
-  using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
+  using HitToTuple = HitToTupleT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
+  using TupleMultiplicity = TupleMultiplicityT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
+  using CellNeighborsVector = CellNeighborsVectorT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+  using CellTracksVector = CellTracksVectorT<TrackerTraits>;
 
   template <typename TrackerTraits>
-  using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
+  using OuterHitOfCell = OuterHitOfCellT<TrackerTraits>;
 
   using Quality = ::pixelTrack::Quality;
 
-  template <typename TrackerTraits>
-  using TkSoAView = reco::TrackSoAView<TrackerTraits>;
+  using TkSoAView = ::reco::TrackSoAView;
+  using TkHitSoAView = ::reco::TrackHitSoAView;
 
   template <typename TrackerTraits>
-  using HitContainer = typename reco::TrackSoA<TrackerTraits>::HitContainer;
-
-  template <typename TrackerTraits>
-  using HitsConstView = typename CACellT<TrackerTraits>::HitsConstView;
-
+  using HitContainer = HitContainerT<TrackerTraits>;
+  
   template <typename TrackerTraits>
   using QualityCuts = ::pixelTrack::QualityCutsT<TrackerTraits>;
-
-  template <typename TrackerTraits>
-  using CAParams = caHitNtupletGenerator::CAParamsT<TrackerTraits>;
-
+  
   using Counters = caHitNtupletGenerator::Counters;
+  
+  using namespace cms::alpakatools;
+
+   // standard initialization for a generic one to many assoc map
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void initGenericContainer(GenericContainerView &view,
+                                                                                 GenericContainer *histo,
+                                                                                 GenericContainer::Counter *offsets,
+                                                                                 GenericContainer::Counter *storage,
+                                                                                 uint32_t n_ones,
+                                                                                 uint32_t n_many) {
+    view.assoc = histo;
+    view.offSize = n_ones + 1;
+    view.offStorage = offsets;
+    view.contentSize = n_many;
+    view.contentStorage = storage;
+  }
+
+  class setHitsLayerStart {
+  public:
+    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  const reco::HitModuleSoAConstView& mm,
+                                  const reco::CALayersSoAConstView& ll,
+                                  uint32_t* __restrict__ hitsLayerStart) const {
+
+      for (int32_t i : cms::alpakatools::uniform_elements(acc, mm.metadata().size())) {
+        printf("ModuleStart %d %d \n",i,mm.moduleStart()[i]);
+      }
+      ALPAKA_ASSERT_ACC(0 == mm.moduleStart()[0]);
+      
+      for (int32_t i : cms::alpakatools::uniform_elements(acc, ll.metadata().size())) {
+        hitsLayerStart[i] = mm.moduleStart()[ll.layerStarts()[i]];
+// #ifdef GPU_DEBUG
+        int old = i == 0 ? 0 : mm.moduleStart()[ll.layerStarts()[i - 1]];
+        printf("LayerStart %d/%d at module %d: %d - %d\n",
+               i,
+               ll.metadata().size(),
+               ll.layerStarts()[i],
+               hitsLayerStart[i],
+               hitsLayerStart[i] - old);
+// #endif
+      }
+    }
+  };
 
   template <typename TrackerTraits>
   class Kernel_checkOverflows {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
+                                  HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
                                   TupleMultiplicity<TrackerTraits> const *tupleMultiplicity,
                                   HitToTuple<TrackerTraits> const *hitToTuple,
                                   cms::alpakatools::AtomicPairCounter *apc,
@@ -109,16 +150,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                apc->get().second,
                nHits);
         if (apc->get().first < TrackerTraits::maxNumberOfQuadruplets) {
-          ALPAKA_ASSERT_ACC(tracks_view.hitIndices().size(apc->get().first) == 0);
-          ALPAKA_ASSERT_ACC(tracks_view.hitIndices().size() == apc->get().second);
+          ALPAKA_ASSERT_ACC(foundNtuplets->size(apc->get().first) == 0);
+          ALPAKA_ASSERT_ACC(foundNtuplets->size() == apc->get().second);
         }
       }
 
-      for (auto idx : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().nOnes())) {
-        if (tracks_view.hitIndices().size(idx) > TrackerTraits::maxHitsOnTrack)  // current real limit
-          printf("ERROR %d, %d\n", idx, tracks_view.hitIndices().size(idx));
-        ALPAKA_ASSERT_ACC(ftracks_view.hitIndices().size(idx) <= TrackerTraits::maxHitsOnTrack);
-        for (auto ih = tracks_view.hitIndices().begin(idx); ih != tracks_view.hitIndices().end(idx); ++ih)
+      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+        if (foundNtuplets->size(idx) > TrackerTraits::maxHitsOnTrack)  // current real limit
+          printf("ERROR %d, %d\n", idx, foundNtuplets->size(idx));
+        ALPAKA_ASSERT_ACC(foundNtuplets->size(idx) <= TrackerTraits::maxHitsOnTrack);
+        for (auto ih = foundNtuplets->begin(idx); ih != foundNtuplets->end(idx); ++ih)
           ALPAKA_ASSERT_ACC(int(*ih) < nHits);
       }
 #endif
@@ -172,7 +213,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   CACellT<TrackerTraits> const *cells,
                                   uint32_t const *__restrict__ nCells,
-                                  TkSoAView<TrackerTraits> tracks_view) const {
+                                  TkSoAView tracks_view) const {
       constexpr auto reject = Quality::dup;
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, *nCells)) {
@@ -195,7 +236,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   CACellT<TrackerTraits> const *cells,
                                   uint32_t const *__restrict__ nCells,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
                                   bool dupPassThrough) const {
       // quality to mark rejected
       constexpr auto reject = Quality::edup;  /// cannot be loose
@@ -234,7 +275,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   CACellT<TrackerTraits> const *__restrict__ cells,
                                   uint32_t const *__restrict__ nCells,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
                                   bool dupPassThrough) const {
       // quality to mark rejected
       auto const reject = dupPassThrough ? Quality::loose : Quality::dup;
@@ -323,13 +364,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   cms::alpakatools::AtomicPairCounter *apc1,
                                   cms::alpakatools::AtomicPairCounter *apc2,  // just to zero them
-                                  HitsConstView<TrackerTraits> hh,
+                                  HitsConstView hh,
+                                  reco::CALayersSoAConstView ll,
                                   CACellT<TrackerTraits> *cells,
                                   uint32_t *nCells,
                                   CellNeighborsVector<TrackerTraits> *cellNeighbors,
-                                  OuterHitOfCell<TrackerTraits> const *isOuterHitOfCell,
-                                  CAParams<TrackerTraits> params) const {
+                                  OuterHitOfCell<TrackerTraits> *isOuterHitOfCell,
+                                  // GenericContainer* __restrict__ histo,
+                                  AlgoParams const& params) const {
       using Cell = CACellT<TrackerTraits>;
+      // using CellStack = cms::alpakatools::SimpleVector<uint16_t>; //could
 
       if (cms::alpakatools::once_per_grid(acc)) {
         *apc1 = 0;
@@ -337,20 +381,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       }  // ready for next kernel
 
       // loop on outer cells
-      for (uint32_t idx : cms::alpakatools::uniform_elements_y(acc, *nCells)) {
-        auto cellIndex = idx;
-        auto &thisCell = cells[idx];
+      for (uint32_t cellIndex : cms::alpakatools::uniform_elements_y(acc, *nCells)) {
+        auto &thisCell = cells[cellIndex];
         auto innerHitId = thisCell.inner_hit_id();
         if (int(innerHitId) < isOuterHitOfCell->offset)
           continue;
-
+        
         uint32_t numberOfPossibleNeighbors = (*isOuterHitOfCell)[innerHitId].size();
+        printf("numberOfPossibleNeighbors;%d;%d;\n",thisCell.innerLayer(),numberOfPossibleNeighbors);
         auto vi = (*isOuterHitOfCell)[innerHitId].data();
         auto ri = thisCell.inner_r(hh);
         auto zi = thisCell.inner_z(hh);
         auto ro = thisCell.outer_r(hh);
         auto zo = thisCell.outer_z(hh);
-        auto isBarrel = thisCell.inner_detIndex(hh) < TrackerTraits::last_barrel_detIndex;
+        auto thetaCut = ll[thisCell.innerLayer()].caThetaCut();
 
         // loop on inner cells
         for (uint32_t j : cms::alpakatools::independent_group_elements_x(acc, numberOfPossibleNeighbors)) {
@@ -358,6 +402,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto &oc = cells[otherCell];
           auto r1 = oc.inner_r(hh);
           auto z1 = oc.inner_z(hh);
+          auto dcaCut = ll[oc.innerLayer()].caDCACut();
+          // printf("%d %d .%2f -> %.2f \n",oc.innerLayer(),thisCell.innerLayer(),thetaCut,dcaCut);
           bool aligned = Cell::areAlignedRZ(
               r1,
               z1,
@@ -366,34 +412,74 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
               ro,
               zo,
               params.ptmin_,
-              isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
+              thetaCut); 
           if (aligned &&
               thisCell.dcaCut(hh,
                               oc,
-                              oc.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? params.dcaCutInnerTriplet_
-                                                                                         : params.dcaCutOuterTriplet_,
-                              params.hardCurvCut_)) {  // FIXME tune cuts
+                              dcaCut,
+                              params.hardCurvCut_)) { 
+            printf("filling cell: %d -> %d\n",otherCell,cellIndex);
             oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);
+            // histo->count(acc,otherCell);
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             oc.setStatusBits(Cell::StatusBit::kUsed);
+            
+          } else
+          { 
+            printf("discarding cell: %d -> %d\n",otherCell,cellIndex);
+            // (*isOuterHitOfCell)[innerHitId][j] = std::numeric_limits<uint32_t>::max(); // not a good match
           }
         }  // loop on inner cells
       }  // loop on outer cells
     }
   };
+
+  template <typename TrackerTraits>
+  class Kernel_connectFill {
+  public:
+    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+    ALPAKA_FN_ACC void operator()(TAcc const &acc,
+                                  HitsConstView hh,
+                                  CACellT<TrackerTraits> *cells,
+                                  uint32_t *nCells,
+                                  OuterHitOfCell<TrackerTraits> const* isOuterHitOfCell,
+                                  GenericContainer* __restrict__ histo) const {
+  
+  for (uint32_t cellIndex : cms::alpakatools::uniform_elements_y(acc, *nCells)) {
+        auto &thisCell = cells[cellIndex];
+        auto innerHitId = thisCell.inner_hit_id();
+        if (int(innerHitId) < isOuterHitOfCell->offset)
+          continue;
+        
+        uint32_t numberOfPossibleNeighbors = (*isOuterHitOfCell)[innerHitId].size();
+        auto vi = (*isOuterHitOfCell)[innerHitId].data();
+        for (uint32_t j : cms::alpakatools::independent_group_elements_x(acc, numberOfPossibleNeighbors)) {
+          auto otherCell = (vi[j]);
+          if(vi[j]==std::numeric_limits<uint32_t>::max())
+            continue;
+          histo->fill(acc,otherCell,cellIndex);
+          printf("filling histo: %d -> %d\n",otherCell,cellIndex);
+        }
+
+    }
+   }
+  };
+  
   template <typename TrackerTraits>
   class Kernel_find_ntuplets {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  HitsConstView<TrackerTraits> hh,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  HitsConstView hh,
+                                  const ::reco::CACellsSoAConstView &cc,
+                                  TkSoAView tracks_view,
+                                  HitContainer<TrackerTraits> *foundNtuplets,
+                                  // GenericContainer const *__restrict__ cellNeighborsHisto,
                                   CACellT<TrackerTraits> *__restrict__ cells,
                                   uint32_t const *nCells,
                                   CellTracksVector<TrackerTraits> *cellTracks,
                                   cms::alpakatools::AtomicPairCounter *apc,
-                                  CAParams<TrackerTraits> params) const {
-      // recursive: not obvious to widen
+                                  AlgoParams const& params) const {
 
       using Cell = CACellT<TrackerTraits>;
 
@@ -414,24 +500,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           continue;
 
         auto pid = thisCell.layerPairId();
-        bool doit = params.startingLayerPair(pid);
+        bool doit = cc[pid].startingPair();
 
         constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
 
         if (doit) {
           typename Cell::TmpTuple stack;
           stack.reset();
-          bool bpix1Start = params.startAt0(pid);
           thisCell.template find_ntuplets<maxDepth, TAcc>(acc,
                                                           hh,
+                                                          cc,
                                                           cells,
                                                           *cellTracks,
-                                                          tracks_view.hitIndices(),
+                                                          *foundNtuplets,
+                                                          // cellNeighborsHisto,
                                                           *apc,
                                                           tracks_view.quality(),
                                                           stack,
-                                                          params.minHitsPerNtuplet_,
-                                                          bpix1Start);
+                                                          params.minHitsPerNtuplet_);
           ALPAKA_ASSERT_ACC(stack.empty());
         }
       }
@@ -459,10 +545,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
+                                  HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
                                   TupleMultiplicity<TrackerTraits> *tupleMultiplicity) const {
-      for (auto it : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().nOnes())) {
-        auto nhits = tracks_view.hitIndices().size(it);
+      for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+        auto nhits = foundNtuplets->size(it);
         if (nhits < 3)
           continue;
         if (tracks_view[it].quality() == Quality::edup)
@@ -481,10 +568,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
+                                  HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
                                   TupleMultiplicity<TrackerTraits> *tupleMultiplicity) const {
-      for (auto it : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().nOnes())) {
-        auto nhits = tracks_view.hitIndices().size(it);
+      for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+        auto nhits = foundNtuplets->size(it);
         if (nhits < 3)
           continue;
         if (tracks_view[it].quality() == Quality::edup)
@@ -503,10 +591,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
+                                  HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
                                   QualityCuts<TrackerTraits> cuts) const {
-      for (auto it : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().nOnes())) {
-        auto nhits = tracks_view.hitIndices().size(it);
+      for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+        auto nhits = foundNtuplets->size(it);
         if (nhits == 0)
           break;  // guard
 
@@ -527,7 +616,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         }
         if (isNaN) {
 #ifdef NTUPLE_DEBUG
-          printf("NaN in fit %d size %d chi2 %f\n", it, tracks_view.hitIndices().size(it), tracks_view[it].chi2());
+          printf("NaN in fit %d size %d chi2 %f\n", it, foundNtuplets->size(it), tracks_view[it].chi2());
 #endif
           continue;
         }
@@ -549,9 +638,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   class Kernel_doStatsForTracks {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
-    ALPAKA_FN_ACC void operator()(TAcc const &acc, TkSoAView<TrackerTraits> tracks_view, Counters *counters) const {
-      for (auto idx : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().nOnes())) {
-        if (tracks_view.hitIndices().size(idx) == 0)
+    ALPAKA_FN_ACC void operator()(TAcc const &acc, TkSoAView tracks_view, HitContainer<TrackerTraits> const *__restrict__ foundNtuplets, Counters *counters) const {
+      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+        if (foundNtuplets->size(idx) == 0)
           break;  //guard
         if (tracks_view[idx].quality() < Quality::loose)
           continue;
@@ -568,12 +657,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
+                                  HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
                                   HitToTuple<TrackerTraits> *hitToTuple) const {
-      for (auto idx : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().nOnes())) {
-        if (tracks_view.hitIndices().size(idx) == 0)
+      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+        if (foundNtuplets->size(idx) == 0)
           break;  // guard
-        for (auto h = tracks_view.hitIndices().begin(idx); h != tracks_view.hitIndices().end(idx); ++h)
+        for (auto h = foundNtuplets->begin(idx); h != foundNtuplets->end(idx); ++h)
           hitToTuple->count(acc, *h);
       }
     }
@@ -584,12 +674,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
+                                  HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
                                   HitToTuple<TrackerTraits> *hitToTuple) const {
-      for (auto idx : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().nOnes())) {
-        if (tracks_view.hitIndices().size(idx) == 0)
+      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+        if (foundNtuplets->size(idx) == 0)
           break;  // guard
-        for (auto h = tracks_view.hitIndices().begin(idx); h != tracks_view.hitIndices().end(idx); ++h)
+        for (auto h = foundNtuplets->begin(idx); h != foundNtuplets->end(idx); ++h)
           hitToTuple->fill(acc, *h, idx);
       }
     }
@@ -600,16 +691,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
-                                  HitsConstView<TrackerTraits> hh) const {
+                                  TkSoAView tracks_view,
+                                  TkHitSoAView track_hits_view,
+                                  HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
+                                  HitsConstView hh) const {
       // copy offsets
-      for (auto idx : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().nOnes())) {
-        tracks_view.detIndices().off[idx] = tracks_view.hitIndices().off[idx];
+      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes() - 1)) {
+        // tracks_view.detIndices().off[idx] = foundNtuplets->off[idx];
+        tracks_view[idx].hitOffsets() = foundNtuplets->off[idx + 1]; // offset for track 0 is always 0
       }
       // fill hit indices
-      for (auto idx : cms::alpakatools::uniform_elements(acc, tracks_view.hitIndices().size())) {
-        ALPAKA_ASSERT_ACC(tracks_view.hitIndices().content[idx] < (uint32_t)hh.metadata().size());
-        tracks_view.detIndices().content[idx] = hh[tracks_view.hitIndices().content[idx]].detectorIndex();
+      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->size())) {
+        ALPAKA_ASSERT_ACC(foundNtuplets->content[idx] < (uint32_t)hh.metadata().size());
+        // tracks_view.detIndices().content[idx] = hh[foundNtuplets->content[idx]].detectorIndex();
+        track_hits_view[idx].id() = foundNtuplets->content[idx];
+        track_hits_view[idx].detId() = hh[foundNtuplets->content[idx]].detectorIndex();
       }
     }
   };
@@ -619,7 +715,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
+                                  TkHitSoAView track_hits_view,
+                                  uint32_t const* __restrict__ layerStarts,
+                                  uint16_t maxLayers,
                                   cms::alpakatools::AtomicPairCounter *apc) const {
       // clamp the number of tracks to the capacity of the SoA
       auto ntracks = std::min<int>(apc->get().first, tracks_view.metadata().size() - 1);
@@ -627,8 +726,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       if (cms::alpakatools::once_per_grid(acc))
         tracks_view.nTracks() = ntracks;
       for (auto idx : cms::alpakatools::uniform_elements(acc, ntracks)) {
-        ALPAKA_ASSERT_ACC(TracksUtilities<TrackerTraits>::nHits(tracks_view, idx) >= 3);
-        tracks_view[idx].nLayers() = TracksUtilities<TrackerTraits>::computeNumberOfLayers(tracks_view, idx);
+        ALPAKA_ASSERT_ACC(reco::nHits(tracks_view, idx) >= 3);
+        tracks_view[idx].nLayers() = reco::nLayers(tracks_view, track_hits_view, maxLayers, layerStarts, idx);
       }
     }
   };
@@ -723,7 +822,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
                                   uint16_t nmin,
                                   bool dupPassThrough,
                                   HitToTuple<TrackerTraits> const *__restrict__ phitToTuple) const {
@@ -780,8 +879,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  HitsConstView<TrackerTraits> hh,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  HitsConstView hh,
+                                  uint32_t const* __restrict__ layerStarts,
+                                  TkSoAView tracks_view,
                                   int nmin,
                                   bool dupPassThrough,
                                   HitToTuple<TrackerTraits> const *__restrict__ phitToTuple) const {
@@ -792,7 +892,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
       auto &hitToTuple = *phitToTuple;
 
-      uint32_t l1end = hh.hitsLayerStart()[1];
+      uint32_t l1end =layerStarts[1];
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, hitToTuple.nOnes())) {
         if (hitToTuple.size(idx) < 2)
@@ -834,7 +934,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
                                   uint16_t nmin,
                                   bool dupPassThrough,
                                   HitToTuple<TrackerTraits> const *__restrict__ phitToTuple) const {
@@ -894,7 +994,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  TkSoAView tracks_view,
                                   uint16_t nmin,
                                   bool dupPassThrough,
                                   HitToTuple<TrackerTraits> const *__restrict__ phitToTuple) const {
@@ -940,8 +1040,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  HitsConstView<TrackerTraits> hh,
-                                  TkSoAView<TrackerTraits> tracks_view,
+                                  HitsConstView hh,
+                                  TkSoAView tracks_view,
+                                  HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
                                   HitToTuple<TrackerTraits> const *__restrict__ phitToTuple,
                                   int32_t firstPrint,
                                   int32_t lastPrint,
@@ -949,8 +1050,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       constexpr auto loose = Quality::loose;
 
       for (auto i :
-           cms::alpakatools::uniform_elements(acc, firstPrint, std::min(lastPrint, tracks_view.hitIndices().nbins()))) {
-        auto nh = tracks_view.hitIndices().size(i);
+           cms::alpakatools::uniform_elements(acc, firstPrint, std::min(lastPrint, foundNtuplets->nbins()))) {
+        auto nh = foundNtuplets->size(i);
         if (nh < 3)
           continue;
         if (tracks_view[i].quality() < loose)
@@ -967,13 +1068,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                reco::tip(tracks_view, i),
                reco::zip(tracks_view, i),
                tracks_view[i].chi2(),
-               hh[*tracks_view.hitIndices().begin(i)].zGlobal(),
-               hh[*(tracks_view.hitIndices().begin(i) + 1)].zGlobal(),
-               hh[*(tracks_view.hitIndices().begin(i) + 2)].zGlobal(),
-               nh > 3 ? hh[int(*(tracks_view.hitIndices().begin(i) + 3))].zGlobal() : 0,
-               nh > 4 ? hh[int(*(tracks_view.hitIndices().begin(i) + 4))].zGlobal() : 0,
-               nh > 5 ? hh[int(*(tracks_view.hitIndices().begin(i) + 5))].zGlobal() : 0,
-               nh > 6 ? hh[int(*(tracks_view.hitIndices().begin(i) + nh - 1))].zGlobal() : 0);
+               hh[*foundNtuplets->begin(i)].zGlobal(),
+               hh[*(foundNtuplets->begin(i) + 1)].zGlobal(),
+               hh[*(foundNtuplets->begin(i) + 2)].zGlobal(),
+               nh > 3 ? hh[int(*(foundNtuplets->begin(i) + 3))].zGlobal() : 0,
+               nh > 4 ? hh[int(*(foundNtuplets->begin(i) + 4))].zGlobal() : 0,
+               nh > 5 ? hh[int(*(foundNtuplets->begin(i) + 5))].zGlobal() : 0,
+               nh > 6 ? hh[int(*(foundNtuplets->begin(i) + nh - 1))].zGlobal() : 0);
       }
     }
   };

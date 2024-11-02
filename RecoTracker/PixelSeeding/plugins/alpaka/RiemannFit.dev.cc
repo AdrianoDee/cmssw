@@ -6,16 +6,15 @@
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
-#include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
+#include "RecoLocalTracker/ClusterParameterEstimator/interface/FrameSoALayout.h"
 #include "RecoTracker/PixelTrackFitting/interface/alpaka/RiemannFit.h"
 
 #include "HelixFit.h"
 #include "CAStructures.h"
 
 template <typename TrackerTraits>
-using Tuples = typename reco::TrackSoA<TrackerTraits>::HitContainer;
-template <typename TrackerTraits>
-using OutputSoAView = reco::TrackSoAView<TrackerTraits>;
+using Tuples = caStructures::HitContainerT<TrackerTraits>;
+using OutputSoAView = reco::TrackSoAView;
 template <typename TrackerTraits>
 using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
@@ -31,8 +30,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   Tuples<TrackerTraits> const *__restrict__ foundNtuplets,
                                   TupleMultiplicity<TrackerTraits> const *__restrict__ tupleMultiplicity,
                                   uint32_t nHits,
-                                  TrackingRecHitSoAConstView<TrackerTraits> hh,
-                                  pixelCPEforDevice::ParamsOnDeviceT<TrackerTraits> const *__restrict__ cpeParams,
+                                  ::reco::TrackingRecHitConstView hh,
+                                  FrameSoAConstView fr,
                                   double *__restrict__ phits,
                                   float *__restrict__ phits_ge,
                                   double *__restrict__ pfast_fit,
@@ -74,8 +73,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         for (unsigned int i = 0; i < hitsInFit; ++i) {
           auto hit = hitId[i];
           float ge[6];
-          cpeParams->detParams(hh[hit].detectorIndex()).frame.toGlobal(hh[hit].xerrLocal(), 0, hh[hit].yerrLocal(), ge);
-
+          fr.detFrame(hh.detectorIndex(hit)).toGlobal(hh[hit].xerrLocal(), 0, hh[hit].yerrLocal(), ge);
           hits.col(i) << hh[hit].xGlobal(), hh[hit].yGlobal(), hh[hit].zGlobal();
           hits_ge.col(i) << ge[0], ge[1], ge[2], ge[3], ge[4], ge[5];
         }
@@ -146,7 +144,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   TupleMultiplicity<TrackerTraits> const *__restrict__ tupleMultiplicity,
                                   uint32_t nHits,
                                   double bField,
-                                  OutputSoAView<TrackerTraits> results_view,
+                                  OutputSoAView results_view,
                                   double *__restrict__ phits,
                                   float *__restrict__ phits_ge,
                                   double *__restrict__ pfast_fit_input,
@@ -175,7 +173,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         riemannFit::fromCircleToPerigee(acc, circle_fit[local_idx]);
 
-        TracksUtilities<TrackerTraits>::copyFromCircle(results_view,
+        reco::copyFromCircle(results_view,
                                                        circle_fit[local_idx].par,
                                                        circle_fit[local_idx].cov,
                                                        line_fit.par,
@@ -209,8 +207,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   };
 
   template <typename TrackerTraits>
-  void HelixFit<TrackerTraits>::launchRiemannKernels(const TrackingRecHitSoAConstView<TrackerTraits> &hv,
-                                                     pixelCPEforDevice::ParamsOnDeviceT<TrackerTraits> const *cpeParams,
+  void HelixFit<TrackerTraits>::launchRiemannKernels(const ::reco::TrackingRecHitConstView &hv,
+                                                     const FrameSoAConstView &fr,
                                                      uint32_t nhits,
                                                      uint32_t maxNumberOfTuples,
                                                      Queue &queue) {
@@ -242,7 +240,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           tupleMultiplicity_,
                           3,
                           hv,
-                          cpeParams,
+                          fr,
                           hitsDevice.data(),
                           hits_geDevice.data(),
                           fast_fit_resultsDevice.data(),
@@ -281,7 +279,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           tupleMultiplicity_,
                           4,
                           hv,
-                          cpeParams,
+                          fr,
                           hitsDevice.data(),
                           hits_geDevice.data(),
                           fast_fit_resultsDevice.data(),
@@ -321,7 +319,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             tupleMultiplicity_,
                             5,
                             hv,
-                            cpeParams,
+                            fr,
                             hitsDevice.data(),
                             hits_geDevice.data(),
                             fast_fit_resultsDevice.data(),
@@ -360,7 +358,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             tupleMultiplicity_,
                             5,
                             hv,
-                            cpeParams,
+                            fr,
                             hitsDevice.data(),
                             hits_geDevice.data(),
                             fast_fit_resultsDevice.data(),

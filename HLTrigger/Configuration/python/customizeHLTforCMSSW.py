@@ -48,6 +48,50 @@ def customiseForOffline(process):
 
     return process
 
+def customiseHLTFor46647(process):
+    for prod in producers_by_type(process, 'CtfSpecialSeedGenerator'):
+        if hasattr(prod, "DontCountDetsAboveNClusters"):
+            value = prod.DontCountDetsAboveNClusters.value()
+            delattr(prod, "DontCountDetsAboveNClusters")
+            # Replace it with cms.uint32
+            prod.DontCountDetsAboveNClusters = cms.uint32(value)
+
+        for prod in producers_by_type(process, 'SeedCombiner'):
+            if hasattr(prod, "PairCollection"):
+                delattr(prod, "PairCollection")
+            if hasattr(prod, "TripletCollection"):
+                delattr(prod, "TripletCollection")
+
+def customizeHLTforXXX(process):
+    if not hasattr(process, 'HLTRecoPixelTracksSequence'):
+        return process
+
+    process.frameSoAESProducerPhase1 = cms.ESProducer('FrameSoAESProducerPhase1@alpaka',
+      ComponentName = cms.string('FrameSoAPhase1'),
+      appendToDataLabel = cms.string(''),
+      alpaka = cms.untracked.PSet(
+        backend = cms.untracked.string('')
+      )
+    )
+
+    for producer in producers_by_type(process, "CAHitNtupletAlpakaPhase1@alpaka"):
+        #print("entered the producers loop")
+        if hasattr(producer, "CPE"):
+            print("found CPE stuff")
+            delattr(producer, "CPE")
+        if not hasattr(producer, 'frameSoA'):
+            setattr(producer, 'frameSoA', cms.string('FrameSoAPhase1'))
+
+    for producer in producers_by_type(process, "alpaka_serial_sync::CAHitNtupletAlpakaPhase1"):
+        #print("entered the producers loop")
+        if hasattr(producer, "CPE"):
+            print("found CPE stuff")
+            delattr(producer, "CPE")
+        if not hasattr(producer, 'frameSoA'):
+            setattr(producer, 'frameSoA', cms.string('FrameSoAPhase1'))
+    
+    return process
+>>>>>>> 0145612bd99 (Squash all the developments for flexible CA)
 
 # CMSSW version specific customizations
 def customizeHLTforCMSSW(process, menuType="GRun"):
@@ -56,5 +100,6 @@ def customizeHLTforCMSSW(process, menuType="GRun"):
 
     # add call to action function in proper order: newest last!
     # process = customiseFor12718(process)
+    process = customizeHLTforXXX(process)
 
     return process

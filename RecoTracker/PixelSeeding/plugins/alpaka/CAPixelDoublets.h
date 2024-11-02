@@ -60,13 +60,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     uint32_t* nCells,
                                     CellNeighborsVector<TrackerTraits>* cellNeighbors,
                                     CellTracksVector<TrackerTraits>* cellTracks,
-                                    HitsConstView<TrackerTraits> hh,
+                                    HitsConstView hh,
+                                    ::reco::CACellsSoAConstView cc,
+                                    uint32_t const* __restrict__ offsets,
+                                    PhiBinner<TrackerTraits>* phiBinner,
                                     OuterHitOfCell<TrackerTraits>* isOuterHitOfCell,
-                                    uint32_t nActualPairs,
-                                    const uint32_t maxNumOfDoublets,
-                                    CellCutsT<TrackerTraits> cuts) const {
+                                    // GenericContainer* __restrict__ histo,
+                                    AlgoParams const& params) const {
         doubletsFromHisto<TrackerTraits>(
-            acc, nActualPairs, maxNumOfDoublets, cells, nCells, cellNeighbors, cellTracks, hh, *isOuterHitOfCell, cuts);
+            acc, cells, nCells, cellNeighbors, cellTracks, hh, cc, offsets, phiBinner, *isOuterHitOfCell, params);
+      }
+    };
+
+    template <typename TrackerTraits>
+    class FillDoubletsHisto {
+    public:
+      template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+
+      ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                    CACellT<TrackerTraits>* cells,
+                                    uint32_t* nCells,
+                                    GenericContainer* __restrict__ histo) const {
+        for (auto cellIndex : cms::alpakatools::uniform_elements(acc, *nCells))
+          histo->fill(acc,cells[cellIndex].outer_hit_id(),cellIndex);
       }
     };
 
