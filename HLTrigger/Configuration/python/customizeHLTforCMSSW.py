@@ -55,6 +55,10 @@ def customizeHLTfor47630(process):
                 if hasattr(pset, attr):
                     delattr(mod.DBParameters, attr)
 
+    import copy
+    for esprod in list(esproducers_by_type(process, "OnlineBeamSpotESProducer")):
+        delattr(process, esprod.label())
+
     return process
 
 # CMSSW version specific customizations
@@ -64,6 +68,7 @@ def customizeHLTforCMSSW(process, menuType="GRun"):
 
     # add call to action function in proper order: newest last!
     # process = customiseFor12718(process)
+
     process = customizeHLTfor47630(process)
-    
+
     return process
