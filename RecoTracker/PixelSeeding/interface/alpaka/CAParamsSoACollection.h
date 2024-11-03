@@ -12,13 +12,15 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/CopyToHost.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
-namespace ALPAKA_ACCELERATOR_NAMESPACE {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::reco {
 
-  using CAParamsSoACollection =
-      std::conditional_t<std::is_same_v<Device, alpaka::DevCpu>, CAParamsHost, CAParamsDevice<Device>>;
+    using ::reco::CAParamsHost;
+    using ::reco::CAParamsDevice;
+    using CAParamsSoACollection =
+        std::conditional_t<std::is_same_v<Device, alpaka::DevCpu>, CAParamsHost, CAParamsDevice<Device>>;
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
-ASSERT_DEVICE_MATCHES_HOST_COLLECTION(CAParamsSoACollection, CAParamsHost);
+ASSERT_DEVICE_MATCHES_HOST_COLLECTION(reco::CAParamsSoACollection, reco::CAParamsHost);
 
 #endif  // RecoTracker_PixelSeeding_interface_CAParamsSoACollection_h
