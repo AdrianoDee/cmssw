@@ -33,17 +33,14 @@ namespace reco {
                     SOA_COLUMN(float, caDCACut)
                     )
     
-  // Common types for both Host and Device code
   using CALayersSoA = CALayersLayout<>;
   using CALayersSoAView = CALayersSoA::View;
   using CALayersSoAConstView = CALayersSoA::ConstView;
 
-  // Common types for both Host and Device code
   using CACellsSoA = CACellsLayout<>;
   using CACellsSoAView = CACellsSoA::View;
   using CACellsSoAConstView = CACellsSoA::ConstView;
 
-  // Common types for both Host and Device code
   using CARegionsSoA = CARegionsLayout<>;
   using CARegionsSoAView = CARegionsSoA::View;
   using CARegionsSoAConstView = CARegionsSoA::ConstView;
