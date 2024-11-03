@@ -19,7 +19,7 @@
 #include "CAParams_t.h"
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
-
+using namespace ALPAKA_ACCELERATOR_NAMESPACE::reco;
 // Run 3 values, used for testing
 constexpr uint32_t n_layers = 15;
 constexpr uint32_t n_pairs = 50;

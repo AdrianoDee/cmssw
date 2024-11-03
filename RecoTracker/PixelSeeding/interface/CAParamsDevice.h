@@ -9,7 +9,8 @@
 #include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
-template <typename TDev>
-using CAParamsDevice = PortableDeviceMultiCollection<TDev, reco::CALayersSoA, reco::CACellsSoA, reco::CARegionsSoA>;
-
+namespace reco {
+    template <typename TDev>
+    using CAParamsDevice = PortableDeviceMultiCollection<TDev, CALayersSoA, CACellsSoA, CARegionsSoA>;
+}
 #endif  // DataFormats_VertexSoA_CAParamsDevice_H

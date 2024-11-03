@@ -9,6 +9,7 @@
 #include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
-using CAParamsHost = PortableHostCollection3<reco::CALayersSoA, reco::CACellsSoA, reco::CARegionsSoA>;
-
+namespace reco {
+    using CAParamsHost = PortableHostMultiCollection<CALayersSoA, CACellsSoA, CARegionsSoA>;
+}
 #endif  // DataFormats_VertexSoA_CAParamsHost_H
