@@ -214,6 +214,7 @@ from Configuration.ProcessModifiers.alpaka_cff import alpaka
 #from RecoTracker.PixelSeeding.caParamsESProducer_cfi import caParamsESProducer as _caParamsESProducer
 def _addCAParamsESProducer(process):
     process.load("RecoTracker.PixelSeeding.caParamsESProducer_cfi")
+    process.caParamsESProducer.appendToDataLabel = cms.string("caParams")
 
 modifyConfigurationForAlpakaCAParams_ = alpaka.makeProcessModifier(_addCAParamsESProducer)
 
