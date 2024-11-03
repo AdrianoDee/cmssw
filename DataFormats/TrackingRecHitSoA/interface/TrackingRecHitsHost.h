@@ -1,5 +1,5 @@
-#ifndef DataFormats_TrackingRecHitSoA_interface_TrackingRecHitsHost_h
-#define DataFormats_TrackingRecHitSoA_interface_TrackingRecHitsHost_h
+#ifndef DataFormats_SiStripCluster_interface_TrackingRecHitsHost_h
+#define DataFormats_SiStripCluster_interface_TrackingRecHitsHost_h
 
 #include <cstdint>
 
@@ -49,4 +49,4 @@ using TrackingRecHitHostPhase1 = TrackingRecHitHost<pixelTopology::Phase1>;
 using TrackingRecHitHostPhase2 = TrackingRecHitHost<pixelTopology::Phase2>;
 using TrackingRecHitHostHIonPhase1 = TrackingRecHitHost<pixelTopology::HIonPhase1>;
 
-#endif  // DataFormats_TrackingRecHitSoA_interface_TrackingRecHitsHost_h
+#endif  // DataFormats_SiStripCluster_interface_TrackingRecHitsHost_h

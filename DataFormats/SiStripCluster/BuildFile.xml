@@ -1,8 +1,13 @@
+<use name="alpaka"/>
+<use name="eigen"/>
 <use name="DataFormats/Common"/>
-<use name="DataFormats/TrajectoryState"/>
 <use name="DataFormats/SiStripDigi"/>
 <use name="DataFormats/SiStripDetId"/>
+<use name="DataFormats/SoATemplate" source_only="1"/>
+<use name="DataFormats/TrajectoryState"/>
 <use name="FWCore/Utilities" source_only="1"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<flags ALPAKA_BACKENDS="!serial"/>
 <export>
   <lib name="1"/>
 </export>

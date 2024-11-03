@@ -1,5 +1,5 @@
-#ifndef DataFormats_TrackingRecHitSoA_interface_alpaka_TrackingRecHitsSoACollection_h
-#define DataFormats_TrackingRecHitSoA_interface_alpaka_TrackingRecHitsSoACollection_h
+#ifndef DataFormats_SiStripCluster_interface_alpaka_TrackingRecHitsSoACollection_h
+#define DataFormats_SiStripCluster_interface_alpaka_TrackingRecHitsSoACollection_h
 
 #include <cstdint>
 #include <type_traits>
@@ -70,4 +70,4 @@ ASSERT_DEVICE_MATCHES_HOST_COLLECTION(TrackingRecHitSoAPhase1, TrackingRecHitHos
 ASSERT_DEVICE_MATCHES_HOST_COLLECTION(TrackingRecHitSoAPhase2, TrackingRecHitHostPhase2);
 ASSERT_DEVICE_MATCHES_HOST_COLLECTION(TrackingRecHitSoAHIonPhase1, TrackingRecHitHostHIonPhase1);
 
-#endif  // DataFormats_TrackingRecHitSoA_interface_alpaka_TrackingRecHitsSoACollection_h
+#endif  // DataFormats_SiStripCluster_interface_alpaka_TrackingRecHitsSoACollection_h

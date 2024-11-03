@@ -8,3 +8,11 @@
 </library>
 
 <test name="TestSiStripApproximateClusterCollection" command="TestSiStripApproximateClusterCollection.sh"/>
+
+<!-- 
+TODO: FIX THIS
+<bin file="alpaka/StripCluster_test.dev.cc" name="StripCluster_test">
+  <use name="alpaka"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <flags ALPAKA_BACKENDS="!serial"/>
+</bin> -->

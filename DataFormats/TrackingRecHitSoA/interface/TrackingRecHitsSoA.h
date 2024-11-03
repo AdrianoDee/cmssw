@@ -1,5 +1,5 @@
-#ifndef DataFormats_TrackingRecHitSoA_interface_TrackingRecHitsSoA_h
-#define DataFormats_TrackingRecHitSoA_interface_TrackingRecHitsSoA_h
+#ifndef DataFormats_SiStripCluster_interface_TrackingRecHitsSoA_h
+#define DataFormats_SiStripCluster_interface_TrackingRecHitsSoA_h
 
 #include <Eigen/Dense>
 

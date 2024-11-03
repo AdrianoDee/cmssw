@@ -1,5 +1,5 @@
-#ifndef DataFormats_TrackingRecHitSoA_interface_TrackingRecHitSoADevice_h
-#define DataFormats_TrackingRecHitSoA_interface_TrackingRecHitSoADevice_h
+#ifndef DataFormats_SiStripCluster_interface_TrackingRecHitSoADevice_h
+#define DataFormats_SiStripCluster_interface_TrackingRecHitSoADevice_h
 
 #include <cstdint>
 
