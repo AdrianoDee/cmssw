@@ -11,7 +11,6 @@
 
 #include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
 #include "RecoTracker/PixelSeeding/interface/CAParamsHost.h"
-#include "RecoTracker/PixelSeeding/interface/alpaka/CAParamsSoACollection.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
@@ -137,7 +136,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::ParameterSetDescription desc;
 
     // layers params
-    desc.add<std::vector<int>>("layerStart", std::vector<int>(std::begin(layerStart), std::end(layerStart))) ->setComment("Layer module start");
+    desc.add<std::vector<int>>("layerStarts", std::vector<int>(std::begin(layerStart), std::end(layerStart))) ->setComment("Layer module start");
     // cells params
     desc.add<std::vector<int>>("pairGraph", std::vector<int>(std::begin(layerPairs), std::end(layerPairs))) ->setComment("CA graph");
     desc.add<std::vector<int>>("phiCuts", std::vector<int>(std::begin(phicuts), std::end(phicuts))) ->setComment("Cuts in phi for cells");
