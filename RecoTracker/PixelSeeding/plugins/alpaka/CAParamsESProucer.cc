@@ -11,6 +11,7 @@
 
 #include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
 #include "RecoTracker/PixelSeeding/interface/CAParamsHost.h"
+#include "RecoTracker/PixelSeeding/interface/alpaka/CAParamsSoACollection.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
@@ -149,6 +150,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     desc.add<bool>("idealConditions", true);
     // region params
     desc.add<std::vector<int>>("regionStarts", {0,100}) ->setComment("Layer module start");
+    desc.add<std::vector<double>>("caThetaCut", {0,100}) ->setComment("Layer module start");
+    desc.add<std::vector<double>>("caDCACut", {0,100}) ->setComment("Layer module start");
 
 
 

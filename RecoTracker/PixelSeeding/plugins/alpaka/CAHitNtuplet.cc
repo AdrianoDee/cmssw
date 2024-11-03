@@ -70,6 +70,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::ParameterSetDescription desc;
 
     desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingAlpaka"));
+    desc.add<std::string>("caParams", std::string("caParams"));
 
     std::string frame = "FrameSoA";
     frame += TrackerTraits::nameModifier;
