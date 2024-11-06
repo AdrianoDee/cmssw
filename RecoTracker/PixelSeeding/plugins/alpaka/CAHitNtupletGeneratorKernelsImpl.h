@@ -806,6 +806,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   HitsConstView<TrackerTraits> hh,
+                                  uint32_t const* __restrict__ layerStarts,
                                   TkSoAView<TrackerTraits> tracks_view,
                                   int nmin,
                                   bool dupPassThrough,
@@ -817,7 +818,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
       auto &hitToTuple = *phitToTuple;
 
-      uint32_t l1end = hh.hitsLayerStart()[1];
+      uint32_t l1end =layerStarts[1];
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, hitToTuple.nOnes())) {
         if (hitToTuple.size(idx) < 2)

@@ -313,6 +313,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   template <typename TrackerTraits>
   void CAHitNtupletGeneratorKernels<TrackerTraits>::buildDoublets(const HitsConstView &hh,
+                                                                  const ::reco::CACellsSoAConstView &cc,
                                                                   uint32_t offsetBPIX2,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
@@ -391,12 +392,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_theCellNeighbors_.data(),
                         this->device_theCellTracks_.data(),
                         hh,
+                        cc,
                         this->device_layerStarts_.data(),
                         this->device_hitPhiHist_.data(),
                         this->isOuterHitOfCell_.data(),
                         nActualPairs,
                         this->m_params.caParams_.maxNumberOfDoublets_,
-                        this->m_params.cellCuts_);
+                        this->m_params.cellCuts_
+                        );
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
@@ -480,6 +483,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           workDiv1D,
                           Kernel_sharedHitCleaner<TrackerTraits>{},
                           hh,
+                          this->device_layerStarts_.data(),
                           tracks_view,
                           this->m_params.minHitsForSharingCut_,
                           this->m_params.dupPassThrough_,

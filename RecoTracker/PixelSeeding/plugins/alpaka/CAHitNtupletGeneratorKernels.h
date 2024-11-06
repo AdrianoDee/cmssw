@@ -256,7 +256,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
 
-    void buildDoublets(const HitsConstView& hh, uint32_t offsetBPIX2, Queue& queue);
+    void buildDoublets(const HitsConstView& hh, const ::reco::CACellsSoAConstView& cc, uint32_t offsetBPIX2, Queue& queue);
 
     static void printCounters();
 

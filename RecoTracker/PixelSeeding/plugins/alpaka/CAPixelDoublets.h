@@ -61,6 +61,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     CellNeighborsVector<TrackerTraits>* cellNeighbors,
                                     CellTracksVector<TrackerTraits>* cellTracks,
                                     HitsConstView<TrackerTraits> hh,
+                                    ::reco::CACellsSoAConstView cc,
                                     uint32_t const* __restrict__ offsets,
                                     PhiBinner<TrackerTraits>* phiBinner,
                                     OuterHitOfCell<TrackerTraits>* isOuterHitOfCell,
@@ -68,7 +69,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     const uint32_t maxNumOfDoublets,
                                     CellCutsT<TrackerTraits> cuts) const {
         doubletsFromHisto<TrackerTraits>(
-            acc, nActualPairs, maxNumOfDoublets, cells, nCells, cellNeighbors, cellTracks, hh, offsets, phiBinner, *isOuterHitOfCell, cuts);
+            acc, nActualPairs, maxNumOfDoublets, cells, nCells, cellNeighbors, cellTracks, hh, cc, offsets, phiBinner, *isOuterHitOfCell, cuts);
       }
     };
 

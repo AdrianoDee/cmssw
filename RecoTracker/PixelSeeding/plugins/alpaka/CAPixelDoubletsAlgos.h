@@ -16,6 +16,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
+#include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
 
 #include "CACell.h"
 #include "CAStructures.h"
@@ -148,20 +149,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       CellNeighborsVector<TrackerTraits>* cellNeighbors,
       CellTracksVector<TrackerTraits>* cellTracks,
       HitsConstView<TrackerTraits> hh,
+      ::reco::CACellsSoAConstView cc,
       uint32_t const* __restrict__ offsets,
       PhiBinner<TrackerTraits>* phiBinner,
       OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
       CellCutsT<TrackerTraits> const& cuts) {  // ysize cuts (z in the barrel)  times 8
                                                // these are used if doClusterCut is true
 
-    const bool doClusterCut = cuts.doClusterCut_;
-    const bool doZ0Cut = cuts.doZ0Cut_;
-    const bool doPtCut = cuts.doPtCut_;
+    // const bool doClusterCut = cc.doClusterCut;
+    // const bool doZ0Cut = cuts.doZ0Cut_;
+    // const bool doPtCut = cuts.doPtCut_;
 
-    const float z0cut = cuts.z0Cut_;      // cm
-    const float hardPtCut = cuts.ptCut_;  // GeV
+    // const float z0cut = cuts.z0Cut_;      // cm
+    // const float hardPtCut = cuts.ptCut_;  // GeV
     // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
-    const float minRadius = hardPtCut * 87.78f;
+    const float minRadius = cc.cellPtCut() * 87.78f;
     const float minRadius2T4 = 4.f * minRadius * minRadius;
 
     using PhiHisto = PhiBinner<TrackerTraits>;
@@ -227,10 +229,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
       auto mez = hh[i].zGlobal();
 
-      if (mez < TrackerTraits::minz[pairLayerId] || mez > TrackerTraits::maxz[pairLayerId])
+      if (mez < cc.minz()[pairLayerId] || mez > cc.maxz()[pairLayerId])
         continue;
 
-      if (doClusterCut && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(acc, hh, i))
+      if (cc.doClusterCut() && outer > pixelTopology::last_barrel_layer && cuts.clusterCut(acc, hh, i))
         continue;
 
       auto mep = hh[i].iphi();
@@ -248,10 +250,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         auto zo = hh[j].zGlobal();
         auto ro = hh[j].rGlobal();
         auto dr = ro - mer;
-        return dr > TrackerTraits::maxr[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > z0cut * dr;
+        return dr > cc.maxr()[pairLayerId] || dr < 0 || std::abs((mez * ro - mer * zo)) > cc.cellZ0Cut() * dr;
       };
 
-      auto iphicut = cuts.phiCuts[pairLayerId];
+      auto iphicut = cc.phiCuts()[pairLayerId];
 
       auto kl = PhiHisto::bin(int16_t(mep - iphicut));
       auto kh = PhiHisto::bin(int16_t(mep + iphicut));
@@ -286,7 +288,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           if (mo > pixelClustering::maxNumModules)
             continue;
 
-          if (doZ0Cut && z0cutoff(oi))
+          if (cc.cellZ0Cut() > 0 && z0cutoff(oi))
             continue;
 
           auto mop = hh[oi].iphi();
@@ -295,10 +297,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           if (idphi > iphicut)
             continue;
 
-          if (doClusterCut && cuts.zSizeCut(acc, hh, i, oi))
+          if (cc.doClusterCut() && cuts.zSizeCut(acc, hh, i, oi))
             continue;
 
-          if (doPtCut && ptcut(oi, idphi))
+          if (cc.cellPtCut() > 0 && ptcut(oi, idphi))
             continue;
 
           auto ind = alpaka::atomicAdd(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});
