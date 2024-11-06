@@ -37,7 +37,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         device_hitToTupleStorage_{
             cms::alpakatools::make_device_buffer<typename HitToTuple::Counter[]>(queue, hh.metadata().size() + 1)},
         device_hitPhiHist_{cms::alpakatools::make_device_buffer<PhiBinner>(queue)},
-        device_phiBinnerStorage_{cms::alpakatools::make_device_buffer<typename PhiBinner::index_type[]>(queue, hh.metadata().size())},  
+        device_phiBinnerStorage_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, hh.metadata().size())},
+        device_layerStarts_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, TrackerTraits::numberOfLayers)}, 
         device_tupleMultiplicity_{cms::alpakatools::make_device_buffer<TupleMultiplicity>(queue)},
 
         // NB: In legacy, device_theCells_ and device_isOuterHitOfCell_ were allocated inside buildDoublets
@@ -98,20 +99,42 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device_hitPhiView_.contentSize = hh.metadata().size();
     device_hitPhiView_.contentStorage = device_phiBinnerStorage_.data();
 
-    cms::alpakatools::fillManyFromVector<Acc1D>(device_hitPhiHist_.data(),
-                                                      device_hitPhiView_,
-                                                      TrackerTraits::numberOfLayers,
-                                                      hh.iphi(),
-                                                      hh.hitsLayerStart().data(),
-                                                      hh.metadata().size(),
-                                                      (uint32_t)256,
-                                                      queue);
-
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Allocations for CAHitNtupletGeneratorKernels: done!" << std::endl;
 #endif
   }
+
+  template <typename TrackerTraits>
+  void CAHitNtupletGeneratorKernels<TrackerTraits>::prepareHits(const HitsConstView &hh,
+                                                                const reco::CALayersSoAConstView& ll,
+                                                                Queue &queue)
+    {
+        using namespace caHitNtupletGeneratorKernels;
+
+        const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(1, ll.metadata().size());
+        alpaka::exec<Acc1D>(queue,
+                            workDiv1D,
+                            setHitsLayerStart{},
+                            hh.hitsModuleStart().data(),
+                            ll,
+                            this->device_layerStarts_.data());
+        
+        cms::alpakatools::fillManyFromVector<Acc1D>(device_hitPhiHist_.data(),
+                                                    device_hitPhiView_,
+                                                    TrackerTraits::numberOfLayers,
+                                                    hh.iphi(),
+                                                    this->device_layerStarts_.data(),
+                                                    hh.metadata().size(),
+                                                    (uint32_t)256,
+                                                    queue);
+        
+// #ifdef GPU_DEBUG
+        alpaka::wait(queue);
+        std::cout << "CAHitNtupletGeneratorKernels -> Hits prepared (layer starts and histo) -> DONE!" << std::endl;
+// #endif
+
+    }   
 
   template <typename TrackerTraits>
   void CAHitNtupletGeneratorKernels<TrackerTraits>::launchKernels(const HitsConstView &hh,
@@ -368,6 +391,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_theCellNeighbors_.data(),
                         this->device_theCellTracks_.data(),
                         hh,
+                        this->device_layerStarts_.data(),
                         this->device_hitPhiHist_.data(),
                         this->isOuterHitOfCell_.data(),
                         nActualPairs,

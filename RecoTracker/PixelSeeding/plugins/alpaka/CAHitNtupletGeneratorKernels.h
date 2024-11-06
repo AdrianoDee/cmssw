@@ -16,6 +16,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
+#include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
 
 #include "CACell.h"
 #include "CAPixelDoublets.h"
@@ -249,6 +250,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.data(); }
 
+    void prepareHits(const HitsConstView& hh, const ::reco::CALayersSoAConstView& ll, Queue& queue);
+
     void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, TkSoAView& track_view, Queue& queue);
 
     void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
@@ -269,6 +272,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     cms::alpakatools::device_buffer<Device, PhiBinner> device_hitPhiHist_;
     PhiBinnerView device_hitPhiView_;
     cms::alpakatools::device_buffer<Device, PhiBinnerStorageType[]> device_phiBinnerStorage_;
+    cms::alpakatools::device_buffer<Device, hindex_type[]> device_layerStarts_;
 
     HitToTupleView device_hitToTupleView_;
     cms::alpakatools::device_buffer<Device, TupleMultiplicity> device_tupleMultiplicity_;

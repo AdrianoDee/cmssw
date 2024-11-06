@@ -94,7 +94,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
 //         // assuming full warp of threads is better than a smaller number...
-        if (nHits) {
+        if (nHits and false) {
           const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(1, 32);
           alpaka::exec<Acc1D>(queue,
                               workDiv1D,

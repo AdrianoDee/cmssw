@@ -148,6 +148,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       CellNeighborsVector<TrackerTraits>* cellNeighbors,
       CellTracksVector<TrackerTraits>* cellTracks,
       HitsConstView<TrackerTraits> hh,
+      uint32_t const* __restrict__ offsets,
       PhiBinner<TrackerTraits>* phiBinner,
       OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
       CellCutsT<TrackerTraits> const& cuts) {  // ysize cuts (z in the barrel)  times 8
@@ -164,7 +165,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     const float minRadius2T4 = 4.f * minRadius * minRadius;
 
     using PhiHisto = PhiBinner<TrackerTraits>;
-    uint32_t const* __restrict__ offsets = hh.hitsLayerStart().data();
+    // uint32_t const* __restrict__ offsets = hh.hitsLayerStart().data();
     ALPAKA_ASSERT_ACC(offsets);
 
     auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };
