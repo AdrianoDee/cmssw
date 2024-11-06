@@ -13,7 +13,7 @@ struct TrackingRecHitSoA {
   using hindex_type = typename TrackerTraits::hindex_type;
   
   using AverageGeometry = pixelTopology::AverageGeometryT<TrackerTraits>;
-  using HitLayerStartArray = std::array<hindex_type, TrackerTraits::numberOfLayers + 1>;
+  // using HitLayerStartArray = std::array<hindex_type, TrackerTraits::numberOfLayers + 1>;
   using HitModuleStartArray = std::array<hindex_type, TrackerTraits::numberOfModules + 1>;
 
   GENERATE_SOA_LAYOUT(Layout,
@@ -32,7 +32,6 @@ struct TrackingRecHitSoA {
                       SOA_COLUMN(uint16_t, detectorIndex),
                       SOA_SCALAR(int32_t, offsetBPIX2),
                       SOA_SCALAR(HitModuleStartArray, hitsModuleStart),
-                      SOA_SCALAR(HitLayerStartArray, hitsLayerStart),
                       SOA_SCALAR(AverageGeometry, averageGeometry));
 };
 
