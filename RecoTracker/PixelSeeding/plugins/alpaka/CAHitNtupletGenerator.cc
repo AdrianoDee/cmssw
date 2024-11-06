@@ -303,7 +303,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 template <typename TrackerTraits>
   TracksSoACollection<TrackerTraits> CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
-      HitsOnDevice const& hits_d, FrameOnDevice const& frame, float bfield, Queue& queue) const {
+      HitsOnDevice const& hits_d, FrameOnDevice const& frame, CAParamsOnDevice const& params_d, float bfield, Queue& queue) const {
     using HelixFit = HelixFit<TrackerTraits>;
     using TrackSoA = TracksSoACollection<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
@@ -319,6 +319,7 @@ template <typename TrackerTraits>
     }
     GPUKernels kernels(m_params, hits_d.view(), queue);
 
+    kernels.prepareHits(hits_d.view(), params_d.view(),queue);
     kernels.buildDoublets(hits_d.view(), hits_d.offsetBPIX2(), queue);
     kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), tracks.view(), queue);
 
