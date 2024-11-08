@@ -31,8 +31,11 @@ struct TrackingRecHitSoA {
                       SOA_COLUMN(int16_t, clusterSizeY),
                       SOA_COLUMN(uint16_t, detectorIndex),
                       SOA_SCALAR(int32_t, offsetBPIX2),
-                      SOA_SCALAR(HitModuleStartArray, hitsModuleStart),
-                      SOA_SCALAR(AverageGeometry, averageGeometry));
+                      SOA_SCALAR(HitModuleStartArray, hitsModuleStart));
+
+  // GENERATE_SOA_LAYOUT(ModulesLayout,
+  //                     SOA_COLUMN(uint32_t, hitsModuleStart));
+
 };
 
 template <typename TrackerTraits>
