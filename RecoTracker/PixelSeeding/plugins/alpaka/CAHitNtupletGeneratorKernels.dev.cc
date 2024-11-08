@@ -374,9 +374,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     if (0 == nhits)
       return;  // protect against empty events
 
-    // take all layer pairs into account
-    auto nActualPairs = this->m_params.nPairs();
-
     const int stride = 4;
     const int threadsPerBlock = TrackerTraits::getDoubletsFromHistoMaxBlockSize / stride;
     int blocks = (4 * nhits + threadsPerBlock - 1) / threadsPerBlock;
@@ -396,7 +393,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_layerStarts_.data(),
                         this->device_hitPhiHist_.data(),
                         this->isOuterHitOfCell_.data(),
-                        nActualPairs,
                         this->m_params.caParams_.maxNumberOfDoublets_,
                         this->m_params.cellCuts_
                         );

@@ -55,32 +55,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
     CellCutsT() = default;
 
-    CellCutsT(const bool doClusterCut,
-              const bool doZ0Cut,
-              const bool doPtCut,
-              const bool idealConditions,
-              const float z0Cut,
-              const float ptCut,
-              const std::vector<int>& phiCutsV)
-        : doClusterCut_(doClusterCut),
-          doZ0Cut_(doZ0Cut),
-          doPtCut_(doPtCut),
-          idealConditions_(idealConditions),
-          z0Cut_(z0Cut),
-          ptCut_(ptCut) {
-      assert(phiCutsV.size() == TrackerTraits::nPairs);
-      std::copy(phiCutsV.begin(), phiCutsV.end(), &phiCuts[0]);
+    CellCutsT(const bool idealConditions)
+        : idealConditions_(idealConditions) {
     }
 
-    bool doClusterCut_;
-    bool doZ0Cut_;
-    bool doPtCut_;
     bool idealConditions_;  //this is actually not used by phase2
 
-    float z0Cut_;  //FIXME: check if could be const now
-    float ptCut_;
-
-    int phiCuts[T::nPairs];
 
     template <typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool __attribute__((always_inline)) zSizeCut(const TAcc& acc,
@@ -142,7 +122,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   template <typename TrackerTraits, typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void __attribute__((always_inline)) doubletsFromHisto(
       const TAcc& acc,
-      uint32_t nPairs,
       const uint32_t maxNumOfDoublets,
       CACellT<TrackerTraits>* cells,
       uint32_t* nCells,
@@ -165,7 +144,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
     const float minRadius = cc.cellPtCut() * 87.78f;
     const float minRadius2T4 = 4.f * minRadius * minRadius;
-
+    
+    const uint32_t nPairs = cc.metadata().size();
+    // const auto maxNumOfDoublets = cc.maxNumOfDoublets();
     using PhiHisto = PhiBinner<TrackerTraits>;
     // uint32_t const* __restrict__ offsets = hh.hitsLayerStart().data();
     ALPAKA_ASSERT_ACC(offsets);
@@ -184,9 +165,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     const uint32_t threadIdxLocalX(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[dimIndexX]);
 
     if (threadIdxLocalY == 0 && threadIdxLocalX == 0) {
-      innerLayerCumulativeSize[0] = layerSize(TrackerTraits::layerPairs[0]);
+      innerLayerCumulativeSize[0] = layerSize(cc.graph()[0][0]);//TrackerTraits::layerPairs[0]);
       for (uint32_t i = 1; i < nPairs; ++i) {
-        innerLayerCumulativeSize[i] = innerLayerCumulativeSize[i - 1] + layerSize(TrackerTraits::layerPairs[2 * i]);
+        innerLayerCumulativeSize[i] = innerLayerCumulativeSize[i - 1] + layerSize(cc.graph()[i][0]);
       }
       ntot = innerLayerCumulativeSize[nPairs - 1];
     }
