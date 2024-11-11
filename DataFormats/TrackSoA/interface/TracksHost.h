@@ -8,27 +8,28 @@
 #include "DataFormats/TrackSoA/interface/TrackDefinitions.h"
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
 
-// TODO: The class is created via inheritance of the PortableHostCollection.
+// TODO: The class is created via inheritance of the PortableHostMultiCollection.
 // This is generally discouraged, and should be done via composition.
 // See: https://github.com/cms-sw/cmssw/pull/40465#discussion_r1067364306
 template <typename TrackerTraits>
-class TracksHost : public PortableHostCollection<reco::TrackLayout<TrackerTraits>> {
+class TracksHost : public PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> > {
 public:
   static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;  //TODO: this could be made configurable at runtime
+  static constexpr int32_t H = TrackerTraits::avgHitsPerTrack;
   TracksHost() = default;  // Needed for the dictionary; not sure if line above is needed anymore
 
-  using PortableHostCollection<reco::TrackLayout<TrackerTraits>>::view;
-  using PortableHostCollection<reco::TrackLayout<TrackerTraits>>::const_view;
-  using PortableHostCollection<reco::TrackLayout<TrackerTraits>>::buffer;
+  using PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >::view;
+  using PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >::const_view;
+  using PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >::buffer;
 
   // Constructor which specifies the SoA size
   template <typename TQueue>
   explicit TracksHost<TrackerTraits>(TQueue& queue)
-      : PortableHostCollection<reco::TrackLayout<TrackerTraits>>(S, queue) {}
+      : PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >({{S,H*S}}, queue) {}
 
   // Constructor which specifies the DevHost
   explicit TracksHost(alpaka_common::DevHost const& host)
-      : PortableHostCollection<reco::TrackLayout<TrackerTraits>>(S, host) {}
+      : PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >({{S,H*S}}, host) {}
 };
 
 namespace pixelTrack {

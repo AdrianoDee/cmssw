@@ -11,19 +11,21 @@
 // This is generally discouraged, and should be done via composition.
 // See: https://github.com/cms-sw/cmssw/pull/40465#discussion_r1067364306
 template <typename TrackerTraits, typename TDev>
-class TracksDevice : public PortableDeviceCollection<reco::TrackLayout<TrackerTraits>, TDev> {
+class TracksDevice : public PortableDeviceMultiCollection<TDev, reco::TrackLayout<TrackerTraits>,   reco::TrackHitLayout<TrackerTraits>> {
 public:
   static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;  //TODO: this could be made configurable at runtime
+  static constexpr int32_t H = TrackerTraits::avgHitsPerTrack;
+
   TracksDevice() = default;                                       // necessary for ROOT dictionaries
 
-  using PortableDeviceCollection<reco::TrackLayout<TrackerTraits>, TDev>::view;
-  using PortableDeviceCollection<reco::TrackLayout<TrackerTraits>, TDev>::const_view;
-  using PortableDeviceCollection<reco::TrackLayout<TrackerTraits>, TDev>::buffer;
+  using PortableDeviceMultiCollection<TDev, reco::TrackLayout<TrackerTraits>,   reco::TrackHitLayout<TrackerTraits>>::view;
+  using PortableDeviceMultiCollection<TDev, reco::TrackLayout<TrackerTraits>,   reco::TrackHitLayout<TrackerTraits>>::const_view;
+  using PortableDeviceMultiCollection<TDev, reco::TrackLayout<TrackerTraits>,   reco::TrackHitLayout<TrackerTraits>>::buffer;
 
   // Constructor which specifies the SoA size
   template <typename TQueue>
   explicit TracksDevice<TrackerTraits, TDev>(TQueue& queue)
-      : PortableDeviceCollection<reco::TrackLayout<TrackerTraits>, TDev>(S, queue) {}
+      : PortableDeviceMultiCollection<TDev, reco::TrackLayout<TrackerTraits>,   reco::TrackHitLayout<TrackerTraits>>({{S,H}}, queue) {}
 };
 
 namespace pixelTrack {
