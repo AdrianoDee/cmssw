@@ -41,8 +41,8 @@ namespace reco {
                         SOA_SCALAR(HitContainer, detIndices))
                         
     GENERATE_SOA_LAYOUT(HitsLayout,
-                        SOA_COLUMN(uint32_t, hitIndices),
-                        SOA_COLUMN(uint32_t, hitDetIndices))
+                        SOA_COLUMN(uint32_t, id),
+                        SOA_COLUMN(uint32_t, detId))
 
   };
 

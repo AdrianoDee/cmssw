@@ -42,7 +42,7 @@
  * objects from the output of SoA CA.
  */
 
-//#define GPU_DEBUG
+#define GPU_DEBUG
 
 template <typename TrackerTraits>
 class PixelTrackProducerFromSoAAlpaka : public edm::global::EDProducer<> {
@@ -171,7 +171,7 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
   auto const &tsoa = iEvent.get(tokenTrack_);
   auto const *quality = tsoa.view().quality();
   auto const *hitOffs = tsoa.view().hitOffsets();
-  auto const *hitIdxs = tsoa.template view<TrackHitSoA>().indices();
+  auto const *hitIdxs = tsoa.template view<TrackHitSoA>().id();
   // auto const &hitIndices = tsoa.view().hitIndices();
   auto nTracks = tsoa.view().nTracks();
 
@@ -193,6 +193,7 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
   //store the index of the SoA: indToEdm[index_SoAtrack] -> index_edmTrack (if it exists)
   indToEdm.resize(sortIdxs.size(), -1);
   for (const auto &it : sortIdxs) {
+    std::cout << it << std::endl;
     auto nHits = TracksHelpers::nHits(tsoa.view(), it);
     assert(nHits >= 3);
     auto q = quality[it];
@@ -207,8 +208,9 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
     hits.resize(nHits);
     auto start = (it==0)? 0 : hitOffs[it-1];
     auto end = hitOffs[it];
-    for (int iHit = start; start < end; ++iHit)
-        hits[iHit - start] = hitmap[hitIdxs[start]];
+
+    for (auto iHit = start; iHit < end; ++iHit)
+      hits[iHit - start] = hitmap[hitIdxs[start]];
   
     // mind: this values are respect the beamspot!
     float chi2 = tsoa.view()[it].chi2();
