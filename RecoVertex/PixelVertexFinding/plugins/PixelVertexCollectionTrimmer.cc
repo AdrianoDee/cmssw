@@ -29,6 +29,7 @@ private:
   uint const maxVtx_;
   double const fractionSumPt2_;
   double const minSumPt2_;
+  const bool dumpCoordinates_;
 
   std::unique_ptr<PVClusterComparer> pvComparer_;
 };
@@ -37,7 +38,8 @@ PixelVertexCollectionTrimmer::PixelVertexCollectionTrimmer(const edm::ParameterS
     : vtxToken_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("src"))),
       maxVtx_(iConfig.getParameter<uint>("maxVtx")),
       fractionSumPt2_(iConfig.getParameter<double>("fractionSumPt2")),
-      minSumPt2_(iConfig.getParameter<double>("minSumPt2")) {
+      minSumPt2_(iConfig.getParameter<double>("minSumPt2")),
+      dumpCoordinates_(iConfig.getParameter<bool>("dumpCoordinates"))  {
   if (fractionSumPt2_ > 1)
     throw cms::Exception("PixelVertexConfiguration") << "value of \"fractionSumPt2\" is larger than 1.";
 
@@ -55,11 +57,17 @@ PixelVertexCollectionTrimmer::PixelVertexCollectionTrimmer(const edm::ParameterS
   pvComparer_ = std::make_unique<PVClusterComparer>(track_pt_min, track_pt_max, track_chi2_max, track_prob_min);
 
   produces<reco::VertexCollection>();
+
+  if(dumpCoordinates_)
+  {
+    produces<reco::Vertex::Point>();
+  }
 }
 
 void PixelVertexCollectionTrimmer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   auto vtxs_trim = std::make_unique<reco::VertexCollection>();
-
+  auto pVCoordinates = std::make_unique<reco::Vertex::Point>();
+  
   auto const& vtxs = iEvent.get(vtxToken_);
 
   if (vtxs.empty())
@@ -82,12 +90,18 @@ void PixelVertexCollectionTrimmer::produce(edm::Event& iEvent, const edm::EventS
       if (foms[idx] >= minFOM_fromFrac and foms[idx] > minSumPt2_)
         vtxs_trim->emplace_back(vtxs[idx]);
     }
-
+    auto firstPV = vtxs[0].position();
+    pVCoordinates->SetXYZ(firstPV.X(),firstPV.Y(),firstPV.Z());
     if (vtxs_trim->empty())
       edm::LogInfo("PixelVertexOutput") << "Output collection is empty.";
   }
 
   iEvent.put(std::move(vtxs_trim));
+
+  if(dumpCoordinates_)
+  {
+    iEvent.put(std::move(pVCoordinates));
+  }
 }
 
 void PixelVertexCollectionTrimmer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -96,6 +110,7 @@ void PixelVertexCollectionTrimmer::fillDescriptions(edm::ConfigurationDescriptio
   desc.add<uint>("maxVtx", 100)->setComment("max output collection size (number of accepted vertices)");
   desc.add<double>("fractionSumPt2", 0.3)->setComment("threshold on sumPt2 fraction of the leading vertex");
   desc.add<double>("minSumPt2", 0.)->setComment("min sumPt2");
+  desc.add<bool>("dumpCoordinates", false)->setComment("flag to dump PV coordinates");
   edm::ParameterSetDescription PVcomparerPSet;
   PVcomparerPSet.add<double>("track_pt_min", 1.0)->setComment("min track p_T");
   PVcomparerPSet.add<double>("track_pt_max", 10.0)->setComment("max track p_T");

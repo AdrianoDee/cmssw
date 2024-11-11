@@ -3,6 +3,7 @@
   <class name="edm::ValueMap<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >"/>
   <class name="edm::Wrapper<edm::ValueMap<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > > >"/>
   <class name="edm::Wrapper<ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<float>,ROOT::Math::DefaultCoordinateSystemTag> >"/>
+  <class name="edm::Wrapper<ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,ROOT::Math::DefaultCoordinateSystemTag> >"/>
   <class name="edm::Wrapper<std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > > >"/>
   <class name="std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >"/>
 

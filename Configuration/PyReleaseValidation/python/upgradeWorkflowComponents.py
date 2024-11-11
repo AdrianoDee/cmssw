@@ -2500,6 +2500,37 @@ upgradeWFs['JetCore'] = UpgradeWorkflow_JetCore(
     offset = 0.19002,
 )
 
+class UpgradeWorkflow_SplittingFromHLT(UpgradeWorkflow):
+    def setup_(self, step, stepName, stepDict, k, properties):
+        stepDict[stepName][k] = merge([{'--procModifiers': 'hltClusterSplitting'}, stepDict[step][k]])
+        # if step in ["Digi","HLTOnly","DigiTrigger"]:
+        #     stepDict[stepName][k] = merge([{'--customise': 'RecoLocalTracker/SubCollectionProducers/customizeSplittingFromHLT.customiseSplittingFromHLT'}, stepDict[stepName][k]])
+    def condition(self, fragment, stepList, key, hasHarvest):
+        return '2025' in key and fragment=="TTbar_14TeV"
+
+upgradeWFs['SplittingFromHLT'] = UpgradeWorkflow_SplittingFromHLT(
+    steps = [
+        'DigiTrigger',
+        'Digi',
+        'HLTOnly',
+        'RecoLocal',
+        'Reco',
+        'RecoFakeHLT',
+        'RecoGlobal',
+    ],
+    PU = [
+        'DigiTrigger',
+        'Digi',
+        'HLTOnly',
+        'RecoLocal',
+        'Reco',
+        'RecoFakeHLT',
+        'RecoGlobal',
+    ],
+    suffix = '_SplittingFromHLT',
+    offset = 0.19003,
+)
+
 #
 # Simulates Bias Rail in Phase-2 OT PS modules and X% random bad Strips
 # in PS-s and SS sensors

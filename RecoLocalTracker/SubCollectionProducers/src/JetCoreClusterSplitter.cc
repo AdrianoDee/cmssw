@@ -57,23 +57,26 @@ private:
   edm::ESGetToken<PixelClusterParameterEstimator, TkPixelCPERecord> const tCPE_;
   edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> const tTrackerTopo_;
 
-  bool verbose;
-  double ptMin_;
-  double deltaR_;
-  double chargeFracMin_;
-  float expSizeXAtLorentzAngleIncidence_;
-  float expSizeXDeltaPerTanAlpha_;
-  float expSizeYAtNormalIncidence_;
-  float tanLorentzAngle_;
-  float tanLorentzAngleBarrelLayer1_;
+  const bool verbose;
+  const double ptMin_;
+  const double deltaR_;
+  const double chargeFracMin_;
+  const float expSizeXAtLorentzAngleIncidence_;
+  const float expSizeXDeltaPerTanAlpha_;
+  const float expSizeYAtNormalIncidence_;
+  const float tanLorentzAngle_;
+  const float tanLorentzAngleBarrelLayer1_;
   edm::EDGetTokenT<edmNew::DetSetVector<SiPixelCluster>> pixelClusters_;
   edm::EDGetTokenT<reco::VertexCollection> vertices_;
   edm::EDGetTokenT<edm::View<reco::Candidate>> cores_;
-  double forceXError_;
-  double forceYError_;
-  double fractionalWidth_;
-  double chargePerUnit_;
-  double centralMIPCharge_;
+  const double forceXError_;
+  const double forceYError_;
+  const double fractionalWidth_;
+  const double chargePerUnit_;
+  const double centralMIPCharge_;
+  const bool usePVFromRaw_;
+
+  edm::EDGetTokenT<reco::Vertex::Point> hltPoint_;
 };
 
 void JetCoreClusterSplitter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -98,7 +101,9 @@ void JetCoreClusterSplitter::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<double>("expSizeYAtNormalIncidence", 1.3);
   desc.add<double>("tanLorentzAngle", 0.0);
   desc.add<double>("tanLorentzAngleBarrelLayer1", 0.0);
-
+  
+  desc.add<bool>("usePVFromRaw", false);
+  desc.add<edm::InputTag>("hltPoint", edm::InputTag("hltTrimmedPixelVertices"));
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -116,17 +121,20 @@ JetCoreClusterSplitter::JetCoreClusterSplitter(const edm::ParameterSet& iConfig)
       tanLorentzAngle_(iConfig.getParameter<double>("tanLorentzAngle")),
       tanLorentzAngleBarrelLayer1_(iConfig.getParameter<double>("tanLorentzAngleBarrelLayer1")),
       pixelClusters_(
-          consumes<edmNew::DetSetVector<SiPixelCluster>>(iConfig.getParameter<edm::InputTag>("pixelClusters"))),
-      vertices_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertices"))),
-      cores_(consumes<edm::View<reco::Candidate>>(iConfig.getParameter<edm::InputTag>("cores"))),
+          consumes(iConfig.getParameter<edm::InputTag>("pixelClusters"))),
+      vertices_(consumes(iConfig.getParameter<edm::InputTag>("vertices"))),
+      cores_(consumes(iConfig.getParameter<edm::InputTag>("cores"))),
       forceXError_(iConfig.getParameter<double>("forceXError")),
       forceYError_(iConfig.getParameter<double>("forceYError")),
       fractionalWidth_(iConfig.getParameter<double>("fractionalWidth")),
       chargePerUnit_(iConfig.getParameter<double>("chargePerUnit")),
-      centralMIPCharge_(iConfig.getParameter<double>("centralMIPCharge"))
+      centralMIPCharge_(iConfig.getParameter<double>("centralMIPCharge")),
+      usePVFromRaw_(iConfig.getParameter<bool>("usePVFromRaw"))
 
 {
   produces<edmNew::DetSetVector<SiPixelCluster>>();
+  if(usePVFromRaw_)
+    hltPoint_ = consumes(iConfig.getParameter<edm::InputTag>("hltPoint"));
 }
 
 JetCoreClusterSplitter::~JetCoreClusterSplitter() {}
@@ -141,9 +149,20 @@ void JetCoreClusterSplitter::produce(edm::Event& iEvent, const edm::EventSetup& 
   Handle<edmNew::DetSetVector<SiPixelCluster>> inputPixelClusters;
   iEvent.getByToken(pixelClusters_, inputPixelClusters);
 
-  Handle<std::vector<reco::Vertex>> vertices;
-  iEvent.getByToken(vertices_, vertices);
-  const reco::Vertex& pv = (*vertices)[0];
+  GlobalPoint ppv;
+
+  if (not usePVFromRaw_)
+  {
+    Handle<std::vector<reco::Vertex>> vertices;
+    iEvent.getByToken(vertices_, vertices);
+    const reco::Vertex& pv = (*vertices)[0];
+    ppv = GlobalPoint(pv.position().x(), pv.position().y(), pv.position().z());
+  } else {
+    auto const& hltPoint = iEvent.get(hltPoint_);
+    ppv = GlobalPoint(hltPoint.X(),hltPoint.Y(),hltPoint.Z());
+  }
+  
+  
 
   Handle<edm::View<reco::Candidate>> cores;
   iEvent.getByToken(cores_, cores);
@@ -169,7 +188,7 @@ void JetCoreClusterSplitter::produce(edm::Event& iEvent, const edm::EventSetup& 
       bool shouldBeSplit = false;
       GlobalPoint cPos =
           det->surface().toGlobal(pp->localParametersV(aCluster, (*geometry->idToDetUnit(detIt->id())))[0].first);
-      GlobalPoint ppv(pv.position().x(), pv.position().y(), pv.position().z());
+      
       GlobalVector clusterDir = cPos - ppv;
       for (unsigned int ji = 0; ji < cores->size(); ji++) {
         if ((*cores)[ji].pt() > ptMin_) {
