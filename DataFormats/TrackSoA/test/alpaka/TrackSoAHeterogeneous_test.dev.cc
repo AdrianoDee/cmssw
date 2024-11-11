@@ -35,7 +35,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           tracks_view[j].chi2() = (float)j;
           tracks_view[j].quality() = (Quality)(j % 256);
           tracks_view[j].nLayers() = j % 128;
-          tracks_view.hitIndices().off[j] = j;
+          tracks_view[j].hitOffsets() = j;
         }
       }
     };
@@ -58,7 +58,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ALPAKA_ASSERT(abs(tracks_view[j].chi2() - (float)j) < .0001);
           ALPAKA_ASSERT(tracks_view[j].quality() == (Quality)(j % 256));
           ALPAKA_ASSERT(tracks_view[j].nLayers() == j % 128);
-          ALPAKA_ASSERT(tracks_view.hitIndices().off[j] == uint32_t(j));
+          ALPAKA_ASSERT(tracks_view[j].hitOffsets() == uint32_t(j));
         }
       }
     };

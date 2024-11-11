@@ -249,6 +249,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ~CAHitNtupletGeneratorKernels() = default;
 
     TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.data(); }
+    HitContainer const* hitContainer() const { return device_hitContainer_.data(); }
 
     void prepareHits(const HitsConstView& hh, const ::reco::CALayersSoAConstView& ll, Queue& queue);
 
@@ -260,9 +261,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     static void printCounters();
 
-    const HitContainer& hitContainer() const {
-        return device_hitContainer_;
-    }
+    
 
   private:
     // params
@@ -280,7 +279,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     cms::alpakatools::device_buffer<Device, hindex_type[]> device_layerStarts_;
 
     // Tracks
-    HitContainer device_hitContainer_;
+    cms::alpakatools::device_buffer<Device, HitContainer> device_hitContainer_;
 
     HitToTupleView device_hitToTupleView_;
     cms::alpakatools::device_buffer<Device, TupleMultiplicity> device_tupleMultiplicity_;

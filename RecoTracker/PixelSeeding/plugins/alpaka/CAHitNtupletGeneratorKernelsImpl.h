@@ -1,8 +1,8 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 
-//#define GPU_DEBUG
-//#define NTUPLE_DEBUG
+#define GPU_DEBUG
+#define NTUPLE_DEBUG
 
 // C++ includes
 #include <cmath>

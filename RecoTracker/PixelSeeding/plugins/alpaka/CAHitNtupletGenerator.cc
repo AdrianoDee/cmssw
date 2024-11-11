@@ -282,7 +282,7 @@ template <typename TrackerTraits>
     kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), tracks.view(), tracks. template view<TrackHitSoA>(), queue);
 
     HelixFit fitter(bfield, m_params.fitNas4_);
-    fitter.allocate(kernels.tupleMultiplicity(), tracks.view(), &kernels.hitContainer());
+    fitter.allocate(kernels.tupleMultiplicity(), tracks.view(), kernels.hitContainer());
     if (m_params.useRiemannFit_) {
       fitter.launchRiemannKernels(
           hits_d.view(), frame.view(), hits_d.view().metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
