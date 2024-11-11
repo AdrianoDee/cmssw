@@ -16,7 +16,7 @@ class TracksHost : public PortableHostMultiCollection<reco::TrackLayout<TrackerT
 public:
   static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;  //TODO: this could be made configurable at runtime
   static constexpr int32_t H = TrackerTraits::avgHitsPerTrack;
-  TracksHost() = default;  // Needed for the dictionary; not sure if line above is needed anymore
+  TracksHost() = default;  // Needed for the dictionary;
 
   using PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >::view;
   using PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >::const_view;
@@ -39,5 +39,8 @@ namespace pixelTrack {
   using TracksHostHIonPhase1 = TracksHost<pixelTopology::HIonPhase1>;
 
 }  // namespace pixelTrack
+
+using TrackPortableCollectionHostPhase1 = PortableHostCollection2< reco::TrackLayout<pixelTopology::Phase1> , reco::TrackHitLayout<pixelTopology::Phase1> >;
+using TrackPortableCollectionHostPhase2 = PortableHostCollection2< reco::TrackLayout<pixelTopology::Phase2> , reco::TrackHitLayout<pixelTopology::Phase2> >;
 
 #endif  // DataFormats_Track_TracksHost_H

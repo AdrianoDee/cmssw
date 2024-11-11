@@ -38,6 +38,7 @@ namespace reco {
                         SOA_SCALAR(int, nTracks),
                         SOA_SCALAR(HitContainer, hitIndices),
                         SOA_SCALAR(HitContainer, detIndices))
+                        
     GENERATE_SOA_LAYOUT(HitsLayout,
                         SOA_COLUMN(uint32_t, hitOffsets),
                         SOA_COLUMN(uint32_t, hitIndices),
