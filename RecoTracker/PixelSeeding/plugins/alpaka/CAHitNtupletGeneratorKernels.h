@@ -215,6 +215,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsView = TrackingRecHitSoAView<TrackerTraits>;
     using HitsConstView = TrackingRecHitSoAConstView<TrackerTraits>;
     using TkSoAView = ::reco::TrackSoAView<TrackerTraits>;
+    using TkHitsSoAView = ::reco::TrackHitSoAView<TrackerTraits>;
 
     using HitToTuple = caStructures::template HitToTupleT<TrackerTraits>;
     using HitToTupleView = typename HitToTuple::View;
@@ -251,13 +252,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void prepareHits(const HitsConstView& hh, const ::reco::CALayersSoAConstView& ll, Queue& queue);
 
-    void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, TkSoAView& track_view, Queue& queue);
+    void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, TkSoAView& track_view, TkHitsSoAView& track_hits_view, Queue& queue);
 
     void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
 
     void buildDoublets(const HitsConstView& hh, const ::reco::CACellsSoAConstView& cc, uint32_t offsetBPIX2, Queue& queue);
 
     static void printCounters();
+
+    const HitContainer& hitContainer() const {
+        return device_hitContainer_;
+    }
 
   private:
     // params

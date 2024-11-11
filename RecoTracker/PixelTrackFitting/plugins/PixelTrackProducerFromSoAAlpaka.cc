@@ -50,6 +50,8 @@ class PixelTrackProducerFromSoAAlpaka : public edm::global::EDProducer<> {
   using TracksHelpers = TracksUtilities<TrackerTraits>;
   using HMSstorage = std::vector<uint32_t>;
   using IndToEdm = std::vector<uint32_t>;
+  using TrackHitSoA = reco::TrackSoA<TrackerTraits>::template HitsLayout<>;
+
 
 public:
   explicit PixelTrackProducerFromSoAAlpaka(const edm::ParameterSet &iConfig);
@@ -168,7 +170,9 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
 
   auto const &tsoa = iEvent.get(tokenTrack_);
   auto const *quality = tsoa.view().quality();
-  auto const &hitIndices = tsoa.view().hitIndices();
+  auto const *hitOffs = tsoa.view().hitOffsets();
+  auto const *hitIdxs = tsoa.template view<TrackHitSoA>().indices();
+  // auto const &hitIndices = tsoa.view().hitIndices();
   auto nTracks = tsoa.view().nTracks();
 
   tracks.reserve(nTracks);
@@ -201,10 +205,11 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
     ++nt;
 
     hits.resize(nHits);
-    auto b = hitIndices.begin(it);
-    for (int iHit = 0; iHit < nHits; ++iHit)
-      hits[iHit] = hitmap[*(b + iHit)];
-
+    auto start = (it==0)? 0 : hitOffs[it-1];
+    auto end = hitOffs[it];
+    for (int iHit = start; start < end; ++iHit)
+        hits[iHit - start] = hitmap[hitIdxs[start]];
+  
     // mind: this values are respect the beamspot!
     float chi2 = tsoa.view()[it].chi2();
     float phi = reco::phi(tsoa.view(), it);

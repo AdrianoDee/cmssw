@@ -36,11 +36,11 @@ namespace reco {
                         SOA_EIGEN_COLUMN(Vector5f, state),
                         SOA_EIGEN_COLUMN(Vector15f, covariance),
                         SOA_SCALAR(int, nTracks),
+                        SOA_COLUMN(uint32_t, hitOffsets),
                         SOA_SCALAR(HitContainer, hitIndices),
                         SOA_SCALAR(HitContainer, detIndices))
                         
     GENERATE_SOA_LAYOUT(HitsLayout,
-                        SOA_COLUMN(uint32_t, hitOffsets),
                         SOA_COLUMN(uint32_t, hitIndices),
                         SOA_COLUMN(uint32_t, hitDetIndices))
 
@@ -58,7 +58,7 @@ namespace reco {
   template <typename TrackerTraits>
   using TrackHitSoAView = typename reco::TrackSoA<TrackerTraits>::template HitsLayout<>::View;
   template <typename TrackerTraits>
-  using TrackHotSoAConstView = typename reco::TrackSoA<TrackerTraits>::template HitsLayout<>::ConstView;
+  using TrackHitSoAConstView = typename reco::TrackSoA<TrackerTraits>::template HitsLayout<>::ConstView;
 
   /* Implement a type trait to identify the specialisations of TrackSoAConstView<TrackerTraits>
    *

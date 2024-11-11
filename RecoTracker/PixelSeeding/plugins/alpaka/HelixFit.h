@@ -59,6 +59,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     using Tuples = typename ::reco::TrackSoA<TrackerTraits>::HitContainer;
     using OutputSoAView = ::reco::TrackSoAView<TrackerTraits>;
+    using OutputHitSoAView = ::reco::TrackHitSoAView<TrackerTraits>;
 
     using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
@@ -71,7 +72,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void launchBrokenLineKernels(const HitConstView &hv, const FrameSoAConstView &fr, uint32_t nhits, uint32_t maxNumberOfTuples, Queue &queue);
 
 
-    void allocate(TupleMultiplicity const *tupleMultiplicity, OutputSoAView &helix_fit_results);
+    void allocate(TupleMultiplicity const *tupleMultiplicity, OutputSoAView &helix_fit_results, Tuples const *__restrict__ foundNtuplets);
     void deallocate();
 
   private:

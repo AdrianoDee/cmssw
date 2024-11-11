@@ -15,6 +15,7 @@ template <typename TrackerTraits>
 struct TracksUtilities {
   using TrackSoAView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::View;
   using TrackSoAConstView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::ConstView;
+  using TrackHitSoAConstView = typename reco::TrackSoA<TrackerTraits>::template HitsLayout<>::ConstView;
   using hindex_type = typename reco::TrackSoA<TrackerTraits>::hindex_type;
 
   // state at the beam spot: { phi, tip, 1/pt, cotan(theta), zip }
@@ -65,12 +66,17 @@ struct TracksUtilities {
   }
 
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static constexpr int computeNumberOfLayers(const TrackSoAConstView &tracks,
+                                                                                 const TrackHitSoAConstView &hits,
                                                                                  int32_t i) {
-    auto pdet = tracks.detIndices().begin(i);
+    auto start = (i==0) ? 0 : tracks[i-1].hitOffsets();
+    auto end = tracks[i].hitOffsets();
+    auto pdet = hits[start].detId();//tracks.detIndices().begin(i);
     int nl = 1;
-    auto ol = pixelTopology::getLayer<TrackerTraits>(*pdet);
-    for (; pdet < tracks.detIndices().end(i); ++pdet) {
-      auto il = pixelTopology::getLayer<TrackerTraits>(*pdet);
+    auto ol = pixelTopology::getLayer<TrackerTraits>(pdet);
+    ++start;
+    for (; start < end; ++start) {
+      pdet = hits[start].detId();
+      auto il = pixelTopology::getLayer<TrackerTraits>(pdet);
       if (il != ol)
         ++nl;
       ol = il;
@@ -79,7 +85,10 @@ struct TracksUtilities {
   }
 
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static constexpr int nHits(const TrackSoAConstView &tracks, int i) {
-    return tracks.detIndices().size(i);
+
+    auto start = (i==0)? 0 : tracks[i-1].hitOffsets();
+    return tracks[i].hitOffsets() - start;
+    //return tracks[i].hitOffsets() - tracks[i].hitOffsets()  .detIndices().size(i);
   }
 };
 

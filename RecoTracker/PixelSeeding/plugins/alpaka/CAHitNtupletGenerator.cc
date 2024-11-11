@@ -263,6 +263,8 @@ template <typename TrackerTraits>
     using HelixFit = HelixFit<TrackerTraits>;
     using TrackSoA = TracksSoACollection<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
+    using TrackHitSoA = ::reco::TrackHitLayout<TrackerTraits>;
+    using HitContainer = ::reco::TrackSoA<TrackerTraits>::HitContainer;
 
     TrackSoA tracks(queue);
 
@@ -277,10 +279,10 @@ template <typename TrackerTraits>
 
     kernels.prepareHits(hits_d.view(), params_d.view(),queue);
     kernels.buildDoublets(hits_d.view(), params_d.view<::reco::CACellsSoA>(), hits_d.offsetBPIX2(), queue);
-    kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), tracks.view(), queue);
+    kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), tracks.view(), tracks. template view<TrackHitSoA>(), queue);
 
     HelixFit fitter(bfield, m_params.fitNas4_);
-    fitter.allocate(kernels.tupleMultiplicity(), tracks.view());
+    fitter.allocate(kernels.tupleMultiplicity(), tracks.view(), &kernels.hitContainer());
     if (m_params.useRiemannFit_) {
       fitter.launchRiemannKernels(
           hits_d.view(), frame.view(), hits_d.view().metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
