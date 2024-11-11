@@ -4,7 +4,11 @@
   <class name="reco::TrackLayout<pixelTopology::Phase1>"/>
   <class name="reco::TrackSoAView<pixelTopology::Phase1>"/>
 
-  <class name="PortableHostCollection<reco::TrackLayout<pixelTopology::Phase1>>"/>
+  <class name="reco::TrackSoA<pixelTopology::Phase1>::HitsLayout<>"/>
+  <class name="reco::TrackHitLayout<pixelTopology::Phase1>"/>
+  <class name="reco::TrackHitSoAView<pixelTopology::Phase1>"/>
+
+  <class name="PortableHostMultiCollection<reco::TrackLayout<pixelTopology::Phase1>, reco::TrackHitLayout<pixelTopology::Phase1>>"/>
   <class name="pixelTrack::TracksHostPhase1"/>
   <class name="edm::Wrapper<pixelTrack::TracksHostPhase1>" splitLevel="0"/>
 
@@ -13,7 +17,11 @@
   <class name="reco::TrackLayout<pixelTopology::Phase2>"/>
   <class name="reco::TrackSoAView<pixelTopology::Phase2>"/>
 
-  <class name="PortableHostCollection<reco::TrackLayout<pixelTopology::Phase2>>"/>
+  <class name="reco::TrackSoA<pixelTopology::Phase2>::HitsLayout<>"/>
+  <class name="reco::TrackHitLayout<pixelTopology::Phase2>"/>
+  <class name="reco::TrackHitSoAView<pixelTopology::Phase2>"/>
+
+  <class name="PortableHostMultiCollection<reco::TrackLayout<pixelTopology::Phase2>, reco::TrackHitLayout<pixelTopology::Phase2>>"/>
   <class name="pixelTrack::TracksHostPhase2"/>
   <class name="edm::Wrapper<pixelTrack::TracksHostPhase2>" splitLevel="0"/>
 
@@ -22,7 +30,11 @@
   <class name="reco::TrackLayout<pixelTopology::HIonPhase1>"/>
   <class name="reco::TrackSoAView<pixelTopology::HIonPhase1>"/>
 
-  <class name="PortableHostCollection<reco::TrackLayout<pixelTopology::HIonPhase1>>"/>
+  <class name="reco::TrackSoA<pixelTopology::HIonPhase1>::HitsLayout<>"/>
+  <class name="reco::TrackHitLayout<pixelTopology::HIonPhase1>"/>
+  <class name="reco::TrackHitSoAView<pixelTopology::HIonPhase1>"/>
+
+  <class name="PortableHostMultiCollection<reco::TrackLayout<pixelTopology::HIonPhase1>, reco::TrackHitLayout<pixelTopology::HIonPhase1>>"/>
   <class name="pixelTrack::TracksHostHIonPhase1"/>
   <class name="edm::Wrapper<pixelTrack::TracksHostHIonPhase1>" splitLevel="0"/>
 </lcgdict>

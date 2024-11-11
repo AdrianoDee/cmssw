@@ -18,15 +18,9 @@ template <typename TrackerTraits>
 class TracksHost : public PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> > {
 public:
   static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;  //TODO: this could be made configurable at runtime
-<<<<<<< HEAD
-
-  TracksHost(edm::Uninitialized)
-      : PortableHostCollection<reco::TrackLayout<TrackerTraits>>{edm::kUninitialized} {
-  }  // necessary for ROOT dictionaries
-=======
   static constexpr int32_t H = TrackerTraits::avgHitsPerTrack;
-  TracksHost() = default;  // Needed for the dictionary; not sure if line above is needed anymore
->>>>>>> 59ff8ef9d0b (Define new Layout for Hit in Tracks)
+
+  TracksHost() = default;
 
   using PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >::view;
   using PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >::const_view;
@@ -34,12 +28,8 @@ public:
 
   // Constructor which specifies the SoA size
   template <typename TQueue>
-<<<<<<< HEAD
-  explicit TracksHost(TQueue& queue) : PortableHostCollection<reco::TrackLayout<TrackerTraits>>(S, queue) {}
-=======
   explicit TracksHost<TrackerTraits>(TQueue& queue)
       : PortableHostMultiCollection<reco::TrackLayout<TrackerTraits>, reco::TrackHitLayout<TrackerTraits> >({{S,H*S}}, queue) {}
->>>>>>> 59ff8ef9d0b (Define new Layout for Hit in Tracks)
 
   // Constructor which specifies the DevHost
   explicit TracksHost(alpaka_common::DevHost const& host)
@@ -53,5 +43,8 @@ namespace pixelTrack {
   using TracksHostHIonPhase1 = TracksHost<pixelTopology::HIonPhase1>;
 
 }  // namespace pixelTrack
+
+using TrackPortableCollectionHostPhase1 = PortableHostCollection2< reco::TrackLayout<pixelTopology::Phase1> , reco::TrackHitLayout<pixelTopology::Phase1> >;
+using TrackPortableCollectionHostPhase2 = PortableHostCollection2< reco::TrackLayout<pixelTopology::Phase2> , reco::TrackHitLayout<pixelTopology::Phase2> >;
 
 #endif  // DataFormats_Track_TracksHost_H
