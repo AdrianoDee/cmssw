@@ -57,6 +57,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   using TkSoAView = reco::TrackSoAView<TrackerTraits>;
 
   template <typename TrackerTraits>
+  using TkHitSoAView = reco::TrackHitSoAView<TrackerTraits>;
+
+  template <typename TrackerTraits>
   using HitContainer = typename reco::TrackSoA<TrackerTraits>::HitContainer;
 
   template <typename TrackerTraits>
@@ -634,16 +637,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   TkSoAView<TrackerTraits> tracks_view,
+                                  TkHitSoAView<TrackerTraits> track_hits_view,
                                   HitContainer<TrackerTraits> const *__restrict__ foundNtuplets,
                                   HitsConstView<TrackerTraits> hh) const {
       // copy offsets
-      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
-        tracks_view.detIndices().off[idx] = foundNtuplets->off[idx];
+      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes() - 1)) {
+        // tracks_view.detIndices().off[idx] = foundNtuplets->off[idx];
+        tracks_view[idx].hitOffsets() = foundNtuplets->off[idx + 1]; // offset for track 0 is always 0
       }
       // fill hit indices
       for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->size())) {
         ALPAKA_ASSERT_ACC(foundNtuplets->content[idx] < (uint32_t)hh.metadata().size());
-        tracks_view.detIndices().content[idx] = hh[foundNtuplets->content[idx]].detectorIndex();
+        // tracks_view.detIndices().content[idx] = hh[foundNtuplets->content[idx]].detectorIndex();
+        track_hits_view[idx].id() = foundNtuplets->content[idx];
+        track_hits_view[idx].detId() = hh[foundNtuplets->content[idx]].detectorIndex();
       }
     }
   };
@@ -654,6 +661,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   TkSoAView<TrackerTraits> tracks_view,
+                                  TkHitSoAView<TrackerTraits> track_hits_view,
                                   cms::alpakatools::AtomicPairCounter *apc) const {
       // clamp the number of tracks to the capacity of the SoA
       auto ntracks = std::min<int>(apc->get().first, tracks_view.metadata().size() - 1);
@@ -662,7 +670,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         tracks_view.nTracks() = ntracks;
       for (auto idx : cms::alpakatools::uniform_elements(acc, ntracks)) {
         ALPAKA_ASSERT_ACC(TracksUtilities<TrackerTraits>::nHits(tracks_view, idx) >= 3);
-        tracks_view[idx].nLayers() = TracksUtilities<TrackerTraits>::computeNumberOfLayers(tracks_view, idx);
+        tracks_view[idx].nLayers() = TracksUtilities<TrackerTraits>::computeNumberOfLayers(tracks_view, track_hits_view, idx);
       }
     }
   };

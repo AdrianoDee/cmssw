@@ -140,6 +140,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void CAHitNtupletGeneratorKernels<TrackerTraits>::launchKernels(const HitsConstView &hh,
                                                                   uint32_t offsetBPIX2,
                                                                   TkSoAView &tracks_view,
+                                                                  TkHitsSoAView &tracks_hits_view,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
     using namespace caHitNtupletGeneratorKernels;
@@ -147,7 +148,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // zero tuples
     HitContainer::template launchZero<Acc1D>(&(this->device_hitContainer_), queue);
 
-    HitContainer::template launchZero<Acc1D>(&(tracks_view.hitIndices()), queue);
+    // HitContainer::template launchZero<Acc1D>(&(tracks_view.hitIndices()), queue);
 
     uint32_t nhits = hh.metadata().size();
 
@@ -213,7 +214,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         Kernel_find_ntuplets<TrackerTraits>{},
                         hh,
                         tracks_view,
-                        &(tracks_view.hitIndices()),
+                        &(this->device_hitContainer_),
                         this->device_theCells_.data(),
                         this->device_nCells_.data(),
                         this->device_theCellTracks_.data(),
@@ -239,18 +240,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
 
     alpaka::exec<Acc1D>(
-        queue, workDiv1D, typename HitContainer::finalizeBulk{}, this->device_hitTuple_apc_, &tracks_view.hitIndices());
+        queue, workDiv1D, typename HitContainer::finalizeBulk{}, this->device_hitTuple_apc_, &(this->device_hitContainer_));
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
 #endif
 
-    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_fillHitDetIndices<TrackerTraits>{}, tracks_view, &tracks_view.hitIndices(), hh);
+    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_fillHitDetIndices<TrackerTraits>{}, tracks_view, tracks_hits_view, &(this->device_hitContainer_), hh);
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
 #endif
-    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_fillNLayers<TrackerTraits>{}, tracks_view, this->device_hitTuple_apc_);
+    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_fillNLayers<TrackerTraits>{}, tracks_view, tracks_hits_view, this->device_hitTuple_apc_);
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
@@ -279,13 +280,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         workDiv1D,
                         Kernel_countMultiplicity<TrackerTraits>{},
                         tracks_view,
-                        &tracks_view.hitIndices(),
+                        &(this->device_hitContainer_),
                         this->device_tupleMultiplicity_.data());
     TupleMultiplicity::template launchFinalize<Acc1D>(this->device_tupleMultiplicity_.data(), queue);
 
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
     alpaka::exec<Acc1D>(
-        queue, workDiv1D, Kernel_fillMultiplicity<TrackerTraits>{}, tracks_view, &tracks_view.hitIndices(), this->device_tupleMultiplicity_.data());
+        queue, workDiv1D, Kernel_fillMultiplicity<TrackerTraits>{}, tracks_view, &(this->device_hitContainer_), this->device_tupleMultiplicity_.data());
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
 #endif
@@ -420,7 +421,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto numberOfBlocks = cms::alpakatools::divide_up_by(3 * TrackerTraits::maxNumberOfQuadruplets / 4, blockSize);
     auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
     alpaka::exec<Acc1D>(
-        queue, workDiv1D, Kernel_classifyTracks<TrackerTraits>{}, tracks_view, &tracks_view.hitIndices(), this->m_params.qualityCuts_);
+        queue, workDiv1D, Kernel_classifyTracks<TrackerTraits>{}, tracks_view, &(this->device_hitContainer_), this->m_params.qualityCuts_);
 
     if (this->m_params.lateFishbone_) {
       // apply fishbone cleaning to good tracks
@@ -456,12 +457,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           workDiv1D,
                           Kernel_countHitInTracks<TrackerTraits>{},
                           tracks_view,
-                          &tracks_view.hitIndices(),
+                          &(this->device_hitContainer_),
                           this->device_hitToTuple_.data());  //CHECK
 
       HitToTuple::template launchFinalize<Acc1D>(this->device_hitToTupleView_, queue);
       alpaka::exec<Acc1D>(
-          queue, workDiv1D, Kernel_fillHitInTracks<TrackerTraits>{}, tracks_view, &tracks_view.hitIndices(), this->device_hitToTuple_.data());
+          queue, workDiv1D, Kernel_fillHitInTracks<TrackerTraits>{}, tracks_view, &(this->device_hitContainer_), this->device_hitToTuple_.data());
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
 #endif
@@ -526,7 +527,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           workDiv1D,
                           Kernel_checkOverflows<TrackerTraits>{},
                           tracks_view,
-                          &(tracks_view.hitIndices()),
+                          &(this->device_hitContainer_),
                           this->device_tupleMultiplicity_.data(),
                           this->device_hitToTuple_.data(),
                           this->device_hitTuple_apc_,
@@ -554,7 +555,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       numberOfBlocks = cms::alpakatools::divide_up_by(3 * TrackerTraits::maxNumberOfQuadruplets / 4, blockSize);
       workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
       alpaka::exec<Acc1D>(
-          queue, workDiv1D, Kernel_doStatsForTracks<TrackerTraits>{}, tracks_view, &(tracks_view.hitIndices()), this->counters_.data());
+          queue, workDiv1D, Kernel_doStatsForTracks<TrackerTraits>{}, tracks_view, &(this->device_hitContainer_), this->counters_.data());
     }
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
@@ -573,7 +574,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             Kernel_print_found_ntuplets<TrackerTraits>{},
                             hh,
                             tracks_view,
-                            &(tracks_view.hitIndices()),
+                            &(this->device_hitContainer_),
                             this->device_hitToTuple_.data(),
                             k,
                             k + 500,
