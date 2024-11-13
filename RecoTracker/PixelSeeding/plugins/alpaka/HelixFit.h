@@ -56,10 +56,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     using HitView = TrackingRecHitSoAView<TrackerTraits>;
     using HitConstView = TrackingRecHitSoAConstView<TrackerTraits>;
-
-    using Tuples = typename ::reco::TrackSoA<TrackerTraits>::HitContainer;
-    using OutputSoAView = ::reco::TrackSoAView<TrackerTraits>;
-    using OutputHitSoAView = ::reco::TrackHitSoAView<TrackerTraits>;
+    using Tuples = caStructures::HitContainerT<TrackerTraits>;
+    using OutputSoAView = ::reco::TrackSoAView;
+    using OutputHitSoAView = ::reco::TrackHitSoAView;
 
     using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 

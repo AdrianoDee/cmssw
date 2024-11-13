@@ -214,8 +214,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     using HitsView = TrackingRecHitSoAView<TrackerTraits>;
     using HitsConstView = TrackingRecHitSoAConstView<TrackerTraits>;
-    using TkSoAView = ::reco::TrackSoAView<TrackerTraits>;
-    using TkHitsSoAView = ::reco::TrackHitSoAView<TrackerTraits>;
+    using TkSoAView = ::reco::TrackSoAView;
+    using TkHitsSoAView = ::reco::TrackHitSoAView;
 
     using HitToTuple = caStructures::template HitToTupleT<TrackerTraits>;
     using HitToTupleView = typename HitToTuple::View;

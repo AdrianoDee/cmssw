@@ -46,11 +46,11 @@
 
 template <typename TrackerTraits>
 class PixelTrackProducerFromSoAAlpaka : public edm::global::EDProducer<> {
-  using TrackSoAHost = TracksHost<TrackerTraits>;
+  using TrackSoAHost = reco::TracksHost;
   using TracksHelpers = TracksUtilities<TrackerTraits>;
   using HMSstorage = std::vector<uint32_t>;
   using IndToEdm = std::vector<uint32_t>;
-  using TrackHitSoA = reco::TrackSoA<TrackerTraits>::template HitsLayout<>;
+  using TrackHitSoA = reco::TrackHitSoA;
 
 
 public:

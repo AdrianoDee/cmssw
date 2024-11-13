@@ -72,7 +72,7 @@ namespace {
 template <typename T>
 class SiPixelCompareTracks : public DQMEDAnalyzer {
 public:
-  using PixelTrackSoA = TracksHost<T>;
+  using PixelTrackSoA = reco::TracksHost;
 
   explicit SiPixelCompareTracks(const edm::ParameterSet&);
   ~SiPixelCompareTracks() override = default;

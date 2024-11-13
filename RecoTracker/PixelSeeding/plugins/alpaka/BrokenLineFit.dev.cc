@@ -13,9 +13,8 @@
 #include "HelixFit.h"
 
 template <typename TrackerTraits>
-using Tuples = typename reco::TrackSoA<TrackerTraits>::HitContainer;
-template <typename TrackerTraits>
-using OutputSoAView = reco::TrackSoAView<TrackerTraits>;
+using Tuples = caStructures::HitContainerT<TrackerTraits>;
+using OutputSoAView = reco::TrackSoAView;
 template <typename TrackerTraits>
 using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
 
@@ -178,7 +177,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   TupleMultiplicity<TrackerTraits> const *__restrict__ tupleMultiplicity,
                                   double bField,
-                                  OutputSoAView<TrackerTraits> results_view,
+                                  OutputSoAView results_view,
                                   typename TrackerTraits::tindex_type const *__restrict__ ptkids,
                                   double *__restrict__ phits,
                                   float *__restrict__ phits_ge,
