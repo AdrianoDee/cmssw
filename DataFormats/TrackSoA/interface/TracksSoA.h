@@ -55,7 +55,7 @@ namespace reco {
     auto start = (i==0) ? 0 : tracks[i-1].hitOffsets();
     auto end = tracks[i].hitOffsets();
     auto hitId = hits[start].id();
-    int nl = 1;
+    int nl = 1; 
     auto ol = 0;
     while ( hitId >= layerStarts[ol+1] and ol < maxLayers)
       ++ol;
@@ -63,7 +63,7 @@ namespace reco {
     for (; start < end; ++start) {
       hitId = hits[start].id();
       auto il = 0;
-      while ( hitId >= layerStarts[ol+1] and ol < maxLayers)
+      while ( hitId >= layerStarts[il+1] and il < maxLayers)
         ++il;
       if (il != ol)
         ++nl;
@@ -93,6 +93,61 @@ namespace reco {
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool isTriplet(const TrackSoAConstView &tracks, int32_t i) {
     return tracks[i].nLayers() == 3;
   }
+
+  // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static int nHits(const TrackSoAConstView &tracks, int i) {
+  //   auto start = (i==0)? 0 : tracks[i-1].hitOffsets();
+  //   return tracks[i].hitOffsets() - start;
+  // }
+
+  // // state at the beam spot: { phi, tip, 1/pt, cotan(theta), zip }
+
+  // // variable of non-literal type 'MapType' 
+  // // (aka 'Map<Eigen::Matrix<float, 15, 1, 0, 15, 1>, 0, Eigen::InnerStride<Eigen::Dynamic>>') 
+  // // cannot be defined in a function before C++2b
+  // template <typename V3, typename M3, typename V2, typename M2>
+  // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyFromCircle(
+  //     TrackSoAView &tracks, V3 const &cp, M3 const &ccov, V2 const &lp, M2 const &lcov, float b, int32_t i) {
+  //   tracks[i].state() << cp.template cast<float>(), lp.template cast<float>();
+
+  //   tracks[i].state()(2) = tracks[i].state()(2) * b;
+  //   auto cov = tracks[i].covariance();
+  //   cov(0) = ccov(0, 0);
+  //   cov(1) = ccov(0, 1);
+  //   cov(2) = b * float(ccov(0, 2));
+  //   cov(4) = cov(3) = 0;
+  //   cov(5) = ccov(1, 1);
+  //   cov(6) = b * float(ccov(1, 2));
+  //   cov(8) = cov(7) = 0;
+  //   cov(9) = b * b * float(ccov(2, 2));
+  //   cov(11) = cov(10) = 0;
+  //   cov(12) = lcov(0, 0);
+  //   cov(13) = lcov(0, 1);
+  //   cov(14) = lcov(1, 1);
+  // }
+
+  // template <typename V5, typename M5>
+  // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyFromDense(TrackSoAView &tracks,
+  //                                                                         V5 const &v,
+  //                                                                         M5 const &cov,
+  //                                                                         int32_t i) {
+  //   tracks[i].state() = v.template cast<float>();
+  //   for (int j = 0, ind = 0; j < 5; ++j)
+  //     for (auto k = j; k < 5; ++k)
+  //       tracks[i].covariance()(ind++) = cov(j, k);
+  // }
+
+  // template <typename V5, typename M5>
+  // ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyToDense(const TrackSoAConstView &tracks,
+  //                                                                       V5 &v,
+  //                                                                       M5 &cov,
+  //                                                                       int32_t i) {
+  //   v = tracks[i].state().template cast<typename V5::Scalar>();
+  //   for (int j = 0, ind = 0; j < 5; ++j) {
+  //     cov(j, j) = tracks[i].covariance()(ind++);
+  //     for (auto k = j + 1; k < 5; ++k)
+  //       cov(k, j) = cov(j, k) = tracks[i].covariance()(ind++);
+  //   }
+  // }
 
 }  // namespace reco
 
