@@ -245,7 +245,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using PhiBinnerStorageType = typename PhiBinner::index_type;
     using PhiBinnerView = typename PhiBinner::View;
 
-    CAHitNtupletGeneratorKernels(Params const& params, const HitsConstView &hh, Queue& queue);
+    CAHitNtupletGeneratorKernels(Params const& params, const HitsConstView &hh, uint16_t nLayers, Queue& queue);
     ~CAHitNtupletGeneratorKernels() = default;
 
     TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.data(); }
@@ -253,7 +253,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void prepareHits(const HitsConstView& hh, const ::reco::CALayersSoAConstView& ll, Queue& queue);
 
-    void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, TkSoAView& track_view, TkHitsSoAView& track_hits_view, Queue& queue);
+    void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, uint16_t nLayers, TkSoAView& track_view, TkHitsSoAView& track_hits_view, Queue& queue);
 
     void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
 

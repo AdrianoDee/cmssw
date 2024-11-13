@@ -25,6 +25,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TrackerTraits>
   CAHitNtupletGeneratorKernels<TrackerTraits>::CAHitNtupletGeneratorKernels(Params const &params,
                                                                             const HitsConstView &hh,
+                                                                            uint16_t nLayers,
                                                                             Queue &queue)
       : m_params(params),
         //////////////////////////////////////////////////////////
@@ -39,7 +40,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         device_hitPhiHist_{cms::alpakatools::make_device_buffer<PhiBinner>(queue)},
         device_phiBinnerStorage_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, hh.metadata().size())},
-        device_layerStarts_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, TrackerTraits::numberOfLayers)}, 
+        device_layerStarts_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, nLayers)}, 
 
         device_hitContainer_{cms::alpakatools::make_device_buffer<HitContainer>(queue)},
         
@@ -143,6 +144,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TrackerTraits>
   void CAHitNtupletGeneratorKernels<TrackerTraits>::launchKernels(const HitsConstView &hh,
                                                                   uint32_t offsetBPIX2,
+                                                                  uint16_t nLayers,
                                                                   TkSoAView &tracks_view,
                                                                   TkHitsSoAView &tracks_hits_view,
                                                                   Queue &queue) {
@@ -255,7 +257,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
 #endif
-    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_fillNLayers<TrackerTraits>{}, tracks_view, tracks_hits_view, this->device_hitTuple_apc_);
+    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_fillNLayers<TrackerTraits>{}, tracks_view, tracks_hits_view, this->device_layerStarts_.data(), nLayers, this->device_hitTuple_apc_);
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);

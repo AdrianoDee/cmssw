@@ -88,10 +88,8 @@ struct TracksUtilities {
   }
 
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static int nHits(const TrackSoAConstView &tracks, int i) {
-
     auto start = (i==0)? 0 : tracks[i-1].hitOffsets();
     return tracks[i].hitOffsets() - start;
-    //return tracks[i].hitOffsets() - tracks[i].hitOffsets()  .detIndices().size(i);
   }
 };
 
