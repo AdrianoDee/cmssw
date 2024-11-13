@@ -33,7 +33,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::test {
 
     template <typename TrackerTraits>
     struct TestTrackSoA {
-      using Utils = TracksUtilities<TrackerTraits>;
 
       ALPAKA_FN_ACC void operator()(Acc1D const& acc, reco::TrackSoAView tracks) const {
         Vector5d par0;
@@ -43,10 +42,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::test {
         Matrix5d cov0 = buildCovariance(e0);
 
         for (auto i : uniform_elements(acc, tracks.metadata().size())) {
-          Utils::copyFromDense(tracks, par0, cov0, i);
+          reco::copyFromDense(tracks, par0, cov0, i);
           Vector5d par1;
           Matrix5d cov1;
-          Utils::copyToDense(tracks, par1, cov1, i);
+          reco::copyToDense(tracks, par1, cov1, i);
           Vector5d deltaV = par1 - par0;
           Matrix5d deltaM = cov1 - cov0;
           for (int j = 0; j < 5; ++j) {

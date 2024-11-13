@@ -47,7 +47,6 @@
 template <typename TrackerTraits>
 class PixelTrackProducerFromSoAAlpaka : public edm::global::EDProducer<> {
   using TrackSoAHost = reco::TracksHost;
-  using TracksHelpers = TracksUtilities<TrackerTraits>;
   using HMSstorage = std::vector<uint32_t>;
   using IndToEdm = std::vector<uint32_t>;
   using TrackHitSoA = reco::TrackHitSoA;
@@ -194,7 +193,7 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
   indToEdm.resize(sortIdxs.size(), -1);
   for (const auto &it : sortIdxs) {
     std::cout << it << std::endl;
-    auto nHits = TracksHelpers::nHits(tsoa.view(), it);
+    auto nHits = reco::nHits(tsoa.view(), it);
     assert(nHits >= 3);
     auto q = quality[it];
 
@@ -218,7 +217,7 @@ void PixelTrackProducerFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID strea
 
     riemannFit::Vector5d ipar, opar;
     riemannFit::Matrix5d icov, ocov;
-    TracksHelpers::template copyToDense<riemannFit::Vector5d, riemannFit::Matrix5d>(tsoa.view(), ipar, icov, it);
+    reco::copyToDense<riemannFit::Vector5d, riemannFit::Matrix5d>(tsoa.view(), ipar, icov, it);
     riemannFit::transformToPerigeePlane(ipar, icov, opar, ocov);
 
     LocalTrajectoryParameters lpar(opar(0), opar(1), opar(2), opar(3), opar(4), 1.);
