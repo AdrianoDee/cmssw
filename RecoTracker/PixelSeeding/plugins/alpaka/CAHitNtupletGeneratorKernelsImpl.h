@@ -668,7 +668,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       if (cms::alpakatools::once_per_grid(acc))
         tracks_view.nTracks() = ntracks;
       for (auto idx : cms::alpakatools::uniform_elements(acc, ntracks)) {
-        ALPAKA_ASSERT_ACC(TracksUtilities<TrackerTraits>::nHits(tracks_view, idx) >= 3);
+        ALPAKA_ASSERT_ACC(reco::nHits(tracks_view, idx) >= 3);
         tracks_view[idx].nLayers() = reco::nLayers(tracks_view, track_hits_view, maxLayers, layerStarts, idx);
       }
     }

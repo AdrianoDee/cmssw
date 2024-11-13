@@ -10,89 +10,6 @@
 #include "DataFormats/TrackSoA/interface/TracksSoA.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
-// Methods that operate on View and ConstView of the TrackSoA, and cannot be class methods.
-template <typename TrackerTraits>
-struct TracksUtilities {
-  using TrackSoAView = reco::TrackSoAView;
-  using TrackSoAConstView = reco::TrackSoAConstView;
-  using TrackHitSoAConstView = reco::TrackHitSoAConstView;
-
-  // state at the beam spot: { phi, tip, 1/pt, cotan(theta), zip }
-
-  // variable of non-literal type 'MapType' 
-  // (aka 'Map<Eigen::Matrix<float, 15, 1, 0, 15, 1>, 0, Eigen::InnerStride<Eigen::Dynamic>>') 
-  // cannot be defined in a function before C++2b
-  template <typename V3, typename M3, typename V2, typename M2>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyFromCircle(
-      TrackSoAView &tracks, V3 const &cp, M3 const &ccov, V2 const &lp, M2 const &lcov, float b, int32_t i) {
-    tracks[i].state() << cp.template cast<float>(), lp.template cast<float>();
-
-    tracks[i].state()(2) = tracks[i].state()(2) * b;
-    auto cov = tracks[i].covariance();
-    cov(0) = ccov(0, 0);
-    cov(1) = ccov(0, 1);
-    cov(2) = b * float(ccov(0, 2));
-    cov(4) = cov(3) = 0;
-    cov(5) = ccov(1, 1);
-    cov(6) = b * float(ccov(1, 2));
-    cov(8) = cov(7) = 0;
-    cov(9) = b * b * float(ccov(2, 2));
-    cov(11) = cov(10) = 0;
-    cov(12) = lcov(0, 0);
-    cov(13) = lcov(0, 1);
-    cov(14) = lcov(1, 1);
-  }
-
-  template <typename V5, typename M5>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyFromDense(TrackSoAView &tracks,
-                                                                          V5 const &v,
-                                                                          M5 const &cov,
-                                                                          int32_t i) {
-    tracks[i].state() = v.template cast<float>();
-    for (int j = 0, ind = 0; j < 5; ++j)
-      for (auto k = j; k < 5; ++k)
-        tracks[i].covariance()(ind++) = cov(j, k);
-  }
-
-  template <typename V5, typename M5>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyToDense(const TrackSoAConstView &tracks,
-                                                                        V5 &v,
-                                                                        M5 &cov,
-                                                                        int32_t i) {
-    v = tracks[i].state().template cast<typename V5::Scalar>();
-    for (int j = 0, ind = 0; j < 5; ++j) {
-      cov(j, j) = tracks[i].covariance()(ind++);
-      for (auto k = j + 1; k < 5; ++k)
-        cov(k, j) = cov(j, k) = tracks[i].covariance()(ind++);
-    }
-  }
-
-  // move to use the layer gaps defined in CAParams
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static int computeNumberOfLayers(const TrackSoAConstView &tracks,
-                                                                                 const TrackHitSoAConstView &hits,
-                                                                                 int32_t i) {
-    auto start = (i==0) ? 0 : tracks[i-1].hitOffsets();
-    auto end = tracks[i].hitOffsets();
-    auto pdet = hits[start].detId();//tracks.detIndices().begin(i);
-    int nl = 1;
-    auto ol = pixelTopology::getLayer<TrackerTraits>(pdet);
-    ++start;
-    for (; start < end; ++start) {
-      pdet = hits[start].detId();
-      auto il = pixelTopology::getLayer<TrackerTraits>(pdet);
-      if (il != ol)
-        ++nl;
-      ol = il;
-    }
-    return nl;
-  }
-
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static int nHits(const TrackSoAConstView &tracks, int i) {
-    auto start = (i==0)? 0 : tracks[i-1].hitOffsets();
-    return tracks[i].hitOffsets() - start;
-  }
-};
-
 namespace pixelTrack {
 
   template <typename TrackerTraits, typename Enable = void>
@@ -180,9 +97,5 @@ namespace pixelTrack {
   };
 
 }  // namespace pixelTrack
-
-// TODO: Should those be placed in the ALPAKA_ACCELERATOR_NAMESPACE
-template struct TracksUtilities<pixelTopology::Phase1>;
-template struct TracksUtilities<pixelTopology::Phase2>;
 
 #endif  // DataFormats_TrackSoA_interface_alpaka_TrackUtilities_h

@@ -211,7 +211,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         brokenline::lineFit(acc, hits_ge, fast_fit, bField, data, line);
         brokenline::circleFit(acc, hits, hits_ge, fast_fit, bField, data, circle);
 
-        TracksUtilities<TrackerTraits>::copyFromCircle(
+        reco::copyFromCircle(
             results_view, circle.par, circle.cov, line.par, line.cov, 1.f / float(bField), tkid);
         results_view[tkid].pt() = float(bField) / float(std::abs(circle.par(2)));
         results_view[tkid].eta() = alpaka::math::asinh(acc, line.par(0));

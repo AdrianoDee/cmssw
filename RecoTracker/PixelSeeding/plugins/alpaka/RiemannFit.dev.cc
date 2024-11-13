@@ -173,7 +173,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         riemannFit::fromCircleToPerigee(acc, circle_fit[local_idx]);
 
-        TracksUtilities<TrackerTraits>::copyFromCircle(results_view,
+        reco::copyFromCircle(results_view,
                                                        circle_fit[local_idx].par,
                                                        circle_fit[local_idx].cov,
                                                        line_fit.par,
