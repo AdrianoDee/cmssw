@@ -24,11 +24,12 @@
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
+#include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
 
 template <typename T>
 class SiPixelMonitorTrackSoAAlpaka : public DQMEDAnalyzer {
 public:
-  using PixelTrackHeterogeneous = TracksHost<T>;
+  using PixelTrackHeterogeneous = reco::TracksHost;
   explicit SiPixelMonitorTrackSoAAlpaka(const edm::ParameterSet&);
   ~SiPixelMonitorTrackSoAAlpaka() override = default;
   void bookHistograms(DQMStore::IBooker& ibooker, edm::Run const& iRun, edm::EventSetup const& iSetup) override;
@@ -77,6 +78,7 @@ SiPixelMonitorTrackSoAAlpaka<T>::SiPixelMonitorTrackSoAAlpaka(const edm::Paramet
 //
 template <typename T>
 void SiPixelMonitorTrackSoAAlpaka<T>::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  using helper = TracksUtilities<T>;
   const auto& tsoaHandle = iEvent.getHandle(tokenSoATrack_);
   if (!tsoaHandle.isValid()) {
     edm::LogWarning("SiPixelMonitorTrackSoAAlpaka") << "No Track SoA found \n returning!" << std::endl;
@@ -90,7 +92,7 @@ void SiPixelMonitorTrackSoAAlpaka<T>::analyze(const edm::Event& iEvent, const ed
   int32_t nLooseAndAboveTracks = 0;
 
   for (int32_t it = 0; it < maxTracks; ++it) {
-    auto nHits = tsoa.view().detIndices().size(it);
+    auto nHits = helper::nHits(tsoa.const_view(), it);
     auto nLayers = tsoa.view()[it].nLayers();
     if (nHits == 0)
       break;  // this is a guard

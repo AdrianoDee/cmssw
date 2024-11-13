@@ -29,7 +29,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     class LoadTracks {
     public:
       ALPAKA_FN_ACC void operator()(Acc1D const& acc,
-                                    reco::TrackSoAConstView<TrackerTraits> tracks_view,
+                                    ::reco::TrackSoAConstView tracks_view,
                                     VtxSoAView data,
                                     TrkSoAView trkdata,
                                     WsSoAView ws,
@@ -127,7 +127,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     template <typename TrackerTraits>
     ZVertexSoACollection Producer<TrackerTraits>::makeAsync(Queue& queue,
-                                                            reco::TrackSoAConstView<TrackerTraits> const& tracks_view,
+                                                            ::reco::TrackSoAConstView const& tracks_view,
                                                             int maxVertices,
                                                             float ptMin,
                                                             float ptMax) const {

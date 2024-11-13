@@ -13,15 +13,17 @@
 // Methods that operate on View and ConstView of the TrackSoA, and cannot be class methods.
 template <typename TrackerTraits>
 struct TracksUtilities {
-  using TrackSoAView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::View;
-  using TrackSoAConstView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::ConstView;
-  using TrackHitSoAConstView = typename reco::TrackSoA<TrackerTraits>::template HitsLayout<>::ConstView;
-  using hindex_type = typename reco::TrackSoA<TrackerTraits>::hindex_type;
+  using TrackSoAView = reco::TrackSoAView;
+  using TrackSoAConstView = reco::TrackSoAConstView;
+  using TrackHitSoAConstView = reco::TrackHitSoAConstView;
 
   // state at the beam spot: { phi, tip, 1/pt, cotan(theta), zip }
 
+  // variable of non-literal type 'MapType' 
+  // (aka 'Map<Eigen::Matrix<float, 15, 1, 0, 15, 1>, 0, Eigen::InnerStride<Eigen::Dynamic>>') 
+  // cannot be defined in a function before C++2b
   template <typename V3, typename M3, typename V2, typename M2>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static constexpr void copyFromCircle(
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyFromCircle(
       TrackSoAView &tracks, V3 const &cp, M3 const &ccov, V2 const &lp, M2 const &lcov, float b, int32_t i) {
     tracks[i].state() << cp.template cast<float>(), lp.template cast<float>();
 
@@ -42,7 +44,7 @@ struct TracksUtilities {
   }
 
   template <typename V5, typename M5>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static constexpr void copyFromDense(TrackSoAView &tracks,
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyFromDense(TrackSoAView &tracks,
                                                                           V5 const &v,
                                                                           M5 const &cov,
                                                                           int32_t i) {
@@ -53,7 +55,7 @@ struct TracksUtilities {
   }
 
   template <typename V5, typename M5>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static constexpr void copyToDense(const TrackSoAConstView &tracks,
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void copyToDense(const TrackSoAConstView &tracks,
                                                                         V5 &v,
                                                                         M5 &cov,
                                                                         int32_t i) {
@@ -65,7 +67,8 @@ struct TracksUtilities {
     }
   }
 
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static constexpr int computeNumberOfLayers(const TrackSoAConstView &tracks,
+  // move to use the layer gaps defined in CAParams
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static int computeNumberOfLayers(const TrackSoAConstView &tracks,
                                                                                  const TrackHitSoAConstView &hits,
                                                                                  int32_t i) {
     auto start = (i==0) ? 0 : tracks[i-1].hitOffsets();
@@ -84,7 +87,7 @@ struct TracksUtilities {
     return nl;
   }
 
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static constexpr int nHits(const TrackSoAConstView &tracks, int i) {
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static int nHits(const TrackSoAConstView &tracks, int i) {
 
     auto start = (i==0)? 0 : tracks[i-1].hitOffsets();
     return tracks[i].hitOffsets() - start;
@@ -99,8 +102,8 @@ namespace pixelTrack {
 
   template <typename TrackerTraits>
   struct QualityCutsT<TrackerTraits, pixelTopology::isPhase1Topology<TrackerTraits>> {
-    using TrackSoAView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::View;
-    using TrackSoAConstView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::ConstView;
+    using TrackSoAView = reco::TrackSoAView;
+    using TrackSoAConstView = reco::TrackSoAConstView;
     float chi2Coeff[4];
     float chi2MaxPt;  // GeV
     float chi2Scale;
@@ -161,8 +164,8 @@ namespace pixelTrack {
 
   template <typename TrackerTraits>
   struct QualityCutsT<TrackerTraits, pixelTopology::isPhase2Topology<TrackerTraits>> {
-    using TrackSoAView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::View;
-    using TrackSoAConstView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::ConstView;
+    using TrackSoAView = reco::TrackSoAView;
+    using TrackSoAConstView = reco::TrackSoAConstView;
 
     float maxChi2;
     float minPt;

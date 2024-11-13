@@ -35,7 +35,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::test {
     struct TestTrackSoA {
       using Utils = TracksUtilities<TrackerTraits>;
 
-      ALPAKA_FN_ACC void operator()(Acc1D const& acc, reco::TrackSoAView<TrackerTraits> tracks) const {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc, reco::TrackSoAView tracks) const {
         Vector5d par0;
         par0 << 0.2, 0.1, 3.5, 0.8, 0.1;
         Vector5d e0;
@@ -64,12 +64,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::test {
   }  // namespace
 
   template <typename TrackerTraits>
-  void testTrackSoA(Queue& queue, reco::TrackSoAView<TrackerTraits>& tracks) {
+  void testTrackSoA(Queue& queue, ::reco::TrackSoAView& tracks) {
     auto grid = make_workdiv<Acc1D>(1, 64);
     alpaka::exec<Acc1D>(queue, grid, TestTrackSoA<TrackerTraits>{}, tracks);
   }
 
-  template void testTrackSoA<pixelTopology::Phase1>(Queue& queue, reco::TrackSoAView<pixelTopology::Phase1>& tracks);
-  template void testTrackSoA<pixelTopology::Phase2>(Queue& queue, reco::TrackSoAView<pixelTopology::Phase2>& tracks);
+  template void testTrackSoA<pixelTopology::Phase1>(Queue& queue, reco::TrackSoAView& tracks);
+  template void testTrackSoA<pixelTopology::Phase2>(Queue& queue, reco::TrackSoAView& tracks);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::test

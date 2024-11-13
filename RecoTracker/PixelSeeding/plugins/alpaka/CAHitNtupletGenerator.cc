@@ -258,15 +258,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
 template <typename TrackerTraits>
-  TracksSoACollection<TrackerTraits> CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
+  reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
       HitsOnDevice const& hits_d, FrameOnDevice const& frame, CAParamsOnDevice const& params_d, float bfield, Queue& queue) const {
     using HelixFit = HelixFit<TrackerTraits>;
-    using TrackSoA = TracksSoACollection<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
-    using TrackHitSoA = ::reco::TrackHitLayout<TrackerTraits>;
-    using HitContainer = ::reco::TrackSoA<TrackerTraits>::HitContainer;
+    using TrackHitSoA = ::reco::TrackHitSoA;
+    using HitContainer = caStructures::HitContainerT<TrackerTraits>;
+    static constexpr int32_t S = TrackerTraits::maxNumberOfTuples; 
+    static constexpr int32_t H = TrackerTraits::avgHitsPerTrack;
 
-    TrackSoA tracks(queue);
+    reco::TracksSoACollection tracks({{S,H*S}},queue);
 
     // Don't bother if less than 2 this
     if (hits_d.view().metadata().size() < 2) {

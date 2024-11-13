@@ -12,21 +12,13 @@
 
 namespace reco {
 
-  template <typename TrackerTraits>
-  struct TrackSoA {
-    static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
-    static constexpr int32_t H = TrackerTraits::avgHitsPerTrack;
     // Aliases in order to not confuse the GENERATE_SOA_LAYOUT
     // macro with weird colons and angled brackets.
     using Vector5f = Eigen::Matrix<float, 5, 1>;
     using Vector15f = Eigen::Matrix<float, 15, 1>;
     using Quality = pixelTrack::Quality;
 
-    using hindex_type = uint32_t;
-
-    using HitContainer = cms::alpakatools::OneToManyAssocSequential<hindex_type, S + 1, H * S>;
-
-    GENERATE_SOA_LAYOUT(Layout,
+    GENERATE_SOA_LAYOUT(TrackLayout,
                         SOA_COLUMN(Quality, quality),
                         SOA_COLUMN(float, chi2),
                         SOA_COLUMN(int8_t, nLayers),
@@ -36,77 +28,43 @@ namespace reco {
                         SOA_EIGEN_COLUMN(Vector5f, state),
                         SOA_EIGEN_COLUMN(Vector15f, covariance),
                         SOA_SCALAR(int, nTracks),
-                        SOA_COLUMN(uint32_t, hitOffsets),
-                        SOA_SCALAR(HitContainer, hitIndices),
-                        SOA_SCALAR(HitContainer, detIndices))
+                        SOA_COLUMN(uint32_t, hitOffsets))
                         
-    GENERATE_SOA_LAYOUT(HitsLayout,
+    GENERATE_SOA_LAYOUT(TrackHitsLayout,
                         SOA_COLUMN(uint32_t, id),
                         SOA_COLUMN(uint32_t, detId))
+  
+  using TrackSoA = TrackLayout<>;
+  using TrackSoAView = TrackSoA::View;
+  using TrackSoAConstView = TrackSoA::ConstView;
 
-  };
+  using TrackHitSoA = TrackHitsLayout<>;
+  using TrackHitSoAView = TrackHitSoA::View;
+  using TrackHitSoAConstView = TrackHitSoA::ConstView;
 
-  template <typename TrackerTraits>
-  using TrackLayout = typename reco::TrackSoA<TrackerTraits>::template Layout<>;
-  template <typename TrackerTraits>
-  using TrackSoAView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::View;
-  template <typename TrackerTraits>
-  using TrackSoAConstView = typename reco::TrackSoA<TrackerTraits>::template Layout<>::ConstView;
+  // If constexpr we get this:
+  // note: non-literal type 'reco::TrackLayout<128, false>::ConstViewTemplateFreeParams<128, false, true, true>::const_element' 
+  // cannot be used in a constant expression
 
-  template <typename TrackerTraits>
-  using TrackHitLayout = typename reco::TrackSoA<TrackerTraits>::template HitsLayout<>;
-  template <typename TrackerTraits>
-  using TrackHitSoAView = typename reco::TrackSoA<TrackerTraits>::template HitsLayout<>::View;
-  template <typename TrackerTraits>
-  using TrackHitSoAConstView = typename reco::TrackSoA<TrackerTraits>::template HitsLayout<>::ConstView;
-
-  /* Implement a type trait to identify the specialisations of TrackSoAConstView<TrackerTraits>
-   *
-   * This is done explicitly for all possible pixel topologies, because we did not find a way
-   * to use template deduction with a partial specialisation.
-   */
-  template <typename T>
-  struct IsTrackSoAConstView : std::false_type {};
-  template <>
-  struct IsTrackSoAConstView<TrackSoAConstView<pixelTopology::Phase1>> : std::true_type {};
-  template <>
-  struct IsTrackSoAConstView<TrackSoAView<pixelTopology::Phase1>> : std::true_type {};
-  template <>
-  struct IsTrackSoAConstView<TrackSoAConstView<pixelTopology::Phase2>> : std::true_type {};
-  template <>
-  struct IsTrackSoAConstView<TrackSoAView<pixelTopology::Phase2>> : std::true_type {};
-  template <>
-  struct IsTrackSoAConstView<TrackSoAConstView<pixelTopology::HIonPhase1>> : std::true_type {};
-  template <>
-  struct IsTrackSoAConstView<TrackSoAView<pixelTopology::HIonPhase1>> : std::true_type {};
-
-  template <typename T>
-  constexpr bool isTrackSoAConstView = IsTrackSoAConstView<T>::value;
-
-  template <typename ConstView, typename = std::enable_if_t<isTrackSoAConstView<ConstView>>>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr float charge(ConstView const& tracks, int32_t i) {
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float charge(const TrackSoAConstView &tracks, int32_t i) {
     //was: std::copysign(1.f, tracks[i].state()(2)). Will be constexpr with C++23
     float v = tracks[i].state()(2);
     return float((0.0f < v) - (v < 0.0f));
   }
 
-  template <typename ConstView, typename = std::enable_if_t<isTrackSoAConstView<ConstView>>>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr float phi(ConstView const& tracks, int32_t i) {
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float phi(const TrackSoAConstView &tracks, int32_t i) {
     return tracks[i].state()(0);
   }
 
-  template <typename ConstView, typename = std::enable_if_t<isTrackSoAConstView<ConstView>>>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr float tip(ConstView const& tracks, int32_t i) {
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float tip(const TrackSoAConstView &tracks, int32_t i) {
     return tracks[i].state()(1);
   }
 
-  template <typename ConstView, typename = std::enable_if_t<isTrackSoAConstView<ConstView>>>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr float zip(ConstView const& tracks, int32_t i) {
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float zip(const TrackSoAConstView &tracks, int32_t i) {
     return tracks[i].state()(4);
   }
 
-  template <typename ConstView, typename = std::enable_if_t<isTrackSoAConstView<ConstView>>>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr bool isTriplet(ConstView const& tracks, int32_t i) {
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool isTriplet(const TrackSoAConstView &tracks, int32_t i) {
     return tracks[i].nLayers() == 3;
   }
 
