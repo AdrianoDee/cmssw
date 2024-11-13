@@ -276,11 +276,11 @@ template <typename TrackerTraits>
       alpaka::memset(queue, ntracks_d, 0);
       return tracks;
     }
-    GPUKernels kernels(m_params, hits_d.view(), queue);
+    GPUKernels kernels(m_params, hits_d.view(), params_d.view().metadata().size(), queue);
 
     kernels.prepareHits(hits_d.view(), params_d.view(),queue);
     kernels.buildDoublets(hits_d.view(), params_d.view<::reco::CACellsSoA>(), hits_d.offsetBPIX2(), queue);
-    kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), tracks.view(), tracks. template view<TrackHitSoA>(), queue);
+    kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), params_d.view().metadata().size(), tracks.view(), tracks. template view<TrackHitSoA>(), queue);
 
     HelixFit fitter(bfield, m_params.fitNas4_);
     fitter.allocate(kernels.tupleMultiplicity(), tracks.view(), kernels.hitContainer());

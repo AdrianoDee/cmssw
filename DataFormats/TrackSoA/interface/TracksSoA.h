@@ -45,6 +45,32 @@ namespace reco {
   // If constexpr we get this:
   // note: non-literal type 'reco::TrackLayout<128, false>::ConstViewTemplateFreeParams<128, false, true, true>::const_element' 
   // cannot be used in a constant expression
+  
+  // move to use the layer gaps defined in CAParams
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static int nLayers(const TrackSoAConstView &tracks,
+                                                                                 const TrackHitSoAConstView &hits,
+                                                                                 uint16_t maxLayers,
+                                                                                 uint32_t const* __restrict__ layerStarts,
+                                                                                 int32_t i) {
+    auto start = (i==0) ? 0 : tracks[i-1].hitOffsets();
+    auto end = tracks[i].hitOffsets();
+    auto hitId = hits[start].id();
+    int nl = 1;
+    auto ol = 0;
+    while ( hitId >= layerStarts[ol+1] and ol < maxLayers)
+      ++ol;
+    ++start;
+    for (; start < end; ++start) {
+      hitId = hits[start].id();
+      auto il = 0;
+      while ( hitId >= layerStarts[ol+1] and ol < maxLayers)
+        ++il;
+      if (il != ol)
+        ++nl;
+      ol = il;
+    }
+    return nl;
+  }
 
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float charge(const TrackSoAConstView &tracks, int32_t i) {
     //was: std::copysign(1.f, tracks[i].state()(2)). Will be constexpr with C++23
