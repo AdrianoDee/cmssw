@@ -212,8 +212,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using CAParams = caHitNtupletGenerator::CAParamsT<TrackerTraits>;
     using Counters = caHitNtupletGenerator::Counters;
 
-    using HitsView = TrackingRecHitSoAView<TrackerTraits>;
-    using HitsConstView = TrackingRecHitSoAConstView<TrackerTraits>;
+    using HitsView = ::reco::TrackingRecHitView;
+    using HitsConstView = ::reco::TrackingRecHitConstView;
     using TkSoAView = ::reco::TrackSoAView;
     using TkHitsSoAView = ::reco::TrackHitSoAView;
 

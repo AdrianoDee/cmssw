@@ -15,11 +15,13 @@ using namespace alpaka;
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   using namespace cms::alpakatools;
+  using namespace ALPAKA_ACCELERATOR_NAMESPACE::reco;
   namespace testTrackingRecHitSoA {
 
-    template <typename TrackerTraits>
     struct TestFillKernel {
-      ALPAKA_FN_ACC void operator()(Acc1D const& acc, TrackingRecHitSoAView<TrackerTraits> soa) const {
+
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc, TrackingRecHitSoAView soa) const {
+
         const uint32_t i(alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0u]);
         const uint32_t j(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u]);
 
@@ -33,9 +35,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
     };
 
-    template <typename TrackerTraits>
     struct ShowKernel {
-      ALPAKA_FN_ACC void operator()(Acc1D const& acc, TrackingRecHitSoAConstView<TrackerTraits> soa) const {
+
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc, TrackingRecHitSoAConstView soa) const {
+
         if (cms::alpakatools::once_per_grid(acc)) {
           printf("offsetBPIX = %d\n", soa.offsetBPIX2());
           printf("nHits = %d\n", soa.metadata().size());
@@ -50,17 +53,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
     };
 
-    template <typename TrackerTraits>
-    void runKernels(TrackingRecHitSoAView<TrackerTraits>& view, Queue& queue) {
+    void runKernels(::reco::TrackingRecHitView& view, Queue& queue) {
       uint32_t items = 64;
       uint32_t groups = divide_up_by(view.metadata().size(), items);
       auto workDiv = make_workdiv<Acc1D>(groups, items);
-      alpaka::exec<Acc1D>(queue, workDiv, TestFillKernel<TrackerTraits>{}, view);
-      alpaka::exec<Acc1D>(queue, workDiv, ShowKernel<TrackerTraits>{}, view);
+      alpaka::exec<Acc1D>(queue, workDiv, TestFillKernel{}, view);
+      alpaka::exec<Acc1D>(queue, workDiv, ShowKernel{}, view);
     }
-
-    template void runKernels<pixelTopology::Phase1>(TrackingRecHitSoAView<pixelTopology::Phase1>& view, Queue& queue);
-    template void runKernels<pixelTopology::Phase2>(TrackingRecHitSoAView<pixelTopology::Phase2>& view, Queue& queue);
 
   }  // namespace testTrackingRecHitSoA
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

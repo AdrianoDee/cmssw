@@ -21,10 +21,9 @@
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
 
-template <typename TrackerTraits>
 class SiPixelRecHitFromSoAAlpaka : public edm::global::EDProducer<> {
-  using HitModuleStartArray = typename TrackingRecHitSoA<TrackerTraits>::HitModuleStartArray;
-  using hindex_type = typename TrackerTraits::hindex_type;
+  using HitModuleStartArray = reco::HitModuleStartArray;
+  using hindex_type = uint32_t;//typename TrackerTraits::hindex_type;
   using HMSstorage = typename std::vector<hindex_type>;
 
 public:
@@ -34,7 +33,7 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
   // Data has been implicitly copied from Device to Host by the framework
-  using HitsOnHost = TrackingRecHitHost<TrackerTraits>;
+  using HitsOnHost = ::reco::TrackingRecHitHost;
 
 private:
   void produce(edm::StreamID streamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
@@ -46,24 +45,24 @@ private:
   const edm::EDPutTokenT<HMSstorage> hostPutToken_;
 };
 
-template <typename TrackerTraits>
-SiPixelRecHitFromSoAAlpaka<TrackerTraits>::SiPixelRecHitFromSoAAlpaka(const edm::ParameterSet& iConfig)
+
+SiPixelRecHitFromSoAAlpaka::SiPixelRecHitFromSoAAlpaka(const edm::ParameterSet& iConfig)
     : geomToken_(esConsumes()),
       hitsToken_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
       clusterToken_(consumes(iConfig.getParameter<edm::InputTag>("src"))),
       rechitsPutToken_(produces()),
       hostPutToken_(produces()) {}
 
-template <typename TrackerTraits>
-void SiPixelRecHitFromSoAAlpaka<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+
+void SiPixelRecHitFromSoAAlpaka::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingAlpaka"));
   desc.add<edm::InputTag>("src", edm::InputTag("siPixelClustersPreSplitting"));
   descriptions.addWithDefaultLabel(desc);
 }
 
-template <typename TrackerTraits>
-void SiPixelRecHitFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID streamID,
+
+void SiPixelRecHitFromSoAAlpaka::produce(edm::StreamID streamID,
                                                         edm::Event& iEvent,
                                                         const edm::EventSetup& iSetup) const {
   auto const& hits = iEvent.get(hitsToken_);
@@ -71,7 +70,7 @@ void SiPixelRecHitFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID streamID,
   LogDebug("SiPixelRecHitFromSoAAlpaka") << "converting " << nHits << " Hits";
 
   // allocate a buffer for the indices of the clusters
-  constexpr auto nMaxModules = TrackerTraits::numberOfModules;
+  constexpr auto nMaxModules = phase1PixelTopology::numberOfModules;
 
   SiPixelRecHitCollection output;
   output.reserve(nMaxModules, nHits);
@@ -179,11 +178,13 @@ void SiPixelRecHitFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID streamID,
   iEvent.emplace(rechitsPutToken_, std::move(output));
 }
 
-using SiPixelRecHitFromSoAAlpakaPhase1 = SiPixelRecHitFromSoAAlpaka<pixelTopology::Phase1>;
-using SiPixelRecHitFromSoAAlpakaPhase2 = SiPixelRecHitFromSoAAlpaka<pixelTopology::Phase2>;
-using SiPixelRecHitFromSoAAlpakaHIonPhase1 = SiPixelRecHitFromSoAAlpaka<pixelTopology::HIonPhase1>;
+using SiPixelRecHitFromSoAAlpakaPhase1 = SiPixelRecHitFromSoAAlpaka;
+using SiPixelRecHitFromSoAAlpakaPhase2 = SiPixelRecHitFromSoAAlpaka;
+using SiPixelRecHitFromSoAAlpakaHIonPhase1 = SiPixelRecHitFromSoAAlpaka;
 
 #include "FWCore/Framework/interface/MakerMacros.h"
+DEFINE_FWK_MODULE(SiPixelRecHitFromSoAAlpaka);
+// Keeping these to ease the migration of the HLT menu
 DEFINE_FWK_MODULE(SiPixelRecHitFromSoAAlpakaPhase1);
 DEFINE_FWK_MODULE(SiPixelRecHitFromSoAAlpakaPhase2);
 DEFINE_FWK_MODULE(SiPixelRecHitFromSoAAlpakaHIonPhase1);
