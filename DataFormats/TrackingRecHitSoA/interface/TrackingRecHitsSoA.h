@@ -30,7 +30,7 @@ namespace reco {
                       SOA_SCALAR(HitModuleStartArray, hitsModuleStart));
 
   GENERATE_SOA_LAYOUT(HitModulesLayout,
-               SOA_COLUMN(uint32_t, hitsModuleStart)
+               SOA_COLUMN(uint32_t, moduleStart)
   );
                
   #ifdef CA_TRIPLETS_HOLE

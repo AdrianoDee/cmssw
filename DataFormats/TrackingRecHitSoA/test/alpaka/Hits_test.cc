@@ -63,7 +63,7 @@ int main() {
       auto constYGV_v = cms::alpakatools::make_host_view<float>(constXV.data(),nHits);
       alpaka::memcpy(queue, hitYD, constYGV_v);
 
-      testTrackingRecHitSoA::runKernels(tkhit.view(), queue);
+      testTrackingRecHitSoA::runKernels(tkhit.view(), tkhit.view<::reco::HitModuleSoA>(), queue);
       tkhit.updateFromDevice(queue);
 
       

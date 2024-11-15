@@ -66,16 +66,17 @@ void SiPixelRecHitFromSoAAlpaka::produce(edm::StreamID streamID,
                                                         edm::Event& iEvent,
                                                         const edm::EventSetup& iSetup) const {
   auto const& hits = iEvent.get(hitsToken_);
-  auto nHits = hits.view().metadata().size();
-  LogDebug("SiPixelRecHitFromSoAAlpaka") << "converting " << nHits << " Hits";
+  auto hitsView = hits.view();
+  auto modulesView = hits.view<::reco::HitModuleSoA>();
+  auto nHits = hitsView.metadata().size();
+  auto nModules = modulesView.metadata().size();
+  LogDebug("SiPixelRecHitFromSoAAlpaka") << "converting " << nHits << " hits in max " << nModules << " modules";
 
   // allocate a buffer for the indices of the clusters
-  constexpr auto nMaxModules = phase1PixelTopology::numberOfModules;
-
   SiPixelRecHitCollection output;
-  output.reserve(nMaxModules, nHits);
+  output.reserve(nModules, nHits);
 
-  HMSstorage hmsp(nMaxModules + 1);
+  HMSstorage hmsp(nModules + 1);
 
   if (0 == nHits) {
     hmsp.clear();
@@ -86,14 +87,14 @@ void SiPixelRecHitFromSoAAlpaka::produce(edm::StreamID streamID,
 
   // fill content of HMSstorage product, and put it into the Event
   for (unsigned int idx = 0; idx < hmsp.size(); ++idx) {
-    hmsp[idx] = hits.view().hitsModuleStart()[idx];
+    hmsp[idx] = modulesView.moduleStart()[idx];
   }
   iEvent.emplace(hostPutToken_, std::move(hmsp));
 
-  auto xl = hits.view().xLocal();
-  auto yl = hits.view().yLocal();
-  auto xe = hits.view().xerrLocal();
-  auto ye = hits.view().yerrLocal();
+  auto xl = hitsView.xLocal();
+  auto yl = hitsView.yLocal();
+  auto xe = hitsView.xerrLocal();
+  auto ye = hitsView.yerrLocal();
 
   TrackerGeometry const& geom = iSetup.getData(geomToken_);
 
@@ -112,8 +113,8 @@ void SiPixelRecHitFromSoAAlpaka::produce(edm::StreamID streamID,
     const PixelGeomDetUnit* pixDet = dynamic_cast<const PixelGeomDetUnit*>(genericDet);
     assert(pixDet);
     SiPixelRecHitCollection::FastFiller recHitsOnDetUnit(output, detid);
-    auto fc = hits.view().hitsModuleStart()[gind];
-    auto lc = hits.view().hitsModuleStart()[gind + 1];
+    auto fc = modulesView.moduleStart()[gind];
+    auto lc = modulesView.moduleStart()[gind + 1];
     auto nhits = lc - fc;
 
     assert(lc > fc);
