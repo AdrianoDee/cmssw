@@ -75,16 +75,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  uint32_t const* __restrict__ hitsModuleStart,
                                   const reco::HitModuleSoAConstView& mm,
                                   const reco::CALayersSoAConstView& ll,
                                   uint32_t* __restrict__ hitsLayerStart) const {
-      ALPAKA_ASSERT_ACC(0 == mm.hitsModuleStart()[0]);
+      ALPAKA_ASSERT_ACC(0 == mm.moduleStart()[0]);
       
       for (int32_t i : cms::alpakatools::uniform_elements(acc, ll.metadata().size())) {
-        hitsLayerStart[i] = mm.hitsModuleStart()[ll.layerStarts()[i]];
+        hitsLayerStart[i] = mm.moduleStart()[ll.layerStarts()[i]];
 // #ifdef GPU_DEBUG
-        int old = i == 0 ? 0 : mm.hitsModuleStart()[ll.layerStarts()[i - 1]];
+        int old = i == 0 ? 0 : mm.moduleStart()[ll.layerStarts()[i - 1]];
         printf("LayerStart %d/%d at module %d: %d - %d\n",
                i,
                ll.metadata().size(),
