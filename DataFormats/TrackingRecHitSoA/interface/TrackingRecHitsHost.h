@@ -43,9 +43,12 @@ namespace reco
         : PortableHostMultiCollection({{int(clusters.nClusters()),clusters.view().metadata().size()}}, queue)  {
           
       auto hitsView = this->template view<TrackingRecHitSoA>();
-      auto nHits = clusters.view().metadata().size();
-      auto clusters_m = cms::alpakatools::make_host_view(queue, clusters.view().moduleStart(), nHits);
-      auto hits_m = cms::alpakatools::make_host_view<float>(queue, hitsView.hitsModuleStart(), nHits);
+      auto modsView = this->template view<HitModuleSoA>();
+
+      auto nModules = clusters.view().metadata().size();
+      
+      auto clusters_m = cms::alpakatools::make_host_view(queue, clusters.view().moduleStart(), nModules);
+      auto hits_m = cms::alpakatools::make_host_view<float>(queue, modsView.moduleStart(), nModules);
 
       alpaka::memcpy(queue, hits_m, clusters_m);
 

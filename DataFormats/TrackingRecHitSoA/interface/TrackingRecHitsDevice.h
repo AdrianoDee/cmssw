@@ -45,10 +45,14 @@ namespace reco
     template <typename TQueue>
     explicit TrackingRecHitDevice(TQueue queue, SiPixelClustersDevice<TDev> const &clusters)
         : HitPortableCollectionDevice<TDev>({{int(clusters.nClusters()),clusters.view().metadata().size()}}, queue), offsetBPIX2_{clusters.offsetBPIX2()} {
+      
       auto hitsView = this->template view<TrackingRecHitSoA>();
-      auto nHits = clusters.view().metadata().size();
-      auto clusters_m = cms::alpakatools::make_device_view(queue, clusters.view().moduleStart(), nHits);
-      auto hits_m = cms::alpakatools::make_device_view<float>(queue, hitsView.hitsModuleStart(), nHits);
+      auto modsView = this->template view<HitModuleSoA>();
+
+      auto nModules = clusters.view().metadata().size();
+      
+      auto clusters_m = cms::alpakatools::make_device_view(queue, clusters.view().moduleStart(), nModules);
+      auto hits_m = cms::alpakatools::make_device_view<float>(queue, modsView.moduleStart(), nModules);
 
       alpaka::memcpy(queue, hits_m, clusters_m);
 
