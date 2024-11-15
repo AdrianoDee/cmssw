@@ -78,6 +78,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   const reco::HitModuleSoAConstView& mm,
                                   const reco::CALayersSoAConstView& ll,
                                   uint32_t* __restrict__ hitsLayerStart) const {
+
+      for (int32_t i : cms::alpakatools::uniform_elements(acc, mm.metadata().size())) {
+        printf("ModuleStart %d %d \n",mm.moduleStart()[i]);
+      }
       ALPAKA_ASSERT_ACC(0 == mm.moduleStart()[0]);
       
       for (int32_t i : cms::alpakatools::uniform_elements(acc, ll.metadata().size())) {
