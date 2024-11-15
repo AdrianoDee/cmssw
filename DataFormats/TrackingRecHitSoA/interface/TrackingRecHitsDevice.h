@@ -8,6 +8,11 @@
 #include "DataFormats/Portable/interface/PortableDeviceCollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsHost.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/SiPixelClusterSoA/interface/SiPixelClustersDevice.h"
+
+// TODO: The class is created via inheritance of the PortableCollection.
+// This is generally discouraged, and should be done via composition.
+// See: https://github.com/cms-sw/cmssw/pull/40465#discussion_r1067364306
 
 namespace reco 
 {
@@ -30,6 +35,22 @@ namespace reco
       auto start_d =
           cms::alpakatools::make_device_view(queue, hitsView.hitsModuleStart().data(), phase1PixelTopology::numberOfModules + 1);
       alpaka::memcpy(queue, start_d, start_h);
+
+      auto off_h = cms::alpakatools::make_host_view(offsetBPIX2_);
+      auto off_d = cms::alpakatools::make_device_view(queue, hitsView.offsetBPIX2());
+      alpaka::memcpy(queue, off_d, off_h);
+    }
+
+    // Constructor from clusters
+    template <typename TQueue>
+    explicit TrackingRecHitDevice(TQueue queue, SiPixelClustersDevice<TDev> const &clusters)
+        : HitPortableCollectionDevice<TDev>({{int(clusters.nClusters()),clusters.view().metadata().size()}}, queue), offsetBPIX2_{clusters.offsetBPIX2()} {
+      auto hitsView = this->template view<TrackingRecHitSoA>();
+      auto nHits = clusters.view().metadata().size();
+      auto clusters_m = cms::alpakatools::make_device_view(queue, clusters.view().moduleStart(), nHits);
+      auto hits_m = cms::alpakatools::make_device_view<float>(queue, hitsView.hitsModuleStart(), nHits);
+
+      alpaka::memcpy(queue, hits_m, clusters_m);
 
       auto off_h = cms::alpakatools::make_host_view(offsetBPIX2_);
       auto off_d = cms::alpakatools::make_device_view(queue, hitsView.offsetBPIX2());
