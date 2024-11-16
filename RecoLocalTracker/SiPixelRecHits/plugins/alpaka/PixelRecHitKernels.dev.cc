@@ -38,10 +38,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         pixelCPEforDevice::ParamsOnDeviceT<TrackerTraits> const* cpeParams,
         Queue queue) const {
       using namespace pixelRecHits;
-      auto nHits = clusters_d.nClusters();
-      auto offsetBPIX2 = clusters_d.offsetBPIX2();
 
-      TrackingRecHitsSoACollection hits_d(queue, nHits, offsetBPIX2, clusters_d->clusModuleStart());
+      TrackingRecHitsSoACollection hits_d(queue, clusters_d);
 
       int activeModulesWithDigis = digis_d.nModules();
 

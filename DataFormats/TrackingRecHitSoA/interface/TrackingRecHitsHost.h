@@ -47,8 +47,8 @@ namespace reco
 
       auto nModules = clusters.view().metadata().size();
       
-      auto clusters_m = cms::alpakatools::make_host_view<uint32_t>(queue, clusters.view().moduleStart(), nModules);
-      auto hits_m = cms::alpakatools::make_host_view<uint32_t>(queue, modsView.moduleStart(), nModules);
+      auto clusters_m = cms::alpakatools::make_host_view(clusters.view().moduleStart(), nModules);
+      auto hits_m = cms::alpakatools::make_host_view(modsView.moduleStart(), nModules);
 
       alpaka::memcpy(queue, hits_m, clusters_m);
 
