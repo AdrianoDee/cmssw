@@ -80,7 +80,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   uint32_t* __restrict__ hitsLayerStart) const {
 
       for (int32_t i : cms::alpakatools::uniform_elements(acc, mm.metadata().size())) {
-        printf("ModuleStart %d %d \n",mm.moduleStart()[i]);
+        printf("ModuleStart %d %d \n",i,mm.moduleStart()[i]);
       }
       ALPAKA_ASSERT_ACC(0 == mm.moduleStart()[0]);
       
