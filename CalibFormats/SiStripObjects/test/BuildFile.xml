@@ -23,3 +23,12 @@
 </bin>
 
 <test name="testSiStripHashedDetId" command="testSiStripHashedDetId.sh"/>
+
+<bin file="alpaka/SiStripClusterizerConditions_t.cpp">
+<flags ALPAKA_BACKENDS="1"/>  
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="CalibFormats/SiStripObjects"/>
+  <use name="alpaka"/>
+  <use name="eigen"/>
+  <use name="boost"/>
+</bin>

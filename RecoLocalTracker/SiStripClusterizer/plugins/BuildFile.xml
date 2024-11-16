@@ -11,3 +11,17 @@
   <use name="CalibTracker/SiStripCommon"/>
   <flags EDM_PLUGIN="1"/>
 </library>
+
+<library file="alpaka/*.cc" name="RecoLocalTrackerSiStripClusterizerPluginsPortable">
+  <use name="alpaka"/>
+  <use name="CalibFormats/SiStripObjects"/>
+  <use name="CalibTracker/SiStripCommon"/>
+  <use name="DataFormats/Portable"/>
+  <use name="EventFilter/SiStripRawToDigi"/>
+  <use name="FWCore/Framework"/>
+  <use name="HeterogeneousCore/AlpakaCore"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoLocalTracker/Records"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags EDM_PLUGIN="1"/>
+</library>

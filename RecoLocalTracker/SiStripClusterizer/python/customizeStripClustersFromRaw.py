@@ -9,7 +9,7 @@ def customizeStripClustersFromRaw(process):
         # CPU should emulate the full detector clusterizer
         process.siStripClusters.cpu.onDemand = cms.bool(False)
         process.striptrackerlocalrecoTask.add(process.siStripClustersTask)
-
+        process.schedule.append(process.siStripConditionsConsumer_step)
     return process
 
 def customizeHLTStripClustersFromRaw(process):

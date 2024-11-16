@@ -10,6 +10,7 @@ from RecoLocalTracker.SiStripClusterizer.siStripClusterizerFromRawGPU_cfi import
 from RecoLocalTracker.SiStripClusterizer.siStripClustersSOAtoHost_cfi import siStripClustersSOAtoHost
 from RecoLocalTracker.SiStripClusterizer.siStripClustersFromSOA_cfi import siStripClustersFromSOA
 from RecoLocalTracker.SiStripClusterizer.SiStripClusterizerConditionsGPUESProducer_cfi import SiStripClusterizerConditionsGPUESProducer
+from RecoLocalTracker.SiStripClusterizer.siStripClustersConditionsESProducer_cfi import siStripClustersConditionsESProducer as _siStripClustersConditionsESProducerAlpaka
 
 _siStripClusterizerFromRaw = cms.EDProducer("SiStripClusterizerFromRaw",
                                             onDemand = cms.bool(True),
@@ -32,14 +33,38 @@ siStripClustersTask = cms.Task(
 )
 
 from Configuration.ProcessModifiers.gpu_cff import gpu
+from Configuration.ProcessModifiers.alpaka_cff import alpaka
 
-gpu.toModify(siStripClusters,
+(gpu).toModify(siStripClusters,
     cuda = siStripClustersFromSOA,
 )
 
-siStripClustersTaskCUDA = cms.Task()
+siStripConditionsConsumer = cms.EDAnalyzer("GenericConsumer",
+      eventProducts = cms.untracked.vstring('*Device*_*_*_*'),
+      lumiProducts = cms.untracked.vstring('*Device*_*_*_*'),
+      runProducts = cms.untracked.vstring('*Device*_*_*_*'),
+      processProducts = cms.untracked.vstring('*Device*_*_*_*')
+  )
 
-gpu.toReplaceWith(siStripClustersTaskCUDA, cms.Task(
+get = cms.EDAnalyzer("EventSetupRecordDataGetter",
+    toGet = cms.VPSet(cms.PSet(
+        record = cms.string('DTT0Rcd'),
+        data = cms.vstring('DTT0')
+    ), 
+        cms.PSet(
+            record = cms.string('DTTtrigRcd'),
+            data = cms.vstring('DTTtrig')
+        ), 
+        cms.PSet(
+            record = cms.string('DTReadOutMappingRcd'),
+            data = cms.vstring('DTReadOutMapping')
+        )),
+    verbose = cms.untracked.bool(True)
+)
+
+siStripConditionsConsumer_step = cms.EndPath(siStripConditionsConsumer)
+siStripClustersTaskCUDA = cms.Task()
+(gpu).toReplaceWith(siStripClustersTaskCUDA, cms.Task(
     # conditions used *only* by the modules running on GPU
     SiStripClusterizerConditionsGPUESProducer,
     # reconstruct the strip clusters on the gpu
@@ -48,9 +73,26 @@ gpu.toReplaceWith(siStripClustersTaskCUDA, cms.Task(
     siStripClustersSOAtoHost,
 ))
 
-gpu.toReplaceWith(siStripClustersTask, cms.Task(
+(gpu).toReplaceWith(siStripClustersTask, cms.Task(
     # CUDA specific
     siStripClustersTaskCUDA,
     # switch producer to legacy format
     siStripClusters,
 ))
+
+siStripClustersConditionsESProducerAlpaka = _siStripClustersConditionsESProducerAlpaka.clone(
+    appendToDataLabel = "stripCondAlpaka",
+)
+siStripClustersTaskAlpaka= cms.Task()
+
+(alpaka).toReplaceWith(siStripClustersTaskAlpaka, cms.Task(
+    siStripClustersConditionsESProducerAlpaka,
+))
+
+
+(alpaka).toReplaceWith(siStripClustersTask, cms.Task(
+    siStripClustersTaskAlpaka,
+    # switch producer to legacy format
+    siStripClusters,
+))
+

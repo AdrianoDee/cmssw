@@ -31,6 +31,13 @@
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/alpaka/PixelCPEFastParamsCollection.h"
 
+////////////////////////////////////////
+///// REMOVE ME/////////////////////////
+#include "RecoLocalTracker/Records/interface/SiStripClusterizerConditionsRcd.h"
+#include "CalibFormats/SiStripObjects/interface/alpaka/SiStripClusterizerConditionsCollection.h"
+////////////////////////////////////////
+////////////////////////////////////////
+
 #include "PixelRecHitKernel.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
@@ -46,6 +53,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void produce(edm::StreamID streamID, device::Event& iEvent, const device::EventSetup& iSetup) const override;
 
     const device::ESGetToken<PixelCPEFastParams<TrackerTraits>, PixelCPEFastParamsRecord> cpeToken_;
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    const device::ESGetToken<reco::SiStripClusterizerConditionsCollection, SiStripClusterizerConditionsRcd> stripToken_; //TODO: REMOVE ME, TESTING ONLY
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     const device::EDGetToken<BeamSpotDevice> tBeamSpot;
     const device::EDGetToken<SiPixelClustersSoACollection> tokenClusters_;
     const device::EDGetToken<SiPixelDigisSoACollection> tokenDigi_;
@@ -57,6 +67,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TrackerTraits>
   SiPixelRecHitAlpaka<TrackerTraits>::SiPixelRecHitAlpaka(const edm::ParameterSet& iConfig)
       : cpeToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("CPE")))),
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        stripToken_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("StripCond")))),
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         tBeamSpot(consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))),
         tokenClusters_(consumes(iConfig.getParameter<edm::InputTag>("src"))),
         tokenDigi_(consumes(iConfig.getParameter<edm::InputTag>("src"))),
@@ -72,6 +85,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::string cpe = "PixelCPEFastParams";
     cpe += TrackerTraits::nameModifier;
     desc.add<std::string>("CPE", cpe);
+    desc.add<std::string>("StripCond","stripCondAlpaka");
 
     descriptions.addWithDefaultLabel(desc);
   }
@@ -81,6 +95,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                    device::Event& iEvent,
                                                    const device::EventSetup& es) const {
     auto& fcpe = es.getData(cpeToken_);
+
+    [[maybe_unused]] auto const& stripES = es.getData(stripToken_);
 
     auto const& clusters = iEvent.get(tokenClusters_);
 

@@ -58,6 +58,7 @@ SiStripClusterizerConditionsGPUESProducer::ReturnType SiStripClusterizerConditio
   const auto& noises = iRecord.get(noisesToken_);
   const auto& quality = iRecord.get(qualityToken_);
 
+  std::cout << "SiStripClusterizerConditionsGPUESProducer::produce" << std::endl;
   return std::make_unique<SiStripClusterizerConditionsGPU>(quality, gainsH.product(), noises);
 }
 

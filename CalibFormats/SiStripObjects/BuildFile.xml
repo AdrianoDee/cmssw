@@ -3,8 +3,11 @@
 <use name="CondFormats/SiStripObjects"/>
 <use name="DataFormats/TrackerCommon"/>
 <use name="HeterogeneousCore/CUDACore"/>
+<use name="HeterogeneousCore/AlpakaCore"/>
 <use name="HeterogeneousCore/CUDAUtilities"/>
 <use name="cuda"/>
+<use name="alpaka"/>
+<flags ALPAKA_BACKENDS="1"/>
 <export>
   <lib name="1"/>
 </export>
