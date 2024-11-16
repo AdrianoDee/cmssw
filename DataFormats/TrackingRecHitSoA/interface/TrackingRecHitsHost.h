@@ -47,10 +47,13 @@ namespace reco
 
       auto nModules = clusters.view().metadata().size();
       
-      auto clusters_m = cms::alpakatools::make_host_view(queue, clusters.view().moduleStart(), nModules);
-      auto hits_m = cms::alpakatools::make_host_view(queue, modsView.moduleStart(), nModules);
+      auto clusters_m = cms::alpakatools::make_host_view<uint32_t>(queue, clusters.view().moduleStart(), nModules);
+      auto hits_m = cms::alpakatools::make_host_view<uint32_t>(queue, modsView.moduleStart(), nModules);
 
       alpaka::memcpy(queue, hits_m, clusters_m);
+
+      for(int i = 0; i < nModules; i++)
+        printf("%d - %d - %d \n",i,clusters_m[i],hits_m[i]);
 
       hitsView.offsetBPIX2() = clusters.offsetBPIX2();
     }

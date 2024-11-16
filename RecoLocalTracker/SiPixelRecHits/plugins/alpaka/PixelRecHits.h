@@ -93,9 +93,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
           auto& clusParams = alpaka::declareSharedVar<pixelCPEforDevice::ClusParams, __COUNTER__>(acc);
+          auto first = clusters[1 + module].moduleStart();
           for (int startClus = 0, endClus = nclus; startClus < endClus; startClus += maxHitsInIter) {
-            auto first = clusters[1 + module].moduleStart();
-
             int nClusInIter = alpaka::math::min(acc, maxHitsInIter, endClus - startClus);
             int lastClus = startClus + nClusInIter;
             ALPAKA_ASSERT_ACC(nClusInIter <= nclus);
