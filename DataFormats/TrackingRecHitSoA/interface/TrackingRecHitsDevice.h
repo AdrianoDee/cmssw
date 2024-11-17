@@ -51,7 +51,7 @@ namespace reco
 
       auto nModules = clusters.view().metadata().size();
       
-      auto clusters_m = cms::alpakatools::make_device_view(queue, clusters.view().moduleStart(), nModules);
+      auto clusters_m = cms::alpakatools::make_device_view(queue, clusters.view().clusModuleStart(), nModules);
       auto hits_m = cms::alpakatools::make_device_view(queue, modsView.moduleStart(), nModules);
 
       alpaka::memcpy(queue, hits_m, clusters_m);
