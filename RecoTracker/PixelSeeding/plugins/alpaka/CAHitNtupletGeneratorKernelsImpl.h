@@ -390,6 +390,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto r1 = oc.inner_r(hh);
           auto z1 = oc.inner_z(hh);
           auto dcaCut = ll[oc.innerLayer()].caDCACut();
+          printf("%d %d .%2f -> %.2f \n",oc.innerLayer(),thisCell.innerLayer(),thetaCut,dcaCut);
           bool aligned = Cell::areAlignedRZ(
               r1,
               z1,
