@@ -126,8 +126,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // layers params
     desc.add<std::vector<int>>("layerStarts", std::vector<int>(std::begin(layerStart), std::end(layerStart))) ->setComment("Layer module start.");
-    desc.add<std::vector<double>>("caThetaCuts", {0.15f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f}) ->setComment("CA theta cut. One per layer, the layer being the midelle one for a triplet.");
-    desc.add<std::vector<double>>("caDCACuts", {0.002f,0.003f,0.003f,0.003f,0.003f,0.003f,0.003f,0.003f,0.003f,0.003f}) ->setComment("CA DCA cuts. One per layer, the layer being the innermost one for a triplet.");
+    desc.add<std::vector<double>>("caDCACuts", {0.15f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f}) ->setComment("CA theta cut. One per layer, the layer being the midelle one for a triplet.");
+    desc.add<std::vector<double>>("caThetaCuts", {0.002f,0.002f,0.002f,0.002f,0.003f,0.003f,0.003f,0.003f,0.003f,0.003f}) ->setComment("CA DCA cuts. One per layer, the layer being the innermost one for a triplet.");
     // cells params
     desc.add<std::vector<int>>("pairGraph", std::vector<int>(std::begin(layerPairs), std::end(layerPairs))) ->setComment("CA graph");
     desc.add<std::vector<int>>("phiCuts", std::vector<int>(std::begin(phicuts), std::end(phicuts))) ->setComment("Cuts in phi for cells");
