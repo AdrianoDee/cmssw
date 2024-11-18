@@ -254,7 +254,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void prepareHits(const HitsConstView& hh, const HitModulesConstView &mm, const ::reco::CALayersSoAConstView& ll, Queue& queue);
 
-    void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, uint16_t nLayers, TkSoAView& track_view, TkHitsSoAView& track_hits_view, Queue& queue);
+    void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, uint16_t nLayers, TkSoAView& track_view, TkHitsSoAView& track_hits_view, const ::reco::CALayersSoAConstView& ca_layers, Queue& queue);
 
     void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
 

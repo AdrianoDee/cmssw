@@ -148,14 +148,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                   uint16_t nLayers,
                                                                   TkSoAView &tracks_view,
                                                                   TkHitsSoAView &tracks_hits_view,
+                                                                  const reco::CALayersSoAConstView &ll,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
     using namespace caHitNtupletGeneratorKernels;
 
     // zero tuples
     HitContainer::template launchZero<Acc1D>(this->device_hitContainer_.data(), queue);
-
-    // HitContainer::template launchZero<Acc1D>(&(tracks_view.hitIndices()), queue);
 
     uint32_t nhits = hh.metadata().size();
 
@@ -188,6 +187,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_hitTuple_apc_,
                         this->device_hitToTuple_apc_,  // needed only to be reset, ready for next kernel
                         hh,
+                        ll,
                         this->device_theCells_.data(),
                         this->device_nCells_.data(),
                         this->device_theCellNeighbors_.data(),

@@ -354,6 +354,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   cms::alpakatools::AtomicPairCounter *apc1,
                                   cms::alpakatools::AtomicPairCounter *apc2,  // just to zero them
                                   HitsConstView<TrackerTraits> hh,
+                                  reco::CALayersSoAConstView ll,
                                   CACellT<TrackerTraits> *cells,
                                   uint32_t *nCells,
                                   CellNeighborsVector<TrackerTraits> *cellNeighbors,
@@ -380,7 +381,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         auto zi = thisCell.inner_z(hh);
         auto ro = thisCell.outer_r(hh);
         auto zo = thisCell.outer_z(hh);
-        auto isBarrel = thisCell.inner_detIndex(hh) < TrackerTraits::last_barrel_detIndex;
+        auto thetaCut = ll[thisCell.innerLayer()].caThetaCut();
 
         // loop on inner cells
         for (uint32_t j : cms::alpakatools::independent_group_elements_x(acc, numberOfPossibleNeighbors)) {
@@ -388,6 +389,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto &oc = cells[otherCell];
           auto r1 = oc.inner_r(hh);
           auto z1 = oc.inner_z(hh);
+          auto dcaCut = ll[oc.innerLayer()].caDCACut();
           bool aligned = Cell::areAlignedRZ(
               r1,
               z1,
@@ -396,13 +398,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
               ro,
               zo,
               params.ptmin_,
-              isBarrel ? params.CAThetaCutBarrel_ : params.CAThetaCutForward_);  // 2.f*thetaCut); // FIXME tune cuts
+              thetaCut); 
           if (aligned &&
               thisCell.dcaCut(hh,
                               oc,
-                              oc.inner_detIndex(hh) < TrackerTraits::last_bpix1_detIndex ? params.dcaCutInnerTriplet_
-                                                                                         : params.dcaCutOuterTriplet_,
-                              params.hardCurvCut_)) {  // FIXME tune cuts
+                              dcaCut,
+                              params.hardCurvCut_)) { 
             oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             oc.setStatusBits(Cell::StatusBit::kUsed);

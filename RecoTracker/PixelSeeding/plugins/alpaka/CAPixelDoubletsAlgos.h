@@ -289,7 +289,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
             alpaka::atomicSub(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});
             break;
           }  // move to SimpleVector??
-          cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, i, oi);
+          cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, inner, outer, i, oi);
           isOuterHitOfCell[oi].push_back(acc, ind);
 #ifdef GPU_DEBUG
           if (isOuterHitOfCell[oi].full())

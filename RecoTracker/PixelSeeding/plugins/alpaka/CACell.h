@@ -53,11 +53,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                              CellTracksVector& cellTracks,
                                              const HitsConstView& hh,
                                              int layerPairId,
+                                             uint8_t theInnerLayer,
+                                             uint8_t theOuterLayer,
                                              hindex_type innerHitId,
                                              hindex_type outerHitId) {
       theInnerHitId = innerHitId;
       theOuterHitId = outerHitId;
       theLayerPairId_ = layerPairId;
+      theInnerLayer_ = theInnerLayer;
+      theOuterLayer_ = theOuterLayer;
       theStatus_ = 0;
       theFishboneId = invalidHitId;
 
@@ -364,6 +368,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool isKilled() const { return theStatus_ & uint16_t(StatusBit::kKilled); }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t layerPairId() const { return theLayerPairId_; }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t innerLayer() const { return theInnerLayer_; }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t outerLayer() const { return theOuterLayer_; }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool unused() const { return 0 == (uint16_t(StatusBit::kUsed) & theStatus_); }
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void setStatusBits(StatusBit mask) { theStatus_ |= uint16_t(mask); }
@@ -389,6 +395,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     CellTracks* theTracks;
 
     int16_t theLayerPairId_;
+    uint8_t theInnerLayer_;
+    uint8_t theOuterLayer_;
     uint16_t theStatus_;  // tbd
 
     float theInnerZ;
