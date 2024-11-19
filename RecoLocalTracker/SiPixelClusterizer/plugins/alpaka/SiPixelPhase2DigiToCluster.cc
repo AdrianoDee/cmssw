@@ -123,7 +123,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     digis_d = SiPixelDigisSoACollection(nDigis, iEvent.queue());
-    alpaka::memcpy(iEvent.queue(), digis_d.buffer(), digis_h.buffer());
+    alpaka::memcpy(iEvent.queue(), digis_d.buffer(), digis_h.buffer()); // TODO: avoid copy on host?
 
     Algo_.makePhase2ClustersAsync(iEvent.queue(), clusterThresholds_, digis_d.view(), nDigis_);
   }

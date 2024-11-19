@@ -188,6 +188,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         totalSize += buff->bufferSize();
       }
     }
+
+    // std::vector<uint8_t>
     
   //   auto const& hMap = iSetup.getData(mapToken_);
   //   auto const& dGains = iSetup.getData(gainsToken_);

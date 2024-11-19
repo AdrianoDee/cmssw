@@ -132,7 +132,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       SiStripRawToClusterKernel& operator=(const SiStripRawToClusterKernel&) = delete;
       SiStripRawToClusterKernel& operator=(SiStripRawToClusterKernel&&) = delete;
 
-      void makeClustersAsync(Queue& queue,
+      void makeStripClustersAsync(Queue& queue,
                                    const std::vector<const FEDRawData*>& rawdata,
                                    const std::vector<std::unique_ptr<sistrip::FEDBuffer>>& buffers,
                                    const StripConditionsDetSoAConstView& detView,

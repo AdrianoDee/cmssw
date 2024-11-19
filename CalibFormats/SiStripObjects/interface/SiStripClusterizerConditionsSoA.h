@@ -1,7 +1,6 @@
 #ifndef CalibFormats_SiStripObjects_interface_SiStripClusterizerConditionsSoA_h
 #define CalibFormats_SiStripObjects_interface_SiStripClusterizerConditionsSoA_h
 
-#include <array>
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 
 namespace reco

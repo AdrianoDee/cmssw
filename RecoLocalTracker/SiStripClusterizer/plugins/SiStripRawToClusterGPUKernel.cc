@@ -69,6 +69,7 @@ namespace stripgpu {
         }
       }
     }
+    
     // send rawdata to GPU
     cms::cuda::copyAsync(fedRawDataGPU, fedRawDataHost, totalSize, stream);
 
@@ -103,7 +104,10 @@ namespace stripgpu {
           off += headerlen;
         }
 
-        chanlocs->setChannelLoc(i, channel.data(), off, offset, len, fedId, fedCh, detp.detID());
+        // to SoA column setting
+        chanlocs->setChannelLoc(i, channel.data(), off, offset, len, fedId, fedCh, detp.detID()); 
+        std::cout << i << " - " << fedi << " - " << fedRawDataOffsets_[fedi] << " - " << (channel.data() - rawdata[fedId]->data()) << std::endl;
+        
         inputGPU[i] = fedRawDataGPU.get() + fedRawDataOffsets_[fedi] + (channel.data() - rawdata[fedId]->data());
         offset += len;
 
