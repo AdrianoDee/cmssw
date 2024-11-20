@@ -140,7 +140,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using TupleMultiplicity = caStructures::template TupleMultiplicityT<TrackerTraits>;
     
     /// Cells
-    using CellContainer = cms::alpakatools::OneToManyAssocSequential<hindex_type, -1, -1>;
+    using CellContainer = caStructures::CellContainer;
     using CellContainerStorage = typename CellContainer::index_type;
     using CellContainerView = typename CellContainer::View;
 

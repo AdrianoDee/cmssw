@@ -355,9 +355,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   uint32_t *nCells,
                                   CellNeighborsVector<TrackerTraits> *cellNeighbors,
                                   OuterHitOfCell<TrackerTraits> const *isOuterHitOfCell,
+                                  CellContainer* __restrict__ histo,
                                   AlgoParams const& params) const {
       using Cell = CACellT<TrackerTraits>;
-      using CellStack = cms::alpakatools::SimpleVector<uint16_t>;
+      // using CellStack = cms::alpakatools::SimpleVector<uint16_t>; //could
+
       if (cms::alpakatools::once_per_grid(acc)) {
         *apc1 = 0;
         *apc2 = 0;
@@ -381,7 +383,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
         // loop on inner cells
         for (uint32_t j : cms::alpakatools::independent_group_elements_x(acc, numberOfPossibleNeighbors)) {
-          tmpNtuplet.push_back_unsafe(doubletId);
           auto otherCell = (vi[j]);
           auto &oc = cells[otherCell];
           auto r1 = oc.inner_r(hh);
@@ -403,6 +404,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                               dcaCut,
                               params.hardCurvCut_)) { 
             oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);
+            histo->fill(acc,cellIndex,otherCell);
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             oc.setStatusBits(Cell::StatusBit::kUsed);
           }
