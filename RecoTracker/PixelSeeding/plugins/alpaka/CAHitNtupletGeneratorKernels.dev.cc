@@ -180,7 +180,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto nCells_h = cms::alpakatools::make_host_view(nCells);
     alpaka::memcpy(queue, nCells_h, this->device_nCells_);
 
-    /*
     
     auto cellNeighborsHisto = cms::alpakatools::make_device_buffer<CellContainer> (queue);
     auto cellNeighborsStorage = cms::alpakatools::make_device_buffer<CellContainer::Counter[]>(queue, nCells);
@@ -194,8 +193,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     cellNeighborsView.contentSize = nCells;
     cellNeighborsView.contentStorage = cellNeighborsStorage.data();
 
-    */
-
     std::cout << "Found nCells: " << nCells << std::endl;
     alpaka::exec<Acc2D>(queue,
                         kernelConnectWorkDiv,
@@ -208,6 +205,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_nCells_.data(),
                         this->device_theCellNeighbors_.data(),
                         this->isOuterHitOfCell_.data(),
+                        cellNeighborsHisto.data(),
                         this->m_params.algoParams_);
 
     // do not run the fishbone if there are hits only in BPIX1
