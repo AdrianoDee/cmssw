@@ -4,21 +4,21 @@ import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("Geometry")
 
-readGeometryFromDB = True
+readGeometryFromDB = False
 
 # N.B. for the time being we load the geometry from local
 # XML, whle in future we will have to use the DB. This is
 # only a temporary hack, since the material description has
 # been updated in release via XML and the DB is behind.
 if not readGeometryFromDB:
-  process.load('Configuration.Geometry.GeometryExtended2021Reco_cff')
+  process.load('Configuration.Geometry.GeometryDD4hepExtended2024Reco_cff')
 else:
 # GlobalTag and geometry via GT
   process.load('Configuration.Geometry.GeometrySimDB_cff')
   process.load('Configuration.Geometry.GeometryRecoDB_cff')
   process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
   from Configuration.AlCa.GlobalTag import GlobalTag
-  process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
+  process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2024_realistic', '')
 
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')

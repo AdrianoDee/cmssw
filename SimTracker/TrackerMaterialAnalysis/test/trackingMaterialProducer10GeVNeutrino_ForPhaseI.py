@@ -2,8 +2,8 @@
 
 import FWCore.ParameterSet.Config as cms
 
-from Configuration.Eras.Modifier_run2_common_cff import run2_common
-process = cms.Process("Geometry",run2_common)
+from Configuration.Eras.Modifier_run3_common_cff import run3_common
+process = cms.Process("Geometry",run3_common)
 
 readGeometryFromDB = False
 
@@ -12,14 +12,14 @@ readGeometryFromDB = False
 # only a temporary hack, since the material description has
 # been updated in release via XML and the DB is behind.
 if not readGeometryFromDB:
-  process.load('Configuration.Geometry.GeometryExtended2017Reco_cff')
+  process.load('Configuration.Geometry.GeometryExtended2021Reco_cff')
 else:
 # GlobalTag and geometry via GT
   process.load('Configuration.Geometry.GeometrySimDB_cff')
   process.load('Configuration.Geometry.GeometryRecoDB_cff')
   process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
   from Configuration.AlCa.GlobalTag import GlobalTag
-  process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2017_design', '')
+  process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2024_realistic', '')
 
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
@@ -41,7 +41,7 @@ process.load("SimTracker.TrackerMaterialAnalysis.trackingMaterialProducer_cff")
 process.trackingMaterialProducer.StackingAction.TrackNeutrino = True
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(200000)
+    input = cms.untracked.int32(1000)
 )
 
 # Input source

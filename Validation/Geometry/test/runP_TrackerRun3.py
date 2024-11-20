@@ -1,37 +1,44 @@
-from __future__ import print_function
 # In order to produce everything that you need in one go, use the command:
 #
-# for t in {'BeamPipe','Tracker','PixBar','PixFwdMinus','PixFwdPlus','TIB','TOB','TIDB','TIDF','TEC','TkStrct','InnerServices'}; do cmsRun runP_Tracker_cfg.py geom=XYZ label=$t >& /dev/null &; done
+# for t in {'BeamPipe','Tracker','PixBar','PixFwdMinus','PixFwdPlus','TIB','TOB','TIDB','TIDF','TEC','TkStrct','InnerServices'}; do python3 runP_Tracker.py geom=XYZ label=$t >& /dev/null &; done
 
-
+from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
+from Configuration.Eras.Era_Run3_2024_cff import Run3_2024
 import sys, re
 
-from FWCore.PythonFramework.CmsRun import CmsRun
-#from Configuration.Eras.Era_Phase2_cff import Phase2
-from Configuration.Eras.Era_Run3_2024_cff import Run3_2024
+from Configuration.Eras.Era_Run3_DDD_cff import Run3_DDD
+process = cms.Process('PROD',Run3_DDD)
 
-process = cms.Process("PROD", Run3_2024)
+from FWCore.PythonFramework.CmsRun import CmsRun
+
+#process = cms.Process("PROD",Run3_2024)
 
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 
-# The default geometry is Extended2026D110Reco. If a different geoemtry
-# is needed, the appropriate flag has to be passed at command line,
-# e.g.: cmsRun runP_HGCal_cfg.py geom="XYZ"
+"""
 
-# The default component to be monitored is the HGCal. If other
-# components need to be studied, they must be supplied, one at a time,
-# at the command line, e.g.: cmsRun runP_HGCal_cfg.py
-# label="XYZ"
+ The default geometry is Extended2017Plan1. If a different geometry
+ is needed, the appropriate flag has to be passed at command line,
+ e.g.: cmsRun runP_Tracker_cfg.py geom="XYZ"
 
-from Validation.Geometry.plot_hgcal_utils import _LABELS2COMPS
+ The default component to be monitored is the Tracker. If other
+ components need to be studied, they must be supplied, one at a time,
+ at the command line, e.g.: python3 runP_Tracker.py
+ label="XYZ"
+
+"""
+
+from Validation.Geometry.plot_utils import _LABELS2COMPS
+
+process.load("FWCore.MessageLogger.MessageLogger_cfi")
 
 _ALLOWED_LABELS = _LABELS2COMPS.keys()
 
 options = VarParsing('analysis')
 options.register('geom',             #name
-                 'Extended2024',      #default value
+                 'Extended2017Plan1',      #default value
                  VarParsing.multiplicity.singleton,   # kind of options
                  VarParsing.varType.string,           # type of option
                  "Select the geometry to be studied"  # help message
@@ -41,7 +48,7 @@ options.register('label',         #name
                  'Tracker',              #default value
                  VarParsing.multiplicity.singleton,   # kind of options
                  VarParsing.varType.string,           # type of option
-                 "Select the label to be used to create output files. Default to HGCal. If multiple components are selected, it defaults to the join of all components, with '_' as separator."  # help message
+                 "Select the label to be used to create output files. Default to tracker. If multiple components are selected, it defaults to the join of all components, with '_' as separator."  # help message
                 )
 
 options.setDefault('inputFiles', ['file:single_neutrino_random.root'])
@@ -49,16 +56,45 @@ options.setDefault('inputFiles', ['file:single_neutrino_random.root'])
 options.parseArguments()
 # Option validation
 
+#process.options.numberOfThreads=cms.untracked.uint32(16) 
+process.MessageLogger = cms.Service(
+    "MessageLogger",
+    destinations   = cms.untracked.vstring('info'),
+    categories = cms.untracked.vstring(['logMsg','MaterialBudget']),
+    info = cms.untracked.PSet(
+        threshold = cms.untracked.string('INFO'),
+        filename = cms.untracked.string('Log_%s_%s' % (options.label,options.geom)),
+        logMsg = cms.untracked.PSet(limit = cms.untracked.int32(-1))
+        )
+    )
+
 if options.label not in _ALLOWED_LABELS:
     print("\n*** Error, '%s' not registered as a valid components to monitor." % options.label)
     print("Allowed components:", _ALLOWED_LABELS)
-    print()
     raise RuntimeError("Unknown label")
 
 _components = _LABELS2COMPS[options.label]
-print(_components)
+
+#
+#Geometry
+#
+def _adaptToRun2(det):
+  if det == 'PixelForwardZminus':
+    det = det.replace('minus', 'Minus')
+  elif det == 'PixelForwardZplus':
+    det = det.replace('plus', 'Plus')
+  return det
+
 # Load geometry either from the Database of from files
 process.load("Configuration.Geometry.Geometry%sReco_cff" % options.geom)
+
+# Customise names for Run2
+if re.match('.*2016.*', options.geom):
+  if isinstance(_components, list):
+      for i in range(len(_components)):
+          _components[i] = _adaptToRun2(_components[i])
+  else:
+      _components = _adaptToRun2(_components)
 
 #
 #Magnetic Field
@@ -83,17 +119,7 @@ process.source = cms.Source("PoolSource",
 process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(-1)
 )
-'''
-process.Timing = cms.Service("Timing")
 
-process.SimpleMemoryCheck = cms.Service("SimpleMemoryCheck",
-  ignoreTotal          = cms.untracked.int32(1),
-  oncePerEventMode     = cms.untracked.bool(True),
-  moduleMemorySummary  = cms.untracked.bool(True),
-  showMallocInfo       = cms.untracked.bool(True),
-  monitorPssAndPrivate = cms.untracked.bool(True),
-)
-'''
 process.p1 = cms.Path(process.g4SimHits)
 process.g4SimHits.StackingAction.TrackNeutrino = cms.bool(True)
 process.g4SimHits.UseMagneticField = False
@@ -103,42 +129,19 @@ process.g4SimHits.Physics.CutsPerRegion = False
 process.g4SimHits.Watchers = cms.VPSet(cms.PSet(
     type = cms.string('MaterialBudgetAction'),
     MaterialBudgetAction = cms.PSet(
-        HistosFile = cms.string('matbdg_%s.root' % options.label),
+        HistosFile = cms.string('matbdg_%s_%s.root' % (options.label,
+                                                       options.geom)),
         AllStepsToTree = cms.bool(True),
-        HistogramList = cms.string(options.label),
+        HistogramList = cms.string('Tracker'),
         SelectedVolumes = cms.vstring(_components),
-        TreeFile = cms.string('None'), ## is NOT requested
-
+        TreeFile = cms.string('matbdg_tree_%s_%s.root' % (options.label,
+                                                          options.geom)),
         StopAfterProcess = cms.string('None'),
-        #        TextFile = cms.string("matbdg_HGCal.txt")
-        TextFile = cms.string('None'), 
-        #Setting ranges for histos
-        #Make z 1mm per bin. Be careful this could lead to memory crashes if too low. 
-        minZ = cms.double(-5500.),
-        maxZ = cms.double(5500.),
-        nintZ = cms.int32(11000), 
-        # Make r 1cm per bin
-        rMin = cms.double(-50.), 
-        rMax = cms.double(3400.),
-        nrbin = cms.int32(345),
-        # eta
-        etaMin = cms.double(-5.), 
-        etaMax = cms.double(5.),
-        netabin = cms.int32(250),
-        # phi
-        phiMin = cms.double(-3.2), 
-        phiMax = cms.double(3.2),
-        nphibin = cms.int32(180),
-        # R for profile histos
-        RMin =  cms.double(0.), 
-        RMax =  cms.double(3000.), 
-        nRbin = cms.int32(300)
-
-     )
+        TextFile = cms.string('matbdg_%s_%s.txt' % (options.label,
+                                                     options.geom))
+    )
 ))
 process.g4SimHits.LHCTransport = False
 
 cmsRun = CmsRun(process)
 cmsRun.run()
-
-

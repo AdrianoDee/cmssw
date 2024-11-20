@@ -117,7 +117,7 @@ optPh = str(sys.argv[1])
 groups = None
 if( optPh.lower() == "phasei"):
     groups = groupsPh1
-    process.load('Configuration.Geometry.GeometryDD4hepExtended2021Reco_cff')
+    process.load('Configuration.Geometry.GeometryDD4hepExtended2024Reco_cff')
 elif( optPh.lower() == "phaseii"):
     groups = groupsPh2
 else:

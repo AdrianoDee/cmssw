@@ -875,7 +875,8 @@ def createCompoundPlots(detector, plot, geometry):
                 % (theDirname, detector, plot, geometry))
     can.SaveAs( "%s/%s_%s_%s.png" 
                 % (theDirname, detector, plot, geometry))
-
+    can.SaveAs( "%s/%s_%s_%s.root"
+                % (theDirname, detector, plot, geometry))
 
 def create2DPlots(detector, plot, geometry):
     """Produce the requested plot for the specified detector.
