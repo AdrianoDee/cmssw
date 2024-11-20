@@ -16,31 +16,32 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/PixelSeeding/interface/CircleEq.h"
+#include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
 
 #include "CAStructures.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
+  using namespace ::caStructures;
   template <typename TrackerTraits>
   class CACellT {
   public:
     using PtrAsInt = unsigned long long;
 
     static constexpr auto maxCellsPerHit = TrackerTraits::maxCellsPerHit;
-    using OuterHitOfCellContainer = caStructures::OuterHitOfCellContainerT<TrackerTraits>;
-    using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
-    using CellNeighbors = caStructures::CellNeighborsT<TrackerTraits>;
-    using CellTracks = caStructures::CellTracksT<TrackerTraits>;
-    using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
-    using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
+    using OuterHitOfCellContainer = OuterHitOfCellContainerT<TrackerTraits>;
+    using OuterHitOfCell = OuterHitOfCellT<TrackerTraits>;
+    using CellNeighbors = CellNeighborsT<TrackerTraits>;
+    using CellTracks = CellTracksT<TrackerTraits>;
+    using CellNeighborsVector = CellNeighborsVectorT<TrackerTraits>;
+    using CellTracksVector = CellTracksVectorT<TrackerTraits>;
 
-    using HitsConstView = ::reco::TrackingRecHitConstView;
     using hindex_type = typename TrackerTraits::hindex_type;
     using tindex_type = typename TrackerTraits::tindex_type;
     static constexpr auto invalidHitId = std::numeric_limits<hindex_type>::max();
 
     using TmpTuple = cms::alpakatools::VecArray<uint32_t, TrackerTraits::maxDepth>;
-    using HitContainer = caStructures::HitContainerT<TrackerTraits>;
+    using HitContainer = HitContainerT<TrackerTraits>;
 
     using Quality = ::pixelTrack::Quality;
     static constexpr auto bad = ::pixelTrack::Quality::bad;
@@ -298,14 +299,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template <int DEPTH, typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void find_ntuplets(TAcc const& acc,
                                                       const HitsConstView& hh,
+                                                      const ::reco::CACellsSoAConstView &cc,
                                                       CACellT* __restrict__ cells,
                                                       CellTracksVector& cellTracks,
                                                       HitContainer& foundNtuplets,
                                                       cms::alpakatools::AtomicPairCounter& apc,
                                                       Quality* __restrict__ quality,
                                                       TmpTuple& tmpNtuplet,
-                                                      const unsigned int minHitsPerNtuplet,
-                                                      bool startAt0) const {
+                                                      const unsigned int minHitsPerNtuplet) const {
       // the building process for a track ends if:
       // it has no right neighbor
       // it has no compatible neighbor
@@ -326,12 +327,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             continue;  // killed by earlyFishbone
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
-              acc, hh, cells, cellTracks, foundNtuplets, apc, quality, tmpNtuplet, minHitsPerNtuplet, startAt0);
+              acc, hh, cc, cells, cellTracks, foundNtuplets, apc, quality, tmpNtuplet, minHitsPerNtuplet);
         }
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
 #ifdef ONLY_TRIPLETS_IN_HOLE
             // triplets accepted only pointing to the hole
+            auto startAt0 = cc[this->layerPairId()].graph()[0] == 0;
             if (tmpNtuplet.size() >= 3 || (startAt0 && hole4(hh, cells[tmpNtuplet[0]])) ||
                 ((!startAt0) && hole0(hh, cells[tmpNtuplet[0]])))
 #endif
