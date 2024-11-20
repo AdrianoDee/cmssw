@@ -19,6 +19,7 @@ namespace reco {
 
     GENERATE_SOA_LAYOUT(CACellsLayout, 
                     SOA_COLUMN(GraphNode, graph),
+                    SOA_COLUMN(bool, startingPair),
                     SOA_COLUMN(int16_t, phiCuts),
                     SOA_COLUMN(float, minz),
                     SOA_COLUMN(float, maxz),
@@ -28,6 +29,7 @@ namespace reco {
                     SOA_SCALAR(bool, doClusterCut),
                     SOA_SCALAR(bool, idealConditions)
                     )
+                    
   using CALayersSoA = CALayersLayout<>;
   using CALayersSoAView = CALayersSoA::View;
   using CALayersSoAConstView = CALayersSoA::ConstView;
