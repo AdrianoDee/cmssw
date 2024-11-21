@@ -56,7 +56,7 @@ namespace caStructures {
   //   using CellNeighbors = cms::alpakatools::VecArray<typename TrackerTraits::cindex_type, TrackerTraits::maxCellNeighbors>;
   // }
 
-  using CellContainer = cms::alpakatools::OneToManyAssocRandomAccess<hindex_type, -1, -1>;
+  using GenericContainer = cms::alpakatools::OneToManyAssocRandomAccess<hindex_type, -1, -1>;
 
 
   template <typename TrackerTraits>

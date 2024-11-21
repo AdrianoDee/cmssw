@@ -303,6 +303,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       CACellT* __restrict__ cells,
                                                       CellTracksVector& cellTracks,
                                                       HitContainer& foundNtuplets,
+                                                      GenericContainer const *__restrict__ cellNeighborsHisto,
                                                       cms::alpakatools::AtomicPairCounter& apc,
                                                       Quality* __restrict__ quality,
                                                       TmpTuple& tmpNtuplet,
@@ -322,12 +323,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ALPAKA_ASSERT_ACC(tmpNtuplet.size() <= int(TrackerTraits::maxHitsOnTrack - 3));
 
         bool last = true;
+        for (auto o = cellNeighborsHisto->begin(doubletId); o != cellNeighborsHisto->end(doubletId); ++o)
+         printf("doubletIdHisto: %ld -> %d\n",doubletId,*o);
+          
         for (unsigned int otherCell : outerNeighbors()) {
+          printf("doubletId: %ld -> %d\n",doubletId,otherCell);
           if (cells[otherCell].isKilled())
             continue;  // killed by earlyFishbone
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
-              acc, hh, cc, cells, cellTracks, foundNtuplets, apc, quality, tmpNtuplet, minHitsPerNtuplet);
+              acc, hh, cc, cells, cellTracks, foundNtuplets, cellNeighborsHisto, apc, quality, tmpNtuplet, minHitsPerNtuplet);
         }
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
