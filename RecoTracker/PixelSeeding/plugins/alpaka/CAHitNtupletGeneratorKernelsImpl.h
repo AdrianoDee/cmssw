@@ -67,6 +67,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   using Counters = caHitNtupletGenerator::Counters;
   
   using namespace cms::alpakatools;
+
+   // standard initialization for a generic one to many assoc map
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void initGenericContainer(GenericContainerView &view,
+                                                                                 GenericContainer *histo,
+                                                                                 GenericContainer::Counter *offsets,
+                                                                                 GenericContainer::Counter *storage,
+                                                                                 uint32_t n_ones,
+                                                                                 uint32_t n_many) {
+    view.assoc = histo;
+    view.offSize = n_ones + 1;
+    view.offStorage = offsets;
+    view.contentSize = n_many;
+    view.contentStorage = storage;
+  }
+
   class setHitsLayerStart {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
