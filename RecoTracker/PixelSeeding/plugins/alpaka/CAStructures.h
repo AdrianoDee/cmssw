@@ -16,6 +16,7 @@ namespace caStructures {
     uint32_t maxNumberOfDoublets_;
     uint32_t minHitsPerNtuplet_;
     uint32_t minHitsForSharingCut_;
+
     float ptmin_;
     float hardCurvCut_;
     bool useRiemannFit_;
@@ -27,9 +28,13 @@ namespace caStructures {
     bool dupPassThrough_;
     bool useSimpleTripletCleaner_;
 
-    uint32_t maxNumberOfTriplets_ = 1;
+    // uint32_t maxNumberOfTriplets_ = 1; // === maxDoublets * avgCellPerCell
     uint32_t maxNumberOfTuples_ = 1;
-
+    uint8_t avgHitsPerTrack_ = 1;
+    uint8_t avgCellPerHit_ = 1;
+    uint8_t avgCellPerCell_ = 1;
+    uint8_t avgTrackPerCell_ = 1;
+    uint8_t avgNeighborPerCell_ = 1;
     // bool idealConditions_;
     //move back idealConditions here
   };

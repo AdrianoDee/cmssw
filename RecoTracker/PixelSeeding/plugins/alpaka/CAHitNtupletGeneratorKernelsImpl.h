@@ -370,7 +370,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   uint32_t *nCells,
                                   CellNeighborsVector<TrackerTraits> *cellNeighbors,
                                   OuterHitOfCell<TrackerTraits> *isOuterHitOfCell,
-                                  GenericContainer* __restrict__ histo,
+                                  // GenericContainer* __restrict__ histo,
                                   AlgoParams const& params) const {
       using Cell = CACellT<TrackerTraits>;
       // using CellStack = cms::alpakatools::SimpleVector<uint16_t>; //could
@@ -420,7 +420,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                               params.hardCurvCut_)) { 
             printf("filling cell: %d -> %d\n",otherCell,cellIndex);
             oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);
-            histo->count(acc,otherCell);
+            // histo->count(acc,otherCell);
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             oc.setStatusBits(Cell::StatusBit::kUsed);
             
@@ -474,7 +474,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   const ::reco::CACellsSoAConstView &cc,
                                   TkSoAView tracks_view,
                                   HitContainer<TrackerTraits> *foundNtuplets,
-                                  GenericContainer const *__restrict__ cellNeighborsHisto,
+                                  // GenericContainer const *__restrict__ cellNeighborsHisto,
                                   CACellT<TrackerTraits> *__restrict__ cells,
                                   uint32_t const *nCells,
                                   CellTracksVector<TrackerTraits> *cellTracks,
@@ -513,7 +513,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                           cells,
                                                           *cellTracks,
                                                           *foundNtuplets,
-                                                          cellNeighborsHisto,
+                                                          // cellNeighborsHisto,
                                                           *apc,
                                                           tracks_view.quality(),
                                                           stack,

@@ -68,12 +68,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         device_hitTuple_apc_{reinterpret_cast<cms::alpakatools::AtomicPairCounter *>(device_storage_.data())},
         device_hitToTuple_apc_{reinterpret_cast<cms::alpakatools::AtomicPairCounter *>(device_storage_.data() + 1)},
         device_nCells_{
-            cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_storage_.data() + 2))},
-        host_nCells_{
-            cms::alpakatools::make_host_buffer<uint32_t>()},
-        // Hit -> Cells
-        device_hitToCell_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_hitToCellOffsets_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, hh.metadata().size())}
+            cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_storage_.data() + 2))}
+        // host_nCells_{
+        //     cms::alpakatools::make_host_buffer<uint32_t>()},
+        // // Hit -> Cells
+        // device_hitToCell_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
+        // device_hitToCellOffsets_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, hh.metadata().size())}
         {
 #ifdef GPU_DEBUG
     std::cout << "Allocation for tuple building. N hits " << hh.metadata().size() << std::endl;
@@ -82,7 +82,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::memset(queue, counters_, 0);
     alpaka::memset(queue, device_nCells_, 0);
     alpaka::memset(queue, cellStorage_, 0);
-    alpaka::memset(queue, host_nCells_, 0);
+    // alpaka::memset(queue, host_nCells_, 0);
     [[maybe_unused]] TupleMultiplicity *tupleMultiplicityDeviceData = device_tupleMultiplicity_.data();
     using TM = cms::alpakatools::OneToManyAssocRandomAccess<uint32_t,
                                                             TrackerTraits::maxHitsOnTrack + 1,
@@ -182,25 +182,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const Vec2D thrs{blockSize, stride};
     const auto kernelConnectWorkDiv = cms::alpakatools::make_workdiv<Acc2D>(blks, thrs);
     
-    uint32_t nCells = 0;
-    auto nCells_h = cms::alpakatools::make_host_view(nCells);
-    alpaka::memcpy(queue, nCells_h, this->device_nCells_);
+    // uint32_t nCells = 0;
+    // auto nCells_h = cms::alpakatools::make_host_view(nCells);
+    // alpaka::memcpy(queue, nCells_h, this->device_nCells_);
 
     
-    auto cellNeighborsHisto = cms::alpakatools::make_device_buffer<GenericContainer> (queue);
-    auto cellNeighborsStorage = cms::alpakatools::make_device_buffer<GenericContainer::Counter[]>(queue, nCells * 64);
-    auto cellNeighborsStorageOff = cms::alpakatools::make_device_buffer<GenericContainer::Counter[]>(queue, nCells);
-    GenericContainerView cellNeighborsView;
+    // auto cellNeighborsHisto = cms::alpakatools::make_device_buffer<GenericContainer> (queue);
+    // auto cellNeighborsStorage = cms::alpakatools::make_device_buffer<GenericContainer::Counter[]>(queue, nCells * 64);
+    // auto cellNeighborsStorageOff = cms::alpakatools::make_device_buffer<GenericContainer::Counter[]>(queue, nCells);
+    // GenericContainerView cellNeighborsView;
     
-    cellNeighborsView.assoc = cellNeighborsHisto.data();
-    cellNeighborsView.offSize = nCells + 1;
-    cellNeighborsView.offStorage = cellNeighborsStorageOff.data();
-    cellNeighborsView.contentSize = nCells * 64;
-    cellNeighborsView.contentStorage = cellNeighborsStorage.data();
+    // cellNeighborsView.assoc = cellNeighborsHisto.data();
+    // cellNeighborsView.offSize = nCells + 1;
+    // cellNeighborsView.offStorage = cellNeighborsStorageOff.data();
+    // cellNeighborsView.contentSize = nCells * 64;
+    // cellNeighborsView.contentStorage = cellNeighborsStorage.data();
     
-    GenericContainer::template launchZero<Acc1D>(cellNeighborsView, queue);
+    // GenericContainer::template launchZero<Acc1D>(cellNeighborsView, queue);
 
-    std::cout << "Found nCells: " << nCells << std::endl;
+    // std::cout << "Found nCells: " << nCells << std::endl;
     alpaka::exec<Acc2D>(queue,
                         kernelConnectWorkDiv,
                         Kernel_connect<TrackerTraits>{},
@@ -212,19 +212,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_nCells_.data(),
                         this->device_theCellNeighbors_.data(),
                         this->isOuterHitOfCell_.data(),
-                        cellNeighborsHisto.data(),
+                        // cellNeighborsHisto.data(),
                         this->m_params.algoParams_);
     
-    alpaka::exec<Acc2D>(queue,
-                    kernelConnectWorkDiv,
-                    Kernel_connectFill<TrackerTraits>{},
-                    hh,
-                    this->device_theCells_.data(),
-                    this->device_nCells_.data(),
-                    this->isOuterHitOfCell_.data(),
-                    cellNeighborsHisto.data());
+    // alpaka::exec<Acc2D>(queue,
+    //                 kernelConnectWorkDiv,
+    //                 Kernel_connectFill<TrackerTraits>{},
+    //                 hh,
+    //                 this->device_theCells_.data(),
+    //                 this->device_nCells_.data(),
+    //                 this->isOuterHitOfCell_.data(),
+    //                 cellNeighborsHisto.data());
                     
-    GenericContainer::template launchFinalize<Acc1D>(cellNeighborsHisto.data(), queue);
+    // GenericContainer::template launchFinalize<Acc1D>(cellNeighborsHisto.data(), queue);
 
     // do not run the fishbone if there are hits only in BPIX1
     if (this->m_params.algoParams_.earlyFishbone_ and nhits > offsetBPIX2) {
@@ -255,7 +255,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         cc,
                         tracks_view,
                         this->device_hitContainer_.data(),
-                        cellNeighborsHisto.data(),
+                        // cellNeighborsHisto.data(),
                         this->device_theCells_.data(),
                         this->device_nCells_.data(),
                         this->device_theCellTracks_.data(),
