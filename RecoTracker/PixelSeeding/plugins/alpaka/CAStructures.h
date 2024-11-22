@@ -26,6 +26,10 @@ namespace caStructures {
     bool doSharedHitCut_;
     bool dupPassThrough_;
     bool useSimpleTripletCleaner_;
+
+    uint32_t maxNumberOfTriplets_ = 1;
+    uint32_t maxNumberOfTuples_ = 1;
+
     // bool idealConditions_;
     //move back idealConditions here
   };
@@ -57,7 +61,8 @@ namespace caStructures {
   // }
 
   using GenericContainer = cms::alpakatools::OneToManyAssocRandomAccess<hindex_type, -1, -1>;
-
+  using GenericContainerStorage = typename GenericContainer::index_type;
+  using GenericContainerView = typename GenericContainer::View;
 
   template <typename TrackerTraits>
   using CellNeighborsT =
