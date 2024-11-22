@@ -427,7 +427,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           } else
           { 
             printf("discarding cell: %d -> %d\n",otherCell,cellIndex);
-            (*isOuterHitOfCell)[innerHitId][j] = std::numeric_limits<uint32_t>::max(); // not a good match
+            // (*isOuterHitOfCell)[innerHitId][j] = std::numeric_limits<uint32_t>::max(); // not a good match
           }
         }  // loop on inner cells
       }  // loop on outer cells
