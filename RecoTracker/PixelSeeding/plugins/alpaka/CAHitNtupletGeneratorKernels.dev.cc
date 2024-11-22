@@ -96,10 +96,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     TupleMultiplicity::template launchZero<Acc1D>(tupleMultiplicityDeviceData, queue);
 
     device_hitToTupleView_.assoc = device_hitToTuple_.data();
-    device_hitToTupleView_.offStorage = device_hitToTupleStorage_.data();
-    device_hitToTupleView_.offSize = alpaka::getExtentProduct(device_hitToTupleStorage_);//hh.metadata().size() + 1; // there's a way to get the size of a buffer? could be used here
+    device_hitToTupleView_.offStorage = device_hitToTupleOffsets_.data();
+    device_hitToTupleView_.offSize = alpaka::getExtentProduct(device_hitToTupleOffsets_);//hh.metadata().size() + 1; // there's a way to get the size of a buffer? could be used here
     device_hitToTupleView_.contentStorage = device_hitToTupleStorage_.data();
-    device_hitToTupleView_.contentSize = alpaka::getExtentProduct(device_hitToTupleStorage_);//hh.metadata().size() + 1;
+    device_hitToTupleView_.contentSize = alpaka::getExtentProduct(device_hitToTupleStorage_);//hh.metadata().size() * TrackerTraits::avgHitsPerTrack;
+
+    std::cout << alpaka::getExtentProduct(device_hitToTupleStorage_) << " - > " << hh.metadata().size() * TrackerTraits::avgHitsPerTrack << std::endl;
 
     // HitToTuple::template launchZero<Acc1D>(device_hitToTupleView_, queue);
     GenericContainer::template launchZero<Acc1D>(device_hitToTupleView_, queue);
