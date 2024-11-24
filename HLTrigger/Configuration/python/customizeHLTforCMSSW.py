@@ -48,7 +48,7 @@ def customiseForOffline(process):
 
     return process
 
-<<<<<<< HEAD
+
 def customiseHLTFor46647(process):
     for prod in producers_by_type(process, 'CtfSpecialSeedGenerator'):
         if hasattr(prod, "DontCountDetsAboveNClusters"):
