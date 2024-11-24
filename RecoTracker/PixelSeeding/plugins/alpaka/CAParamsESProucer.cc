@@ -85,7 +85,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     assert(caThetaCuts_.size() == caDCACuts_.size()); 
     
-    int n_layers = layerStarts_.size();
+    int n_layers = layerStarts_.size() - 1;
     int n_pairs = pairGraph_.size() / 2;
 
     assert(int(n_pairs) == int(minZ_.size())); 
