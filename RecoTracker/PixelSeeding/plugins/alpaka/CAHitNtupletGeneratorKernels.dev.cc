@@ -18,7 +18,7 @@
 #include "CAHitNtupletGeneratorKernelsImpl.h"
 
 #define GPU_DEBUG
-//#define NTUPLE_DEBUG
+#define NTUPLE_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -35,7 +35,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         // Hits -> Track
         device_hitToTuple_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_hitToTupleStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, hh.metadata().size() * TrackerTraits::avgHitsPerTrack)},
+        device_hitToTupleStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, hh.metadata().size() * m_params.algoParams_.avgHitsPerTrack_)},
         device_hitToTupleOffsets_{cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, hh.metadata().size() + 1)},
         
         // Hits
@@ -45,12 +45,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         // Tracks -> Hits
         device_hitContainer_{cms::alpakatools::make_device_buffer<SequentialContainer>(queue)},
-        device_hitContainerStorage_{cms::alpakatools::make_device_buffer<SequentialContainerStorage[]>(queue, TrackerTraits::avgHitsPerTrack * TrackerTraits::maxNumberOfTuples)},
-        device_hitContainerOffsets_{cms::alpakatools::make_device_buffer<SequentialContainerOffsets[]>(queue, TrackerTraits::maxNumberOfTuples + 1)},     
+        device_hitContainerStorage_{cms::alpakatools::make_device_buffer<SequentialContainerStorage[]>(queue, m_params.algoParams_.avgHitsPerTrack_ * m_params.algoParams_.maxNumberOfTuples_)},
+        device_hitContainerOffsets_{cms::alpakatools::make_device_buffer<SequentialContainerOffsets[]>(queue, m_params.algoParams_.maxNumberOfTuples_ + 1)},     
         
         // No.Hits -> Track (Multiplicity)
         device_tupleMultiplicity_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_tupleMultiplicityStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, TrackerTraits::maxNumberOfTuples)},
+        device_tupleMultiplicityStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, m_params.algoParams_.maxNumberOfTuples_)},
         device_tupleMultiplicityOffsets_{cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, TrackerTraits::maxHitsOnTrack + 1)},
         
         // NB: In legacy, device_theCells_ and device_isOuterHitOfCell_ were allocated inside buildDoublets
@@ -96,7 +96,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device_hitToTupleView_.assoc = device_hitToTuple_.data();
     device_hitToTupleView_.contentStorage = device_hitToTupleStorage_.data();
     device_hitToTupleView_.offStorage = device_hitToTupleOffsets_.data();
-    device_hitToTupleView_.contentSize = alpaka::getExtentProduct(device_hitToTupleStorage_);//hh.metadata().size() * TrackerTraits::avgHitsPerTrack;
+    device_hitToTupleView_.contentSize = alpaka::getExtentProduct(device_hitToTupleStorage_);//hh.metadata().size() * m_params.algoParams_.avgHitsPerTrack_;
     device_hitToTupleView_.offSize = alpaka::getExtentProduct(device_hitToTupleOffsets_);//hh.metadata().size() + 1; // there's a way to get the size of a buffer? could be used here
 
     GenericContainer::template launchZero<Acc1D>(device_hitToTupleView_, queue);
@@ -107,15 +107,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device_hitPhiView_.offStorage = nullptr;
     device_hitPhiView_.contentSize = hh.metadata().size();
     device_hitPhiView_.contentStorage = device_phiBinnerStorage_.data();
-
-    // alpaka::memset(queue, host_nCells_, 0);
-    // [[maybe_unused]] TupleMultiplicity *tupleMultiplicityDeviceData = device_tupleMultiplicity_.data();
-    // using TM = cms::alpakatools::OneToManyAssocRandomAccess<uint32_t,
-    //                                                         TrackerTraits::maxHitsOnTrack + 1,
-    //                                                         TrackerTraits::maxNumberOfTuples>;
-    // TM *tm = device_tupleMultiplicity_.data();
-    // TM::template launchZero<Acc1D>(tm, queue);
-    // TupleMultiplicity::template launchZero<Acc1D>(tupleMultiplicityDeviceData, queue);
 
     // Tracks -> Hits
     device_tupleMultiplicityView_.assoc = device_tupleMultiplicity_.data();
@@ -317,7 +308,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
     blockSize = 128;
-    numberOfBlocks = cms::alpakatools::divide_up_by(TrackerTraits::maxNumberOfTuples+1, blockSize);
+    numberOfBlocks = cms::alpakatools::divide_up_by(m_params.algoParams_.maxNumberOfTuples_+1, blockSize);
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
 
     alpaka::exec<Acc1D>(
@@ -354,7 +345,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
     blockSize = 128;
-    numberOfBlocks = cms::alpakatools::divide_up_by(3 * TrackerTraits::maxNumberOfTuples / 4, blockSize);
+    numberOfBlocks = cms::alpakatools::divide_up_by(3 * m_params.algoParams_.maxNumberOfTuples_ / 4, blockSize);
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
 
     alpaka::exec<Acc1D>(queue,
