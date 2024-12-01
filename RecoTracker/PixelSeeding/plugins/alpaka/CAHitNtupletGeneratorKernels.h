@@ -227,8 +227,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     cms::alpakatools::device_buffer<Device, cms::alpakatools::AtomicPairCounter::DoubleWord[]> device_storage_;
     cms::alpakatools::AtomicPairCounter* device_hitTuple_apc_;
     cms::alpakatools::device_view<Device, uint32_t> device_nCells_;
+    cms::alpakatools::device_view<Device, uint32_t> device_nTriplets_;
 
-    CACoupleSoACollection cellToCell_;
+    CACoupleSoACollection deviceTriplets_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

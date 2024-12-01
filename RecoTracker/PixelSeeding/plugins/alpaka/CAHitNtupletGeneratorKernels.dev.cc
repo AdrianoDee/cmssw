@@ -90,6 +90,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         device_hitTuple_apc_{reinterpret_cast<cms::alpakatools::AtomicPairCounter *>(device_storage_.data())},
         // device_hitToTuple_apc_{reinterpret_cast<cms::alpakatools::AtomicPairCounter *>(device_storage_.data() + 1)},
         device_nCells_{
+            cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_storage_.data() + 1))},
+        device_nTriplets_{
             cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_storage_.data() + 2))}
         {
 #ifdef GPU_DEBUG
@@ -99,6 +101,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::memset(queue, counters_, 0);
     alpaka::memset(queue, device_nCells_, 0);
     alpaka::memset(queue, cellStorage_, 0);
+    alpaka::memset(queue, device_nTriplets_,0);
 
     // Hits -> Track
     device_hitToTupleView_.assoc = device_hitToTuple_.data();
@@ -162,7 +165,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // alpaka::getExtentProduct(device_hitToTupleOffsets_),
     // alpaka::getExtentProduct(device_hitToTupleStorage_));
 
-    cellToCell_ = CACoupleSoACollection(device_cellToNeighborsView_.contentSize,queue);
+    deviceTriplets_ = CACoupleSoACollection(device_cellToNeighborsView_.contentSize,queue);
     
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
@@ -266,7 +269,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         hh,
                         ll,
                         this->device_theCells_.data(),
+                        // this->deviceTriplets_.view(),
                         this->device_nCells_.data(),
+                        this->device_nTriplets_.data(),
                         this->device_theCellNeighbors_.data(),
                         this->isOuterHitOfCell_.data(),
                         this->device_hitToCell_.data(),
@@ -314,6 +319,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_hitContainer_.data(),
                         // cellNeighborsHisto.data(),
                         this->device_theCells_.data(),
+                        this->device_nTriplets_.data(),
                         this->device_nCells_.data(),
                         this->device_theCellTracks_.data(),
                         this->device_hitTuple_apc_,
