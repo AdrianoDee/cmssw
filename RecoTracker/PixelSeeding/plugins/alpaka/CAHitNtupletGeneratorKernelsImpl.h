@@ -364,7 +364,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   cms::alpakatools::AtomicPairCounter *apc1, // just to zero them
                                   HitsConstView hh,
                                   reco::CALayersSoAConstView ll,
-                                  // caStructures::CACoupleSoAView cellNeighborsView cn,
+                                  caStructures::CACoupleSoAView cn,
                                   CACellT<TrackerTraits> *cells,
                                   uint32_t *nCells,
                                   uint32_t *nTrips,
@@ -422,11 +422,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                               oc,
                               dcaCut,
                               params.hardCurvCut_)) { 
-            auto t_ind = alpaka::atomicAdd(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});
-            printf("filling cell: %d -> %d\n",otherCell,cellIndex);
+            auto t_ind = alpaka::atomicAdd(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
+            printf("filling cell no. %d: %d -> %d\n",t_ind,otherCell,cellIndex);
             oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);
-            // cn[t_ind].inner() = otherCell;
-            // cn[t_ind].outer() = cellIndex;
+            cn[t_ind].inner() = otherCell;
+            cn[t_ind].outer() = cellIndex;
             // histo->count(acc,otherCell);
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             oc.setStatusBits(Cell::StatusBit::kUsed);
