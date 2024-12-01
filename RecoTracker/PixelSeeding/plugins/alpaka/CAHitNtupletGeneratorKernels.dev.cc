@@ -268,8 +268,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_hitTuple_apc_, // needed only to be reset, ready for next kernel
                         hh,
                         ll,
+                        this->deviceTriplets_.view(),
                         this->device_theCells_.data(),
-                        // this->deviceTriplets_.view(),
                         this->device_nCells_.data(),
                         this->device_nTriplets_.data(),
                         this->device_theCellNeighbors_.data(),
