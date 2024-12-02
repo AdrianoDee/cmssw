@@ -243,7 +243,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       ALPAKA_ASSERT_ACC(nCells);
       for (auto idx : cms::alpakatools::uniform_elements(acc, *nCells)) {
         auto const &thisCell = cells[idx];
-
+        auto cT = thisCell.tracks();
+        printf("cellTracksSizes;%d;%d;%d\n",idx,cT.size(),cT.capacity());
         if (thisCell.tracks().size() < 2)
           continue;
 
@@ -471,7 +472,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   const ::reco::CACellsSoAConstView &cc,
                                   TkSoAView tracks_view,
                                   HitContainer *foundNtuplets,
-                                  // GenericContainer const *__restrict__ cellNeighborsHisto,
+                                  CellToCell const* __restrict__ cellNeighborsHisto,
                                   CACellT<TrackerTraits> *__restrict__ cells,
                                   uint32_t const *nTriplets,
                                   uint32_t const *nCells,
@@ -511,7 +512,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                           cells,
                                                           *cellTracks,
                                                           *foundNtuplets,
-                                                          // cellNeighborsHisto,
+                                                          cellNeighborsHisto,
                                                           *apc,
                                                           tracks_view.quality(),
                                                           stack,
