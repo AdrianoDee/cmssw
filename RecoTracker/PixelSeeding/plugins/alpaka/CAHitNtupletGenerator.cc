@@ -208,7 +208,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     desc.add<unsigned int>("avgHitsPerTrack", pixelTopology::HIonPhase1::avgHitsPerTrack);
     desc.add<unsigned int>("avgCellsPerHit", pixelTopology::HIonPhase1::maxCellsPerHit);
     desc.add<unsigned int>("avgCellsPerCell", pixelTopology::HIonPhase1::maxCellNeighbors);
-    desc.add<unsigned int>("avgTracksPerCell", pixelTopology::HIonPhase1::maxCellTracks);
+    desc.add<unsigned int>("avgTracksPerCell", pixelTopology::Phase1::maxCellTracks);
     
     edm::ParameterSetDescription trackQualityCuts;
     trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
@@ -240,9 +240,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase2::maxNumberOfDoublets);
     desc.add<unsigned int>("maxNumberOfTuples", pixelTopology::Phase2::maxNumberOfTuples);
     desc.add<unsigned int>("avgHitsPerTrack", pixelTopology::Phase2::avgHitsPerTrack);
-    desc.add<unsigned int>("avgCellsPerHit", pixelTopology::HIonPhase1::maxCellsPerHit);
-    desc.add<unsigned int>("avgCellsPerCell", pixelTopology::HIonPhase1::avgCellsPerCell);
-    desc.add<unsigned int>("avgTracksPerCell", pixelTopology::HIonPhase1::avgTracksPerCell);
+    desc.add<unsigned int>("avgCellsPerHit", pixelTopology::Phase2::maxCellsPerHit);
+    desc.add<unsigned int>("avgCellsPerCell", pixelTopology::Phase2::maxCellNeighbors);
+    desc.add<unsigned int>("avgTracksPerCell", pixelTopology::Phase2::maxCellTracks);
 
     edm::ParameterSetDescription trackQualityCuts;
     trackQualityCuts.add<double>("maxChi2", 5.)->setComment("Max normalized chi2");

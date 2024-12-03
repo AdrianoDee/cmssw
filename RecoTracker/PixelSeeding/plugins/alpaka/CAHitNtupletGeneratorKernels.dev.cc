@@ -51,12 +51,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         // Cell -> Neighbor Cells
         device_cellToNeighbors_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_cellToNeighborsStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, m_params.algoParams_.maxNumberOfDoublets_ * m_params.algoParams_.avgCellsPerCell)},
+        device_cellToNeighborsStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, m_params.algoParams_.maxNumberOfDoublets_ * m_params.algoParams_.avgCellsPerCell_)},
         device_cellToNeighborsOffsets_{cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, m_params.algoParams_.maxNumberOfDoublets_ + 1)},
 
         // Cell -> Tracks
         device_cellToTracks_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_cellToTracksStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, m_params.algoParams_.maxNumberOfDoublets_ * m_params.algoParams_.avgTracksPerCell)},
+        device_cellToTracksStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, m_params.algoParams_.maxNumberOfDoublets_ * m_params.algoParams_.avgTracksPerCell_)},
         device_cellToTracksOffsets_{cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, m_params.algoParams_.maxNumberOfDoublets_ + 1)},
 
         // Tracks -> Hits
@@ -296,7 +296,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     CellToCell::template launchFinalize<Acc1D>(this->device_cellToNeighborsView_, queue);
 
     auto threadsPerBlock = 512;
-    auto blocks = cms::alpakatools::divide_up_by( this->m_params.algoParams_.maxNumberOfDoublets_ * m_params.algoParams_.avgCellsPerCell , threadsPerBlock);
+    auto blocks = cms::alpakatools::divide_up_by( this->m_params.algoParams_.maxNumberOfDoublets_ * m_params.algoParams_.avgCellsPerCell_ , threadsPerBlock);
     auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
 
     alpaka::exec<Acc1D>(queue,
@@ -336,6 +336,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         tracks_view,
                         this->device_hitContainer_.data(),
                         this->device_cellToNeighbors_.data(),
+                        this->device_cellToTracks_.data(),
                         this->device_theCells_.data(),
                         this->device_nTriplets_.data(),
                         this->device_nCells_.data(),
