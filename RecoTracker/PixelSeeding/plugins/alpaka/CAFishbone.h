@@ -31,6 +31,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   template <typename TrackerTraits>
   using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
 
+  using HitToCell = caStructures::GenericContainer;
 
   template <typename TrackerTraits>
   class CAFishbone {
@@ -41,14 +42,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                   CACellT<TrackerTraits>* cells,
                                   uint32_t const* __restrict__ nCells,
                                   OuterHitOfCell<TrackerTraits> const* isOuterHitOfCellWrap,
-                                  int32_t nHits,
+                                  HitToCell const* __restrict__ outerHitHisto,
+                                  uint32_t nHits,
+                                  uint32_t nHitsBPix1,
                                   bool checkTrack) const {
       constexpr auto maxCellsPerHit = CACellT<TrackerTraits>::maxCellsPerHit;
-
-      int32_t layer2Offset = isOuterHitOfCellWrap->offset;
-      // if there are no hits outside of the BPIX1, there is nothing to do
-      if (nHits <= layer2Offset)
-        return;
 
       auto const isOuterHitOfCell = isOuterHitOfCellWrap->container;
 
@@ -58,9 +56,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       uint8_t l[maxCellsPerHit];
 
       // outermost parallel loop, using all grid elements along the slower dimension (Y or 0 in a 2D grid)
-      for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, nHits - layer2Offset)) {
+      for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, nHits - nHitsBPix1)) {
         auto const& vc = isOuterHitOfCell[idy];
+        uint32_t histSize = outerHitHisto->size(idy+nHitsBPix1);
         auto size = vc.size();
+        printf("histSize %d size %d \n",histSize,size);
+        ALPAKA_ASSERT_ACC(histSize == uint32_t(size));
         if (size < 2)
           continue;
         // if alligned kill one of the two.
@@ -70,6 +71,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         auto yo = c0.outer_y(hh);
         auto zo = c0.outer_z(hh);
         auto sg = 0;
+        // this could be moved below 
+        // precomputing these here has 
+        // the advantage we then loop on less 
+        // entries but we can anyway skip them below and avoid having 
+        // the arrays above
         for (int32_t ic = 0; ic < size; ++ic) {
           auto& ci = cells[vc[ic]];
           if (ci.unused())
@@ -97,6 +103,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
             // if (d[ic]==d[jc]) continue;
             auto cos12 = x[ic] * x[jc] + y[ic] * y[jc] + z[ic] * z[jc];
 
+            // cos12 * cos12 could go after d[ic] != d[jc]
             if (d[ic] != d[jc] && cos12 * cos12 >= 0.99999f * (n[ic] * n[jc])) {
               // alligned:  kill farthest (prefer consecutive layers)
               // if same layer prefer farthest (longer level arm) and make space for intermediate hit
@@ -128,3 +135,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets
 
 #endif  // RecoTracker_PixelSeeding_plugins_alpaka_CAFishbone_h
+
