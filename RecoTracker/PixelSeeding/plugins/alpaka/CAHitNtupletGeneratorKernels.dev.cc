@@ -404,7 +404,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         tracks_view,
                         this->device_hitContainer_.data(),
                         this->device_tupleMultiplicity_.data());
-    GenericContainer::template launchFinalize<Acc1D>(this->device_tupleMultiplicity_.data(), queue);
+    GenericContainer::template launchFinalize<Acc1D>(this->device_tupleMultiplicityView_, queue);
 
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
     alpaka::exec<Acc1D>(
