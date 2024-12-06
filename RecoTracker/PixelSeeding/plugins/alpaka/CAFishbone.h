@@ -52,10 +52,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
       auto const isOuterHitOfCell = isOuterHitOfCellWrap->container;
 
-      float x[maxCellsPerHit], y[maxCellsPerHit], z[maxCellsPerHit], n[maxCellsPerHit];
-      uint32_t cc[maxCellsPerHit];
-      uint16_t d[maxCellsPerHit];
-      uint8_t l[maxCellsPerHit];
+      // float x[maxCellsPerHit], y[maxCellsPerHit], z[maxCellsPerHit], n[maxCellsPerHit];
+      // uint32_t cc[maxCellsPerHit];
+      // uint16_t d[maxCellsPerHit];
+      // uint8_t l[maxCellsPerHit];
 
       // outermost parallel loop, using all grid elements along the slower dimension (Y or 0 in a 2D grid)
       for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, nHits - layer2Offset)) {
@@ -69,39 +69,55 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         auto xo = c0.outer_x(hh);
         auto yo = c0.outer_y(hh);
         auto zo = c0.outer_z(hh);
-        auto sg = 0;
-        for (int32_t ic = 0; ic < size; ++ic) {
+        // auto sg = 0;
+        // for (int32_t ic = 0; ic < size; ++ic) {
+        //   auto& ci = cells[vc[ic]];
+        //   if (ci.unused())
+        //     continue;  // for triplets equivalent to next
+        //   if (checkTrack && ci.tracks().empty())
+        //     continue;
+        //   cc[sg] = vc[ic];
+        //   l[sg] = ci.layerPairId();
+        //   d[sg] = ci.inner_detIndex(hh);
+        //   x[sg] = ci.inner_x(hh) - xo;
+        //   y[sg] = ci.inner_y(hh) - yo;
+        //   z[sg] = ci.inner_z(hh) - zo;
+        //   n[sg] = x[sg] * x[sg] + y[sg] * y[sg] + z[sg] * z[sg];
+        //   ++sg;
+        // }
+        // if (sg < 2)
+        //   continue;
+
+        // innermost parallel loop, using the block elements along the faster dimension (X or 1 in a 2D grid)
+        for (uint32_t ic : cms::alpakatools::independent_group_elements_x(acc, size - 1)) {
           auto& ci = cells[vc[ic]];
-          if (ci.unused())
+           if (ci.unused())
             continue;  // for triplets equivalent to next
           if (checkTrack && ci.tracks().empty())
             continue;
-          cc[sg] = vc[ic];
-          l[sg] = ci.layerPairId();
-          d[sg] = ci.inner_detIndex(hh);
-          x[sg] = ci.inner_x(hh) - xo;
-          y[sg] = ci.inner_y(hh) - yo;
-          z[sg] = ci.inner_z(hh) - zo;
-          n[sg] = x[sg] * x[sg] + y[sg] * y[sg] + z[sg] * z[sg];
-          ++sg;
-        }
-        if (sg < 2)
-          continue;
 
-        // innermost parallel loop, using the block elements along the faster dimension (X or 1 in a 2D grid)
-        for (uint32_t ic : cms::alpakatools::independent_group_elements_x(acc, sg - 1)) {
-          auto& ci = cells[cc[ic]];
-          for (auto jc = ic + 1; (int)jc < sg; ++jc) {
-            auto& cj = cells[cc[jc]];
+          auto x1 = (ci.inner_x(hh) - xo);
+          auto y1 = (ci.inner_y(hh) - yo); 
+          auto z1 = (ci.inner_z(hh) - zo); 
+          auto n1 = x1*x1 + y1*y1 + z1*z1;
+
+          for (auto jc = ic + 1; (int)jc < size; ++jc) {
+            auto& cj = cells[vc[jc]];
             // must be different detectors (in the same layer)
-            // if (d[ic]==d[jc]) continue;
-            auto cos12 = x[ic] * x[jc] + y[ic] * y[jc] + z[ic] * z[jc];
+            if (ci.inner_detIndex(hh)==cj.inner_detIndex(hh)) continue;
+            
+            auto x2 = (cj.inner_x(hh) - xo);
+            auto y2 = (cj.inner_y(hh) - yo); 
+            auto z2 = (cj.inner_z(hh) - zo); 
+            auto n2 = x2*x2 + y2*y2 + z2*z2;
 
-            if (d[ic] != d[jc] && cos12 * cos12 >= 0.99999f * (n[ic] * n[jc])) {
+            auto cos12 = x1 * x2 + y1 * y2 + z1 * z2;
+
+            if (cos12 * cos12 >= 0.99999f * (n1*n2)) {
               // alligned:  kill farthest (prefer consecutive layers)
               // if same layer prefer farthest (longer level arm) and make space for intermediate hit
-              bool sameLayer = l[ic] == l[jc];
-              if (n[ic] > n[jc]) {
+              bool sameLayer = ci.layerPairId() == cj.layerPairId();
+              if (n1 > n2) {
                 if (sameLayer) {
                   cj.kill();  // closest
                   ci.setFishbone(acc, cj.inner_hit_id(), cj.inner_z(hh), hh);
