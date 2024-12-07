@@ -58,9 +58,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       // outermost parallel loop, using all grid elements along the slower dimension (Y or 0 in a 2D grid)
       for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, nHits - nHitsBPix1)) {
         auto const& vc = isOuterHitOfCell[idy];
+        auto id = idy+nHitsBPix1;  //TODO have this offset in the histo building directly
         uint32_t histSize = outerHitHisto->size(idy+nHitsBPix1);
         auto size = vc.size();
-        printf("histSize %d size %d \n",histSize,size);
+        printf("hist %d histSize %d size %d \n",idy+nHitsBPix1,histSize,size);
         ALPAKA_ASSERT_ACC(histSize == uint32_t(size));
         if (size < 2)
           continue;
@@ -76,13 +77,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         // the advantage we then loop on less 
         // entries but we can anyway skip them below and avoid having 
         // the arrays above
-        for (int32_t ic = 0; ic < size; ++ic) {
-          auto& ci = cells[vc[ic]];
+
+        auto const* __restrict__ bin = outerHitHisto->begin(idy+nHitsBPix1);
+        for (auto idx = 0u; idx < histSize; idx++) {
+          unsigned int otherCell = bin[idx];
+          printf("vc[0] %d idx %d vc[idx] %d otherCell %d \n",vc[0],idx,vc[idx],otherCell);
+        }
+        
+        for (auto idx = 0u; idx < histSize; idx++) {
+        // for (int32_t ic = 0; ic < size; ++ic) {
+        // for (auto ic = 0u; ic < histSize; ic++) {
+          unsigned int otherCell = bin[idx];
+          auto& ci = cells[otherCell];//vc[ic]];
+          // unsigned int otherCell = bin[ic] - nHitsBPix1;
+          // auto& ci = cells[otherCell];
           if (ci.unused())
             continue;  // for triplets equivalent to next
           if (checkTrack && ci.tracks().empty())
             continue;
-          cc[sg] = vc[ic];
+          cc[sg] = otherCell;//vc[ic];
           l[sg] = ci.layerPairId();
           d[sg] = ci.inner_detIndex(hh);
           x[sg] = ci.inner_x(hh) - xo;
