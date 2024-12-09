@@ -469,7 +469,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   HitContainer *foundNtuplets,
                                   CellToCell const* __restrict__ cellNeighborsHisto,
                                   CellToTracks *cellTracksHisto,
-                                  CACellT<TrackerTraits> *__restrict__ cells,
+                                  CASimpleCell<TrackerTraits> *__restrict__ cells,
                                   uint32_t const *nTriplets,
                                   uint32_t const *nCells,
                                   CellTracksVector<TrackerTraits> *cellTracks,
@@ -491,7 +491,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           continue;
 
         // we require at least three hits
-        if (thisCell.outerNeighbors().empty())
+        if (cellNeighborsHisto->size(idx))
           continue;
 
         auto pid = thisCell.layerPairId();
@@ -506,7 +506,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                           hh,
                                                           cc,
                                                           cells,
-                                                          *cellTracks,
                                                           *foundNtuplets,
                                                           cellNeighborsHisto,
                                                           cellTracksHisto,
