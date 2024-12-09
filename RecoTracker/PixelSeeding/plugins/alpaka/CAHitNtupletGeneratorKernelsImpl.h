@@ -375,7 +375,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   CellToCell *cellNeighborsHisto,
                                   AlgoParams const& params) const {
       using Cell = CACellT<TrackerTraits>;
-      // using CellStack = cms::alpakatools::SimpleVector<uint16_t>; //could
 
       if (cms::alpakatools::once_per_grid(acc)) {
         *apc1 = 0;
@@ -421,13 +420,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                               oc,
                               dcaCut,
                               params.hardCurvCut_)) { 
+            cellNeighborsHisto->count(acc,otherCell);
             auto t_ind = alpaka::atomicAdd(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
-            // printf("filling cell no. %d: %d -> %d\n",t_ind,otherCell,cellIndex);
+            printf("filling cell no. %d %d: %d -> %d\n",t_ind,cellNeighborsHisto->size(),otherCell,cellIndex);
             oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);
+            
+            // ALPAKA_ASSERT_ACC(t_ind == );
             // add check for size?
             cn[t_ind].inner() = otherCell;
             cn[t_ind].outer() = cellIndex;
-            cellNeighborsHisto->count(acc,otherCell);
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             oc.setStatusBits(Cell::StatusBit::kUsed);
             
@@ -457,6 +458,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
     }
   };
+
+  template <typename TrackerTraits>
+  class Kernel_cellTrackHistoFill {
+  public:
+    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+    ALPAKA_FN_ACC void operator()(TAcc const &acc,
+                                  uint32_t const* nTrips,
+                                  caStructures::CACoupleSoAConstView cn,
+                                  CellToCell *cellNeighborsHisto) const {
+  
+  for (uint32_t tripIndex : cms::alpakatools::uniform_elements(acc, *nTrips)) {
+        cellNeighborsHisto->fill(acc,cn[tripIndex].inner(),cn[tripIndex].outer());
+        printf("filling cellNeighborsHisto: %d -> %d\n",cn[tripIndex].inner(),cn[tripIndex].outer());
+          
+        }
+
+    }
+  };
   
   template <typename TrackerTraits>
   class Kernel_find_ntuplets {
@@ -469,10 +488,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   HitContainer *foundNtuplets,
                                   CellToCell const* __restrict__ cellNeighborsHisto,
                                   CellToTracks *cellTracksHisto,
+                                  caStructures::CACoupleSoAView ct,
                                   CASimpleCell<TrackerTraits> *__restrict__ cells,
                                   uint32_t const *nTriplets,
                                   uint32_t const *nCells,
-                                  CellTracksVector<TrackerTraits> *cellTracks,
                                   cms::alpakatools::AtomicPairCounter *apc,
                                   AlgoParams const& params) const {
 
@@ -480,7 +499,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
 #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc))
-        printf("starting producing ntuplets from %d cells and %d triplets \n", *nCells, *nTriplets);
+        printf("starting producing ntuplets from %d/%d cells and %d triplets \n", *nCells, cellNeighborsHisto->nOnes(), *nTriplets);
 #endif
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
@@ -491,7 +510,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           continue;
 
         // we require at least three hits
-        if (cellNeighborsHisto->size(idx))
+        auto nNeighbors = cellNeighborsHisto->end(idx) - cellNeighborsHisto->begin(idx);
+        printf("%d nNeighbors %ld size %d \n",idx, nNeighbors,cellNeighborsHisto->size(idx));
+        if (cellNeighborsHisto->size(idx) == 0)
           continue;
 
         auto pid = thisCell.layerPairId();
@@ -509,6 +530,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                           *foundNtuplets,
                                                           cellNeighborsHisto,
                                                           cellTracksHisto,
+                                                          ct,
                                                           *apc,
                                                           tracks_view.quality(),
                                                           stack,
