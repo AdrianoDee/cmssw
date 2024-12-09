@@ -339,7 +339,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_hitContainer_.data(),
                         this->device_cellToNeighbors_.data(),
                         this->device_cellToTracks_.data(),
-                        this->device_theCells_.data(),
+                        this->device_simpleCells_.data(),
                         this->device_nTriplets_.data(),
                         this->device_nCells_.data(),
                         this->device_theCellTracks_.data(),
