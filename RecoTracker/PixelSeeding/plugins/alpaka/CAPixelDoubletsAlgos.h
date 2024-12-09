@@ -269,6 +269,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           if (cc.cellPtCut() > 0 && ptcut(oi, idphi))
             continue;
 
+          hitToCell->count(acc,oi);
+          //nCells could be simply hitToCell->size(); ... uhm
           auto ind = alpaka::atomicAdd(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});
           if (ind >= maxNumOfDoublets) {
             alpaka::atomicSub(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});
@@ -277,7 +279,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, inner, outer, i, oi);
           s_cells[ind].init(hh, pairLayerId, inner, outer, i, oi);
           
-          hitToCell->count(acc,oi);
+          
 
           isOuterHitOfCell[oi].push_back(acc, ind);
 #ifdef GPU_DEBUG

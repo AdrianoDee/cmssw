@@ -238,8 +238,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     cms::alpakatools::AtomicPairCounter* device_hitTuple_apc_;
     cms::alpakatools::device_view<Device, uint32_t> device_nCells_;
     cms::alpakatools::device_view<Device, uint32_t> device_nTriplets_;
+    // cms::alpakatools::device_view<Device, uint32_t> device_nCellTracks_;
 
     CACoupleSoACollection deviceTriplets_;
+    CACoupleSoACollection deviceTracksCells_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

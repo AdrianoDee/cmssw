@@ -17,6 +17,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/PixelSeeding/interface/CircleEq.h"
 #include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
+#include "RecoTracker/PixelSeeding/interface/CACoupleSoA.h"
 
 #include "CAStructures.h"
 
@@ -56,6 +57,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitContainer = caStructures::SequentialContainer;
     using CellToCell = caStructures::GenericContainer;
     using CellToTracks = caStructures::GenericContainer;
+    using CACoupleSoAView = caStructures::CACoupleSoAView;
 
     using Quality = ::pixelTrack::Quality;
     static constexpr auto bad = ::pixelTrack::Quality::bad;
@@ -164,6 +166,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       HitContainer& foundNtuplets,
                                                       CellToCell const *__restrict__ cellNeighborsHisto,
                                                       CellToTracks *cellTracksHisto,
+                                                      CACoupleSoAView ct,
                                                       cms::alpakatools::AtomicPairCounter& apc,
                                                       Quality* __restrict__ quality,
                                                       TmpTuple& tmpNtuplet,
@@ -198,7 +201,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             continue;  // killed by earlyFishbone
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
-              acc, hh, cc, cells, foundNtuplets, cellNeighborsHisto, cellTracksHisto, apc, quality, tmpNtuplet, minHitsPerNtuplet);
+              acc, hh, cc, cells, foundNtuplets, cellNeighborsHisto, cellTracksHisto, ct, apc, quality, tmpNtuplet, minHitsPerNtuplet);
         }
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
@@ -226,7 +229,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               printf("track n. %d nhits %d \n",it,nh+1);
               if (it >= 0) {  // if negative is overflow....
                 for (auto c : tmpNtuplet)
-                  cellTracksHisto->count(acc,c);
+                {
+
+                  cellTracksHisto->count(acc,c); //use this to count!!!
+                  auto t_ind = cellTracksHisto->size();
+                  printf("cellToTrack n. %d cell %d track %d\n",t_ind,c,it);
+                  ct[t_ind].inner() = c; //cell
+                  ct[t_ind].outer() = it; //track
+                }
                 quality[it] = bad;  // initialize to bad
               }
             }

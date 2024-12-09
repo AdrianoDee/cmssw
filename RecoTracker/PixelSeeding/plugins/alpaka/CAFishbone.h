@@ -58,8 +58,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       // outermost parallel loop, using all grid elements along the slower dimension (Y or 0 in a 2D grid)
       for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, nHits - nHitsBPix1)) {
         auto const& vc = isOuterHitOfCell[idy];
-        auto id = idy+nHitsBPix1;  //TODO have this offset in the histo building directly
-        uint32_t histSize = outerHitHisto->size(idy+nHitsBPix1);
+        uint32_t histSize = outerHitHisto->size(idy+nHitsBPix1); //TODO have this offset in the histo building directly
         auto size = vc.size();
         printf("hist %d histSize %d size %d \n",idy+nHitsBPix1,histSize,size);
         ALPAKA_ASSERT_ACC(histSize == uint32_t(size));
