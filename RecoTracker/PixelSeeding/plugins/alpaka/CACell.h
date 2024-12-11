@@ -166,6 +166,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       HitContainer& foundNtuplets,
                                                       CellToCell const *__restrict__ cellNeighborsHisto,
                                                       CellToTracks *cellTracksHisto,
+                                                      uint32_t *nCellTracks,
                                                       CACoupleSoAView ct,
                                                       cms::alpakatools::AtomicPairCounter& apc,
                                                       Quality* __restrict__ quality,
@@ -201,7 +202,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             continue;  // killed by earlyFishbone
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
-              acc, hh, cc, cells, foundNtuplets, cellNeighborsHisto, cellTracksHisto, ct, apc, quality, tmpNtuplet, minHitsPerNtuplet);
+              acc, hh, cc, cells, foundNtuplets, cellNeighborsHisto, cellTracksHisto, nCellTracks, ct, apc, quality, tmpNtuplet, minHitsPerNtuplet);
         }
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
@@ -232,7 +233,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                 {
 
                   cellTracksHisto->count(acc,c); //use this to count!!!
-                  auto t_ind = cellTracksHisto->size();
+                  auto t_ind = alpaka::atomicAdd(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
+                  // add a check
                   printf("cellToTrack n. %d cell %d track %d\n",t_ind,c,it);
                   ct[t_ind].inner() = c; //cell
                   ct[t_ind].outer() = it; //track
