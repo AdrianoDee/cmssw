@@ -39,21 +39,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
   // all of these below are mostly to avoid brining around the relative namespace
 
-  template <typename TrackerTraits>
-  using HitToTuple = HitToTupleT<TrackerTraits>;
-
-  template <typename TrackerTraits>
-  using TupleMultiplicity = TupleMultiplicityT<TrackerTraits>;
-
-  template <typename TrackerTraits>
-  using CellNeighborsVector = CellNeighborsVectorT<TrackerTraits>;
-
-  template <typename TrackerTraits>
-  using CellTracksVector = CellTracksVectorT<TrackerTraits>;
-
-  template <typename TrackerTraits>
-  using OuterHitOfCell = OuterHitOfCellT<TrackerTraits>;
-
   using Quality = ::pixelTrack::Quality;
 
   using TkSoAView = ::reco::TrackSoAView;
@@ -65,8 +50,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   using Counters = caHitNtupletGenerator::Counters;
   using HitContainer = caStructures::SequentialContainer;
   using HitToCell = caStructures::GenericContainer;
+  using HitToTuple = caStructures::GenericContainer;
   using CellToCell = caStructures::GenericContainer;
   using CellToTracks = caStructures::GenericContainer;
+  using TupleMultiplicity = caStructures::GenericContainer;
 
   using namespace cms::alpakatools;
 
@@ -116,16 +103,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   TkSoAView tracks_view,
                                   HitContainer const *__restrict__ foundNtuplets,
-                                  GenericContainer const *tupleMultiplicity,
-                                  GenericContainer const *hitToTuple,
+                                  TupleMultiplicity const *tupleMultiplicity,
+                                  HitToTuple const *hitToTuple,
                                   cms::alpakatools::AtomicPairCounter *apc,
-                                  CACellT<TrackerTraits> const *__restrict__ cells,
+                                  CASimpleCell<TrackerTraits> const *__restrict__ cells,
                                   uint32_t const *__restrict__ nCells,
-                                  CellNeighborsVector<TrackerTraits> const *cellNeighbors,
-                                  CellTracksVector<TrackerTraits> const *cellTracks,
-                                  OuterHitOfCell<TrackerTraits> const *isOuterHitOfCell,
-                                  int32_t nHits,
-                                  uint32_t maxNumberOfDoublets,
+                                  // CellNeighborsVector<TrackerTraits> const *cellNeighbors,
+                                  // CellTracksVector<TrackerTraits> const *cellTracks,
+                                  // OuterHitOfCell<TrackerTraits> const *isOuterHitOfCell,
+                                  int32_t nHits, //could be just the nOnes() of hitToTuple
+                                  AlgoParams const& params,
                                   Counters *counters) const {
       auto &c = *counters;
       // counters once per event
@@ -166,30 +153,30 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       if (cms::alpakatools::once_per_grid(acc)) {
         if (apc->get().first >= TrackerTraits::maxNumberOfQuadruplets)
           printf("Tuples overflow\n");
-        if (*nCells >= maxNumberOfDoublets)
+        if (*nCells >= params.maxNumberOfDoublets_)
           printf("Cells overflow\n");
-        if (cellNeighbors && cellNeighbors->full())
-          printf("cellNeighbors overflow %d %d \n", cellNeighbors->capacity(), cellNeighbors->size());
-        if (cellTracks && cellTracks->full())
-          printf("cellTracks overflow\n");
-        if (int(hitToTuple->nOnes()) < nHits)
-          printf("ERROR hitToTuple  overflow %d %d\n", hitToTuple->nOnes(), nHits);
-#ifdef GPU_DEBUG
-        printf("size of cellNeighbors %d \n cellTracks %d \n hitToTuple %d \n",
-               cellNeighbors->size(),
-               cellTracks->size(),
-               hitToTuple->size());
-#endif
+//         if (cellNeighbors && cellNeighbors->full())
+//           printf("cellNeighbors overflow %d %d \n", cellNeighbors->capacity(), cellNeighbors->size());
+//         if (cellTracks && cellTracks->full())
+//           printf("cellTracks overflow\n");
+//         if (int(hitToTuple->nOnes()) < nHits)
+//           printf("ERROR hitToTuple  overflow %d %d\n", hitToTuple->nOnes(), nHits);
+// #ifdef GPU_DEBUG
+//         printf("size of cellNeighbors %d \n cellTracks %d \n hitToTuple %d \n",
+//                cellNeighbors->size(),
+//                cellTracks->size(),
+//                hitToTuple->size());
+// #endif
       }
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, *nCells)) {
         auto const &thisCell = cells[idx];
         if (thisCell.hasFishbone() && !thisCell.isKilled())
           alpaka::atomicAdd(acc, &c.nFishCells, 1ull, alpaka::hierarchy::Blocks{});
-        if (thisCell.outerNeighbors().full())  //++tooManyNeighbors[thisCell.theLayerPairId];
-          printf("OuterNeighbors overflow %d in %d\n", idx, thisCell.layerPairId());
-        if (thisCell.tracks().full())  //++tooManyTracks[thisCell.theLayerPairId];
-          printf("Tracks overflow %d in %d\n", idx, thisCell.layerPairId());
+        // if (thisCell.outerNeighbors().full())  //++tooManyNeighbors[thisCell.theLayerPairId];
+        //   printf("OuterNeighbors overflow %d in %d\n", idx, thisCell.layerPairId());
+        // if (thisCell.tracks().full())  //++tooManyTracks[thisCell.theLayerPairId];
+        //   printf("Tracks overflow %d in %d\n", idx, thisCell.layerPairId());
         if (thisCell.isKilled())
           alpaka::atomicAdd(acc, &c.nKilledCells, 1ull, alpaka::hierarchy::Blocks{});
         if (!thisCell.unused())
@@ -198,10 +185,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           alpaka::atomicAdd(acc, &c.nZeroTrackCells, 1ull, alpaka::hierarchy::Blocks{});
       }
 
-      // FIXME this loop was up to nHits - isOuterHitOfCell.offset in the CUDA version
-      for (auto idx : cms::alpakatools::uniform_elements(acc, nHits))
-        if ((*isOuterHitOfCell).container[idx].full())  // ++tooManyOuterHitOfCell;
-          printf("OuterHitOfCell overflow %d\n", idx);
+      // // FIXME this loop was up to nHits - isOuterHitOfCell.offset in the CUDA version
+      // for (auto idx : cms::alpakatools::uniform_elements(acc, nHits))
+      //   if ((*isOuterHitOfCell).container[idx].full())  // ++tooManyOuterHitOfCell;
+      //     printf("OuterHitOfCell overflow %d\n", idx);
     }
   };
 
@@ -482,7 +469,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   for (uint32_t index : cms::alpakatools::uniform_elements(acc, genericHisto->size())) {
         genericHisto->fill(acc,cn[index].inner(),cn[index].outer());
         printf("filling: %d -> %d\n",cn[index].inner(),cn[index].outer());
-          
         }
 
     }
@@ -597,7 +583,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   TkSoAView tracks_view,
                                   HitContainer const *__restrict__ foundNtuplets,
-                                  GenericContainer *tupleMultiplicity) const {
+                                  TupleMultiplicity *tupleMultiplicity) const {
       for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
         auto nhits = foundNtuplets->size(it);
         printf("countMulti mult %d %d\n", it, nhits);
@@ -621,7 +607,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   TkSoAView tracks_view,
                                   HitContainer const *__restrict__ foundNtuplets,
-                                  GenericContainer *tupleMultiplicity) const {
+                                  TupleMultiplicity *tupleMultiplicity) const {
       for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
 
         auto nhits = foundNtuplets->size(it);
@@ -714,7 +700,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   TkSoAView tracks_view,
                                   HitContainer const *__restrict__ foundNtuplets,
-                                  GenericContainer *hitToTuple) const {
+                                  HitToTuple *hitToTuple) const {
       for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
         if (foundNtuplets->size(idx) == 0)
           break;  // guard
@@ -731,7 +717,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   TkSoAView tracks_view,
                                   HitContainer const *__restrict__ foundNtuplets,
-                                  GenericContainer *hitToTuple) const {
+                                  HitToTuple *hitToTuple) const {
       for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
         if (foundNtuplets->size(idx) == 0)
           break;  // guard
@@ -794,7 +780,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  GenericContainer const *__restrict__ hitToTuple,
+                                  HitToTuple const *__restrict__ hitToTuple,
                                   Counters *counters) const {
       auto &c = *counters;
       for (auto idx : cms::alpakatools::uniform_elements(acc, hitToTuple->nOnes())) {
@@ -813,9 +799,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   int *__restrict__ nshared,
-                                  GenericContainer const *__restrict__ ptuples,
+                                  HitContainer const *__restrict__ ptuples,
                                   Quality const *__restrict__ quality,
-                                  GenericContainer const *__restrict__ phitToTuple) const {
+                                  HitToTuple const *__restrict__ phitToTuple) const {
       constexpr auto loose = Quality::loose;
 
       auto &hitToTuple = *phitToTuple;
@@ -852,7 +838,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   int const *__restrict__ nshared,
-                                  GenericContainer const *__restrict__ tuples,
+                                  HitContainer const *__restrict__ tuples,
                                   Quality *__restrict__ quality,
                                   bool dupPassThrough) const {
       // constexpr auto bad = Quality::bad;
@@ -882,7 +868,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   TkSoAView tracks_view,
                                   uint16_t nmin,
                                   bool dupPassThrough,
-                                  GenericContainer const *__restrict__ phitToTuple) const {
+                                  HitToTuple const *__restrict__ phitToTuple) const {
       // quality to mark rejected
       auto const reject = dupPassThrough ? Quality::loose : Quality::dup;
 
@@ -941,7 +927,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   TkSoAView tracks_view,
                                   int nmin,
                                   bool dupPassThrough,
-                                  GenericContainer const *__restrict__ phitToTuple) const {
+                                  HitToTuple const *__restrict__ phitToTuple) const {
       // quality to mark rejected
       auto const reject = dupPassThrough ? Quality::loose : Quality::dup;
       // quality of longest track
@@ -994,7 +980,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   TkSoAView tracks_view,
                                   uint16_t nmin,
                                   bool dupPassThrough,
-                                  GenericContainer const *__restrict__ phitToTuple) const {
+                                  HitToTuple const *__restrict__ phitToTuple) const {
       // quality to mark rejected
       auto const reject = Quality::loose;
       /// min quality of good
@@ -1054,7 +1040,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   TkSoAView tracks_view,
                                   uint16_t nmin,
                                   bool dupPassThrough,
-                                  GenericContainer const *__restrict__ phitToTuple) const {
+                                  HitToTuple const *__restrict__ phitToTuple) const {
       // quality to mark rejected
       auto const reject = Quality::loose;
       /// min quality of good
@@ -1100,7 +1086,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   HitsConstView hh,
                                   TkSoAView tracks_view,
                                   HitContainer const *__restrict__ foundNtuplets,
-                                  GenericContainer const *__restrict__ phitToTuple,
+                                  HitToTuple const *__restrict__ phitToTuple,
                                   int32_t firstPrint,
                                   int32_t lastPrint,
                                   int iev) const {
