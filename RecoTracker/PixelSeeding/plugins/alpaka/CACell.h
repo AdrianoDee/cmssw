@@ -485,14 +485,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
     }
 
-    /*
+
+#ifdef CA_TRIPLET_HOLES
+
     // These functions have never been used in production
     // They need an AverageGeometry to be filled 
     // Commenting for the moment since they are the only reason we 
     // fill the AverageGeometry and attach to the hit SoA
-    // keeping them commented for future usage and memory
 
-    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool hole0(const HitsConstView& hh, CACellT const& innerCell) const {
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool hole0(const HitsConstView& hh, AverageGeometryConstView& ag, CACellT const& innerCell) const {
       using namespace phase1PixelTopology;
 
       int p = innerCell.inner_iphi(hh);
@@ -501,13 +502,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       p = (max_ladder_bpx0 * p) / std::numeric_limits<unsigned short>::max();
       p %= max_ladder_bpx0;
       auto il = first_ladder_bpx0 + p;
-      auto r0 = hh.averageGeometry().ladderR[il];
+      auto r0 = ag[il].ladderR();
       auto ri = innerCell.inner_r(hh);
       auto zi = innerCell.inner_z(hh);
       auto ro = outer_r(hh);
       auto zo = outer_z(hh);
       auto z0 = zi + (r0 - ri) * (zo - zi) / (ro - ri);
-      auto z_in_ladder = std::abs(z0 - hh.averageGeometry().ladderZ[il]);
+      auto z_in_ladder = std::abs(z0 - ag[il].ladderZ());
       auto z_in_module = z_in_ladder - module_length_bpx0 * int(z_in_ladder / module_length_bpx0);
       auto gap = z_in_module < module_tolerance_bpx0 || z_in_module > (module_length_bpx0 - module_tolerance_bpx0);
       return gap;
@@ -522,20 +523,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       p = (max_ladder_bpx4 * p) / std::numeric_limits<unsigned short>::max();
       p %= max_ladder_bpx4;
       auto il = first_ladder_bpx4 + p;
-      auto r4 = hh.averageGeometry().ladderR[il];
+      auto r4 = ag[il].ladderR();
       auto ri = innerCell.inner_r(hh);
       auto zi = innerCell.inner_z(hh);
       auto ro = outer_r(hh);
       auto zo = outer_z(hh);
       auto z4 = zo + (r4 - ro) * (zo - zi) / (ro - ri);
-      auto z_in_ladder = std::abs(z4 - hh.averageGeometry().ladderZ[il]);
+      auto z_in_ladder = std::abs(z4 - ag[il].ladderZ());
       auto z_in_module = z_in_ladder - module_length_bpx4 * int(z_in_ladder / module_length_bpx4);
       auto gap = z_in_module < module_tolerance_bpx4 || z_in_module > (module_length_bpx4 - module_tolerance_bpx4);
-      auto holeP = z4 > hh.averageGeometry().ladderMaxZ[il] && z4 < hh.averageGeometry().endCapZ[0];
-      auto holeN = z4 < hh.averageGeometry().ladderMinZ[il] && z4 > hh.averageGeometry().endCapZ[1];
+      auto holeP = z4 > ag[il].ladderMaxZ() && z4 < ag[0].endCapZ();
+      auto holeN = z4 < ag[il].ladderMinZ() && z4 > ag[1].endCapZ();
       return gap || holeP || holeN;
     }
-    */
+#endif
 
     // Cell status management
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void kill() { theStatus_ |= uint16_t(StatusBit::kKilled); }
