@@ -198,6 +198,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             "cuts\" based on the fit results (pT, Tip, Zip).");
   }
 
+  // now this could be removed actually
   template <>
   void CAHitNtupletGenerator<pixelTopology::HIonPhase1>::fillPSetDescription(edm::ParameterSetDescription& desc) {
     fillDescriptionsCommon(desc);

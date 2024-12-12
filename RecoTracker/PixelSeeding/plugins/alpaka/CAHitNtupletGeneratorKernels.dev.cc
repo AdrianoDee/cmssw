@@ -68,27 +68,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         device_tupleMultiplicity_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
         device_tupleMultiplicityStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, m_params.algoParams_.maxNumberOfTuples_)},
         device_tupleMultiplicityOffsets_{cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, TrackerTraits::maxHitsOnTrack + 1)},
-        
-        // NB: In legacy, device_theCells_ and device_isOuterHitOfCell_ were allocated inside buildDoublets
-        // device_theCells_{
-        //     cms::alpakatools::make_device_buffer<CACell[]>(queue, m_params.algoParams_.maxNumberOfDoublets_)},
+
         device_simpleCells_{
             cms::alpakatools::make_device_buffer<SimpleCell[]>(queue, m_params.algoParams_.maxNumberOfDoublets_)},
         // in principle we can use "nhits" to heuristically dimension the workspace...
-        // device_isOuterHitOfCell_{
-        //     cms::alpakatools::make_device_buffer<OuterHitOfCellContainer[]>(queue, std::max(1, int(nHits - offsetBPIX2)))},
-        // isOuterHitOfCell_{cms::alpakatools::make_device_buffer<OuterHitOfCell>(queue)},
-
-        // device_theCellNeighbors_{cms::alpakatools::make_device_buffer<CellNeighborsVector>(queue)},
-        // device_theCellTracks_{cms::alpakatools::make_device_buffer<CellTracksVector>(queue)},
-        // cellStorage_{cms::alpakatools::make_device_buffer<unsigned char[]>(
-        //     queue,
-        //     TrackerTraits::maxNumOfActiveDoublets * sizeof(CellNeighbors) +
-        //         TrackerTraits::maxNumOfActiveDoublets * sizeof(CellTracks))},
-        // device_theCellNeighborsContainer_{reinterpret_cast<CellNeighbors *>(cellStorage_.data())},
-        // device_theCellTracksContainer_{reinterpret_cast<CellTracks *>(
-        //     cellStorage_.data() + TrackerTraits::maxNumOfActiveDoublets * sizeof(CellNeighbors))},
-
         device_extraStorage_{
             cms::alpakatools::make_device_buffer<cms::alpakatools::AtomicPairCounter::DoubleWord[]>(queue, 3u)},
         device_hitTuple_apc_{reinterpret_cast<cms::alpakatools::AtomicPairCounter *>(device_extraStorage_.data())},
@@ -214,10 +197,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                     (uint32_t)256,
                                                     queue);
         
-// #ifdef GPU_DEBUG
+#ifdef GPU_DEBUG
         alpaka::wait(queue);
         std::cout << "CAHitNtupletGeneratorKernels -> Hits prepared (layer starts and histo) -> DONE!" << std::endl;
-// #endif
+#endif
 
     }   
   
