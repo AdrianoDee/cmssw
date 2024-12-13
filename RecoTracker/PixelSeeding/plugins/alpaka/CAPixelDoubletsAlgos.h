@@ -118,7 +118,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       // CellNeighborsVector<TrackerTraits>* cellNeighbors,
       // CellTracksVector<TrackerTraits>* cellTracks,
       HitsConstView hh,
-      ::reco::CACellsSoAConstView cc,
+      ::reco::CAGraphSoAConstView cc,
       uint32_t const* __restrict__ offsets,
       PhiBinner<TrackerTraits>* phiBinner, //const
       // OuterHitOfCell<TrackerTraits> isOuterHitOfCell,

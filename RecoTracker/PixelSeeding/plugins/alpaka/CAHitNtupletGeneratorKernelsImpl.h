@@ -498,7 +498,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   HitsConstView hh,
-                                  const ::reco::CACellsSoAConstView &cc,
+                                  const ::reco::CAGraphSoAConstView &cc,
                                   TkSoAView tracks_view,
                                   HitContainer *foundNtuplets,
                                   CellToCell const* __restrict__ cellNeighborsHisto,

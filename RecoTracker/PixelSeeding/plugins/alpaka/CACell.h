@@ -161,7 +161,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template <int DEPTH, typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void find_ntuplets(TAcc const& acc,
                                                       const HitsConstView& hh,
-                                                      const ::reco::CACellsSoAConstView &cc,
+                                                      const ::reco::CAGraphSoAConstView &cc,
                                                       CASimpleCell* __restrict__ cells,
                                                       HitContainer& foundNtuplets,
                                                       CellToCell const *__restrict__ cellNeighborsHisto,
@@ -571,7 +571,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template <int DEPTH, typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void find_ntuplets(TAcc const& acc,
                                                       const HitsConstView& hh,
-                                                      const ::reco::CACellsSoAConstView &cc,
+                                                      const ::reco::CAGraphSoAConstView &cc,
                                                       CACellT* __restrict__ cells,
                                                       CellTracksVector& cellTracks,
                                                       HitContainer& foundNtuplets,

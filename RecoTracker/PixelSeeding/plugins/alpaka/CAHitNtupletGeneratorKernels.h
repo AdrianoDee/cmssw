@@ -169,11 +169,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void prepareHits(const HitsConstView& hh, const HitModulesConstView &mm, const ::reco::CALayersSoAConstView& ll, Queue& queue);
 
-    void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, uint16_t nLayers, TkSoAView& track_view, TkHitsSoAView& track_hits_view, const ::reco::CALayersSoAConstView& ca_layers, const ::reco::CACellsSoAConstView& ca_cells, Queue& queue);
+    void launchKernels(const HitsConstView& hh, uint32_t offsetBPIX2, uint16_t nLayers, TkSoAView& track_view, TkHitsSoAView& track_hits_view, const ::reco::CALayersSoAConstView& ca_layers, const ::reco::CAGraphSoAConstView& ca_cells, Queue& queue);
 
     void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
 
-    void buildDoublets(const HitsConstView& hh, const ::reco::CACellsSoAConstView& cc, uint32_t offsetBPIX2, Queue& queue);
+    void buildDoublets(const HitsConstView& hh, const ::reco::CAGraphSoAConstView& cc, uint32_t offsetBPIX2, Queue& queue);
 
     static void printCounters();
 
