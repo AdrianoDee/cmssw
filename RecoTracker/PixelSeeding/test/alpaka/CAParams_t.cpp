@@ -43,7 +43,7 @@ int main() {
       // Instantiate vertices on device. PortableCollection allocates
       // SoA on device automatically.
       CAGeometrySoACollection ca_params_d({{n_layers,n_pairs}}, queue);
-      // testParamsSoA::runKernels(ca_params_d.view(), ca_params_d.view<reco::CACellsSoA>(), ca_params_d.view<reco::CARegionsSoA>(), queue);
+      // testParamsSoA::runKernels(ca_params_d.view(), ca_params_d.view<reco::CAGraphSoA>(), ca_params_d.view<reco::CARegionsSoA>(), queue);
 
 //       // If the device is actually the host, use the collection as-is.
 //       // Otherwise, copy the data from the device to the host.

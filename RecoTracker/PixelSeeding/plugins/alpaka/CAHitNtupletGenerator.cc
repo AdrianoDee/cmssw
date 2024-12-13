@@ -279,8 +279,8 @@ template <typename TrackerTraits>
     GPUKernels kernels(m_params, hits_d.nHits(), hits_d.offsetBPIX2(), geometry_d.view().metadata().size(), queue);
 
     kernels.prepareHits(hits_d.view(), hits_d.view<::reco::HitModuleSoA>(),  geometry_d.view(),queue);
-    kernels.buildDoublets(hits_d.view(), geometry_d.view<::reco::CACellsSoA>(), hits_d.offsetBPIX2(), queue);
-    kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), geometry_d.view().metadata().size(), tracks.view(), tracks.view<TrackHitSoA>(), geometry_d.view<::reco::CALayersSoA>(), geometry_d.view<::reco::CACellsSoA>(), queue);
+    kernels.buildDoublets(hits_d.view(), geometry_d.view<::reco::CAGraphSoA>(), hits_d.offsetBPIX2(), queue);
+    kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), geometry_d.view().metadata().size(), tracks.view(), tracks.view<TrackHitSoA>(), geometry_d.view<::reco::CALayersSoA>(), geometry_d.view<::reco::CAGraphSoA>(), queue);
 
     HelixFit fitter(bfield, m_params.algoParams_.fitNas4_);
     fitter.allocate(kernels.tupleMultiplicity(), tracks.view(), kernels.hitContainer());

@@ -7,7 +7,7 @@
 namespace ALPAKA_ACCELERATOR_NAMESPACE::testParamsSoA {
 
   void runKernels(::reco::CALayersSoAView layers_view,
-                                  ::reco::CACellsSoAView pairs_view,
+                                  ::reco::CAGraphSoAView pairs_view,
                                   Queue& queue);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::testCAGeometrySoA

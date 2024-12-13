@@ -6,6 +6,7 @@
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
+#include "DataFormats/GeometrySurface/interface/SOARotation.h"
 
 namespace reco {
 
@@ -26,6 +27,11 @@ namespace reco {
     // }
 
     using GraphNode = std::array<uint32_t, 2>;
+    using DetFrame = SOAFrame<float>;
+
+    GENERATE_SOA_LAYOUT(CAModulesLayout, 
+                    SOA_COLUMN(DetFrame, detFrame)
+                    )
 
     GENERATE_SOA_LAYOUT(CALayersLayout, 
                     SOA_COLUMN(uint32_t, layerStarts),
@@ -33,7 +39,7 @@ namespace reco {
                     SOA_COLUMN(float, caDCACut)
                     )
 
-    GENERATE_SOA_LAYOUT(CACellsLayout, 
+    GENERATE_SOA_LAYOUT(CAGraphLayout, 
                     SOA_COLUMN(GraphNode, graph),
                     SOA_COLUMN(bool, startingPair),
                     SOA_COLUMN(int16_t, phiCuts),
@@ -50,9 +56,13 @@ namespace reco {
   using CALayersSoAView = CALayersSoA::View;
   using CALayersSoAConstView = CALayersSoA::ConstView;
 
-  using CACellsSoA = CACellsLayout<>;
-  using CACellsSoAView = CACellsSoA::View;
-  using CACellsSoAConstView = CACellsSoA::ConstView;
+  using CAGraphSoA = CAGraphLayout<>;
+  using CAGraphSoAView = CAGraphSoA::View;
+  using CAGraphSoAConstView = CAGraphSoA::ConstView;
+
+  using CAModulesSoA = CAModulesLayout<>;
+  using CAModulesView = CAModulesSoA::View;
+  using CAModulesConstView = CAModulesSoA::ConstView;  
 
 }
 #endif  // RecoTracker_PixelSeeding_interface_CAGeometry_h

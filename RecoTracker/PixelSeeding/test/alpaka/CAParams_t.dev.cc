@@ -13,7 +13,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::testParamsSoA {
 //     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
 //     ALPAKA_FN_ACC void operator()(TAcc const& acc,
 //                                   reco::CALayersSoAView layers_view,
-//                                   reco::CACellsSoAView pairs_view,
+//                                   reco::CAGraphSoAView pairs_view,
 //                                   reco::CARegionsSoAView regions_view) const {
 //       if (cms::alpakatools::once_per_grid(acc)) {
 //         CAGeometry_view.nvFinal() = 420;
@@ -58,7 +58,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::testParamsSoA {
 //   };
 
   void runKernels(reco::CALayersSoAView layers_view,
-                                  reco::CACellsSoAView pairs_view,
+                                  reco::CAGraphSoAView pairs_view,
                                   Queue& queue) {
     uint32_t items = 64;
     uint32_t groups = cms::alpakatools::divide_up_by(CAGeometry_view.metadata().size(), items);

@@ -31,6 +31,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
+    using Rotation = SOARotation<float>;
+    using Frame = SOAFrame<float>;
+
   private:
 
     // Layers params
@@ -84,23 +87,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     assert(caThetaCuts_.size() == caDCACuts_.size()); 
     
     int n_layers = caThetaCuts_.size(); //layerStarts_.size() - 1;
-
     int n_pairs = pairGraph_.size() / 2;
-
+    int n_modules = 0;
     assert(int(n_pairs) == int(minZ_.size())); 
     assert(*std::max_element(startingPairs_.begin(), startingPairs_.end()) < n_pairs);
-
-    reco::CAGeometryHost product{{{n_layers + 1,n_pairs}}, cms::alpakatools::host()};
-
-    auto layerSoA = product.view();
-    auto cellSoA = product.view<::reco::CACellsSoA>();
 
     std::cout << "No. Layers to be used = " << n_layers << std::endl;
     
     const auto &trackerTopology = &iRecord.get(tTopologyToken_);
     const auto &trackerGeometry = &iRecord.get(tGeometryToken_);
-    
-    auto detUnits = trackerGeometry->detUnits();
+    auto const& detUnits = trackerGeometry->detUnits();
 
 #ifdef GPU_DEBUG 
     auto subSystem = 1;
@@ -118,7 +114,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     for (auto& detUnit : detUnits) {
       unsigned int index = detUnit->index();
-
+      n_modules++;
 #ifdef GPU_DEBUG
       if(index >= subSystemOffset)
       {
@@ -143,6 +139,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
       }
             
+    }
+
+    reco::CAGeometryHost product{{{n_layers + 1,n_pairs, n_modules}}, cms::alpakatools::host()};
+
+    auto layerSoA = product.view();
+    auto cellSoA = product.view<::reco::CAGraphSoA>();
+    auto modulesSoA = product.view<::reco::CAModulesSoA>();
+
+    for (int i = 0; i < n_modules; ++i) {
+        auto det = detUnits[i];
+        auto vv = det->surface().position();
+        auto rr = Rotation(det->surface().rotation());
+        modulesSoA[i].detFrame() =  Frame(vv.x(), vv.y(), vv.z(), rr); 
     }
 
     for (int i = 0; i < n_layers; ++i)

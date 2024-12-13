@@ -212,7 +212,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                   TkSoAView &tracks_view,
                                                                   TkHitsSoAView &tracks_hits_view,
                                                                   const reco::CALayersSoAConstView &ll,
-                                                                  const reco::CACellsSoAConstView &cc,
+                                                                  const reco::CAGraphSoAConstView &cc,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
     using namespace caHitNtupletGeneratorKernels;
@@ -445,7 +445,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   template <typename TrackerTraits>
   void CAHitNtupletGeneratorKernels<TrackerTraits>::buildDoublets(const HitsConstView &hh,
-                                                                  const ::reco::CACellsSoAConstView &cc,
+                                                                  const ::reco::CAGraphSoAConstView &cc,
                                                                   uint32_t offsetBPIX2,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;

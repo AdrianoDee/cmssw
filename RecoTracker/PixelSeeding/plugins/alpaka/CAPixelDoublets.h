@@ -63,7 +63,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     // CellNeighborsVector<TrackerTraits>* cellNeighbors,
                                     // CellTracksVector<TrackerTraits>* cellTracks,
                                     HitsConstView hh,
-                                    ::reco::CACellsSoAConstView cc,
+                                    ::reco::CAGraphSoAConstView cc,
                                     uint32_t const* __restrict__ offsets,
                                     PhiBinner<TrackerTraits>* phiBinner,
                                     // OuterHitOfCell<TrackerTraits>* isOuterHitOfCell,

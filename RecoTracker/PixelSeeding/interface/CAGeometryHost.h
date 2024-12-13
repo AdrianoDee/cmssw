@@ -10,6 +10,6 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
 namespace reco {
-    using CAGeometryHost = PortableHostMultiCollection<CALayersSoA, CACellsSoA>;
+    using CAGeometryHost = PortableHostMultiCollection<CALayersSoA, CAGraphSoA, CAModulesSoA>;
 }
 #endif  // RecoTracker_PixelSeeding_interface_CAGeometryHost_H
