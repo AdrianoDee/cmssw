@@ -19,12 +19,14 @@ namespace caStructures {
     uint32_t maxNumberOfTuples_;
     uint32_t avgHitsPerTrack_;
     uint32_t avgCellsPerHit_;
-    uint32_t avgCellsPerCell_; // cell neighbors
+    uint32_t avgCellsPerCell_; 
     uint32_t avgTracksPerCell_;
 
     // Algorithm Parameters
     float ptmin_;
     float hardCurvCut_;
+    float cellZ0Cut_;
+    float cellPtCut_;
     bool useRiemannFit_;
     bool fitNas4_;
     bool earlyFishbone_;
@@ -33,9 +35,9 @@ namespace caStructures {
     bool doSharedHitCut_;
     bool dupPassThrough_;
     bool useSimpleTripletCleaner_;
+    bool doClusterCut_;
+    bool doZSizeCut_;
 
-    // bool idealConditions_;
-    //move back idealConditions here
   };
 
   // Hits data formats
