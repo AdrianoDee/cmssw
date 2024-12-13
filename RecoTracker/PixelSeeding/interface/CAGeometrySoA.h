@@ -1,5 +1,5 @@
-#ifndef RecoTracker_PixelSeeding_interface_CAParams_h
-#define RecoTracker_PixelSeeding_interface_CAParams_h
+#ifndef RecoTracker_PixelSeeding_interface_CAGeometry_h
+#define RecoTracker_PixelSeeding_interface_CAGeometry_h
 
 #include <Eigen/Core>
 
@@ -55,4 +55,4 @@ namespace reco {
   using CACellsSoAConstView = CACellsSoA::ConstView;
 
 }
-#endif  // RecoTracker_PixelSeeding_interface_CAParams_h
+#endif  // RecoTracker_PixelSeeding_interface_CAGeometry_h

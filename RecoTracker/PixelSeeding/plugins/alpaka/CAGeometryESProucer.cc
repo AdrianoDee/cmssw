@@ -8,43 +8,32 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
-#include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
-#include "RecoTracker/PixelSeeding/interface/CAParamsHost.h"
-#include "RecoTracker/PixelSeeding/interface/alpaka/CAParamsSoACollection.h"
+#include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
+#include "RecoTracker/PixelSeeding/interface/CAGeometryHost.h"
+#include "RecoTracker/PixelSeeding/interface/alpaka/CAGeometrySoACollection.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
-
-// #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
-// #include "Geometry/Records/interface/TrackerTopologyRcd.h"
-// #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-// #include "MagneticField/Engine/interface/MagneticField.h"
-// #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-// #include "RecoLocalTracker/ClusterParameterEstimator/interface/PixelClusterParameterEstimator.h"
-
-// #include "CondFormats/DataRecord/interface/SiPixelGenErrorDBObjectRcd.h"
-// #include "RecoLocalTracker/Records/interface/CAParamsRecord.h"
-#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-
 #include "Geometry/CommonDetUnit/interface/TrackingGeometry.h"
 #include "Geometry/CommonDetUnit/interface/GeomDetType.h"
 
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
-  class CAParamsESProducer : public ESProducer {
+  class CAGeometryESProducer : public ESProducer {
 
   public:
-    CAParamsESProducer(edm::ParameterSet const& iConfig);
-    std::optional<reco::CAParamsHost> produce(const TrackerRecoGeometryRecord &iRecord);
+    CAGeometryESProducer(edm::ParameterSet const& iConfig);
+    std::optional<reco::CAGeometryHost> produce(const TrackerRecoGeometryRecord &iRecord);
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
   private:
 
     // Layers params
-    // const std::vector<int> layerStarts_;
     const std::vector<double> caThetaCuts_;
     const std::vector<double> caDCACuts_;
 
@@ -65,9 +54,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   };
 
-  CAParamsESProducer::CAParamsESProducer(const edm::ParameterSet& iConfig)
+  CAGeometryESProducer::CAGeometryESProducer(const edm::ParameterSet& iConfig)
       : ESProducer(iConfig),
-        // layerStarts_(iConfig.getParameter<std::vector<int>>("layerStarts")),
         caThetaCuts_(iConfig.getParameter<std::vector<double>>("caThetaCuts")),
         caDCACuts_(iConfig.getParameter<std::vector<double>>("caDCACuts")),
         pairGraph_(iConfig.getParameter<std::vector<int>>("pairGraph")),
@@ -86,7 +74,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     tGeometryToken_ = cc.consumes();
   }
 
-  std::optional<reco::CAParamsHost> CAParamsESProducer::produce(
+  std::optional<reco::CAGeometryHost> CAGeometryESProducer::produce(
     const TrackerRecoGeometryRecord& iRecord) {
 
     assert(minZ_.size() == maxZ_.size()); 
@@ -102,7 +90,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     assert(int(n_pairs) == int(minZ_.size())); 
     assert(*std::max_element(startingPairs_.begin(), startingPairs_.end()) < n_pairs);
 
-    reco::CAParamsHost product{{{n_layers + 1,n_pairs}}, cms::alpakatools::host()};
+    reco::CAGeometryHost product{{{n_layers + 1,n_pairs}}, cms::alpakatools::host()};
 
     auto layerSoA = product.view();
     auto cellSoA = product.view<::reco::CACellsSoA>();
@@ -112,31 +100,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const auto &trackerTopology = &iRecord.get(tTopologyToken_);
     const auto &trackerGeometry = &iRecord.get(tGeometryToken_);
     
-    // auto n_dets = trackerGeometry->detUnits().size();
     auto detUnits = trackerGeometry->detUnits();
 
+#ifdef GPU_DEBUG 
     auto subSystem = 1;
     auto subSystemName = GeomDetEnumerators::tkDetEnum[subSystem];
     auto subSystemOffset = trackerGeometry->offsetDU(subSystemName);
-    
     std::cout << "=========================================================================================================" << std::endl;
     std::cout << " ===================== Subsystem: " << subSystemName << std::endl;
-    auto oldLayer = 0u;
-    auto layerCount = 0;
     subSystemName = GeomDetEnumerators::tkDetEnum[++subSystem];
     subSystemOffset = trackerGeometry->offsetDU(subSystemName);
-
+#endif
+    auto oldLayer = 0u;
+    auto layerCount = 0;
+    
     std::vector<int> layerStarts(n_layers+1);
 
     for (auto& detUnit : detUnits) {
       unsigned int index = detUnit->index();
 
+#ifdef GPU_DEBUG
       if(index >= subSystemOffset)
       {
         subSystemName = GeomDetEnumerators::tkDetEnum[++subSystem];
         subSystemOffset = trackerGeometry->offsetDU(subSystemName);
         std::cout << " ===================== Subsystem: " << subSystemName << std::endl;
       }
+#endif
 
       auto geoid = detUnit->geographicalId();
       auto layer = trackerTopology->layer(geoid);
@@ -148,12 +138,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           if (layerCount > n_layers + 1)
             break;
           oldLayer = layer;
+#ifdef GPU_DEBUG
           std::cout << " > New layer at module : " << index << " (detId: " <<  geoid << ")" << std::endl;
+#endif
       }
             
     }
-
-    std::cout << "=========================================================================================================" << std::endl;
 
     for (int i = 0; i < n_layers; ++i)
     {
@@ -188,14 +178,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   
-  void CAParamsESProducer::fillDescriptions(
+  void CAGeometryESProducer::fillDescriptions(
       edm::ConfigurationDescriptions& descriptions) {
     
     using namespace phase1PixelTopology;
     edm::ParameterSetDescription desc;
 
     // layers params
-    // desc.add<std::vector<int>>("layerStarts", std::vector<int>(std::begin(layerStart), std::end(layerStart))) ->setComment("Layer module start.");
     desc.add<std::vector<double>>("caDCACuts", {0.15f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f,0.25f}) ->setComment("Cut on RZ alignement. One per layer, the layer being the midelle one for a triplet.");
     desc.add<std::vector<double>>("caThetaCuts", {0.002f,0.002f,0.002f,0.002f,0.003f,0.003f,0.003f,0.003f,0.003f,0.003f}) ->setComment("Cut on origin radius. One per layer, the layer being the innermost one for a triplet.");
     desc.add<std::vector<int>>("startingPairs",{0,1,2}) ->setComment("The list of the ids of pairs from which the CA ntuplets building may start."); //TODO could be parsed via an expression
@@ -215,4 +204,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
-DEFINE_FWK_EVENTSETUP_ALPAKA_MODULE(CAParamsESProducer);
+DEFINE_FWK_EVENTSETUP_ALPAKA_MODULE(CAGeometryESProducer);

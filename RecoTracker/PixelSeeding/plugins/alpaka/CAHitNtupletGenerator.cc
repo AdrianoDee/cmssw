@@ -259,7 +259,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 template <typename TrackerTraits>
   reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
-      HitsOnDevice const& hits_d, FrameOnDevice const& frame, CAParamsOnDevice const& params_d, float bfield, Queue& queue) const {
+      HitsOnDevice const& hits_d, FrameOnDevice const& frame, CAGeometryOnDevice const& geometry_d, float bfield, Queue& queue) const {
     using HelixFit = HelixFit<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
     using TrackHitSoA = ::reco::TrackHitSoA;
@@ -276,11 +276,11 @@ template <typename TrackerTraits>
       alpaka::memset(queue, ntracks_d, 0);
       return tracks;
     }
-    GPUKernels kernels(m_params, hits_d.nHits(), hits_d.offsetBPIX2(), params_d.view().metadata().size(), queue);
+    GPUKernels kernels(m_params, hits_d.nHits(), hits_d.offsetBPIX2(), geometry_d.view().metadata().size(), queue);
 
-    kernels.prepareHits(hits_d.view(), hits_d.view<::reco::HitModuleSoA>(),  params_d.view(),queue);
-    kernels.buildDoublets(hits_d.view(), params_d.view<::reco::CACellsSoA>(), hits_d.offsetBPIX2(), queue);
-    kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), params_d.view().metadata().size(), tracks.view(), tracks.view<TrackHitSoA>(), params_d.view<::reco::CALayersSoA>(), params_d.view<::reco::CACellsSoA>(), queue);
+    kernels.prepareHits(hits_d.view(), hits_d.view<::reco::HitModuleSoA>(),  geometry_d.view(),queue);
+    kernels.buildDoublets(hits_d.view(), geometry_d.view<::reco::CACellsSoA>(), hits_d.offsetBPIX2(), queue);
+    kernels.launchKernels(hits_d.view(), hits_d.offsetBPIX2(), geometry_d.view().metadata().size(), tracks.view(), tracks.view<TrackHitSoA>(), geometry_d.view<::reco::CALayersSoA>(), geometry_d.view<::reco::CACellsSoA>(), queue);
 
     HelixFit fitter(bfield, m_params.algoParams_.fitNas4_);
     fitter.allocate(kernels.tupleMultiplicity(), tracks.view(), kernels.hitContainer());

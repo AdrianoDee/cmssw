@@ -16,7 +16,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
-#include "RecoTracker/PixelSeeding/interface/CAParamsSoA.h"
+#include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
 
 #include "CACell.h"
 #include "CAStructures.h"
