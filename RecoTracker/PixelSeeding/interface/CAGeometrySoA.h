@@ -45,11 +45,7 @@ namespace reco {
                     SOA_COLUMN(int16_t, phiCuts),
                     SOA_COLUMN(float, minz),
                     SOA_COLUMN(float, maxz),
-                    SOA_COLUMN(float, maxr),
-                    SOA_SCALAR(float, cellPtCut),
-                    SOA_SCALAR(float, cellZ0Cut),
-                    SOA_SCALAR(bool, doClusterCut),
-                    SOA_SCALAR(bool, idealConditions)
+                    SOA_COLUMN(float, maxr)
                     )
                     
   using CALayersSoA = CALayersLayout<>;

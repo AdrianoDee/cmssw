@@ -47,10 +47,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const std::vector<double> minZ_;
     const std::vector<double> maxZ_;
     const std::vector<double> maxR_;
-    const double cellZ0Cut_;
-    const double cellPtCut_;
-    const bool doClusterCut_;
-    const bool idealConditions_;
 
     edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> tTopologyToken_;
     edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> tGeometryToken_;
@@ -66,11 +62,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         phiCuts_(iConfig.getParameter<std::vector<int>>("phiCuts")),
         minZ_(iConfig.getParameter<std::vector<double>>("minZ")),
         maxZ_(iConfig.getParameter<std::vector<double>>("maxZ")),
-        maxR_(iConfig.getParameter<std::vector<double>>("maxR")),
-        cellZ0Cut_(iConfig.getParameter<double>("cellZ0Cut")),
-        cellPtCut_(iConfig.getParameter<double>("cellPtCut")),
-        doClusterCut_(iConfig.getParameter<bool>("doClusterCut")),
-        idealConditions_(iConfig.getParameter<bool>("idealConditions"))
+        maxR_(iConfig.getParameter<std::vector<double>>("maxR"))
  {
     auto cc = setWhatProduced(this);   
     tTopologyToken_ = cc.consumes();
@@ -176,11 +168,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   
     for (const int& i : startingPairs_)
       cellSoA.startingPair()[i] = true;
-
-    cellSoA.cellPtCut() = cellPtCut_;
-    cellSoA.cellZ0Cut() = cellZ0Cut_;
-    cellSoA.doClusterCut() = doClusterCut_;
-    cellSoA.idealConditions() = idealConditions_;
     
     return product;
 
@@ -203,10 +190,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     desc.add<std::vector<double>>("minZ", std::vector<double>(std::begin(minz), std::end(minz))) ->setComment("Cuts in min z (on inner hit) for cells");
     desc.add<std::vector<double>>("maxZ", std::vector<double>(std::begin(maxz), std::end(maxz))) ->setComment("Cuts in max z (on inner hit) for cells");
     desc.add<std::vector<double>>("maxR", std::vector<double>(std::begin(maxr), std::end(maxr))) ->setComment("Cuts in max r for cells");
-    desc.add<double>("cellZ0Cut", 12.0f) ->setComment("Z0 cut for cells");
-    desc.add<double>("cellPtCut", 0.5f) ->setComment("Preliminary pT cut on "); 
-    desc.add<bool>("doClusterCut", true);
-    desc.add<bool>("idealConditions", true);
 
     descriptions.addWithDefaultLabel(desc);
   }

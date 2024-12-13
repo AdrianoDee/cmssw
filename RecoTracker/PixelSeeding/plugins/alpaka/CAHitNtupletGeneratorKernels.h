@@ -8,6 +8,10 @@
 
 #include <alpaka/alpaka.hpp>
 
+////////////////////////////////////////
+//// -> for the heuristic size estimation 
+//// -> #include <TFormula.h>
+////////////////////////////
 #include "DataFormats/TrackSoA/interface/TrackDefinitions.h"
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
@@ -46,7 +50,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     unsigned long long nZeroTrackCells;
   };
 
-    //Full list of params = algo params + ca params + cell params + quality cuts
+  //Full list of params = algo params + quality cuts
   //Generic template
   template <typename TrackerTraits, typename Enable = void>
   struct ParamsT {

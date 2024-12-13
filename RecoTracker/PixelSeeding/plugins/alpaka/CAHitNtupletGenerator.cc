@@ -43,7 +43,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
       desc.add<double>("hardCurvCut", 1.f / (0.35 * 87.f))
           ->setComment("Cut on minimum curvature, used in DCA ntuplet selection");
+      desc.add<double>("cellZ0Cut", 12.0f) ->setComment("Z0 cut for cells");
+      desc.add<double>("cellPtCut", 0.5f) ->setComment("Preliminary pT cut at cell building level."); 
 
+      desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase1::maxNumberOfDoublets);
+      desc.add<unsigned int>("maxNumberOfTuples", pixelTopology::Phase1::maxNumberOfTuples);
+      desc.add<unsigned int>("avgHitsPerTrack", pixelTopology::Phase1::avgHitsPerTrack);
+      desc.add<unsigned int>("avgCellsPerHit", pixelTopology::Phase1::maxCellsPerHit);
+      desc.add<unsigned int>("avgCellsPerCell", pixelTopology::Phase1::maxCellNeighbors);
+      desc.add<unsigned int>("avgTracksPerCell", pixelTopology::Phase1::maxCellTracks);
+      
       desc.add<bool>("earlyFishbone", true);
       desc.add<bool>("lateFishbone", false);
       desc.add<bool>("fillStatistics", false);
@@ -57,6 +66,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
       desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
       desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+
+      desc.add<bool>("doClusterCut", true)->setComment("Cut on inner hit cluster size (in Y) for barrel-forward cells.");
+      desc.add<bool>("doZSizeCut", true)->setComment("Cut on cluster size differences (in Y) for barrel-forward cells.");
     }
 
     AlgoParams makeCommonParams(edm::ParameterSet const& cfg) {
@@ -75,6 +87,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          // Algo params
                          (float)cfg.getParameter<double>("ptmin"),
                          (float)cfg.getParameter<double>("hardCurvCut"),
+                         (float)cfg.getParameter<double>("cellZ0Cut"),
+                         (float)cfg.getParameter<double>("cellPtCut"),
                          cfg.getParameter<bool>("useRiemannFit"),
                          cfg.getParameter<bool>("fitNas4"),
                          cfg.getParameter<bool>("earlyFishbone"),
@@ -83,7 +97,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          cfg.getParameter<bool>("doSharedHitCut"),
                          cfg.getParameter<bool>("dupPassThrough"),
                          cfg.getParameter<bool>("useSimpleTripletCleaner"),
-
+                         cfg.getParameter<bool>("doClusterCut"),
+                         cfg.getParameter<bool>("doZSizeCut")
                          });
     }
 
@@ -170,14 +185,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void CAHitNtupletGenerator<pixelTopology::Phase1>::fillPSetDescription(edm::ParameterSetDescription& desc) {
     fillDescriptionsCommon(desc);
 
-    desc.add<bool>("idealConditions", true);
-    desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase1::maxNumberOfDoublets);
-    desc.add<unsigned int>("maxNumberOfTuples", pixelTopology::Phase1::maxNumberOfTuples);
-    desc.add<unsigned int>("avgHitsPerTrack", pixelTopology::Phase1::avgHitsPerTrack);
-    desc.add<unsigned int>("avgCellsPerHit", pixelTopology::Phase1::maxCellsPerHit);
-    desc.add<unsigned int>("avgCellsPerCell", pixelTopology::Phase1::maxCellNeighbors);
-    desc.add<unsigned int>("avgTracksPerCell", pixelTopology::Phase1::maxCellTracks);
-
     edm::ParameterSetDescription trackQualityCuts;
     trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
     trackQualityCuts.add<std::vector<double>>("chi2Coeff", {0.9, 1.8})->setComment("chi2 at 1GeV and at ptMax above");
@@ -201,15 +208,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   // now this could be removed actually
   template <>
   void CAHitNtupletGenerator<pixelTopology::HIonPhase1>::fillPSetDescription(edm::ParameterSetDescription& desc) {
+    
     fillDescriptionsCommon(desc);
-
-    desc.add<bool>("idealConditions", false);
-    desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::HIonPhase1::maxNumberOfDoublets);
-    desc.add<unsigned int>("maxNumberOfTuples", pixelTopology::HIonPhase1::maxNumberOfTuples);
-    desc.add<unsigned int>("avgHitsPerTrack", pixelTopology::HIonPhase1::avgHitsPerTrack);
-    desc.add<unsigned int>("avgCellsPerHit", pixelTopology::HIonPhase1::maxCellsPerHit);
-    desc.add<unsigned int>("avgCellsPerCell", pixelTopology::HIonPhase1::maxCellNeighbors);
-    desc.add<unsigned int>("avgTracksPerCell", pixelTopology::Phase1::maxCellTracks);
     
     edm::ParameterSetDescription trackQualityCuts;
     trackQualityCuts.add<double>("chi2MaxPt", 10.)->setComment("max pT used to determine the pT-dependent chi2 cut");
@@ -235,15 +235,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   template <>
   void CAHitNtupletGenerator<pixelTopology::Phase2>::fillPSetDescription(edm::ParameterSetDescription& desc) {
+    
     fillDescriptionsCommon(desc);
-
-    desc.add<bool>("idealConditions", false);
-    desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase2::maxNumberOfDoublets);
-    desc.add<unsigned int>("maxNumberOfTuples", pixelTopology::Phase2::maxNumberOfTuples);
-    desc.add<unsigned int>("avgHitsPerTrack", pixelTopology::Phase2::avgHitsPerTrack);
-    desc.add<unsigned int>("avgCellsPerHit", pixelTopology::Phase2::maxCellsPerHit);
-    desc.add<unsigned int>("avgCellsPerCell", pixelTopology::Phase2::maxCellNeighbors);
-    desc.add<unsigned int>("avgTracksPerCell", pixelTopology::Phase2::maxCellTracks);
 
     edm::ParameterSetDescription trackQualityCuts;
     trackQualityCuts.add<double>("maxChi2", 5.)->setComment("Max normalized chi2");
