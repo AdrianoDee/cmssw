@@ -232,7 +232,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       constexpr auto reject = Quality::edup;  /// cannot be loose
       ALPAKA_ASSERT_ACC(nCells);
       for (auto idx : cms::alpakatools::uniform_elements(acc, *nCells)) {
-        auto const &thisCell = cells[idx];
+        // auto const &thisCell = cells[idx];
         //auto cT = thisCell.tracks();
         //printf("cellTracksSizes;%d;%d;%d\n",idx,cT.size(),cT.capacity());
         // if (thisCell.tracks().size() < 2)

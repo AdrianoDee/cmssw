@@ -14,7 +14,6 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoLocalTracker/ClusterParameterEstimator/interface/alpaka/FrameSoACollection.h"
 #include "RecoTracker/PixelSeeding/interface/alpaka/CAGeometrySoACollection.h"
 
 #include "CACell.h"
@@ -54,7 +53,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using Params = caHitNtupletGenerator::ParamsT<TrackerTraits>;
     using Counters = caHitNtupletGenerator::Counters;
 
-    using FrameOnDevice = FrameSoACollection;
     using CAGeometryOnDevice = reco::CAGeometrySoACollection;
   public:
     CAHitNtupletGenerator(const edm::ParameterSet& cfg);
@@ -70,7 +68,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // void endJob();
 
     TkSoADevice makeTuplesAsync(HitsOnDevice const& hits_d,
-                                FrameOnDevice const& frame_d,
                                 CAGeometryOnDevice const& params_d,
                                 float bfield,
                                 Queue& queue) const;
