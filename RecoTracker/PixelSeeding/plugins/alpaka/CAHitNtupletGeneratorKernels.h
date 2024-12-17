@@ -8,10 +8,6 @@
 
 #include <alpaka/alpaka.hpp>
 
-////////////////////////////////////////
-//// -> for the heuristic size estimation 
-//// -> #include <TFormula.h>
-////////////////////////////
 #include "DataFormats/TrackSoA/interface/TrackDefinitions.h"
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
@@ -126,24 +122,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using QualityCuts = ::pixelTrack::QualityCutsT<TrackerTraits>;
 
     // Histograms
-    /// Hits
-    using hindex_type = uint32_t; //could be rolled back to TrackerTraits having the SoA with the relaxed uint32_t
-    using PhiBinner = cms::alpakatools::HistoContainer<int16_t,
-                                                     256,
-                                                     -1, 
-                                                     8 * sizeof(int16_t),
-                                                     hindex_type,
-                                                     TrackerTraits::numberOfLayers>; 
+
+    using PhiBinner = caStructures::PhiBinnerT<TrackerTraits>; //the traits here define the number of layer/histograms 
     using PhiBinnerStorageType = typename PhiBinner::index_type;
     using PhiBinnerView = typename PhiBinner::View;
 
-    /// Hits in Tracks
-    static constexpr int32_t S = TrackerTraits::maxNumberOfTuples;
-    static constexpr int32_t H = TrackerTraits::avgHitsPerTrack;
-    using HitToTuple = caStructures::template HitToTupleT<TrackerTraits>;
+    using HitToTuple = caStructures::GenericContainer;
     using HitContainer = caStructures::SequentialContainer;
-    using HitToTupleView = typename HitToTuple::View;
-    using TupleMultiplicity = caStructures::template TupleMultiplicityT<TrackerTraits>;
+    using TupleMultiplicity = caStructures::GenericContainer;
     using HitToCell = caStructures::GenericContainer;
     using CellToCell = caStructures::GenericContainer;
     using CellToTrack = caStructures::GenericContainer;
@@ -165,9 +151,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     CAHitNtupletGeneratorKernels(Params const& params, uint32_t nHits, uint32_t offsetBPIX2, uint16_t nLayers, Queue& queue);
     ~CAHitNtupletGeneratorKernels() = default;
 
-    GenericContainer const* tupleMultiplicity() const { return device_tupleMultiplicity_.data(); }
-    SequentialContainer const* hitContainer() const { return device_hitContainer_.data(); }
+    TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.data(); }
+    HitContainer const* hitContainer() const { return device_hitContainer_.data(); }
     HitToCell const* hitToCell() const { return device_hitToCell_.data(); }
+    HitToTuple const* hitToTuple() const {return device_hitToTuple_.data(); }
     CellToCell const* cellToCell() const { return device_cellToNeighbors_.data(); }
     CellToTrack const* cellToTrack() const { return device_cellToTracks_.data(); }
 
@@ -201,8 +188,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // Hits Phi Binner
     cms::alpakatools::device_buffer<Device, PhiBinner> device_hitPhiHist_;
-    PhiBinnerView device_hitPhiView_;
     cms::alpakatools::device_buffer<Device, PhiBinnerStorageType[]> device_phiBinnerStorage_;
+    PhiBinnerView device_hitPhiView_;
     cms::alpakatools::device_buffer<Device, hindex_type[]> device_layerStarts_;
 
     // Cells-> Neighbor Cells

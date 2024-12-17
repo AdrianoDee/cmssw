@@ -5,6 +5,7 @@
 #include <cassert>
 #include <functional>
 #include <vector>
+#include <TFormula.h>
 
 #include <alpaka/alpaka.hpp>
 
@@ -20,6 +21,7 @@
 #include "CAHitNtupletGeneratorKernels.h"
 #include "CAPixelDoublets.h"
 #include "CAPixelDoubletsAlgos.h"
+
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace {
@@ -76,8 +78,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
                          // Container sizes
                          cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
-                         cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
-                         cfg.getParameter<unsigned int>("minHitsForSharingCut"),
                          cfg.getParameter<unsigned int>("maxNumberOfTuples"),
                          cfg.getParameter<unsigned int>("avgHitsPerTrack"),
                          cfg.getParameter<unsigned int>("avgCellsPerHit"),
@@ -85,6 +85,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          cfg.getParameter<unsigned int>("avgTracksPerCell"),
 
                          // Algo params
+                         cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
+                         cfg.getParameter<unsigned int>("minHitsForSharingCut"),
                          (float)cfg.getParameter<double>("ptmin"),
                          (float)cfg.getParameter<double>("hardCurvCut"),
                          (float)cfg.getParameter<double>("cellZ0Cut"),
@@ -261,7 +263,7 @@ template <typename TrackerTraits>
     const int32_t H = m_params.algoParams_.avgHitsPerTrack_;
 
     reco::TracksSoACollection tracks({{S,S*H}},queue);
-    std::cout << S << " - " << H << std::endl;
+
     // Don't bother if less than 2 this
     if (hits_d.view().metadata().size() < 2) {
       const auto device = alpaka::getDev(queue);
