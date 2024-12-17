@@ -85,7 +85,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     HitToCell* outerHitHisto) const {
         for (auto cellIndex : cms::alpakatools::uniform_elements(acc, *nCells))
         {
+#ifdef GPU_DEBUG
           printf("outerHitHisto;%d;%d\n",cellIndex,cells[cellIndex].outer_hit_id());
+#endif
           outerHitHisto->fill(acc,cells[cellIndex].outer_hit_id()-offsetBPIX2,cellIndex);
         }
       }

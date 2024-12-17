@@ -44,13 +44,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   using HitToCell = GenericContainer;
 
   template <typename TrackerTraits>
-  using PhiBinner = cms::alpakatools::HistoContainer<int16_t,
-                                                    256,
-                                                    -1, 
-                                                    8 * sizeof(int16_t),
-                                                    typename TrackerTraits::hindex_type,
-                                                    TrackerTraits::numberOfLayers>; 
+  using PhiBinner = PhiBinnerT<TrackerTraits>; 
 
+  //Move this ^ definition in CAStructures maybe
   template <typename T, typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool __attribute__((always_inline)) zSizeCut(const TAcc& acc,
                                                                               HitsConstView hh,
@@ -269,7 +265,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
             continue;
 
           outerHitHisto->count(acc,oi-hh.offsetBPIX2());
-          //nCells could be simply outerHitHisto->size(); ... uhm .. false
+          //nCells could be simply outerHitHisto->size(); ... uhm ... false it can't
           auto ind = alpaka::atomicAdd(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});
           if (ind >= maxNumOfDoublets) {
             alpaka::atomicSub(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});

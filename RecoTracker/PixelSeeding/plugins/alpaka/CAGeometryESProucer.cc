@@ -84,7 +84,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     assert(int(n_pairs) == int(minZ_.size())); 
     assert(*std::max_element(startingPairs_.begin(), startingPairs_.end()) < n_pairs);
 
-    std::cout << "No. Layers to be used = " << n_layers << std::endl;
+    // std::cout << "No. Layers to be used = " << n_layers << std::endl;
     
     const auto &trackerTopology = &iRecord.get(tTopologyToken_);
     const auto &trackerGeometry = &iRecord.get(tGeometryToken_);
@@ -151,7 +151,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       layerSoA.layerStarts()[i] = layerStarts[i];
       layerSoA.caThetaCut()[i] = caThetaCuts_[i];
       layerSoA.caDCACut()[i] = caDCACuts_[i];
-      std::cout << i << " - > " << caDCACuts_[i] << " - " << layerStarts[i] << std::endl;
     }
     
     layerSoA.layerStarts()[n_layers] = layerStarts[n_layers];

@@ -14,8 +14,6 @@ namespace caStructures {
 
     // Container sizes
     uint32_t maxNumberOfDoublets_;
-    uint32_t minHitsPerNtuplet_;
-    uint32_t minHitsForSharingCut_;
     uint32_t maxNumberOfTuples_;
     uint32_t avgHitsPerTrack_;
     uint32_t avgCellsPerHit_;
@@ -23,6 +21,8 @@ namespace caStructures {
     uint32_t avgTracksPerCell_;
 
     // Algorithm Parameters
+    uint32_t minHitsPerNtuplet_;
+    uint32_t minHitsForSharingCut_;
     float ptmin_;
     float hardCurvCut_;
     float cellZ0Cut_;
@@ -53,7 +53,8 @@ namespace caStructures {
   using hindex_type = uint32_t; // TrackerTraits::hindex_type
   using tindex_type = uint32_t; // TrackerTraits::tindex_type
   using cindex_type = uint32_t;
-
+  
+  //FIX ME HERE, use the typenames etc. etc.
   using GenericContainer = cms::alpakatools::OneToManyAssocRandomAccess<hindex_type, -1, -1>;
   using GenericContainerStorage = uint32_t;//typename GenericContainer::index_type;
   using GenericContainerOffsets = uint32_t;//typename GenericContainer::Counter;
@@ -63,6 +64,14 @@ namespace caStructures {
   using SequentialContainerStorage = uint32_t;//typename SequentialContainer::index_type;
   using SequentialContainerOffsets = uint32_t;//typename SequentialContainer::Counter;
   using SequentialContainerView = typename SequentialContainer::View;
+
+  template <typename TrackerTraits>
+  using PhiBinnerT = cms::alpakatools::HistoContainer<int16_t,
+                                                    256,
+                                                    -1, 
+                                                    8 * sizeof(int16_t),
+                                                    typename TrackerTraits::hindex_type,
+                                                    TrackerTraits::numberOfLayers>;
 
   template <typename TrackerTraits>
   using CellNeighborsT =
