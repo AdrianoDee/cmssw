@@ -98,6 +98,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   // CellTracksVector<TrackerTraits> const *cellTracks,
                                   // OuterHitOfCell<TrackerTraits> const *isOuterHitOfCell,
                                   int32_t nHits, //could be just the nOnes() of hitToTuple
+                                  uint32_t maxNumberOfDoublets,
                                   AlgoParams const& params,
                                   Counters *counters) const {
       auto &c = *counters;
@@ -139,7 +140,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       if (cms::alpakatools::once_per_grid(acc)) {
         if (apc->get().first >= TrackerTraits::maxNumberOfQuadruplets)
           printf("Tuples overflow\n");
-        if (*nCells >= params.maxNumberOfDoublets_)
+        if (*nCells >= maxNumberOfDoublets)
           printf("Cells overflow\n");
 //         if (cellNeighbors && cellNeighbors->full())
 //           printf("cellNeighbors overflow %d %d \n", cellNeighbors->capacity(), cellNeighbors->size());

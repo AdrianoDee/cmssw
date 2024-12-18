@@ -5,7 +5,6 @@
 #include <cassert>
 #include <functional>
 #include <vector>
-#include <TFormula.h>
 
 #include <alpaka/alpaka.hpp>
 
@@ -47,9 +46,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment("Cut on minimum curvature, used in DCA ntuplet selection");
       desc.add<double>("cellZ0Cut", 12.0f) ->setComment("Z0 cut for cells");
       desc.add<double>("cellPtCut", 0.5f) ->setComment("Preliminary pT cut at cell building level."); 
+      
+      desc.add<std::string>("maxNumberOfDoublets", std::to_string(pixelTopology::Phase1::maxNumberOfDoublets));
+      desc.add<std::string>("maxNumberOfTuples", std::to_string(pixelTopology::Phase1::maxNumberOfTuples));
 
-      desc.add<unsigned int>("maxNumberOfDoublets", pixelTopology::Phase1::maxNumberOfDoublets);
-      desc.add<unsigned int>("maxNumberOfTuples", pixelTopology::Phase1::maxNumberOfTuples);
       desc.add<unsigned int>("avgHitsPerTrack", pixelTopology::Phase1::avgHitsPerTrack);
       desc.add<unsigned int>("avgCellsPerHit", pixelTopology::Phase1::maxCellsPerHit);
       desc.add<unsigned int>("avgCellsPerCell", pixelTopology::Phase1::maxCellNeighbors);
@@ -77,8 +77,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return AlgoParams({
 
                          // Container sizes
-                         cfg.getParameter<unsigned int>("maxNumberOfDoublets"),
-                         cfg.getParameter<unsigned int>("maxNumberOfTuples"),
                          cfg.getParameter<unsigned int>("avgHitsPerTrack"),
                          cfg.getParameter<unsigned int>("avgCellsPerHit"),
                          cfg.getParameter<unsigned int>("avgCellsPerCell"),
@@ -254,15 +252,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 template <typename TrackerTraits>
   reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
-      HitsOnDevice const& hits_d, CAGeometryOnDevice const& geometry_d, float bfield, Queue& queue) const {
+      HitsOnDevice const& hits_d, CAGeometryOnDevice const& geometry_d, float bfield, uint32_t nDoublets, uint32_t nTracks, Queue& queue) const {
     using HelixFit = HelixFit<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
     using TrackHitSoA = ::reco::TrackHitSoA;
     using HitContainer = caStructures::HitContainerT<TrackerTraits>;
-    const int32_t S = m_params.algoParams_.maxNumberOfTuples_; 
+
     const int32_t H = m_params.algoParams_.avgHitsPerTrack_;
 
-    reco::TracksSoACollection tracks({{S,S*H}},queue);
+    reco::TracksSoACollection tracks({{int(nTracks),int(nTracks*H)}},queue);
 
     // Don't bother if less than 2 this
     if (hits_d.view().metadata().size() < 2) {
@@ -271,7 +269,7 @@ template <typename TrackerTraits>
       alpaka::memset(queue, ntracks_d, 0);
       return tracks;
     }
-    GPUKernels kernels(m_params, hits_d.nHits(), hits_d.offsetBPIX2(), geometry_d.view().metadata().size(), queue);
+    GPUKernels kernels(m_params, hits_d.nHits(), hits_d.offsetBPIX2(), nDoublets, nTracks, geometry_d.view().metadata().size(), queue);
 
     kernels.prepareHits(hits_d.view(), hits_d.view<::reco::HitModuleSoA>(),  geometry_d.view(),queue);
     kernels.buildDoublets(hits_d.view(), geometry_d.view<::reco::CAGraphSoA>(), hits_d.offsetBPIX2(), queue);

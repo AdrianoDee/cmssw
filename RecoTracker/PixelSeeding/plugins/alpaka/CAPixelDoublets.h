@@ -57,6 +57,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       //       __launch_bounds__(getDoubletsFromHistoMaxBlockSize, getDoubletsFromHistoMinBlocksPerMP)  // TODO: Alapakify
       // #endif
       ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                    uint32_t maxNumOfDoublets,
                                     // CACellT<TrackerTraits>* cells,
                                     CASimpleCell<TrackerTraits>* cells,
                                     uint32_t* nCells,
@@ -70,7 +71,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     HitToCell* outerHitHisto,
                                     AlgoParams const& params) const {
         doubletsFromHisto<TrackerTraits>(
-            acc, cells, nCells, hh, cc, offsets, phiBinner, outerHitHisto, params);
+            acc, maxNumOfDoublets, cells, nCells, hh, cc, offsets, phiBinner, outerHitHisto, params);
       }
     };
 
