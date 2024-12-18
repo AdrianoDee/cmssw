@@ -13,6 +13,7 @@
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   using namespace alpaka;
   using namespace cms::alpakatools;
+  
   namespace caPixelDoublets {
 
     template <typename TrackerTraits>
@@ -56,17 +57,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       //       __launch_bounds__(getDoubletsFromHistoMaxBlockSize, getDoubletsFromHistoMinBlocksPerMP)  // TODO: Alapakify
       // #endif
       ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                    CACellT<TrackerTraits>* cells,
+                                    uint32_t maxNumOfDoublets,
+                                    // CACellT<TrackerTraits>* cells,
+                                    CASimpleCell<TrackerTraits>* cells,
                                     uint32_t* nCells,
-                                    CellNeighborsVector<TrackerTraits>* cellNeighbors,
-                                    CellTracksVector<TrackerTraits>* cellTracks,
-                                    HitsConstView<TrackerTraits> hh,
-                                    OuterHitOfCell<TrackerTraits>* isOuterHitOfCell,
-                                    uint32_t nActualPairs,
-                                    const uint32_t maxNumOfDoublets,
-                                    CellCutsT<TrackerTraits> cuts) const {
+                                    // CellNeighborsVector<TrackerTraits>* cellNeighbors,
+                                    // CellTracksVector<TrackerTraits>* cellTracks,
+                                    HitsConstView hh,
+                                    ::reco::CAGraphSoAConstView cc,
+                                    uint32_t const* __restrict__ offsets,
+                                    PhiBinner<TrackerTraits>* phiBinner,
+                                    // OuterHitOfCell<TrackerTraits>* isOuterHitOfCell,
+                                    HitToCell* outerHitHisto,
+                                    AlgoParams const& params) const {
         doubletsFromHisto<TrackerTraits>(
-            acc, nActualPairs, maxNumOfDoublets, cells, nCells, cellNeighbors, cellTracks, hh, *isOuterHitOfCell, cuts);
+            acc, maxNumOfDoublets, cells, nCells, hh, cc, offsets, phiBinner, outerHitHisto, params);
+      }
+    };
+
+    template <typename TrackerTraits>
+    class FillDoubletsHisto {
+    public:
+      template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+      ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                    CASimpleCell<TrackerTraits> const* __restrict__ cells,
+                                    uint32_t* nCells, //could be size
+                                    uint32_t offsetBPIX2,
+                                    HitToCell* outerHitHisto) const {
+        for (auto cellIndex : cms::alpakatools::uniform_elements(acc, *nCells))
+        {
+#ifdef GPU_DEBUG
+          printf("outerHitHisto;%d;%d\n",cellIndex,cells[cellIndex].outer_hit_id());
+#endif
+          outerHitHisto->fill(acc,cells[cellIndex].outer_hit_id()-offsetBPIX2,cellIndex);
+        }
       }
     };
 

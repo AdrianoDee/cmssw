@@ -211,6 +211,14 @@ from Configuration.ProcessModifiers.gpuValidationPixel_cff import gpuValidationP
 
 from Configuration.ProcessModifiers.alpaka_cff import alpaka
 
+#from RecoTracker.PixelSeeding.caGeometryESProducer_cfi import caGeometryESProducer as _caGeometryESProducer
+def _addCAGeometryESProducer(process):
+    process.load("RecoTracker.PixelSeeding.caGeometryESProducer_cfi")
+    process.caGeometryESProducer.appendToDataLabel = cms.string("caGeometry")
+
+modifyConfigurationForAlpakaCAGeometry_ = alpaka.makeProcessModifier(_addCAGeometryESProducer)
+
+
 # pixel tracks SoA producer on the device
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase1_cfi import caHitNtupletAlpakaPhase1 as _pixelTracksAlpakaPhase1
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase2_cfi import caHitNtupletAlpakaPhase2 as _pixelTracksAlpakaPhase2
