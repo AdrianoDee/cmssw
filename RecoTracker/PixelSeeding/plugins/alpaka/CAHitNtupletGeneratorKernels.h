@@ -148,7 +148,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using DeviceSequentialStorageBuffer = cms::alpakatools::device_buffer<Device, SequentialContainerStorage[]>;
     using DeviceSequentialOffsetsBuffer = cms::alpakatools::device_buffer<Device, SequentialContainerOffsets[]>;
 
-    CAHitNtupletGeneratorKernels(Params const& params, uint32_t nHits, uint32_t offsetBPIX2, uint16_t nLayers, Queue& queue);
+    CAHitNtupletGeneratorKernels(Params const& params, uint32_t nHits, uint32_t offsetBPIX2, uint32_t nDoublets, uint32_t nTracks, uint16_t nLayers, Queue& queue);
     ~CAHitNtupletGeneratorKernels() = default;
 
     TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_.data(); }
@@ -233,6 +233,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     CACoupleSoACollection deviceTriplets_;
     CACoupleSoACollection deviceTracksCells_;
+
+    // this could be inferred from the above buffers
+    // but seems cleaner to have a dedicate variable
+    uint32_t maxNumberOfDoublets_; 
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

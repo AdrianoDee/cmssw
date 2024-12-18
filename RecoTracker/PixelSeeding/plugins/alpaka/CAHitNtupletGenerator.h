@@ -70,6 +70,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     TkSoADevice makeTuplesAsync(HitsOnDevice const& hits_d,
                                 CAGeometryOnDevice const& params_d,
                                 float bfield,
+                                uint32_t maxDoublets,
+                                uint32_t maxTuples,
                                 Queue& queue) const;
 
   private:

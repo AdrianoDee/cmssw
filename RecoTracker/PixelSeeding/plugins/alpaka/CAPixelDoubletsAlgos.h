@@ -107,6 +107,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   template <typename TrackerTraits, typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void __attribute__((always_inline)) doubletsFromHisto(
       const TAcc& acc,
+      uint32_t maxNumOfDoublets,
       // CACellT<TrackerTraits>* cells,
       CASimpleCell<TrackerTraits>* cells,
       uint32_t* nCells,
@@ -123,8 +124,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     // cm (1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field)
     const float minRadius = params.cellPtCut_ * 87.78f;
     const float minRadius2T4 = 4.f * minRadius * minRadius;
-
-    const auto maxNumOfDoublets = params.maxNumberOfDoublets_;
   
     const uint32_t nPairs = cc.metadata().size();
     using PhiHisto = PhiBinner<TrackerTraits>;
