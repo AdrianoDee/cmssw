@@ -18,7 +18,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     class SiStripRawToClustersKernels {
     public:
 
-      using SequentialContainer = cms::alpakatools::OneToManyAssocSequential<uint32_t, -1, -1>;
+      using SequentialContainer = cms::alpakatools::OneToManyAssocSequential<uint8_t, -1, -1>; //technicall it's an unsigned char ...
       using SequentialContainerStorage = typename SequentialContainer::index_type;
       using SequentialContainerView = typename SequentialContainer::View;
       using SequentialContainerOffsets = typename SequentialContainer::Counter;

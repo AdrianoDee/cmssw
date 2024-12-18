@@ -19,9 +19,12 @@
   <use name="DataFormats/Portable"/>
   <use name="EventFilter/SiStripRawToDigi"/>
   <use name="FWCore/Framework"/>
+  <use name="FWCore/Utilities"/>
   <use name="HeterogeneousCore/AlpakaCore"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <use name="RecoLocalTracker/Records"/>
+  <!-- work around for cms-sw/cmssw#45179 -->
+  <use name="no-array-bounds-flag" for="alpaka/serial"/>
   <flags ALPAKA_BACKENDS="1"/>
   <flags EDM_PLUGIN="1"/>
 </library>
