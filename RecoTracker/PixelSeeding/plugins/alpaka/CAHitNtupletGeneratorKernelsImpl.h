@@ -25,7 +25,7 @@
 #include "RecoTracker/PixelSeeding/interface/CACoupleSoA.h"
 
 // local includes
-#include "CACell.h"
+#include "CASimpleCell.h"
 #include "CAHitNtupletGeneratorKernels.h"
 #include "CAStructures.h"
 
@@ -488,10 +488,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
       using Cell = CASimpleCell<TrackerTraits>;
 
-#ifdef GPU_DEBUG
+// #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc))
-        printf("starting producing ntuplets from %d/%d cells and %d triplets \n", *nCells, cellNeighborsHisto->size(), *nTriplets);
-#endif
+        printf("starting producing ntuplets from %d hits, %d cells and %d triplets \n", hh.metadata().size(), *nCells, *nTriplets);
+// #endif
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
         auto const &thisCell = cells[idx];

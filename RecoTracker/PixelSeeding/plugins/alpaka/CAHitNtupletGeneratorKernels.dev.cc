@@ -36,6 +36,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         //////////////////////////////////////////////////////////
         counters_{cms::alpakatools::make_device_buffer<Counters>(queue)},
 
+        // One to Many Maps
         // Hits -> Track
         device_hitToTuple_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
         device_hitToTupleStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, nHits * m_params.algoParams_.avgHitsPerTrack_)},
@@ -78,9 +79,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         device_tupleMultiplicityOffsets_{cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, TrackerTraits::maxHitsOnTrack + 1)},
         device_tupleMultiplicityView_{device_tupleMultiplicity_.data(), device_tupleMultiplicityOffsets_.data(), device_tupleMultiplicityStorage_.data(), int(TrackerTraits::maxHitsOnTrack + 1), int(maxTuples)},
         
+        // Structures and Counters Storage
         device_simpleCells_{
             cms::alpakatools::make_device_buffer<SimpleCell[]>(queue, maxDoublets)},
-        // in principle we can use "nhits" to heuristically dimension the workspace...
         device_extraStorage_{
             cms::alpakatools::make_device_buffer<cms::alpakatools::AtomicPairCounter::DoubleWord[]>(queue, 3u)},
         device_hitTuple_apc_{reinterpret_cast<cms::alpakatools::AtomicPairCounter *>(device_extraStorage_.data())},
@@ -89,7 +90,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         device_nTriplets_{
             cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 2))},
         device_nCellTracks_{
-            cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 3))}
+            cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 3))},
+        deviceTriplets_{CACoupleSoACollection(maxDoublets * m_params.algoParams_.avgCellsPerCell_,queue)},
+        deviceTracksCells_{CACoupleSoACollection(maxDoublets * m_params.algoParams_.avgTracksPerCell_,queue)}
         {
 #ifdef GPU_DEBUG
     std::cout << "Allocation for tuple building. N hits " << nHits << std::endl;
@@ -119,9 +122,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // No.Hits -> Track (Multiplicity)
     HitContainer::template launchZero<Acc1D>(device_hitContainerView_, queue);
-
-    deviceTriplets_ = CACoupleSoACollection(device_cellToNeighborsView_.contentSize,queue);
-    deviceTracksCells_ = CACoupleSoACollection(device_cellToTracksView_.contentSize,queue);
 
     maxNumberOfDoublets_ = maxDoublets;
 
@@ -409,11 +409,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                   uint32_t offsetBPIX2,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
-    using CACell = CACellT<TrackerTraits>;
-    using OuterHitOfCell = typename CACell::OuterHitOfCell;
-    using CellNeighbors = typename CACell::CellNeighbors;
-    using CellTracks = typename CACell::CellTracks;
-    using OuterHitOfCellContainer = typename CACell::OuterHitOfCellContainer;
 
     auto nhits = hh.metadata().size();
     const auto maxDoublets = this->maxNumberOfDoublets_;
