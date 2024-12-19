@@ -55,8 +55,6 @@ namespace reco
 
     int32_t offsetBPIX2() const { return offsetBPIX2_; }
 
-    uint32_t const* hitsModuleStart() const { return this->template view<TrackingRecHitSoA>().hitsModuleStart().data(); }
-
     // asynchronously update the information cached within the class itself from the information on the device
     template <typename TQueue>
     void updateFromDevice(TQueue queue) {
