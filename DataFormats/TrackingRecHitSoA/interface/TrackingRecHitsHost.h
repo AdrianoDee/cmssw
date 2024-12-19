@@ -23,10 +23,10 @@ namespace reco
   class TrackingRecHitHost : public HitPortableCollectionHost {
   public:
 
-    TrackingRecHitHost() = default;
-    
-    TrackingRecHitHost(edm::Uninitialized)
-	: HitPortableCollectionHost{dm::Uninitialized} {}
+    //TrackingRecHitHost() = default;
+    // TrackingRecHitHost(edm::Uninitialized)
+    //   : PortableHostCollection<TrackingRecHitLayout<TrackerTraits>>{edm::kUninitialized} {}
+    TrackingRecHitHost(edm::Uninitialized) : PortableHostMultiCollection<reco::TrackingRecHitSoA, reco::HitModuleSoA> {edm::kUninitialized} {}
     // Constructor which specifies only the SoA size, to be used when copying the results from the device to the host
     template <typename TQueue>
     explicit TrackingRecHitHost(TQueue queue, uint32_t nHits, uint32_t nModules)

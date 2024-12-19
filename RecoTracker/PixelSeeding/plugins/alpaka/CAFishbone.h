@@ -47,7 +47,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                   CellToTracks const* __restrict__ cellTracksHisto,
                                   uint32_t outerHits,
                                   bool checkTrack) const {
-      constexpr auto maxCellsPerHit = CACellT<TrackerTraits>::maxCellsPerHit;
+      constexpr auto maxCellsPerHit = TrackerTraits::maxCellsPerHit;
 
       // auto const isOuterHitOfCell = isOuterHitOfCellWrap->container;
 

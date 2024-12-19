@@ -19,7 +19,7 @@
 #include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
 #include "RecoTracker/PixelSeeding/interface/alpaka/CACoupleSoACollection.h"
 
-#include "CACell.h"
+#include "CASimpleCell.h"
 #include "CAPixelDoublets.h"
 #include "CAStructures.h"
 
