@@ -53,8 +53,6 @@ namespace reco
 
     int32_t offsetBPIX2() const { return this->template view<TrackingRecHitSoA>().offsetBPIX2(); }
 
-    uint32_t const* hitsModuleStart() const { return this->template view<TrackingRecHitSoA>().hitsModuleStart().data(); }
-
     // do nothing for a host collection
     template <typename TQueue>
     void updateFromDevice(TQueue) {}
