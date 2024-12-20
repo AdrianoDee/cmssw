@@ -38,6 +38,8 @@ class SiStripRecHitSoAConverter : public stream::EDProducer<> {
 
   using Hits = reco::TrackingRecHitsSoACollection;
   using HitsHost = ::reco::TrackingRecHitHost;
+  using HMSstorage = typename std::vector<uint32_t>;
+  
 public:
   explicit SiStripRecHitSoAConverter(const edm::ParameterSet& iConfig);
   ~SiStripRecHitSoAConverter() override = default;
@@ -54,6 +56,7 @@ private:
 
   const edm::EDPutTokenT<HitsHost> stripSoAHost_;
   const device::EDPutToken<Hits> stripSoADevice_;
+  const edm::EDPutTokenT<HMSstorage> hitModuleStart_;
 };
 
 
@@ -63,7 +66,8 @@ SiStripRecHitSoAConverter::SiStripRecHitSoAConverter(const edm::ParameterSet& iC
       beamSpotToken_(consumes<::reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
       pixelHitsSoA_{consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSoASource"))},
       stripSoAHost_{produces()},
-      stripSoADevice_{produces()}
+      stripSoADevice_{produces()},
+      hitModuleStart_{produces()}
 {
   
 }
@@ -96,10 +100,8 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
   auto const& stripHits = iEvent.get(recHitToken_);
 
   // Count strip hits
-  int nStripHits = 0;
+  const int nStripHits = stripHits.data().size();
   const int nStripModules = stripHits.size();
-  for (const auto& detSet : stripHits) 
-    nStripHits += detSet.size();
 
   std::cout << "nStripHits = " << nStripHits << std::endl;
 
@@ -156,6 +158,17 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
 
   assert(int(stripHitsModuleView[stripHitsModuleView.metadata().size()].moduleStart()) == nStripHits);
   
+  auto moduleStartView = cms::alpakatools::make_host_view<uint32_t>(stripHitsModuleView.moduleStart(), stripHitsModuleView.metadata().size());
+  HMSstorage moduleStartVec(stripHitsModuleView.metadata().size());
+
+  // Put in the event the hit module start vector.
+  // Now, this could  be avoided if in the downstream
+  // modules needing this list would consume the host Hit SoA.
+  // But this is the common practice at the moment
+  // also for legacy data formats.
+  alpaka::memcpy(queue, moduleStartVec, moduleStartView);
+  iEvent.emplace(hitModuleStart_, std::move(moduleStartVec));
+
   Hits stripHitsDevice(queue, stripHitsHost.view().metadata().size(), stripHitsModuleView.metadata().size()); 
   alpaka::memcpy(queue, stripHitsDevice.buffer(), stripHitsHost.buffer());
   stripHitsDevice.updateFromDevice(queue);
