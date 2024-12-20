@@ -28,7 +28,8 @@ namespace reco
     // Constructor which specifies only the SoA size, to be used when copying the results from the device to the host
     template <typename TQueue>
     explicit TrackingRecHitHost(TQueue queue, uint32_t nHits, uint32_t nModules)
-        : HitPortableCollectionHost({{int(nHits),int(nModules)}}, queue) {}
+        : HitPortableCollectionHost({{int(nHits),int(nModules)}}, queue) {} 
+          //FIXME it would have more sense to put here a +1 for modules
 
     // Constructor from clusters
     template <typename TQueue>

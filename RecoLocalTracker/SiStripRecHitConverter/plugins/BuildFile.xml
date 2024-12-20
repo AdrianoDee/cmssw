@@ -8,6 +8,7 @@
 <library file="alpaka/*.cc" name="RecoLocalTrackerSiStripRecHitsPluginsPortable">
   <use name="alpaka"/>
   <use name="DataFormats/Portable"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
   <use name="HeterogeneousCore/AlpakaCore"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <flags ALPAKA_BACKENDS="1"/>

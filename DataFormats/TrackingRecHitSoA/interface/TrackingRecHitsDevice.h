@@ -30,6 +30,11 @@ namespace reco
     TrackingRecHitDevice(edm::Uninitialized)
       : HitPortableCollectionDevice<TDev>{edm::kUninitialized} {}
 
+     // Constructor which specifies only the SoA size, to be used when copying the results from host to device     
+    template <typename TQueue>
+    explicit TrackingRecHitDevice(TQueue queue, uint32_t nHits, uint32_t nModules)
+        : HitPortableCollectionDevice<TDev>({{int(nHits),int(nModules)}}, queue) {}
+
     // Constructor from clusters
     template <typename TQueue>
     explicit TrackingRecHitDevice(TQueue queue, SiPixelClustersDevice<TDev> const &clusters)
