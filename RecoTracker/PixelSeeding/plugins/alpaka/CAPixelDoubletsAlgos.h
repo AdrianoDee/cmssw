@@ -108,16 +108,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void __attribute__((always_inline)) doubletsFromHisto(
       const TAcc& acc,
       uint32_t maxNumOfDoublets,
-      // CACellT<TrackerTraits>* cells,
       CASimpleCell<TrackerTraits>* cells,
       uint32_t* nCells,
-      // CellNeighborsVector<TrackerTraits>* cellNeighbors,
-      // CellTracksVector<TrackerTraits>* cellTracks,
       HitsConstView hh,
       ::reco::CAGraphSoAConstView cc,
       uint32_t const* __restrict__ offsets,
-      PhiBinner<TrackerTraits>* phiBinner, //const
-      // OuterHitOfCell<TrackerTraits> isOuterHitOfCell,
+      PhiBinner<TrackerTraits> const* phiBinner,
       HitToCell* outerHitHisto,
       AlgoParams const& params) {  
 

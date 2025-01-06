@@ -33,19 +33,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsConstView = ::reco::TrackingRecHitConstView;
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
-    using hindex_type = uint32_t;//typename TrackingRecHitSoA<TrackerTraits>::hindex_type;
+    using hindex_type = uint32_t;
 
-    using HitToTuple = caStructures::HitToTupleT<TrackerTraits>;
-    using TupleMultiplicity = caStructures::TupleMultiplicityT<TrackerTraits>;
-    using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
-
-    using CACell = CACellT<TrackerTraits>;
     using TkSoADevice = reco::TracksSoACollection;
-    using HitContainer = caStructures::HitContainerT<TrackerTraits>;
     using Tuple = HitContainer;
-
-    using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
-    using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
 
     using Quality = ::pixelTrack::Quality;
 
@@ -54,6 +45,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using Counters = caHitNtupletGenerator::Counters;
 
     using CAGeometryOnDevice = reco::CAGeometrySoACollection;
+
   public:
     CAHitNtupletGenerator(const edm::ParameterSet& cfg);
 

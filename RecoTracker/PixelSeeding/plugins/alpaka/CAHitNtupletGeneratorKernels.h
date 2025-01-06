@@ -105,15 +105,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   public:
     using TrackerTraits = TTTraits;
   
-    // Cells containers
-    using CellNeighborsVector = CellNeighborsVectorT<TrackerTraits>;
-    using CellNeighbors = CellNeighborsT<TrackerTraits>;
-    using CellTracksVector = CellTracksVectorT<TrackerTraits>;
-    using CellTracks = CellTracksT<TrackerTraits>;
-    using OuterHitOfCellContainer = OuterHitOfCellContainerT<TrackerTraits>;
-    using OuterHitOfCell = OuterHitOfCellT<TrackerTraits>;
-
-    using CACell = CACellT<TrackerTraits>;
     using SimpleCell = CASimpleCell<TrackerTraits>;
     using Params = caHitNtupletGenerator::ParamsT<TrackerTraits>;
     using Counters = caHitNtupletGenerator::Counters;
