@@ -94,9 +94,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   cms::alpakatools::AtomicPairCounter *apc,
                                   CASimpleCell<TrackerTraits> const *__restrict__ cells,
                                   uint32_t const *__restrict__ nCells,
-                                  // CellNeighborsVector<TrackerTraits> const *cellNeighbors,
-                                  // CellTracksVector<TrackerTraits> const *cellTracks,
-                                  // OuterHitOfCell<TrackerTraits> const *isOuterHitOfCell,
                                   int32_t nHits, //could be just the nOnes() of hitToTuple
                                   uint32_t maxNumberOfDoublets,
                                   AlgoParams const& params,

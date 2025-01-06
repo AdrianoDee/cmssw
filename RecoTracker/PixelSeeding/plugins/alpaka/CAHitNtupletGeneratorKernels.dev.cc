@@ -149,7 +149,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         
         cms::alpakatools::fillManyFromVector<Acc1D>(device_hitPhiHist_.data(),
                                                     device_hitPhiView_,
-                                                    TrackerTraits::numberOfLayers,
+                                                    TrackerTraits::numberOfLayers, // could be ll.metadata().size()
                                                     hh.iphi(),
                                                     this->device_layerStarts_.data(),
                                                     hh.metadata().size(),
