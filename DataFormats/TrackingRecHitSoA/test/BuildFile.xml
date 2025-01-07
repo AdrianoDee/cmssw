@@ -2,5 +2,11 @@
 <bin file="alpaka/Hits_test.cc alpaka/Hits_test.dev.cc" name="Hits_test">
   <use name="alpaka"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
-  <flags ALPAKA_BACKENDS="1"/>
+  <flags ALPAKA_BACKENDS="cuda serial"/>
+</bin>
+
+<bin file="alpaka/TestMerge.cc " name="TestMerge">
+  <use name="alpaka"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <flags ALPAKA_BACKENDS="cuda serial"/>
 </bin>
