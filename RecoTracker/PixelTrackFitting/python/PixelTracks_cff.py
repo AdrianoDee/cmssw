@@ -98,6 +98,14 @@ from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
 
 from Configuration.ProcessModifiers.alpaka_cff import alpaka
 
+#from RecoTracker.PixelSeeding.caGeometryESProducer_cfi import caGeometryESProducer as _caGeometryESProducer
+def _addCAGeometryESProducer(process):
+    process.load("RecoTracker.PixelSeeding.caGeometryESProducer_cfi")
+    process.caGeometryESProducer.appendToDataLabel = cms.string("caGeometry")
+
+modifyConfigurationForAlpakaCAGeometry_ = alpaka.makeProcessModifier(_addCAGeometryESProducer)
+
+
 # pixel tracks SoA producer on the device
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase1_cfi import caHitNtupletAlpakaPhase1 as _pixelTracksAlpakaPhase1
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase2_cfi import caHitNtupletAlpakaPhase2 as _pixelTracksAlpakaPhase2
@@ -113,19 +121,9 @@ pixelTracksAlpakaSerial = makeSerialClone(pixelTracksAlpaka,
 )
 
 # legacy pixel tracks from SoA
-from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpakaPhase1_cfi import pixelTrackProducerFromSoAAlpakaPhase1 as _pixelTrackProducerFromSoAAlpakaPhase1
-from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpakaPhase2_cfi import pixelTrackProducerFromSoAAlpakaPhase2 as _pixelTrackProducerFromSoAAlpakaPhase2
-from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpakaHIonPhase1_cfi import pixelTrackProducerFromSoAAlpakaHIonPhase1 as _pixelTrackProducerFromSoAAlpakaHIonPhase1
+from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpaka_cfi import pixelTrackProducerFromSoAAlpaka as _pixelTrackProducerFromSoAAlpaka
 
-(alpaka & ~phase2_tracker).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpakaPhase1.clone(
-    pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
-))
-
-(alpaka & phase2_tracker).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpakaPhase2.clone(
-    pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
-))
-
-(alpaka & ~phase2_tracker & pp_on_AA).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpakaHIonPhase1.clone(
+(alpaka).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpaka.clone(
     pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
 ))
 
