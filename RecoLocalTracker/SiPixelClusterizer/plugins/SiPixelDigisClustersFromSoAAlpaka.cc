@@ -159,7 +159,13 @@ void SiPixelDigisClustersFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID,
 #ifdef GPU_DEBUG
   std::cout << "Dumping all digis. nDigis = " << nDigis << std::endl;
 #endif
-  for (uint32_t i = 0; i < nDigis; i++) {
+  std::vector<int32_t> sortIdxs(nDigis);
+  std::iota(sortIdxs.begin(), sortIdxs.end(), 0);
+  std::sort(sortIdxs.begin(), sortIdxs.end(), [&](int32_t const i1, int32_t const i2) {
+    return digisView[i1].rawIdArr() > digisView[i2].rawIdArr();
+  });
+
+  for (const auto &i : sortIdxs) {
     // check for uninitialized digis
     if (digisView[i].rawIdArr() == 0)
       continue;
