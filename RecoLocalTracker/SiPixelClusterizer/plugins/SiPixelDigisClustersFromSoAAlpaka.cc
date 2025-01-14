@@ -22,7 +22,7 @@
 #include "PixelClusterizerBase.h"
 
 //#define EDM_ML_DEBUG
-#define GPU_DEBUG
+//#define GPU_DEBUG
 
 template <typename TrackerTraits>
 class SiPixelDigisClustersFromSoAAlpaka : public edm::global::EDProducer<> {
@@ -124,11 +124,10 @@ void SiPixelDigisClustersFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID,
       return;  // this in reality should never happen
     edmNew::DetSetVector<SiPixelCluster>::FastFiller spc(*outputClusters, detId);
     auto layer = (DetId(detId).subdetId() == 1) ? ttopo.pxbLayer(detId) : 0;
-    auto clusterThreshold = clusterThresholds_.getThresholdForLayerOnCondition(layer == 1);
-    std::cout << __LINE__ <<std::endl;
+    auto clusterThreshold = clusterThresholds_.getThresholdForLayerOnCondition(layer == 1);  
 
     for (int32_t ic = 0; ic < nclus + 1; ++ic) {
-      std::cout << ic << "accessing .. " << std::endl;
+ 
       auto const& acluster = aclusters[ic];
       // in any case we cannot  go out of sync with gpu...
       if (acluster.charge < clusterThreshold)
@@ -136,11 +135,11 @@ void SiPixelDigisClustersFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID,
          std::cout   << "cluster below charge Threshold "
             << "Layer/DetId/clusId " << layer << '/' << detId << '/' << ic << " size/charge " << acluster.isize << '/'
             << acluster.charge << "\n";
-      std::cout << ic << "trying .. " << std::endl;
+
       // sort by row (x)
       spc.emplace_back(acluster.isize, acluster.adc, acluster.x, acluster.y, acluster.xmin, acluster.ymin, ic);
       aclusters[ic].clear();
-      std::cout << ic << "emplaced! " << std::endl;
+
 #ifdef EDM_ML_DEBUG
       ++totClustersFilled;
       const auto& cluster{spc.back()};
@@ -202,8 +201,7 @@ void SiPixelDigisClustersFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID,
       std::cout << ">> Closed module --" << detId << "; nclus = " << nclus << std::endl;
 #endif
       // new module
-      fillClusters(detId);
-      std::cout << ">> fillClusters Done!" << std::endl;
+      fillClusters(detId); 
 #ifdef EDM_ML_DEBUG
       assert(nclus == -1);
 #endif
