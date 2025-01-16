@@ -1,0 +1,17 @@
+<use name="eigen"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/PluginManager"/>
+<use name="alpaka"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="DataFormats/Candidate"/>
+<use name="DataFormats/VertexSoA"/>
+<use name="DataFormats/Math"/>
+<use name="DataFormats/TrackerCommon"/>
+<use name="DataFormats/Common"/>
+<use name="CLHEP"/>
+<use name="RecoLocalTracker/Records"/>
+<use name="Geometry/TrackerGeometryBuilder"/>
+<use name="Geometry/Records"/>
+<flags EDM_PLUGIN="1"/>
+<flags ALPAKA_BACKENDS="1"/>
