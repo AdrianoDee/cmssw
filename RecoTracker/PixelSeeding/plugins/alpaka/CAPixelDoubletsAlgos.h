@@ -110,6 +110,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       uint32_t maxNumOfDoublets,
       CASimpleCell<TrackerTraits>* cells,
       uint32_t* nCells,
+      // cms::alpakatools::AtomicPairCounter *apc, // just to zero them
       HitsConstView hh,
       ::reco::CAGraphSoAConstView cc,
       uint32_t const* __restrict__ offsets,
@@ -140,6 +141,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     const uint32_t threadIdxLocalX(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[dimIndexX]);
 
     if (threadIdxLocalY == 0 && threadIdxLocalX == 0) {
+      // *apc = 0;
       innerLayerCumulativeSize[0] = layerSize(cc.graph()[0][0]);//TrackerTraits::layerPairs[0]);
       for (uint32_t i = 1; i < nPairs; ++i) {
         innerLayerCumulativeSize[i] = innerLayerCumulativeSize[i - 1] + layerSize(cc.graph()[i][0]);
@@ -162,7 +164,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       ALPAKA_ASSERT_ACC(j < innerLayerCumulativeSize[pairLayerId]);
       ALPAKA_ASSERT_ACC(0 == pairLayerId || j >= innerLayerCumulativeSize[pairLayerId - 1]);
 
-      uint8_t inner = TrackerTraits::layerPairs[2 * pairLayerId];
+      uint8_t inner = TrackerTraits::layerPairs[2 * pairLayerId]; //FIXME
       uint8_t outer = TrackerTraits::layerPairs[2 * pairLayerId + 1];
       ALPAKA_ASSERT_ACC(outer > inner);
 
@@ -215,19 +217,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       auto kh = PhiHisto::bin(int16_t(mep + iphicut));
       auto incr = [](auto& k) { return k = (k + 1) % PhiHisto::nbins(); };
 
-#ifdef GPU_DEBUG
-      int tot = 0;
-      int nmin = 0;
-      int tooMany = 0;
-#endif
+//#ifdef GPU_DEBUG
+//      int tot = 0;
+//      int nmin = 0;
+//      int tooMany = 0;
+//#endif
 
       auto khh = kh;
       incr(khh);
       for (auto kk = kl; kk != khh; incr(kk)) {
-#ifdef GPU_DEBUG
-        if (kk != kl && kk != kh)
-          nmin += phiBinner->size(kk + hoff);
-#endif
+
+//#ifdef GPU_DEBUG
+//        if (kk != kl && kk != kh)
+//          nmin += phiBinner->size(kk + hoff);
+//#endif
+
         auto const* __restrict__ p = phiBinner->begin(kk + hoff);
         auto const* __restrict__ e = phiBinner->end(kk + hoff);
         auto const maxpIndex = e - p;

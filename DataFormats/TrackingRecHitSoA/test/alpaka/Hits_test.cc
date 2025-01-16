@@ -102,7 +102,7 @@ int main() {
       assert(host_collection.view().xLocal()[12] == 24.);
       assert(host_collection.view().yGlobal()[int(nHits/2)] == constYG);
       assert(host_collection_2.view().yLocal()[nHits-1] == constYL);
->>>>>>> AdrianoDee/ca_params_light_hits
+
       assert(tkhit.nHits() == nHits);
       assert(tkhit.offsetBPIX2() == 22);  // set in the kernel
       assert(tkhit.nHits() == host_collection.nHits());

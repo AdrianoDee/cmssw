@@ -120,6 +120,7 @@ void PixelTrackProducerFromSoAAlpaka::fillDescriptions(edm::ConfigurationDescrip
   desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplittingLegacy"));
   desc.add<int>("minNumberOfHits", 0);
   desc.add<std::string>("minQuality", "loose");
+  desc.add<bool>("useStripHits",false);
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -295,9 +296,9 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     // filter???
     tracks.emplace_back(track.release(), hits);
   }
-// #ifdef GPU_DEBUG
+#ifdef GPU_DEBUG
   std::cout << "processed " << nt << " good tuples " << tracks.size() << " out of " << indToEdm.size() << std::endl;
-// #endif
+#endif
 
   // store tracks
   storeTracks(iEvent, tracks, httopo);

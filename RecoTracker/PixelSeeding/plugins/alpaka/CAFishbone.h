@@ -60,9 +60,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, outerHits)) {
         // auto const& vc = isOuterHitOfCell[idy];
         uint32_t size = outerHitHisto->size(idy); //TODO have this offset in the histo building directly
-#ifdef GPU_DEBUG
-        printf("hist %d histSize %d \n",idy,size);
-#endif
+// #ifdef GPU_DEBUG
+//         printf("hist %d histSize %d \n",idy,size);
+// #endif
         if (size < 2)
           continue;
 
@@ -80,12 +80,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         // entries but we can anyway skip them below and avoid having 
         // the arrays above
 
-#ifdef GPU_DEBUG 
-        for (auto idx = 0u; idx < size; idx++) {
-          unsigned int otherCell = bin[idx];
-          printf("vc[0] %d idx %d vc[idx] %d otherCell %d \n",vc[0],idx,vc[idx],otherCell);
-        }
-#endif
+// #ifdef GPU_DEBUG 
+//         for (auto idx = 0u; idx < size; idx++) {
+//           unsigned int otherCell = bin[idx];
+//           printf("vc[0] %d idx %d vc[idx] %d otherCell %d \n",vc[0],idx,vc[idx],otherCell);
+//         }
+// #endif
         for (auto idx = 0u; idx < size; idx++) {
         // for (int32_t ic = 0; ic < size; ++ic) {
         // for (auto ic = 0u; ic < size; ic++) {
@@ -110,7 +110,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           continue;
 
         // innermost parallel loop, using the block elements along the faster dimension (X or 1 in a 2D grid)
-        for (uint32_t ic : cms::alpakatools::independent_group_elements_x(acc, sg - 1)) {
+        for (uint32_t ic : cms::alpakatools:: .........–independent_group_elements_x(acc, sg - 1)) {
           auto& ci = cells[cc[ic]];
           for (auto jc = ic + 1; (int)jc < sg; ++jc) {
             auto& cj = cells[cc[jc]];

@@ -90,7 +90,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     uint32_t const maxTuples = maxNumberOfTuples_.Eval(hits.nHits());
     uint32_t const maxDoublets = maxNumberOfDoublets_.Eval(hits.nHits());
-
+    // std::cout << "maxDoublets " << maxDoublets << std::endl;
     iEvent.emplace(tokenTrack_, deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue()));
   }
 
