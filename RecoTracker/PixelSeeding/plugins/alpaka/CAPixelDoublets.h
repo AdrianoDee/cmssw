@@ -60,6 +60,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     uint32_t maxNumOfDoublets,
                                     CASimpleCell<TrackerTraits>* cells,
                                     uint32_t* nCells,
+                                    // cms::alpakatools::AtomicPairCounter *apc,
                                     HitsConstView hh,
                                     ::reco::CAGraphSoAConstView cc,
                                     uint32_t const* __restrict__ offsets,
@@ -67,7 +68,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     HitToCell* outerHitHisto,
                                     AlgoParams const& params) const {
         doubletsFromHisto<TrackerTraits>(
-            acc, maxNumOfDoublets, cells, nCells, hh, cc, offsets, phiBinner, outerHitHisto, params);
+            acc, maxNumOfDoublets, cells, nCells, /*apc,*/ hh, cc, offsets, phiBinner, outerHitHisto, params);
       }
     };
 

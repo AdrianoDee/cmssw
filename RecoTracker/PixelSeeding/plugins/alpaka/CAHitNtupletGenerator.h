@@ -36,8 +36,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using hindex_type = uint32_t;
 
     using TkSoADevice = reco::TracksSoACollection;
-    using Tuple = HitContainer;
-
     using Quality = ::pixelTrack::Quality;
 
     using QualityCuts = ::pixelTrack::QualityCutsT<TrackerTraits>;

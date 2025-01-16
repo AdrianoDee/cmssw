@@ -1,8 +1,8 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 
-// #define GPU_DEBUG
-// #define NTUPLE_DEBUG
+//#define GPU_DEBUG
+//#define NTUPLE_DEBUG
 
 // C++ includes
 #include <cmath>
@@ -355,12 +355,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   cms::alpakatools::AtomicPairCounter *apc, // just to zero them
+                                  // cms::alpakatools::AtomicPairCounter *cellAPC,
                                   HitsConstView hh,
                                   reco::CALayersSoAConstView ll,
                                   caStructures::CACoupleSoAView cn,
                                   // CACellT<TrackerTraits> *cells,
                                   CASimpleCell<TrackerTraits> *cells,
-                                  uint32_t *nCells,
+                                  uint32_t const* nCells,
                                   uint32_t *nTrips,
                                   // CellNeighborsVector<TrackerTraits> *cellNeighbors,
                                   // OuterHitOfCell<TrackerTraits> *isOuterHitOfCell,
@@ -388,9 +389,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         // uint32_t numberOfPossibleNeighbors = (*isOuterHitOfCell)[innerHitId].size(); //REMOVE ME!
         // uint32_t numberOfPossibleNeighbors = outerHitHisto->size(innerHitId);
         // numberOfPossibleNeighbors = numberOfPossibleFromHisto;
-#ifdef GPU_DEBUG
-        printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d\n",*nCells,innerHitId,cellIndex,thisCell.innerLayer(),numberOfPossibleNeighbors);
-#endif
+// #ifdef GPU_DEBUG
+//         printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d\n",*nCells,innerHitId,cellIndex,thisCell.innerLayer(),numberOfPossibleNeighbors);
+// #endif
         //printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d;%d\n",*nCells,innerHitId,cellIndex,thisCell.innerLayer(),numberOfPossibleNeighbors,numberOfPossibleFromHisto);
         // auto vi = (*isOuterHitOfCell)[innerHitId].data();
         auto ri = thisCell.inner_r(hh);
@@ -407,9 +408,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto r1 = oc.inner_r(hh);
           auto z1 = oc.inner_z(hh);
           auto dcaCut = ll[oc.innerLayer()].caDCACut();
-#ifdef GPU_DEBUG
-          printf("cellIndex:%d;%d;%d;%d .%2f -> %.2f \n",cellIndex, otherCell, oc.innerLayer(),thisCell.innerLayer(),thetaCut,dcaCut);
-#endif
+// #ifdef GPU_DEBUG
+//           printf("cellIndex:%d;%d;%d;%d .%2f -> %.2f \n",cellIndex, otherCell, oc.innerLayer(),thisCell.innerLayer(),thetaCut,dcaCut);
+// #endif
           bool aligned = Cell::areAlignedRZ(
               r1,
               z1,
@@ -424,11 +425,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                               oc,
                               dcaCut,
                               params.hardCurvCut_)) { 
+            // auto t_ind = cellNeighborsHisto->countAndTot(acc, *cellAPC, otherCell)
             cellNeighborsHisto->count(acc,otherCell);
             auto t_ind = alpaka::atomicAdd(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
-#ifdef GPU_DEBUG
-            printf("filling cell no. %d %d: %d -> %d\n",t_ind,cellNeighborsHisto->size(),otherCell,cellIndex);
-#endif
+            // printf("t_ind %d\n",t_ind);
+// #ifdef GPU_DEBUG
+//             printf("filling cell no. %d %d: %d -> %d\n",t_ind,cellNeighborsHisto->size(),otherCell,cellIndex);
+// #endif
             // oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);
             
             // ALPAKA_ASSERT_ACC(t_ind == );
@@ -453,11 +456,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   caStructures::CACoupleSoAConstView cn,
+                                  uint32_t const* nElements,
                                   GenericContainer *genericHisto) const {
   
-  for (uint32_t index : cms::alpakatools::uniform_elements(acc, genericHisto->size())) {
+  for (uint32_t index : cms::alpakatools::uniform_elements(acc, *nElements)) {
+        //printf("filling: %d -> %d %d %d %d\n",cn[index].inner(),cn[index].outer(),genericHisto->nOnes(),genericHisto->size(),*nElements);
         genericHisto->fill(acc,cn[index].inner(),cn[index].outer());
-        // printf("filling: %d -> %d\n",cn[index].inner(),cn[index].outer());
+        }
+
+    }
+  };
+
+  template <typename TrackerTraits>
+  class Kernel_fillGenericCoupleAPC {
+  public:
+    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+    ALPAKA_FN_ACC void operator()(TAcc const &acc,
+                                  caStructures::CACoupleSoAConstView cn,
+                                  cms::alpakatools::AtomicPairCounter const *cellAPC,
+                                  GenericContainer *genericHisto) const {
+  
+  for (uint32_t index : cms::alpakatools::uniform_elements(acc, cellAPC->get().first)) {
+        //printf("%d filling: %d -> %d %d %d %d\n",index, cn[index].inner(),cn[index].outer(),cellAPC->get().first,genericHisto->nOnes(),genericHisto->size());
+        genericHisto->fill(acc,cn[index].inner(),cn[index].outer());
         }
 
     }
@@ -485,10 +506,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
       using Cell = CASimpleCell<TrackerTraits>;
 
-// #ifdef GPU_DEBUG
+#ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc))
         printf("starting producing ntuplets from %d hits, %d cells and %d triplets \n", hh.metadata().size(), *nCells, *nTriplets);
-// #endif
+#endif
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
         auto const &thisCell = cells[idx];

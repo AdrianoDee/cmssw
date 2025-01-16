@@ -50,10 +50,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<std::string>("maxNumberOfDoublets", std::to_string(pixelTopology::Phase1::maxNumberOfDoublets));
       desc.add<std::string>("maxNumberOfTuples", std::to_string(pixelTopology::Phase1::maxNumberOfTuples));
 
-      desc.add<unsigned int>("avgHitsPerTrack", pixelTopology::Phase1::avgHitsPerTrack);
-      desc.add<unsigned int>("avgCellsPerHit", pixelTopology::Phase1::maxCellsPerHit);
-      desc.add<unsigned int>("avgCellsPerCell", pixelTopology::Phase1::maxCellNeighbors);
-      desc.add<unsigned int>("avgTracksPerCell", pixelTopology::Phase1::maxCellTracks);
+      desc.add<double>("avgHitsPerTrack", 5.0f);
+      desc.add<double>("avgCellsPerHit", 25.0f);
+      desc.add<double>("avgCellsPerCell", 2.0f);
+      desc.add<double>("avgTracksPerCell", 1.0f);
       
       desc.add<bool>("earlyFishbone", true);
       desc.add<bool>("lateFishbone", false);
@@ -77,14 +77,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return AlgoParams({
 
                          // Container sizes
-                         cfg.getParameter<unsigned int>("avgHitsPerTrack"),
-                         cfg.getParameter<unsigned int>("avgCellsPerHit"),
-                         cfg.getParameter<unsigned int>("avgCellsPerCell"),
-                         cfg.getParameter<unsigned int>("avgTracksPerCell"),
+                         (float)cfg.getParameter<double>("avgHitsPerTrack"),
+                         (float)cfg.getParameter<double>("avgCellsPerHit"),
+                         (float)cfg.getParameter<double>("avgCellsPerCell"),
+                         (float)cfg.getParameter<double>("avgTracksPerCell"),
 
                          // Algo params
-                         cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
-                         cfg.getParameter<unsigned int>("minHitsForSharingCut"),
+                         (uint16_t)cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
+                         (uint16_t)cfg.getParameter<unsigned int>("minHitsForSharingCut"),
                          (float)cfg.getParameter<double>("ptmin"),
                          (float)cfg.getParameter<double>("hardCurvCut"),
                          (float)cfg.getParameter<double>("cellZ0Cut"),

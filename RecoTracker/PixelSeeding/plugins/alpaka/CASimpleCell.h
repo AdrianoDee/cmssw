@@ -2,7 +2,7 @@
 #define RecoTracker_PixelSeeding_plugins_alpaka_CASimpleCell_h
 
 // #define ONLY_TRIPLETS_IN_HOLE
-
+// #define GPU_DEBUG
 #include <cmath>
 #include <limits>
 
@@ -205,7 +205,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           unsigned int otherCell = bin[idx];
         // for (unsigned int otherCell : outerNeighbors()) {
 #ifdef GPU_DEBUG
-          printf("doubletId: %ld -> %d\n",doubletId,otherCell);
+          printf("doubletId: %ld -> %d %d %ld\n",doubletId,otherCell,idx,nInBin);
 #endif
           if (cells[otherCell].isKilled())
             continue;  // killed by earlyFishbone
