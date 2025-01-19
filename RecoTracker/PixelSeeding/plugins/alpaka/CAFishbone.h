@@ -137,16 +137,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
               if (n[ic] > n[jc]) {
                 if (sameLayer) {
                   cj.kill();  // closest
+printf("hit %d same layer cell %d kill %d \n",idy,cc[ic],cc[jc]);  
                   ci.setFishbone(acc, cj.inner_hit_id(), cj.inner_z(hh), hh);
                 } else {
                   ci.kill();  // farthest
+printf("hit %d same layer cell %d kill %d \n",idy,cc[jc],cc[ic]);  
                   // break;  // removed to improve reproducibility, keep it for reference and tests
                 }
               } else {
                 if (!sameLayer) {
                   cj.kill();  // farthest
+printf("hit %d diff layer cell %d kill %d \n",idy,cc[ic],cc[jc]);  
                 } else {
                   ci.kill();  // closest
+printf("hit %d diff layer cell %d kill %d \n",idy,cc[jc],cc[ic]);  
                   cj.setFishbone(acc, ci.inner_hit_id(), ci.inner_z(hh), hh);
                   // break;  // removed to improve reproducibility, keep it for reference and tests
                 }

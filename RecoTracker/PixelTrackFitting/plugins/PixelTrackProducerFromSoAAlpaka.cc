@@ -245,8 +245,13 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     auto end = hitOffs[it];
 
     for (auto iHit = start; iHit < end; ++iHit)
-      hits[iHit - start] = hitmap[hitIdxs[start]];
-  
+      hits[iHit - start] = hitmap[hitIdxs[iHit]];
+    
+    std::cout << "track soa : " << it << " ";
+    for (auto iHit = start; iHit < end; ++iHit)
+      std::cout << hitIdxs[iHit] << " - ";
+    std::cout << std::endl;  
+ 
     // mind: this values are respect the beamspot!
     float chi2 = tsoa.view()[it].chi2();
     float phi = reco::phi(tsoa.view(), it);

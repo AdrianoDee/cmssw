@@ -204,10 +204,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           unsigned int otherCell = bin[idx];
         // for (unsigned int otherCell : outerNeighbors()) {
 // #ifdef GPU_DEBUG
-          printf("doublet no. %d %d doubletId: %ld -> %d (%d,%d) -> (%d,%d) %d %ld\n",tmpNtuplet.size(),idx,doubletId,otherCell,this->inner_hit_id(),this->outer_hit_id(),cells[otherCell].inner_hit_id(),cells[otherCell].outer_hit_id(),idx,nInBin);
+	  if (cells[otherCell].isKilled())
+             continue;          
+printf("doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) %d %ld\n",tmpNtuplet.size(),idx,doubletId,otherCell,cells[otherCell].isKilled(),this->inner_hit_id(),this->outer_hit_id(),cells[otherCell].inner_hit_id(),cells[otherCell].outer_hit_id(),idx,nInBin);
 // #endif
-          if (cells[otherCell].isKilled())
-            continue;  // killed by earlyFishbone
+         
           //printf("otherCell: %ld -> %d %d %ld\n",doubletId,otherCell,idx,nInBin);
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
@@ -234,7 +235,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               printf("track n. %d nhits %d \n",it,nh+1);
 #endif
               if (it >= 0) {  // if negative is overflow....
-              printf("ntuplet: ");
+       printf("ntuplet %d: ",it); 
                 for (auto c : tmpNtuplet)
                 {
 
