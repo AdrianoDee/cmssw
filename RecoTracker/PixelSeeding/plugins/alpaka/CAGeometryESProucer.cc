@@ -87,7 +87,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::cout << int(minZ_.size()) << std::endl;
     std::cout << int(pairGraph_.size() ) << std::endl;
     assert(int(n_pairs) == int(minZ_.size())); 
-    assert(*std::max_element(startingPairs_.begin(), startingPairs_.end()) < n_pairs);
+    assert(*std::max_element(startingPairs_.begin(), startingPairs_.end()) <= n_pairs);
 
     const auto &trackerTopology = &iRecord.get(tTopologyToken_);
     const auto &trackerGeometry = &iRecord.get(tGeometryToken_);

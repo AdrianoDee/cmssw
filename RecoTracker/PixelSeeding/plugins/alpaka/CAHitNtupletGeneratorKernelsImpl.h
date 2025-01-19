@@ -429,7 +429,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             cellNeighborsHisto->count(acc,otherCell);
             auto t_ind = alpaka::atomicAdd(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
 
-printf("cell %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell.inner_hit_id(),thisCell.outer,oc.inner_hit_id(),oc.outer_hit_id());            
+printf("cell %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell.inner_hit_id(),thisCell.outer_hit_id(),oc.inner_hit_id(),oc.outer_hit_id());            
 // printf("t_ind %d\n",t_ind);
 // #ifdef GPU_DEBUG
 //             printf("filling cell no. %d %d: %d -> %d\n",t_ind,cellNeighborsHisto->size(),otherCell,cellIndex);
