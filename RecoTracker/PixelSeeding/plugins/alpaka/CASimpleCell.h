@@ -184,7 +184,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // it has no compatible neighbor
       // the ntuplets is then saved if the number of hits it contains is greater
       // than a threshold
-
       if constexpr (DEPTH <= 0) {
         printf("ERROR: CASimpleCell::find_ntuplets reached full depth!\n");
         ALPAKA_ASSERT_ACC(false);
@@ -204,11 +203,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           // FIXME implement alpaka::ldg and use it here? or is it const* __restrict__ enough?
           unsigned int otherCell = bin[idx];
         // for (unsigned int otherCell : outerNeighbors()) {
-#ifdef GPU_DEBUG
-          printf("doubletId: %ld -> %d %d %ld\n",doubletId,otherCell,idx,nInBin);
-#endif
+// #ifdef GPU_DEBUG
+          printf("doublet no. %d %d doubletId: %ld -> %d (%d,%d) -> (%d,%d) %d %ld\n",tmpNtuplet.size(),idx,doubletId,otherCell,this->inner_hit_id(),this->outer_hit_id(),cells[otherCell].inner_hit_id(),cells[otherCell].outer_hit_id(),idx,nInBin);
+// #endif
           if (cells[otherCell].isKilled())
             continue;  // killed by earlyFishbone
+          //printf("otherCell: %ld -> %d %d %ld\n",doubletId,otherCell,idx,nInBin);
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
               acc, hh, cc, cells, foundNtuplets, cellNeighborsHisto, cellTracksHisto, nCellTracks, ct, apc, quality, tmpNtuplet, minHitsPerNtuplet);
@@ -234,9 +234,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               printf("track n. %d nhits %d \n",it,nh+1);
 #endif
               if (it >= 0) {  // if negative is overflow....
+              printf("ntuplet: ");
                 for (auto c : tmpNtuplet)
                 {
 
+                  printf("%d - ",c);
                   cellTracksHisto->count(acc,c); //use this to count!!!
                   auto t_ind = alpaka::atomicAdd(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
                   // add a check
@@ -246,6 +248,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   ct[t_ind].inner() = c; //cell
                   ct[t_ind].outer() = it; //track
                 }
+                printf("\n");
                 quality[it] = bad;  // initialize to bad
               }
             }

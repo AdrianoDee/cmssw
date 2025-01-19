@@ -135,18 +135,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     auto& innerLayerCumulativeSize = alpaka::declareSharedVar<uint32_t[TrackerTraits::nPairs], __COUNTER__>(acc);
     auto& ntot = alpaka::declareSharedVar<uint32_t, __COUNTER__>(acc);
 
-    constexpr uint32_t dimIndexY = 0u;
-    constexpr uint32_t dimIndexX = 1u;
-    const uint32_t threadIdxLocalY(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[dimIndexY]);
-    const uint32_t threadIdxLocalX(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[dimIndexX]);
+    if (cms::alpakatools::once_per_grid(acc))
+      printf("cellZ0Cut_ = %.2f cellPtCut_ = %.2f doClusterCut = %d doZ0Cut = %d  doPtCut = %d doZSizeCut = %d\n",params.cellZ0Cut_,params.cellPtCut_,params.doClusterCut_,params.cellZ0Cut_>0,params.cellPtCut_>0,params.doZSizeCut_);
 
-    if (threadIdxLocalY == 0 && threadIdxLocalX == 0) {
+    if (cms::alpakatools::once_per_block(acc)) {
       // *apc = 0;
-      innerLayerCumulativeSize[0] = layerSize(cc.graph()[0][0]);//TrackerTraits::layerPairs[0]);
+      innerLayerCumulativeSize[0] = layerSize(cc.graph()[0][0]);
       for (uint32_t i = 1; i < nPairs; ++i) {
         innerLayerCumulativeSize[i] = innerLayerCumulativeSize[i - 1] + layerSize(cc.graph()[i][0]);
       }
       ntot = innerLayerCumulativeSize[nPairs - 1];
+
+      
     }
     alpaka::syncBlockThreads(acc);
 
@@ -164,8 +164,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       ALPAKA_ASSERT_ACC(j < innerLayerCumulativeSize[pairLayerId]);
       ALPAKA_ASSERT_ACC(0 == pairLayerId || j >= innerLayerCumulativeSize[pairLayerId - 1]);
 
-      uint8_t inner = TrackerTraits::layerPairs[2 * pairLayerId]; //FIXME
-      uint8_t outer = TrackerTraits::layerPairs[2 * pairLayerId + 1];
+      uint8_t inner = cc.graph()[pairLayerId][0];//TrackerTraits::layerPairs[2 * pairLayerId]; //FIXME
+      uint8_t outer = cc.graph()[pairLayerId][1];//TrackerTraits::layerPairs[2 * pairLayerId + 1];
       ALPAKA_ASSERT_ACC(outer > inner);
 
       auto hoff = PhiHisto::histOff(outer);
@@ -186,7 +186,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       */
 
       auto mez = hh[i].zGlobal();
-
+      
       if (mez < cc.minz()[pairLayerId] || mez > cc.maxz()[pairLayerId])
         continue;
 
@@ -216,7 +216,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       auto kl = PhiHisto::bin(int16_t(mep - iphicut));
       auto kh = PhiHisto::bin(int16_t(mep + iphicut));
       auto incr = [](auto& k) { return k = (k + 1) % PhiHisto::nbins(); };
-
+     
+      printf("pairLayerId %d %d %.2f %.2f %.2f \n",pairLayerId,cc.phiCuts()[pairLayerId],cc.maxr()[pairLayerId],cc.maxz()[pairLayerId],cc.minz()[pairLayerId]);
 //#ifdef GPU_DEBUG
 //      int tot = 0;
 //      int nmin = 0;
@@ -235,7 +236,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         auto const* __restrict__ p = phiBinner->begin(kk + hoff);
         auto const* __restrict__ e = phiBinner->end(kk + hoff);
         auto const maxpIndex = e - p;
-
+        
         // innermost parallel loop, using the block elements along the faster dimension (X or 1 in a 2D grid)
         for (uint32_t pIndex : cms::alpakatools::independent_group_elements_x(acc, maxpIndex)) {
           // FIXME implement alpaka::ldg and use it here? or is it const* __restrict__ enough?
@@ -248,7 +249,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           if (mo > pixelClustering::maxNumModules)
             continue;
 
-          if (params.cellZ0Cut_ > 0 && z0cutoff(oi))
+          if (params.cellZ0Cut_ > 0. && z0cutoff(oi))
             continue;
 
           auto mop = hh[oi].iphi();
@@ -260,7 +261,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           if (params.doZSizeCut_ && zSizeCut<TrackerTraits,TAcc>(acc, hh, i, oi))
             continue;
 
-          if (params.cellPtCut_ > 0 && ptcut(oi, idphi))
+          if (params.cellPtCut_ > 0. && ptcut(oi, idphi))
             continue;
 
           outerHitHisto->count(acc,oi-hh.offsetBPIX2());
@@ -272,7 +273,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           }  // move to SimpleVector??
           // cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, inner, outer, i, oi);
           cells[ind].init(hh, pairLayerId, inner, outer, i, oi);
-          
+          printf("doublet: %d layerPair: %d inner: %d outer: %d i: %d oi: %d\n",ind,pairLayerId,inner,outer,i,oi);
         
 //           isOuterHitOfCell[oi].push_back(acc, ind);
 // #ifdef GPU_DEBUG
