@@ -317,7 +317,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                     workDiv1D,
                     Kernel_fillGenericCouple<TrackerTraits>{},
                     this->deviceTracksCells_.view(),
-	            this->device_nCellTracks_.data(),
+	                this->device_nCellTracks_.data(),
                     this->device_cellToTracks_.data());
                     
     if (this->m_params.algoParams_.doStats_)
@@ -450,7 +450,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     
     // (Outer) Hits-> Cells
     // HitToCell::template launchInit<Acc1D>(this->device_hitToCellView_, queue);
-
+    
+    std::cout << "nActualPairs = " << cc.metadata().size() << std::endl;
     alpaka::exec<Acc2D>(queue,
                         workDiv2D,
                         GetDoubletsFromHisto<TrackerTraits>{},
