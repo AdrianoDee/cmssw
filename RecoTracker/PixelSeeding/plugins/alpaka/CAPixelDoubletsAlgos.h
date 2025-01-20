@@ -263,13 +263,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           if (params.cellPtCut_ > 0. && ptcut(oi, idphi))
             continue;
 
-          outerHitHisto->count(acc,oi-hh.offsetBPIX2());
+          
           //nCells could be simply outerHitHisto->size(); ... uhm ... false it can't
           auto ind = alpaka::atomicAdd(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});
           if (ind >= maxNumOfDoublets) {
+            printf("Warning!!!! Too many cells (limit = %d)!\n",maxNumOfDoublets);
             alpaka::atomicSub(acc, nCells, (uint32_t)1, alpaka::hierarchy::Blocks{});
             break;
           }  // move to SimpleVector??
+
+          outerHitHisto->count(acc,oi-hh.offsetBPIX2());
           // cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, inner, outer, i, oi);
           cells[ind].init(hh, pairLayerId, inner, outer, i, oi);
 #ifdef GPU_DEBUG

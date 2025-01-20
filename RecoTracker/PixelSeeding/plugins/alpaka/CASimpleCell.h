@@ -238,7 +238,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef GPU_DEBUG
                   printf("%d - ",c);
 #endif
-                  cellTracksHisto->count(acc,c); //use this to count!!!
                   auto t_ind = alpaka::atomicAdd(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
 
                   if (t_ind >= uint32_t(ct.metadata().size())) {
@@ -246,6 +245,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                     alpaka::atomicSub(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
                     break;
                   }
+                  cellTracksHisto->count(acc,c); 
 // #ifdef GPU_DEBUG
 //                   printf("cellToTrack n. %d cell %d track %d\n",t_ind,c,it);
 // #endif
