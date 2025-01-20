@@ -369,6 +369,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   CellToCell *cellNeighborsHisto,
                                   AlgoParams const& params) const {
       using Cell = CASimpleCell<TrackerTraits>;
+      uint32_t maxTriplets = cn.metadata().size();
 
       if (cms::alpakatools::once_per_grid(acc)) {
         *apc = 0;
@@ -437,6 +438,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             
             // ALPAKA_ASSERT_ACC(t_ind == );
             // add check for size?
+            if (t_ind >= maxTriplets) {
+              printf("Warning!!!! Too many cell->cell (triplets) associations (limit = %d)!\n",cn.metadata().size());
+              alpaka::atomicSub(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
+              break;
+            }
+            
             cn[t_ind].inner() = otherCell;
             cn[t_ind].outer() = cellIndex;
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
@@ -466,6 +473,67 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   };
   
   /*
+  template <typename TrackerTraits>
+  class Kernel_find_triplets {
+  public:
+    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+    ALPAKA_FN_ACC void operator()(TAcc const &acc,
+                                  const ::reco::CAGraphSoAConstView &cc,
+                                  TkSoAView tracks_view,
+                                  HitContainer *foundNtuplets,
+                                  CellToCell const* __restrict__ cellNeighborsHisto,
+                                  CellToTrack *cellTracksHisto,
+                                  caStructures::CACoupleSoAView ct,
+                                  caStructures::CACoupleSoAConstView trips,
+                                  CASimpleCell<TrackerTraits> *__restrict__ cells,
+                                  uint32_t *nCellTracks,
+                                  uint32_t const *nTriplets,
+                                  cms::alpakatools::AtomicPairCounter *apc) const {
+
+      using Cell = CASimpleCell<TrackerTraits>;
+
+#ifdef GPU_DEBUG
+      if (cms::alpakatools::once_per_grid(acc))
+        printf("starting producing ntuplets from %d hits, %d cells and %d triplets \n", hh.metadata().size(), *nCells, *nTriplets);
+#endif
+      for (uint32_t tIndex : cms::alpakatools::uniform_elements(acc, *nTriplets)) {
+        auto inner = trips[tIndex].inner();
+        auto const &innerCell = cells[inner];
+        
+        auto pid = innerCell.layerPairId();
+        bool doit = cc[pid].startingPair();
+
+        if(not doit or innerCell.isKilled() or cellNeighborsHisto->size(inner) > 0)
+          continue;
+
+        auto outer = trips[tIndex].outer();
+        
+        constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
+
+        hindex_type hits[3 + 2];
+        auto nh = 0U;
+        hits[nh++] = innerCell.inner_hit_id();
+        if(innerCell.hasFishbone())
+          hits[nh++] = innerCell.fishboneId();
+        hits[nh++] = outerCell.inner_hit_id();
+        if(outerCell.hasFishbone())
+          hits[nh++] = outerCell.fishboneId();
+        hits[nh] = outerCell.outer_hit_id();
+
+        auto it = foundNtuplets->bulkFill(acc, apc, hits, nh + 1);
+        cellTracksHisto->count(acc,inner);
+        cellTracksHisto->count(acc,outer);
+
+        // since these are triplets we can do it:
+        ct[it * 2].inner() = c;
+        ct[(it * 2) + 1].inner() = c;
+
+        tracks_view.quality()[it] = ::pixelTrack::Quality::bad;
+
+      }
+    }
+  };
+
   template <typename TrackerTraits>
   class Kernel_extend_triplets {
   public:
@@ -576,7 +644,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           typename Cell::TmpTuple stack;
           stack.reset();
           thisCell.template find_ntuplets<maxDepth, TAcc>(acc,
-                                                          hh,
                                                           cc,
                                                           cells,
                                                           *foundNtuplets,
@@ -593,13 +660,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       }
     }
   };
-*/  
+*/ 
+   
   template <typename TrackerTraits>
   class Kernel_find_ntuplets {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  HitsConstView hh,
                                   const ::reco::CAGraphSoAConstView &cc,
                                   TkSoAView tracks_view,
                                   HitContainer *foundNtuplets,
@@ -645,7 +712,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           typename Cell::TmpTuple stack;
           stack.reset();
           thisCell.template find_ntuplets<maxDepth, TAcc>(acc,
-                                                          hh,
                                                           cc,
                                                           cells,
                                                           *foundNtuplets,

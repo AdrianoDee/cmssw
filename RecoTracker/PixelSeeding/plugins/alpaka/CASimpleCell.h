@@ -166,7 +166,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // the visit of the graph based on the neighborhood connections between cells.
     template <int DEPTH, typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void find_ntuplets(TAcc const& acc,
-                                                      const HitsConstView& hh,
                                                       const ::reco::CAGraphSoAConstView &cc,
                                                       CASimpleCell* __restrict__ cells,
                                                       HitContainer& foundNtuplets,
@@ -211,7 +210,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
          
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
-              acc, hh, cc, cells, foundNtuplets, cellNeighborsHisto, cellTracksHisto, nCellTracks, ct, apc, quality, tmpNtuplet, minHitsPerNtuplet);
+              acc, cc, cells, foundNtuplets, cellNeighborsHisto, cellTracksHisto, nCellTracks, ct, apc, quality, tmpNtuplet, minHitsPerNtuplet);
         }
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
@@ -241,7 +240,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
                   cellTracksHisto->count(acc,c); //use this to count!!!
                   auto t_ind = alpaka::atomicAdd(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
-                  // add a check
+
+                  if (t_ind >= uint32_t(ct.metadata().size())) {
+                    printf("Warning!!!! Too many cell->tracks associations (limit = %d)!\n",ct.metadata().size());
+                    alpaka::atomicSub(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
+                    break;
+                  }
 // #ifdef GPU_DEBUG
 //                   printf("cellToTrack n. %d cell %d track %d\n",t_ind,c,it);
 // #endif
