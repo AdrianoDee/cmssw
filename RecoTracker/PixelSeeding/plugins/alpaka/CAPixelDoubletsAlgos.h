@@ -135,8 +135,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     auto& innerLayerCumulativeSize = alpaka::declareSharedVar<uint32_t[TrackerTraits::nPairs], __COUNTER__>(acc);
     auto& ntot = alpaka::declareSharedVar<uint32_t, __COUNTER__>(acc);
 
+#ifdef GPU_DEBUG
     if (cms::alpakatools::once_per_grid(acc))
       printf("cellZ0Cut_ = %.2f cellPtCut_ = %.2f doClusterCut = %d doZ0Cut = %d  doPtCut = %d doZSizeCut = %d\n",params.cellZ0Cut_,params.cellPtCut_,params.doClusterCut_,params.cellZ0Cut_>0,params.cellPtCut_>0,params.doZSizeCut_);
+#endif
 
     if (cms::alpakatools::once_per_block(acc)) {
       // *apc = 0;
@@ -216,13 +218,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       auto kl = PhiHisto::bin(int16_t(mep - iphicut));
       auto kh = PhiHisto::bin(int16_t(mep + iphicut));
       auto incr = [](auto& k) { return k = (k + 1) % PhiHisto::nbins(); };
-     
+
+#ifdef GPU_DEGBU
       printf("pairLayerId %d %d %.2f %.2f %.2f \n",pairLayerId,cc.phiCuts()[pairLayerId],cc.maxr()[pairLayerId],cc.maxz()[pairLayerId],cc.minz()[pairLayerId]);
-//#ifdef GPU_DEBUG
-//      int tot = 0;
-//      int nmin = 0;
-//      int tooMany = 0;
-//#endif
+#endif
 
       auto khh = kh;
       incr(khh);
@@ -273,8 +272,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           }  // move to SimpleVector??
           // cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, inner, outer, i, oi);
           cells[ind].init(hh, pairLayerId, inner, outer, i, oi);
+#ifdef GPU_DEBUG
           printf("doublet: %d layerPair: %d inner: %d outer: %d i: %d oi: %d\n",ind,pairLayerId,inner,outer,i,oi);
-        
+#endif
 //           isOuterHitOfCell[oi].push_back(acc, ind);
 // #ifdef GPU_DEBUG
 //           if (isOuterHitOfCell[oi].full())

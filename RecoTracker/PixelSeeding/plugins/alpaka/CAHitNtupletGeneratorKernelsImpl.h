@@ -408,9 +408,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto r1 = oc.inner_r(hh);
           auto z1 = oc.inner_z(hh);
           auto dcaCut = ll[oc.innerLayer()].caDCACut();
-// #ifdef GPU_DEBUG
-//           printf("cellIndex:%d;%d;%d;%d .%2f -> %.2f \n",cellIndex, otherCell, oc.innerLayer(),thisCell.innerLayer(),thetaCut,dcaCut);
-// #endif
+
           bool aligned = Cell::areAlignedRZ(
               r1,
               z1,
@@ -428,8 +426,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             // auto t_ind = cellNeighborsHisto->countAndTot(acc, *cellAPC, otherCell)
             cellNeighborsHisto->count(acc,otherCell);
             auto t_ind = alpaka::atomicAdd(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
-
-printf("cell %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell.inner_hit_id(),thisCell.outer_hit_id(),oc.inner_hit_id(),oc.outer_hit_id());            
+#ifdef GPU_DEBUG            
+            printf("Triplet no. %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell.inner_hit_id(),thisCell.outer_hit_id(),oc.inner_hit_id(),oc.outer_hit_id());            
+#endif
 // printf("t_ind %d\n",t_ind);
 // #ifdef GPU_DEBUG
 //             printf("filling cell no. %d %d: %d -> %d\n",t_ind,cellNeighborsHisto->size(),otherCell,cellIndex);
@@ -445,8 +444,6 @@ printf("cell %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell
             
           } 
 
-/*	  else
-            printf("discarding cell: %d -> %d\n",otherCell,cellIndex); */
         }  // loop on inner cells
       }  // loop on outer cells
     }
@@ -462,31 +459,141 @@ printf("cell %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell
                                   GenericContainer *genericHisto) const {
   
   for (uint32_t index : cms::alpakatools::uniform_elements(acc, *nElements)) {
-        //printf("filling: %d -> %d %d %d %d\n",cn[index].inner(),cn[index].outer(),genericHisto->nOnes(),genericHisto->size(),*nElements);
         genericHisto->fill(acc,cn[index].inner(),cn[index].outer());
         }
 
     }
   };
-
+  
+  /*
   template <typename TrackerTraits>
-  class Kernel_fillGenericCoupleAPC {
+  class Kernel_extend_triplets {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  caStructures::CACoupleSoAConstView cn,
-                                  cms::alpakatools::AtomicPairCounter const *cellAPC,
-                                  GenericContainer *genericHisto) const {
-  
-  for (uint32_t index : cms::alpakatools::uniform_elements(acc, cellAPC->get().first)) {
-        //printf("%d filling: %d -> %d %d %d %d\n",index, cn[index].inner(),cn[index].outer(),cellAPC->get().first,genericHisto->nOnes(),genericHisto->size());
-        genericHisto->fill(acc,cn[index].inner(),cn[index].outer());
-        }
+                                  HitsConstView hh,
+                                  const ::reco::CAGraphSoAConstView &cc,
+                                  TkSoAView tracks_view,
+                                  HitContainer *foundNtuplets,
+                                  CellToCell const* __restrict__ cellNeighborsHisto,
+                                  CellToTrack *cellTracksHisto,
+                                  caStructures::CACoupleSoAView ct,
+                                  caStructures::CACoupleSoAConstView trips,
+                                  CASimpleCell<TrackerTraits> *__restrict__ cells,
+                                  uint32_t *nCellTracks,
+                                  uint32_t const *nTriplets,
+                                  uint32_t const *nCells,
+                                  cms::alpakatools::AtomicPairCounter *apc,
+                                  AlgoParams const& params) const {
 
+      using Cell = CASimpleCell<TrackerTraits>;
+
+#ifdef GPU_DEBUG
+      if (cms::alpakatools::once_per_grid(acc))
+        printf("starting producing ntuplets from %d hits, %d cells and %d triplets \n", hh.metadata().size(), *nCells, *nTriplets);
+#endif
+      for (uint32_t tIndex : cms::alpakatools::uniform_elements(acc, *nTriplets)) {
+        auto inner = trips[tIndex].inner();
+        auto outer = trips[tIndex].outer();
+
+        auto const &innerCell = cells[inner];
+
+        if (innerCell.isKilled())
+          continue;
+        
+        auto neighbors = cellNeighborsHisto->size(inner);
+        if (neighbors == 0 and params.minHitsPerNtuplet_ > 3)
+          continue;
+        
+        constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
+
+        if (neighbors == 0 and params.minHitsPerNtuplet_ == 3)
+        {
+          hindex_type hits[3 + 2];
+          auto nh = 0U;
+          hits[nh++] = innerCell.inner_hit_id();
+          if(innerCell.hasFishbone())
+            hits[nh++] = innerCell.fishboneId();
+          hits[nh++] = outerCell.inner_hit_id();
+          if(outerCell.hasFishbone())
+            hits[nh++] = outerCell.fishboneId();
+          hits[nh] = outerCell.outer_hit_id();
+
+          auto it = foundNtuplets->bulkFill(acc, apc, hits, nh + 1);
+
+        }
+          continue; //do something to store triplets
+        
+        auto pid = innerCell.layerPairId();
+        bool doit = cc[pid].startingPair();
+
+        if (not doit)
+         continue;
+
+        auto const &outerCell = cells[outer];
+
+        typename Cell::TmpTuple stack;
+        stack.push_back_unsafe(inner);
+        outerCell.template find_ntuplets<maxDepth, TAcc>(acc,
+                                                          hh,
+                                                          cc,
+                                                          cells,
+                                                          *foundNtuplets,
+                                                          cellNeighborsHisto,
+                                                          cellTracksHisto,
+                                                          nCellTracks,
+                                                          ct,
+                                                          *apc,
+                                                          tracks_view.quality(),
+                                                          stack,
+                                                          params.minHitsPerNtuplet_);
+
+      }
+      for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
+        auto const &thisCell = cells[idx];
+
+        // printf("isKilled %d : %d\n",idx,thisCell.isKilled());
+        // cut by earlyFishbone
+        if (thisCell.isKilled())
+          continue;
+
+        // we require at least three hits
+        
+
+        if (cellNeighborsHisto->size(idx) == 0)
+          continue;
+
+        auto pid = thisCell.layerPairId();
+        bool doit = cc[pid].startingPair();
+
+        constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
+
+                                                          
+#ifdef GPU_DEBUG
+        printf("LayerPairId %d doit ? %d From cell %d with nNeighbors = %d \n",pid,doit,idx,cellNeighborsHisto->size(idx));
+#endif
+        if (doit) {
+          typename Cell::TmpTuple stack;
+          stack.reset();
+          thisCell.template find_ntuplets<maxDepth, TAcc>(acc,
+                                                          hh,
+                                                          cc,
+                                                          cells,
+                                                          *foundNtuplets,
+                                                          cellNeighborsHisto,
+                                                          cellTracksHisto,
+                                                          nCellTracks,
+                                                          ct,
+                                                          *apc,
+                                                          tracks_view.quality(),
+                                                          stack,
+                                                          params.minHitsPerNtuplet_);
+          ALPAKA_ASSERT_ACC(stack.empty());
+        }
+      }
     }
   };
-
-  
+*/  
   template <typename TrackerTraits>
   class Kernel_find_ntuplets {
   public:
@@ -508,15 +615,15 @@ printf("cell %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell
 
       using Cell = CASimpleCell<TrackerTraits>;
 
-// #ifdef GPU_DEBUG
+#ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc))
         printf("starting producing ntuplets from %d hits, %d cells and %d triplets \n", hh.metadata().size(), *nCells, *nTriplets);
-// #endif
+#endif
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
         auto const &thisCell = cells[idx];
 
-        printf("isKilled %d : %d\n",idx,thisCell.isKilled());
+        // printf("isKilled %d : %d\n",idx,thisCell.isKilled());
         // cut by earlyFishbone
         if (thisCell.isKilled())
           continue;
@@ -531,9 +638,9 @@ printf("cell %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell
         bool doit = cc[pid].startingPair();
 
         constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
-// #ifdef GPU_DEBUG
-        printf("pid %d doit %d cell %d nNeighbors %d \n",pid,doit,idx,cellNeighborsHisto->size(idx));
-// #endif
+#ifdef GPU_DEBUG
+        printf("LayerPairId %d doit ? %d From cell %d with nNeighbors = %d \n",pid,doit,idx,cellNeighborsHisto->size(idx));
+#endif
         if (doit) {
           typename Cell::TmpTuple stack;
           stack.reset();
@@ -740,9 +847,9 @@ printf("cell %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell
         ALPAKA_ASSERT_ACC(foundNtuplets->content[idx] < (uint32_t)hh.metadata().size());
         track_hits_view[idx].id() = foundNtuplets->content[idx];
         track_hits_view[idx].detId() = hh[foundNtuplets->content[idx]].detectorIndex();
-// #ifdef GPU_DEBUG
+#ifdef GPU_DEBUG
         printf("Kernel_fillHitDetIndices %d %d %d \n",idx,foundNtuplets->content[idx],track_hits_view.metadata().size());
-// #endif
+#endif
       }
     }
   };
@@ -765,9 +872,9 @@ printf("cell %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell
       for (auto idx : cms::alpakatools::uniform_elements(acc, ntracks)) {
         ALPAKA_ASSERT_ACC(reco::nHits(tracks_view, idx) >= 3);
         tracks_view[idx].nLayers() = reco::nLayers(tracks_view, track_hits_view, maxLayers, layerStarts, idx);
-// #ifdef GPU_DEBUG
+#ifdef GPU_DEBUG
         printf("Kernel_fillNLayers %d %d %d - %d %d\n",idx,ntracks,tracks_view[idx].nLayers(),apc->get().first,tracks_view.metadata().size() - 1);
-// #endif
+#endif
       }
     }
   };

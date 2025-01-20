@@ -81,11 +81,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     int n_layers = caThetaCuts_.size(); 
     int n_pairs = pairGraph_.size() / 2;
     int n_modules = 0;
-
+    
+#ifdef GPU_DEBUG 
     std::cout << "No. Layers to be used = " << n_layers << std::endl;
     std::cout << "No. Pairs to be used = " << n_pairs << std::endl;
-    std::cout << int(minZ_.size()) << std::endl;
-    std::cout << int(pairGraph_.size() ) << std::endl;
+#endif
+
     assert(int(n_pairs) == int(minZ_.size())); 
     assert(*std::max_element(startingPairs_.begin(), startingPairs_.end()) <= n_pairs);
 

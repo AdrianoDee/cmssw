@@ -1,5 +1,5 @@
-#define BROKENLINE_DEBUG
-#define BL_DUMP_HITS
+// #define BROKENLINE_DEBUG
+// #define BL_DUMP_HITS
 
 #include <cstdint>
 

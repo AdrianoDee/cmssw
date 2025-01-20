@@ -66,10 +66,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         // printf("fishbone ---> outerhit %d size %d - ",idy,size);
 
         if (size < 2)
-        {
-          // printf("\n");
           continue;
-        }
+        
         auto const* __restrict__ bin = outerHitHisto->begin(idy);
         auto const* __restrict__ end = outerHitHisto->end(idy);
         auto const nInBin = end - bin;
@@ -137,20 +135,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
               if (n[ic] > n[jc]) {
                 if (sameLayer) {
                   cj.kill();  // closest
+#ifdef GPU_DEBUG
 printf("hit %d same layer cell %d kill %d \n",idy,cc[ic],cc[jc]);  
+#endif
                   ci.setFishbone(acc, cj.inner_hit_id(), cj.inner_z(hh), hh);
                 } else {
                   ci.kill();  // farthest
+#ifdef GPU_DEBUG
 printf("hit %d same layer cell %d kill %d \n",idy,cc[jc],cc[ic]);  
+#endif
                   // break;  // removed to improve reproducibility, keep it for reference and tests
                 }
               } else {
                 if (!sameLayer) {
                   cj.kill();  // farthest
-printf("hit %d diff layer cell %d kill %d \n",idy,cc[ic],cc[jc]);  
+#ifdef GPU_DEBUG
+printf("hit %d diff layer cell %d kill %d \n",idy,cc[ic],cc[jc]);
+#endif  
                 } else {
                   ci.kill();  // closest
-printf("hit %d diff layer cell %d kill %d \n",idy,cc[jc],cc[ic]);  
+#ifdef GPU_DEBUG
+printf("hit %d diff layer cell %d kill %d \n",idy,cc[jc],cc[ic]);
+#endif
                   cj.setFishbone(acc, ci.inner_hit_id(), ci.inner_z(hh), hh);
                   // break;  // removed to improve reproducibility, keep it for reference and tests
                 }
