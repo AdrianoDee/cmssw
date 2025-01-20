@@ -246,7 +246,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                     Kernel_fillGenericCouple<TrackerTraits>{},
                     this->deviceTriplets_.view(),
                     this->device_nTriplets_.data(),
-		    // this->device_cellCell_apc_,
                     this->device_cellToNeighbors_.data());
     
 #ifdef GPU_DEBUG
@@ -290,7 +289,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
                         Kernel_find_ntuplets<TrackerTraits>{},
-                        hh,
                         cc,
                         tracks_view,
                         this->device_hitContainer_.data(),
