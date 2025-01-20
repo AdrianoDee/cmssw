@@ -1,8 +1,8 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 
-//#define GPU_DEBUG
-//#define NTUPLE_DEBUG
+// #define GPU_DEBUG
+// #define NTUPLE_DEBUG
 
 // C++ includes
 #include <cmath>
@@ -390,9 +390,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         // uint32_t numberOfPossibleNeighbors = (*isOuterHitOfCell)[innerHitId].size(); //REMOVE ME!
         // uint32_t numberOfPossibleNeighbors = outerHitHisto->size(innerHitId);
         // numberOfPossibleNeighbors = numberOfPossibleFromHisto;
-// #ifdef GPU_DEBUG
-//         printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d\n",*nCells,innerHitId,cellIndex,thisCell.innerLayer(),numberOfPossibleNeighbors);
-// #endif
+#ifdef GPU_DEBUG
+        printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d\n",*nCells,innerHitId,cellIndex,thisCell.innerLayer(),numberOfPossibleNeighbors);
+#endif
         //printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d;%d\n",*nCells,innerHitId,cellIndex,thisCell.innerLayer(),numberOfPossibleNeighbors,numberOfPossibleFromHisto);
         // auto vi = (*isOuterHitOfCell)[innerHitId].data();
         auto ri = thisCell.inner_r(hh);
@@ -425,7 +425,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                               dcaCut,
                               params.hardCurvCut_)) { 
             // auto t_ind = cellNeighborsHisto->countAndTot(acc, *cellAPC, otherCell)
-            cellNeighborsHisto->count(acc,otherCell);
+            
             auto t_ind = alpaka::atomicAdd(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
 #ifdef GPU_DEBUG            
             printf("Triplet no. %d %d %d -> (%d, %d, %d, %d) \n",t_ind,otherCell,cellIndex,thisCell.inner_hit_id(),thisCell.outer_hit_id(),oc.inner_hit_id(),oc.outer_hit_id());            
@@ -444,6 +444,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
               break;
             }
             
+            cellNeighborsHisto->count(acc,otherCell);
+
             cn[t_ind].inner() = otherCell;
             cn[t_ind].outer() = cellIndex;
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
@@ -468,11 +470,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   for (uint32_t index : cms::alpakatools::uniform_elements(acc, *nElements)) {
         genericHisto->fill(acc,cn[index].inner(),cn[index].outer());
         }
-
     }
   };
   
-  /*
+ 
   template <typename TrackerTraits>
   class Kernel_find_triplets {
   public:
@@ -494,7 +495,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
 #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc))
-        printf("starting producing ntuplets from %d hits, %d cells and %d triplets \n", hh.metadata().size(), *nCells, *nTriplets);
+        printf("building triplet tracks from %d cells and %d triplets \n", *nCells, *nTriplets);
 #endif
       for (uint32_t tIndex : cms::alpakatools::uniform_elements(acc, *nTriplets)) {
         auto inner = trips[tIndex].inner();
@@ -507,7 +508,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           continue;
 
         auto outer = trips[tIndex].outer();
-        
+        auto const &outerCell = cells[outer];
+
         constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
 
         hindex_type hits[3 + 2];
@@ -525,8 +527,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         cellTracksHisto->count(acc,outer);
 
         // since these are triplets we can do it:
-        ct[it * 2].inner() = c;
-        ct[(it * 2) + 1].inner() = c;
+        ct[it * 2].inner() = inner;
+        ct[(it * 2) + 1].inner() = outer;
+
+        ct[it * 2].outer() = ct[(it * 2) + 1].outer() = it;
 
         tracks_view.quality()[it] = ::pixelTrack::Quality::bad;
 
@@ -534,12 +538,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     }
   };
 
+ /*
   template <typename TrackerTraits>
   class Kernel_extend_triplets {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
-                                  HitsConstView hh,
                                   const ::reco::CAGraphSoAConstView &cc,
                                   TkSoAView tracks_view,
                                   HitContainer *foundNtuplets,
@@ -558,7 +562,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
 #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc))
-        printf("starting producing ntuplets from %d hits, %d cells and %d triplets \n", hh.metadata().size(), *nCells, *nTriplets);
+        printf("starting producing ntuplets from %d cells and %d triplets \n", *nCells, *nTriplets);
 #endif
       for (uint32_t tIndex : cms::alpakatools::uniform_elements(acc, *nTriplets)) {
         auto inner = trips[tIndex].inner();
@@ -570,28 +574,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           continue;
         
         auto neighbors = cellNeighborsHisto->size(inner);
-        if (neighbors == 0 and params.minHitsPerNtuplet_ > 3)
+        if (neighbors < 1)
           continue;
         
         constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
 
-        if (neighbors == 0 and params.minHitsPerNtuplet_ == 3)
-        {
-          hindex_type hits[3 + 2];
-          auto nh = 0U;
-          hits[nh++] = innerCell.inner_hit_id();
-          if(innerCell.hasFishbone())
-            hits[nh++] = innerCell.fishboneId();
-          hits[nh++] = outerCell.inner_hit_id();
-          if(outerCell.hasFishbone())
-            hits[nh++] = outerCell.fishboneId();
-          hits[nh] = outerCell.outer_hit_id();
-
-          auto it = foundNtuplets->bulkFill(acc, apc, hits, nh + 1);
-
-        }
-          continue; //do something to store triplets
-        
         auto pid = innerCell.layerPairId();
         bool doit = cc[pid].startingPair();
 
@@ -684,7 +671,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
 #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc))
-        printf("starting producing ntuplets from %d hits, %d cells and %d triplets \n", hh.metadata().size(), *nCells, *nTriplets);
+        printf("starting producing ntuplets from %d cells and %d triplets \n",  *nCells, *nTriplets);
 #endif
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
