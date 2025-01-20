@@ -17,7 +17,7 @@
 #include "CAHitNtupletGeneratorKernels.h"
 #include "CAHitNtupletGeneratorKernelsImpl.h"
 
-#define GPU_DEBUG
+// #define GPU_DEBUG
 // #define NTUPLE_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
@@ -450,8 +450,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     
     // (Outer) Hits-> Cells
     // HitToCell::template launchInit<Acc1D>(this->device_hitToCellView_, queue);
-    
+#ifdef GPU_DEBUG
     std::cout << "nActualPairs = " << cc.metadata().size() << std::endl;
+#endif
     alpaka::exec<Acc2D>(queue,
                         workDiv2D,
                         GetDoubletsFromHisto<TrackerTraits>{},

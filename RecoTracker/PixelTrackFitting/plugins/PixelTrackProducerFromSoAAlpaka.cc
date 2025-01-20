@@ -247,11 +247,13 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     for (auto iHit = start; iHit < end; ++iHit)
       hits[iHit - start] = hitmap[hitIdxs[iHit]];
     
-    std::cout << "track soa : " << it << " ";
+#ifdef GPU_DEBUG
+    std::cout << "track soa : " << it << " with hits: ";
     for (auto iHit = start; iHit < end; ++iHit)
       std::cout << hitIdxs[iHit] << " - ";
     std::cout << std::endl;  
- 
+#endif
+
     // mind: this values are respect the beamspot!
     float chi2 = tsoa.view()[it].chi2();
     float phi = reco::phi(tsoa.view(), it);
@@ -301,9 +303,9 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     // filter???
     tracks.emplace_back(track.release(), hits);
   }
-// #ifdef GPU_DEBUG
+#ifdef GPU_DEBUG
   std::cout << "processed " << nt << " good tuples " << tracks.size() << " out of " << indToEdm.size() << std::endl;
-// #endif
+#endif
 
   // store tracks
   storeTracks(iEvent, tracks, httopo);

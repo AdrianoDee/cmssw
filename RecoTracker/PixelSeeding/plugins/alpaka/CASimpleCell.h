@@ -1,7 +1,6 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CASimpleCell_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CASimpleCell_h
 
-// #define ONLY_TRIPLETS_IN_HOLE
 // #define GPU_DEBUG
 #include <cmath>
 #include <limits>
@@ -205,11 +204,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // for (unsigned int otherCell : outerNeighbors()) {
 // #ifdef GPU_DEBUG
 	  if (cells[otherCell].isKilled())
-             continue;          
-printf("doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) %d %ld\n",tmpNtuplet.size(),idx,doubletId,otherCell,cells[otherCell].isKilled(),this->inner_hit_id(),this->outer_hit_id(),cells[otherCell].inner_hit_id(),cells[otherCell].outer_hit_id(),idx,nInBin);
-// #endif
+             continue;     
+#ifdef GPU_DEBUG  
+      printf("Doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) %d %ld\n",tmpNtuplet.size(),idx,doubletId,otherCell,cells[otherCell].isKilled(),this->inner_hit_id(),this->outer_hit_id(),cells[otherCell].inner_hit_id(),cells[otherCell].outer_hit_id(),idx,nInBin);
+#endif
          
-          //printf("otherCell: %ld -> %d %d %ld\n",doubletId,otherCell,idx,nInBin);
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(
               acc, hh, cc, cells, foundNtuplets, cellNeighborsHisto, cellTracksHisto, nCellTracks, ct, apc, quality, tmpNtuplet, minHitsPerNtuplet);
@@ -232,24 +231,26 @@ printf("doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) 
               hits[nh] = theOuterHitId;
               auto it = foundNtuplets.bulkFill(acc, apc, hits, nh + 1);
 #ifdef GPU_DEBUG
-              printf("track n. %d nhits %d \n",it,nh+1);
+              printf("track n. %d nhits %d with cells: ",it,nh+1);
 #endif
               if (it >= 0) {  // if negative is overflow....
-       printf("ntuplet %d: ",it); 
                 for (auto c : tmpNtuplet)
                 {
-
+#ifdef GPU_DEBUG
                   printf("%d - ",c);
+#endif
                   cellTracksHisto->count(acc,c); //use this to count!!!
                   auto t_ind = alpaka::atomicAdd(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
                   // add a check
-#ifdef GPU_DEBUG
-                  printf("cellToTrack n. %d cell %d track %d\n",t_ind,c,it);
-#endif
+// #ifdef GPU_DEBUG
+//                   printf("cellToTrack n. %d cell %d track %d\n",t_ind,c,it);
+// #endif
                   ct[t_ind].inner() = c; //cell
                   ct[t_ind].outer() = it; //track
                 }
+#ifdef GPU_DEBUG
                 printf("\n");
+#endif
                 quality[it] = bad;  // initialize to bad
               }
             }
