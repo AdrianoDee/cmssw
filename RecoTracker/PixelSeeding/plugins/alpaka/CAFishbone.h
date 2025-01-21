@@ -19,18 +19,6 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
-  using namespace ::caStructures;
-  template <typename TrackerTraits>
-  using CellNeighbors = caStructures::CellNeighborsT<TrackerTraits>;
-  template <typename TrackerTraits>
-  using CellTracks = caStructures::CellTracksT<TrackerTraits>;
-  template <typename TrackerTraits>
-  using CellNeighborsVector = caStructures::CellNeighborsVectorT<TrackerTraits>;
-  template <typename TrackerTraits>
-  using CellTracksVector = caStructures::CellTracksVectorT<TrackerTraits>;
-  template <typename TrackerTraits>
-  using OuterHitOfCell = caStructures::OuterHitOfCellT<TrackerTraits>;
-
   using HitToCell = caStructures::GenericContainer;
   using CellToTracks = caStructures::GenericContainer;
 
@@ -42,7 +30,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                   HitsConstView hh,
                                   CASimpleCell<TrackerTraits>* cells,
                                   uint32_t const* __restrict__ nCells,
-                                  // OuterHitOfCell<TrackerTraits> const* isOuterHitOfCellWrap,
                                   HitToCell const* __restrict__ outerHitHisto,
                                   CellToTracks const* __restrict__ cellTracksHisto,
                                   uint32_t outerHits,
@@ -93,6 +80,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 //           printf("vc[0] %d idx %d vc[idx] %d otherCell %d \n",vc[0],idx,vc[idx],otherCell);
 //         }
 // #endif
+//TODO CHECK nInBin == size
+        // for (uint32_t idx : cms::alpakatools::independent_group_elements_x(acc, nInBin)) {
         for (auto idx = 0u; idx < nInBin; idx++) {
         // for (int32_t ic = 0; ic < size; ++ic) {
         // for (auto ic = 0u; ic < size; ic++) {
