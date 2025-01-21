@@ -523,22 +523,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         hits[nh] = outerCell.outer_hit_id();
 
         auto it = foundNtuplets->bulkFill(acc, apc, hits, nh + 1);
-        cellTracksHisto->count(acc,inner);
-        cellTracksHisto->count(acc,outer);
+        if (it >= 0) {
+          cellTracksHisto->count(acc,inner);
+          cellTracksHisto->count(acc,outer);
 
-        // since these are triplets we can do it:
-        ct[it * 2].inner() = inner;
-        ct[(it * 2) + 1].inner() = outer;
+          // since these are triplets by definition
+          // we know the associations
+          // cell->track we want to do
+          ct[it * 2].inner() = inner;
+          ct[(it * 2) + 1].inner() = outer;
 
-        ct[it * 2].outer() = ct[(it * 2) + 1].outer() = it;
+          ct[it * 2].outer() = ct[(it * 2) + 1].outer() = it;
 
-        tracks_view.quality()[it] = ::pixelTrack::Quality::bad;
+          tracks_view.quality()[it] = ::pixelTrack::Quality::bad;
+        }
 
       }
     }
   };
 
- /*
+ 
   template <typename TrackerTraits>
   class Kernel_extend_triplets {
   public:
@@ -573,14 +577,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         if (innerCell.isKilled())
           continue;
         
-        auto neighbors = cellNeighborsHisto->size(inner);
-        if (neighbors < 1)
+        auto outerNeighbors = cellNeighborsHisto->size(inner);
+        if (outerNeighbors == 0) // triplets already done
           continue;
-        
+
         constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
 
         auto pid = innerCell.layerPairId();
         bool doit = cc[pid].startingPair();
+
+        #ifdef GPU_DEBUG
+          printf("LayerPairId %d doit ? %d From cell %d with nNeighbors = %d \n",pid,doit,idx,cellNeighborsHisto->size(idx));
+        #endif
 
         if (not doit)
          continue;
@@ -590,7 +598,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         typename Cell::TmpTuple stack;
         stack.push_back_unsafe(inner);
         outerCell.template find_ntuplets<maxDepth, TAcc>(acc,
-                                                          hh,
                                                           cc,
                                                           cells,
                                                           *foundNtuplets,
@@ -603,51 +610,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                           stack,
                                                           params.minHitsPerNtuplet_);
 
-      }
-      for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
-        auto const &thisCell = cells[idx];
-
-        // printf("isKilled %d : %d\n",idx,thisCell.isKilled());
-        // cut by earlyFishbone
-        if (thisCell.isKilled())
-          continue;
-
-        // we require at least three hits
-        
-
-        if (cellNeighborsHisto->size(idx) == 0)
-          continue;
-
-        auto pid = thisCell.layerPairId();
-        bool doit = cc[pid].startingPair();
-
-        constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
-
-                                                          
-#ifdef GPU_DEBUG
-        printf("LayerPairId %d doit ? %d From cell %d with nNeighbors = %d \n",pid,doit,idx,cellNeighborsHisto->size(idx));
-#endif
-        if (doit) {
-          typename Cell::TmpTuple stack;
-          stack.reset();
-          thisCell.template find_ntuplets<maxDepth, TAcc>(acc,
-                                                          cc,
-                                                          cells,
-                                                          *foundNtuplets,
-                                                          cellNeighborsHisto,
-                                                          cellTracksHisto,
-                                                          nCellTracks,
-                                                          ct,
-                                                          *apc,
-                                                          tracks_view.quality(),
-                                                          stack,
-                                                          params.minHitsPerNtuplet_);
-          ALPAKA_ASSERT_ACC(stack.empty());
-        }
       }
     }
   };
-*/ 
+ 
    
   template <typename TrackerTraits>
   class Kernel_find_ntuplets {
