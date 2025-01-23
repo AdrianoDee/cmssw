@@ -47,20 +47,20 @@ namespace caStructures {
   using TkSoAView = ::reco::TrackSoAView;
   using TkHitsSoAView = ::reco::TrackHitSoAView;
 
-  //Indices for hits and tracks
-  using hindex_type = uint32_t; // TrackerTraits::hindex_type
-  using tindex_type = uint32_t; // TrackerTraits::tindex_type
+  //Indices for hits, tracks and cells
+  using hindex_type = uint32_t; 
+  using tindex_type = uint32_t;
   using cindex_type = uint32_t;
   
   //FIX ME HERE, use the typenames etc. etc.
   using GenericContainer = cms::alpakatools::OneToManyAssocRandomAccess<hindex_type, -1, -1>;
-  using GenericContainerStorage = uint32_t;//typename GenericContainer::index_type;
-  using GenericContainerOffsets = uint32_t;//typename GenericContainer::Counter;
+  using GenericContainerStorage = typename GenericContainer::index_type;
+  using GenericContainerOffsets = typename GenericContainer::Counter;
   using GenericContainerView = typename GenericContainer::View;
 
   using SequentialContainer = cms::alpakatools::OneToManyAssocSequential<hindex_type, -1, -1>;
-  using SequentialContainerStorage = uint32_t;//typename SequentialContainer::index_type;
-  using SequentialContainerOffsets = uint32_t;//typename SequentialContainer::Counter;
+  using SequentialContainerStorage = typename SequentialContainer::index_type;
+  using SequentialContainerOffsets = typename SequentialContainer::Counter;
   using SequentialContainerView = typename SequentialContainer::View;
 
   template <typename TrackerTraits>
@@ -68,7 +68,7 @@ namespace caStructures {
                                                     256,
                                                     -1, 
                                                     8 * sizeof(int16_t),
-                                                    typename TrackerTraits::hindex_type,
+                                                    hindex_type,
                                                     TrackerTraits::numberOfLayers>;
 
   template <typename TrackerTraits>
