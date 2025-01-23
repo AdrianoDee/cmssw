@@ -4,13 +4,12 @@ def customizePixelTracksForTriplets(process):
 
   from HLTrigger.Configuration.common import producers_by_type, esproducers_by_type
   producers = ['CAHitNtupletAlpakaPhase1@alpaka','CAHitNtupletAlpakaPhase2@alpaka']
+  
   for name in producers:
   	for producer in producers_by_type(process, name):
         	producer.minHitsPerNtuplet = 3
   
   for esproducer in esproducers_by_type(process,"CAGeometryESProducer@alpaka"):
-
-    print(esproducer)
 
     esproducer.pairGraph = [  0, 1, 0, 4, 0,
         7, 1, 2, 1, 4,

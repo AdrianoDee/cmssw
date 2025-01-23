@@ -473,9 +473,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     }
   };
   
- 
+  /*
   template <typename TrackerTraits>
-  class Kernel_find_triplets {
+  class Kernel_extend_triplets {
   public:
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
@@ -489,60 +489,100 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   CASimpleCell<TrackerTraits> *__restrict__ cells,
                                   uint32_t *nCellTracks,
                                   uint32_t const *nTriplets,
-                                  cms::alpakatools::AtomicPairCounter *apc) const {
+                                  cms::alpakatools::AtomicPairCounter *apc,
+                                  AlgoParams const& params) const {
 
       using Cell = CASimpleCell<TrackerTraits>;
+      constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
 
 #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc))
-        printf("building triplet tracks from %d cells and %d triplets \n", *nCells, *nTriplets);
+        printf("building triplet tracks from %d triplets \n", *nTriplets);
 #endif
       for (uint32_t tIndex : cms::alpakatools::uniform_elements(acc, *nTriplets)) {
         auto inner = trips[tIndex].inner();
+        auto outer = trips[tIndex].outer();
+
         auto const &innerCell = cells[inner];
+        auto const &outerCell = cells[outer];
         
+        if (innerCell.isKilled() or outerCell.isKilled())
+         continue;
+         
         auto pid = innerCell.layerPairId();
         bool doit = cc[pid].startingPair();
 
-        if(not doit or innerCell.isKilled() or cellNeighborsHisto->size(inner) > 0)
+        if(not doit)
           continue;
+        
+        auto outerNeighbors = cellNeighborsHisto->size(outer);
+        if (outerNeighbors == 0)
+        { 
+            hindex_type hits[3 + 2];
+            auto nh = 0U;
+            hits[nh++] = innerCell.inner_hit_id();
+            if(innerCell.hasFishbone())
+              hits[nh++] = innerCell.fishboneId();
+            hits[nh++] = outerCell.inner_hit_id();
+            if(outerCell.hasFishbone())
+              hits[nh++] = outerCell.fishboneId();
+            hits[nh] = outerCell.outer_hit_id();
 
-        auto outer = trips[tIndex].outer();
-        auto const &outerCell = cells[outer];
+            auto it = foundNtuplets->bulkFill(acc, *apc, hits, nh + 1);
+            if (it >= 0) {
 
-        constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
+              auto t_ind = alpaka::atomicAdd(acc, nCellTracks, (uint32_t)2, alpaka::hierarchy::Blocks{});
 
-        hindex_type hits[3 + 2];
-        auto nh = 0U;
-        hits[nh++] = innerCell.inner_hit_id();
-        if(innerCell.hasFishbone())
-          hits[nh++] = innerCell.fishboneId();
-        hits[nh++] = outerCell.inner_hit_id();
-        if(outerCell.hasFishbone())
-          hits[nh++] = outerCell.fishboneId();
-        hits[nh] = outerCell.outer_hit_id();
+              if (t_ind >= uint32_t(ct.metadata().size())) {
+                printf("Warning!!!! Too many cell->tracks associations (limit = %d)!\n",ct.metadata().size());
+                alpaka::atomicSub(acc, nCellTracks, (uint32_t)2, alpaka::hierarchy::Blocks{});
+                break;
+              }
+              
+              cellTracksHisto->count(acc,inner);
+              cellTracksHisto->count(acc,outer);
 
-        auto it = foundNtuplets->bulkFill(acc, apc, hits, nh + 1);
-        if (it >= 0) {
-          cellTracksHisto->count(acc,inner);
-          cellTracksHisto->count(acc,outer);
+              // Since these are triplets 
+              // by construction we know
+              // the cell->track associations
+              // we want to do
+              
+              ct[it * 2].inner() = inner;
+              ct[(it * 2) + 1].inner() = outer;
 
-          // since these are triplets by definition
-          // we know the associations
-          // cell->track we want to do
-          ct[it * 2].inner() = inner;
-          ct[(it * 2) + 1].inner() = outer;
+              ct[it * 2].outer() = it;
+              ct[(it * 2) + 1].outer() = it;
 
-          ct[it * 2].outer() = ct[(it * 2) + 1].outer() = it;
+              tracks_view.quality()[it] = ::pixelTrack::Quality::bad;
+            }
 
-          tracks_view.quality()[it] = ::pixelTrack::Quality::bad;
+        }else if (outerNeighbors > 0)
+        {
+
+          typename Cell::TmpTuple stack;
+          stack.reset();
+          // stack.push_back_unsafe(inner);
+          innerCell.template find_ntuplets<maxDepth, TAcc>(acc,
+                                                            cc,
+                                                            cells,
+                                                            *foundNtuplets,
+                                                            cellNeighborsHisto,
+                                                            cellTracksHisto,
+                                                            nCellTracks,
+                                                            ct,
+                                                            *apc,
+                                                            tracks_view.quality(),
+                                                            stack,
+                                                            params.minHitsPerNtuplet_);
+
         }
+        
 
       }
     }
   };
 
- 
+
   template <typename TrackerTraits>
   class Kernel_extend_triplets {
   public:
@@ -577,7 +617,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         if (innerCell.isKilled())
           continue;
         
-        auto outerNeighbors = cellNeighborsHisto->size(inner);
+        auto outerNeighbors = cellNeighborsHisto->size(outer);
         if (outerNeighbors == 0) // triplets already done
           continue;
 
@@ -587,7 +627,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         bool doit = cc[pid].startingPair();
 
         #ifdef GPU_DEBUG
-          printf("LayerPairId %d doit ? %d From cell %d with nNeighbors = %d \n",pid,doit,idx,cellNeighborsHisto->size(idx));
+          printf("LayerPairId %d doit ? %d From cell %d with nNeighbors = %d \n",pid,doit,tIndex,cellNeighborsHisto->size(outer));
         #endif
 
         if (not doit)
@@ -595,7 +635,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
         auto const &outerCell = cells[outer];
 
+        if (outerCell.isKilled())
+         continue;
+        
         typename Cell::TmpTuple stack;
+        stack.reset();
         stack.push_back_unsafe(inner);
         outerCell.template find_ntuplets<maxDepth, TAcc>(acc,
                                                           cc,
@@ -613,7 +657,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       }
     }
   };
- 
+ */
    
   template <typename TrackerTraits>
   class Kernel_find_ntuplets {
@@ -663,6 +707,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 #endif
         if (doit) {
           typename Cell::TmpTuple stack;
+          
           stack.reset();
           thisCell.template find_ntuplets<maxDepth, TAcc>(acc,
                                                           cc,

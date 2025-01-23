@@ -33,7 +33,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsConstView = ::reco::TrackingRecHitConstView;
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
-    using hindex_type = uint32_t;
+    // using hindex_type = uint32_t;
 
     using TkSoADevice = reco::TracksSoACollection;
     using Quality = ::pixelTrack::Quality;

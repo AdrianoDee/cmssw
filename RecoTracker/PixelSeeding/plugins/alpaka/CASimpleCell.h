@@ -53,8 +53,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       theInnerR = hh[innerHitId].rGlobal();
     }
     
-    using hindex_type = typename TrackerTraits::hindex_type;
-    using tindex_type = typename TrackerTraits::tindex_type;
+    using hindex_type = ::caStructures::hindex_type;
+    using tindex_type = ::caStructures::tindex_type;
+    
     static constexpr auto invalidHitId = std::numeric_limits<hindex_type>::max();
 
     using TmpTuple = cms::alpakatools::VecArray<uint32_t, TrackerTraits::maxDepth>;
@@ -194,8 +195,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // for (auto o = cellNeighborsHisto->begin(doubletId); o != cellNeighborsHisto->end(doubletId); ++o)
         //  printf("doubletIdHisto: %ld -> %d\n",doubletId,*o);
         auto const* __restrict__ bin = cellNeighborsHisto->begin(doubletId);
-        auto const* __restrict__ end = cellNeighborsHisto->end(doubletId);
-        auto const nInBin = end - bin;
+        auto nInBin = cellNeighborsHisto->size(doubletId);
 
         for (auto idx = 0u; idx < nInBin; idx++) {
           // FIXME implement alpaka::ldg and use it here? or is it const* __restrict__ enough?
@@ -205,7 +205,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 	  if (cells[otherCell].isKilled())
              continue;     
 #ifdef GPU_DEBUG  
-      printf("Doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) %d %ld\n",tmpNtuplet.size(),idx,doubletId,otherCell,cells[otherCell].isKilled(),this->inner_hit_id(),this->outer_hit_id(),cells[otherCell].inner_hit_id(),cells[otherCell].outer_hit_id(),idx,nInBin);
+      printf("Doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) %d %d\n",tmpNtuplet.size(),idx,doubletId,otherCell,cells[otherCell].isKilled(),this->inner_hit_id(),this->outer_hit_id(),cells[otherCell].inner_hit_id(),cells[otherCell].outer_hit_id(),idx,nInBin);
 #endif
          
           last = false;
