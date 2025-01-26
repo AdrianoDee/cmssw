@@ -51,7 +51,7 @@ namespace cms::alpakatools {
       int32_t const blockDimension(alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[0u]);
       int32_t const blockThreadIdx(alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u]);
       ALPAKA_ASSERT_ACC(ws);
-      ALPAKA_ASSERT_ACC(size <= warpSize * warpSize);
+      ALPAKA_ASSERT_ACC(size <= warpSize * warpSize); 
       ALPAKA_ASSERT_ACC(0 == blockDimension % warpSize);
       auto first = blockThreadIdx;
       ALPAKA_ASSERT_ACC(isPowerOf2(warpSize));
@@ -188,8 +188,19 @@ namespace cms::alpakatools {
         psum[i] = (j < size) ? co[j] : T(0);
       }
       alpaka::syncBlockThreads(acc);
-      blockPrefixScan(acc, psum, psum, blocksPerGrid, ws);
-
+      if (blocksPerGrid <= 1024)
+      	blockPrefixScan(acc, psum, psum, blocksPerGrid, ws);
+      else
+      {   
+      auto off = 0u;
+      while( off + 1024 < blocksPerGrid )
+            {
+        blockPrefixScan(acc, psum + off, psum + off, 1024, ws);
+        off = off + 1024;
+        alpaka::syncBlockThreads(acc);
+      }
+	      blockPrefixScan(acc, psum + off, psum + off, blocksPerGrid - off, ws);   
+      }
       // now it would have been handy to have the other blocks around...
       // Simplify the computation by having one version where threads per block = block size
       // and a second for the one thread per block accelerator.
