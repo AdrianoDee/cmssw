@@ -274,7 +274,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     }
     blockSize = 128;
-    numberOfBlocks = maxDoublets * m_params.algoParams_.avgCellsPerCell_; //cms::alpakatools::divide_up_by(3 * maxDoublets / 4, blockSize);
+    numberOfBlocks = cms::alpakatools::divide_up_by(3 * maxDoublets / 4, blockSize); 
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
