@@ -476,9 +476,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const Vec2D blks{blocks, 1u};
     const Vec2D thrs{threadsPerBlock, stride};
     const auto workDiv2D = cms::alpakatools::make_workdiv<Acc2D>(blks, thrs);
-    
-    // (Outer) Hits-> Cells
-    // HitToCell::template launchInit<Acc1D>(this->device_hitToCellView_, queue);
+
 #ifdef GPU_DEBUG
     std::cout << "nActualPairs = " << cc.metadata().size() << std::endl;
 #endif

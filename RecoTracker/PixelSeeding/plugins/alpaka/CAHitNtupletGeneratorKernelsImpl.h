@@ -693,8 +693,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           continue;
 
         // we require at least three hits
-        
-
         if (cellNeighborsHisto->size(idx) == 0)
           continue;
 
@@ -738,7 +736,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       using Cell = CASimpleCell<TrackerTraits>;
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
         auto &thisCell = cells[idx];
-        // if (!thisCell.tracks().empty())
         if (cellTracksHisto->size(idx)>0)
           thisCell.setStatusBits(Cell::StatusBit::kInTrack);
       }
@@ -755,6 +752,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   TupleMultiplicity *tupleMultiplicity) const {
       for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
         auto nhits = foundNtuplets->size(it);
+        // printf("it: %d nhits: %d \n",it,nhits);
         if (nhits < 3)
           continue;
         if (tracks_view[it].quality() == Quality::edup)
