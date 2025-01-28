@@ -14,7 +14,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/PixelSeeding/interface/alpaka/CAGeometrySoACollection.h"
+#include "RecoTracker/Record/interface/alpaka/CAGeometrySoACollection.h"
 
 #include "CASimpleCell.h"
 #include "CAHitNtupletGeneratorKernels.h"
@@ -36,7 +36,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using hindex_type = uint32_t;
 
     using TkSoADevice = reco::TracksSoACollection;
-    using Tuple = HitContainer;
 
     using Quality = ::pixelTrack::Quality;
 

@@ -8,9 +8,9 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
-#include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
-#include "RecoTracker/PixelSeeding/interface/CAGeometryHost.h"
-#include "RecoTracker/PixelSeeding/interface/alpaka/CAGeometrySoACollection.h"
+#include "RecoTracker/Record/interface/CAGeometrySoA.h"
+#include "RecoTracker/Record/interface/CAGeometryHost.h"
+#include "RecoTracker/Record/interface/alpaka/CAGeometrySoACollection.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
@@ -81,11 +81,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     int n_layers = caThetaCuts_.size(); 
     int n_pairs = pairGraph_.size() / 2;
     int n_modules = 0;
-
+    
+#ifdef GPU_DEBUG 
     std::cout << "No. Layers to be used = " << n_layers << std::endl;
     std::cout << "No. Pairs to be used = " << n_pairs << std::endl;
     std::cout << int(minZ_.size()) << std::endl;
     std::cout << int(pairGraph_.size() ) << std::endl;
+#endif
+
     assert(int(n_pairs) == int(minZ_.size())); 
     assert(*std::max_element(startingPairs_.begin(), startingPairs_.end()) < n_pairs);
 
