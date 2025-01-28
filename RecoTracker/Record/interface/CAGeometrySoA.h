@@ -1,8 +1,6 @@
 #ifndef RecoTracker_PixelSeeding_interface_CAGeometry_h
 #define RecoTracker_PixelSeeding_interface_CAGeometry_h
 
-#include <Eigen/Core>
-
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/SoATemplate/interface/SoALayout.h"

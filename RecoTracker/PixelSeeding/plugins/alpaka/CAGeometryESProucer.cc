@@ -8,9 +8,9 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
-#include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
-#include "RecoTracker/PixelSeeding/interface/CAGeometryHost.h"
-#include "RecoTracker/PixelSeeding/interface/alpaka/CAGeometrySoACollection.h"
+#include "RecoTracker/Record/interface/CAGeometrySoA.h"
+#include "RecoTracker/Record/interface/CAGeometryHost.h"
+#include "RecoTracker/Record/interface/alpaka/CAGeometrySoACollection.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
