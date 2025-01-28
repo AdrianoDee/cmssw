@@ -1886,6 +1886,22 @@ upgradeWFs['PatatrackPixelOnlyAlpaka'] = PatatrackWorkflow(
     offset = 0.402,
 )
 
+upgradeWFs['PatatrackPixelStripOnlyAlpaka'] = PatatrackWorkflow(
+    digi = {
+        '--customise' : 'HeterogeneousCore/AlpakaServices/customiseAlpakaServiceMemoryFilling.customiseAlpakaServiceMemoryFilling',
+    },
+    reco = {
+        '-s': 'RAW2DIGI:RawToDigi_pixelOnly,RECO:reconstruction_pixelTrackingOnly,VALIDATION:@pixelTrackingOnlyValidation,DQM:@pixelTrackingOnlyDQM',
+        '--procModifiers': 'alpaka,stripNtupletFit',
+        '--customise' : 'HeterogeneousCore/AlpakaServices/customiseAlpakaServiceMemoryFilling.customiseAlpakaServiceMemoryFilling',
+    },
+    harvest = {
+        '-s': 'HARVESTING:@trackingOnlyValidation+@pixelTrackingOnlyDQM'
+    },
+    suffix = 'Patatrack_PixelStripOnlyAlpaka',
+    offset = 0.408,
+)
+
 upgradeWFs['PatatrackPixelOnlyAlpakaValidation'] = PatatrackWorkflow(
     digi = {
         '--procModifiers': 'alpaka', 
