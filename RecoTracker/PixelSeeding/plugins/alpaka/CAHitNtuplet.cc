@@ -24,8 +24,7 @@
 #include "RecoTracker/TkMSParametrization/interface/PixelRecoUtilities.h"
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
-#include "RecoTracker/PixelSeeding/interface/alpaka/CAGeometrySoACollection.h"
-
+#include "RecoTracker/Record/interface/alpaka/CAGeometrySoACollection.h"
 #include "CAHitNtupletGenerator.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
