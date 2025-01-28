@@ -24,6 +24,26 @@ striptrackerlocalrecoTask = cms.Task(
     siStripClusters,
     siStripMatchedRecHits)
 
+##############
+## Alpaka conversion
+
+from Configuration.ProcessModifiers.alpaka_cff import alpaka
+from Configuration.ProcessModifiers.stripNtupletFit_cff import stripNtupletFit
+
+from RecoLocalTracker.SiStripRecHitConverter.siStripRecHitSoAConverter_cfi import siStripRecHitSoAConverter as _siStripRecHitSoAConverter
+
+siStripRecHitSoA = _siStripRecHitSoAConverter.clone()
+
+(alpaka & stripNtupletFit).toReplaceWith(striptrackerlocalrecoTask,
+                        cms.Task(
+                        siStripZeroSuppression,
+                        siStripClusters,
+                        siStripMatchedRecHits,
+                        siStripRecHitSoA
+                        ))
+
+#######
+
 _approxSiStripClustersTask = striptrackerlocalrecoTask.copy()
 _approxSiStripClustersTask.remove(siStripZeroSuppression)
 

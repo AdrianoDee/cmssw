@@ -224,6 +224,21 @@ reconstruction_pixelTrackingOnlyTask = cms.Task(
     siPixelClusterShapeCachePreSplitting,
     recopixelvertexingTask
 )
+
+######################################################################
+## Strip+Pixel tracks 
+from Configuration.ProcessModifiers.stripNtupletFit_cff import stripNtupletFit
+
+stripNtupletFit.toReplaceWith(reconstruction_pixelTrackingOnlyTask,
+                        cms.Task(
+                        trackerlocalrecoTask,
+                        offlineBeamSpotTask,
+                        siPixelClusterShapeCachePreSplitting,
+                        recopixelvertexingTask
+                        ))
+
+######################################################################
+
 reconstruction_pixelTrackingOnly = cms.Sequence(reconstruction_pixelTrackingOnlyTask)
 
 reconstruction_ecalOnlyTask = cms.Task(
