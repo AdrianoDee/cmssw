@@ -72,9 +72,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       alpaka::exec<Acc1D>(queue, workDiv, TestVerifyKernel{}, tracks_view, tracks);
     }
 
-    template void runKernels<pixelTopology::Phase1>(TrackSoAView tracks_view, Queue& queue);
-    template void runKernels<pixelTopology::Phase2>(TrackSoAView tracks_view, Queue& queue);
-
   }  // namespace testTrackSoA
   
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
