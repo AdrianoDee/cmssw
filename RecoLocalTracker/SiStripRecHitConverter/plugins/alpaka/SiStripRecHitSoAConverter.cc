@@ -1,4 +1,4 @@
-/*
+
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -183,4 +183,4 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
 
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
 DEFINE_FWK_ALPAKA_MODULE(SiStripRecHitSoAConverter);
-*/
+

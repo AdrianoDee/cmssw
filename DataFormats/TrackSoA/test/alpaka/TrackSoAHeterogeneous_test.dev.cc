@@ -22,12 +22,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // to test writing to it
     class TestFillKernel {
     public:
-<<<<<<< HEAD
-      ALPAKA_FN_ACC void operator()(Acc1D const& acc, TrackSoAView<TrackerTraits> tracks_view, int32_t nTracks) const {
-=======
-      template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
-      ALPAKA_FN_ACC void operator()(TAcc const& acc, TrackSoAView tracks_view, int32_t nTracks) const {
->>>>>>> AdrianoDee/ca_params_light_hits
+
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc, TrackSoAView tracks_view, int32_t nTracks) const {
         if (cms::alpakatools::once_per_grid(acc)) {
           tracks_view.nTracks() = nTracks;
         }
@@ -47,14 +43,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // that it was written correctly from the fill kernel
     class TestVerifyKernel {
     public:
-<<<<<<< HEAD
       ALPAKA_FN_ACC void operator()(Acc1D const& acc,
-                                    TrackSoAConstView<TrackerTraits> tracks_view,
-=======
-      template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
-      ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                     TrackSoAConstView tracks_view,
->>>>>>> AdrianoDee/ca_params_light_hits
                                     int32_t nTracks) const {
         if (cms::alpakatools::once_per_grid(acc)) {
           ALPAKA_ASSERT(tracks_view.nTracks() == nTracks);
@@ -80,9 +70,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       alpaka::exec<Acc1D>(queue, workDiv, TestFillKernel{}, tracks_view, tracks);
       alpaka::exec<Acc1D>(queue, workDiv, TestVerifyKernel{}, tracks_view, tracks);
     }
-
-    template void runKernels<pixelTopology::Phase1>(TrackSoAView tracks_view, Queue& queue);
-    template void runKernels<pixelTopology::Phase2>(TrackSoAView tracks_view, Queue& queue);
 
   }  // namespace testTrackSoA
   
