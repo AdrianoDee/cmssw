@@ -97,7 +97,7 @@ from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
 ### Alpaka Pixel Track Reco
 
 from Configuration.ProcessModifiers.alpaka_cff import alpaka
-
+from Configuration.ProcessModifiers.stripNtupletFit_cff import stripNtupletFit
 #from RecoTracker.PixelSeeding.caGeometryESProducer_cfi import caGeometryESProducer as _caGeometryESProducer
 def _addCAGeometryESProducer(process):
     process.load("RecoTracker.PixelSeeding.caGeometryESProducer_cfi")
@@ -148,6 +148,17 @@ def _addCAGeometryESProducer(process):
                                              5.0, 8.0, 8.0, 8.0, 8.0, 6.0,  5.0, 5.0, 5.0, 6.0, 5.0, 5.0, 5.0, 9.0,
                                              9.0, 9.0, 8.0, 8.0, 8.0, 11.0, 9.0, 9.0, 9.0, 8.0, 8.0, 8.0, 11.0]
       )
+
+    stripNtupletFit.toModify(process.caGeometryESProducer,
+        pairGraph = list(getattr(process.caGeometryESProducer, "pairGraph")) + [0, 11],
+        maxZ = list(getattr(process.caGeometryESProducer, "maxZ")) + [1000.0],
+        caDCACuts = list(getattr(process.caGeometryESProducer, "caDCACuts")) + [0.3],
+        caThetaCuts = list(getattr(process.caGeometryESProducer, "caThetaCuts")) + [0.25],
+        minZ =  list(getattr(process.caGeometryESProducer, "minZ")) + [-1000.0],
+        maxR =  list(getattr(process.caGeometryESProducer, "maxR")) + [10000.0],
+        phiCuts = list(getattr(process.caGeometryESProducer, "phiCuts")) + [1000]
+      )
+
 modifyConfigurationForAlpakaCAGeometry_ = alpaka.makeProcessModifier(_addCAGeometryESProducer)
 
 
