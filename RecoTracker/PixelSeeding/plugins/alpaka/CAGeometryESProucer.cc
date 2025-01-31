@@ -22,6 +22,8 @@
 
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 
+#define GPU_DEBUG
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   class CAGeometryESProducer : public ESProducer {
 
@@ -93,7 +95,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const auto &trackerTopology = &iRecord.get(tTopologyToken_);
     const auto &trackerGeometry = &iRecord.get(tGeometryToken_);
     auto const& detUnits = trackerGeometry->detUnits();
-
+    auto const& dets = trackerGeometry->dets();
 #ifdef GPU_DEBUG 
     auto subSystem = 1;
     auto subSystemName = GeomDetEnumerators::tkDetEnum[subSystem];
@@ -107,12 +109,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto layerCount = 0;
     
     std::vector<int> layerStarts(n_layers+1);
-
-    for (auto& detUnit : detUnits) {
-      unsigned int index = detUnit->index();
-      n_modules++;
+   
+    for (auto& det : dets) {
+      
+      DetId detid = det->geographicalId();
 #ifdef GPU_DEBUG
-      if(index >= subSystemOffset)
+      if(n_modules >= int(subSystemOffset))
       {
         subSystemName = GeomDetEnumerators::tkDetEnum[++subSystem];
         subSystemOffset = trackerGeometry->offsetDU(subSystemName);
@@ -120,20 +122,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
 #endif
 
-      auto geoid = detUnit->geographicalId();
-      auto layer = trackerTopology->layer(geoid);
+      auto layer = trackerTopology->layer(detid);
 
       if(layer != oldLayer)
       {
-          layerStarts[layerCount] = index;
-          layerCount++;
+          layerStarts[layerCount++] = n_modules;
+          
           if (layerCount > n_layers + 1)
             break;
+          
           oldLayer = layer;
 #ifdef GPU_DEBUG
-          std::cout << " > New layer at module : " << index << " (detId: " <<  geoid << ")" << std::endl;
+          std::cout << " > New layer at module : " << n_modules << " (detId: " <<  detid << ")" << std::endl;
 #endif
       }
+
+      n_modules++;
             
     }
 
@@ -144,7 +148,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto modulesSoA = product.view<::reco::CAModulesSoA>();
 
     for (int i = 0; i < n_modules; ++i) {
-        auto det = detUnits[i];
+        auto det = dets[i];
         auto vv = det->surface().position();
         auto rr = Rotation(det->surface().rotation());
         modulesSoA[i].detFrame() =  Frame(vv.x(), vv.y(), vv.z(), rr); 

@@ -102,6 +102,7 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
 
   const auto &trackerGeometry = &iSetup.getData(geomToken_);
   auto const& geometrySoA = iSetup.getData(geometrySoA_);
+  auto const& dets = trackerGeometry->dets();
   int nModules = geometrySoA.view<::reco::CAModulesSoA>().metadata().size();
 
   auto const& pixelHitsHost = iEvent.get(pixelHitsSoA_);
@@ -149,33 +150,31 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
   uint32_t n_modules = nPixelModules;
   uint32_t n_hits = nPixelHits;
   
-  auto const& detUnits = trackerGeometry->detUnits();
+  
   std::map<uint32_t,uint16_t> detIdToIndex;
-  for (auto& detUnit : detUnits)
-  {
-    detIdToIndex[detUnit->geographicalId()] = detUnit->index();
-    std::cout << detUnit->geographicalId() << " - " << detUnit->index() << std::endl;
-  }
+  uint16_t index = 0u;
+  // Needed since we have glued dets that we count in CAGeometry
+  for (auto& det : dets)
+    detIdToIndex[det->geographicalId()] = index++;
+
 
   std::vector<int> stripDetSizes(nStripModules,0);
   for (const auto& detSet : stripHits) {
     
-    // if (detSet.size() < 1)
-    //   continue;
-
-    // const StripGeomDetUnit* det = dynamic_cast<const StripGeomDetUnit*> (trackerGeometry->idToDet(detSet.begin()->geographicalId()));
-    auto firstHit = detSet.begin();
-    auto geo = firstHit->rawId();
-    auto det = trackerGeometry->idToDet(geo);
-    auto hitDetUnit = firstHit->detUnit();
-    auto hitDet = firstHit->det()->geographicalId();
-    auto index = detIdToIndex[geo];
+    auto id = detSet.detId();
+    auto det = trackerGeometry->idToDet(id);
+    auto index = detIdToIndex[id];
     n_modules++;
-    // stripDetSizes[index-nPixelModules] 
-    std::cout << geo << " - " << detSet.detId() << " - " << hitDet << " - " << index << " - " << nPixelModules << " - " << detSet.size() << std::endl;
-    std::cout << hitDetUnit->index() << " - " << hitDetUnit->geographicalId() << std::endl;
-    stripHitsModuleView[index-nPixelModules].moduleStart() = n_hits; //detSet.size();
-    // stripHitsModuleView[index].moduleStart() =  + stripHitsModuleView[n_modules-1].moduleStart();
+
+    auto iStrip = index - nPixelModules;
+
+    if(iStrip >= nModules)
+      break;
+   
+    stripDetSizes[iStrip] = detSet.size();
+
+    if(iStrip >= nStripModules)
+      continue;
     
     for (const auto& recHit : detSet) {
 
@@ -187,12 +186,12 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
       double gx = globalPosition.x() - bs.x0();
       double gy = globalPosition.y() - bs.y0();
       double gz = globalPosition.z() - bs.z0();
-      std::cout << gx << std::endl;
       stripHitsHost.view()[n_hits].xGlobal() = gx;
       stripHitsHost.view()[n_hits].yGlobal() = gy;
       stripHitsHost.view()[n_hits].zGlobal() = gz;
       stripHitsHost.view()[n_hits].rGlobal() = sqrt(gx * gx + gy * gy);
       stripHitsHost.view()[n_hits].iphi() = unsafe_atan2s<7>(gy, gx);
+      // clamp to 255 and pack in one uint16 = (value2 << 8) | value1  
       // stripHitsHost.view()[n_hits].chargeAndStatus().charge = ?
       // stripHitsHost.view()[n_hits].chargeAndStatus().status = ?
       // stripHitsHost.view()[n_hits].clusterSizeX() = ?
@@ -202,13 +201,14 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
       n_hits++;
     }
 
-    std::cout << index-nPixelModules << " - >" << n_hits;
+     std::cout << id << " - " << n_modules << " - " << index << " - " << nPixelModules << " - " << iStrip << " - " << detSet.size() << " - " << n_hits << " - " << stripDetSizes[iStrip] << std::endl;
   }
 
-  // // this most probably is redundant because by default they should be zero-ed
-  // for(int i = nPixelModules + 1; i < stripHitsModuleView.metadata().size(); i++)
-  //   stripHitsModuleView[i].moduleStart() = stripHitsModuleView[i-1].moduleStart() + stripDetSizes[i-nPixelModules];
-  
+  for(int i = nPixelModules + 1; i < stripHitsModuleView.metadata().size(); i++)
+  {
+    stripHitsModuleView[i].moduleStart() = stripHitsModuleView[i-1].moduleStart() + stripDetSizes[i-nPixelModules-1];
+    std::cout << "module : " << i << " - " << stripHitsModuleView[i].moduleStart() << " - " << stripDetSizes[i-nPixelModules-1] << std::endl;
+  }
   std::cout << stripHitsModuleView[nPixelModules].moduleStart() << " - >" << nPixelHits << std::endl;
   std::cout << stripHitsModuleView[stripHitsModuleView.metadata().size()-1].moduleStart() << " - >" << nStripHits << std::endl;
   assert(stripHitsModuleView[stripHitsModuleView.metadata().size()-1].moduleStart() == n_hits);
@@ -228,7 +228,10 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
   alpaka::memcpy(queue, stripHitsDevice.buffer(), stripHitsHost.buffer());
   stripHitsDevice.updateFromDevice(queue);
 
-  // Would be useful to have a way to prompt a special CopyToDevice for EDProducers
+  // Maybe it would be useful to have a way to prompt a 
+  // special CopyToDevice for Alpaka EDProducers producing
+  // (only) host collections.
+
   // iEvent.emplace(stripSoAHost_, std::move(stripHitsHost));
   iEvent.emplace(stripSoADevice_, std::move(stripHitsDevice));
   
