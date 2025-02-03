@@ -207,8 +207,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         brokenline::lineFit(acc, hits_ge, fast_fit, bField, data, line);
         brokenline::circleFit(acc, hits, hits_ge, fast_fit, bField, data, circle);
 
-        reco::copyFromCircle(
-            results_view, circle.par, circle.cov, line.par, line.cov, 1.f / float(bField), tkid);
+        reco::copyFromCircle(results_view, circle.par, circle.cov, line.par, line.cov, 1.f / float(bField), tkid);
         results_view[tkid].pt() = float(bField) / float(std::abs(circle.par(2)));
         results_view[tkid].eta() = alpaka::math::asinh(acc, line.par(0));
         results_view[tkid].chi2() = (circle.chi2 + line.chi2) / (2 * N - 5);
@@ -237,15 +236,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
   };
 
-#define GENERATE_FUNCTION_CASE(N) case N: Kernel_BLFastFit<N>(); break;
+#define GENERATE_FUNCTION_CASE(N) \
+  case N:                         \
+    Kernel_BLFastFit<N>();        \
+    break;
 
   template <typename TrackerTraits>
-  void HelixFit<TrackerTraits>::launchBrokenLineKernels(
-      const ::reco::TrackingRecHitConstView &hv,
-      const ::reco::CAModulesConstView &cm,
-      uint32_t hitsInFit,
-      uint32_t maxNumberOfTuples,
-      Queue &queue) {
+  void HelixFit<TrackerTraits>::launchBrokenLineKernels(const ::reco::TrackingRecHitConstView &hv,
+                                                        const ::reco::CAModulesConstView &cm,
+                                                        uint32_t hitsInFit,
+                                                        uint32_t maxNumberOfTuples,
+                                                        Queue &queue) {
     ALPAKA_ASSERT_ACC(tuples_);
 
     uint32_t blockSize = 64;

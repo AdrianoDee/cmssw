@@ -37,20 +37,20 @@ int main() {
     {
       uint32_t nHitsOne = 200;
       uint32_t nHitsTwo = 10;
-    //   int32_t offset = 100;
+      //   int32_t offset = 100;
       uint32_t nModulesOne = 20;
       uint32_t nModulesTwo = 50;
 
       ::reco::TrackingRecHitHost hostOne(cms::alpakatools::host(), nHitsOne, nModulesOne + 1);
       ::reco::TrackingRecHitHost hostTwo(cms::alpakatools::host(), nHitsTwo, nModulesTwo + 1);
-      ::reco::TrackingRecHitHost hostThree(cms::alpakatools::host(), nHitsOne + nHitsTwo, nModulesOne + nModulesTwo + 1);
-      
+      ::reco::TrackingRecHitHost hostThree(
+          cms::alpakatools::host(), nHitsOne + nHitsTwo, nModulesOne + nModulesTwo + 1);
+
       auto hitOneView = hostOne.view<::reco::TrackingRecHitSoA>();
       auto hitTwoView = hostTwo.view<::reco::TrackingRecHitSoA>();
-      
+
       auto hitOneModuleView = hostOne.view<::reco::HitModuleSoA>();
       auto hitTwoModuleView = hostTwo.view<::reco::HitModuleSoA>();
-
 
       for (uint32_t i = 0; i < nModulesOne + 1; ++i)
         hitOneModuleView[i].moduleStart() = i * 2;
@@ -60,21 +60,18 @@ int main() {
         hitOneView[i].xGlobal() = 2.f;
       for (uint32_t i = 0; i < nHitsTwo; ++i)
         hitTwoView[i].xGlobal() = i + 2;
-      
-      
+
       auto hitThreeView = hostThree.view<::reco::TrackingRecHitSoA>();
       auto hitThreeModuleView = hostThree.view<::reco::HitModuleSoA>();
-      
+
       alpaka::memcpy(queue, hostThree.buffer(), hostOne.buffer(), alpaka::getExtentProduct(hostOne.buffer()));
-    //   alpaka::memcpy(queue, hostThree.buffer()[nHitsOne], hostTwo.buffer());
+      //   alpaka::memcpy(queue, hostThree.buffer()[nHitsOne], hostTwo.buffer());
       alpaka::wait(queue);
 
       for (uint32_t i = 0; i < nHitsOne + nHitsTwo; ++i)
-        std::cout <<  i << " - " << hitThreeView[i].xGlobal() << std::endl;
-    //   for (uint32_t i = 0; i < nHitsOne + 10; ++i)
-    //     std::cout << hostThree.buffer().data()[i] << std::endl;
-
-      
+        std::cout << i << " - " << hitThreeView[i].xGlobal() << std::endl;
+      //   for (uint32_t i = 0; i < nHitsOne + 10; ++i)
+      //     std::cout << hostThree.buffer().data()[i] << std::endl;
     }
   }
 

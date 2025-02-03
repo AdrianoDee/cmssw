@@ -11,9 +11,8 @@
 #include "DataFormats/TrackSoA/interface/TracksSoA.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 
-namespace reco
-{
-    using TracksHost = PortableHostMultiCollection<TrackSoA, TrackHitSoA>;
+namespace reco {
+  using TracksHost = PortableHostMultiCollection<TrackSoA, TrackHitSoA>;
 }
 
 #endif  // DataFormats_Track_TracksHost_H
