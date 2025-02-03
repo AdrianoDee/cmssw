@@ -161,19 +161,7 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
 
   auto const &hitsModuleStart = iEvent.get(hmsToken_);
 
-  size_t nStripHits = 0;
-  const edmNew::DetSetVector<SiStripMatchedRecHit2D>* stripRechitsDSV = nullptr;
-
-   if (useStripHits_) {
-    stripRechitsDSV = &iEvent.get(cpuStripHits_);
-    nStripHits = hitsModuleStart[hitsModuleStart.size() - 1] - hitsModuleStart[nPixelModules];
-  }
-
-  // auto const &stripRechits = pixelRecHitsDSV.data();
-
-  size_t nhits = nPixelHits + nStripHits;
-
-  hitmap.resize(nhits, nullptr);
+  hitmap.resize(nPixelHits, nullptr);
 
   for (auto const &pixelHit : pixelRecHits) {
     auto const &thit = static_cast<BaseTrackerRecHit const &>(pixelHit);
@@ -202,7 +190,7 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
   }
 
   std::vector<const TrackingRecHit *> hits;
-  hits.reserve(5);
+  hits.reserve(5); //TODO move to a configurable parameter?
 
   auto const &tsoa = iEvent.get(tokenTrack_);
   auto const *quality = tsoa.view().quality();
