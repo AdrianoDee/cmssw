@@ -41,7 +41,7 @@ int main() {
       "the test will be skipped.\n";
     exit(EXIT_FAILURE);
   }
-/*
+  /*
   // Run the test on each device
   for (const auto& device : devices) {
     Queue queue(device);

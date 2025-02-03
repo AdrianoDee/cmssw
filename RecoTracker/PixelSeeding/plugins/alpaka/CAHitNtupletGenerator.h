@@ -65,7 +65,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                 Queue& queue) const;
 
   private:
-  
     Params m_params;
   };
 

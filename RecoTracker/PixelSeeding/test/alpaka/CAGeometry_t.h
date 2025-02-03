@@ -6,10 +6,8 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::testParamsSoA {
 
-  void runKernels(::reco::CALayersSoAView layers_view,
-                                  ::reco::CAGraphSoAView pairs_view,
-                                  Queue& queue);
+  void runKernels(::reco::CALayersSoAView layers_view, ::reco::CAGraphSoAView pairs_view, Queue& queue);
 
-}  // namespace ALPAKA_ACCELERATOR_NAMESPACE::testCAGeometrySoA
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE::testParamsSoA
 
 #endif  // RecoTracker_PixelSeeding_test_alpaka_CAGeometrySoA_test_h

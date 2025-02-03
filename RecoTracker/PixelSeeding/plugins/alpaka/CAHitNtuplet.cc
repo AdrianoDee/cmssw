@@ -47,7 +47,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   private:
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> tokenField_;
-    const device::ESGetToken<reco::CAGeometrySoACollection, TrackerRecoGeometryRecord> geometrySoA_;  
+    const device::ESGetToken<reco::CAGeometrySoACollection, TrackerRecoGeometryRecord> geometrySoA_;
     const device::EDGetToken<HitsOnDevice> tokenHit_;
     const device::EDPutToken<TkSoADevice> tokenTrack_;
 
@@ -62,11 +62,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         geometrySoA_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("caGeometry")))),
         tokenHit_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
         tokenTrack_(produces()),
-        maxNumberOfDoublets_(TFormula("doubletsHitsDependecy", iConfig.getParameter<std::string>("maxNumberOfDoublets").data())),
-        maxNumberOfTuples_(TFormula("tracksHitsDependency",iConfig.getParameter<std::string>("maxNumberOfTuples").data())),
-        deviceAlgo_(iConfig) {
-
-        }
+        maxNumberOfDoublets_(
+            TFormula("doubletsHitsDependecy", iConfig.getParameter<std::string>("maxNumberOfDoublets").data())),
+        maxNumberOfTuples_(
+            TFormula("tracksHitsDependency", iConfig.getParameter<std::string>("maxNumberOfTuples").data())),
+        deviceAlgo_(iConfig) {}
 
   template <typename TrackerTraits>
   void CAHitNtupletAlpaka<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -90,7 +90,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     uint32_t const maxTuples = maxNumberOfTuples_.Eval(hits.nHits());
     uint32_t const maxDoublets = maxNumberOfDoublets_.Eval(hits.nHits());
     // std::cout << "maxDoublets " << maxDoublets << std::endl;
-    iEvent.emplace(tokenTrack_, deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue()));
+    iEvent.emplace(tokenTrack_,
+                   deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue()));
   }
 
   using CAHitNtupletAlpakaPhase1 = CAHitNtupletAlpaka<pixelTopology::Phase1>;

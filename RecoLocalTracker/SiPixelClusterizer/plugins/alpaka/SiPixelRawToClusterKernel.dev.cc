@@ -432,12 +432,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template <typename TrackerTraits>
     struct ShowHitsModuleStart {
       template <typename TAcc>
-      ALPAKA_FN_ACC void operator()(const TAcc &acc, SiPixelClustersSoAView clus_view) const
-      {
-        if (cms::alpakatools::once_per_grid(acc))
-        {
-          for(int i = 0; i < TrackerTraits::numberOfModules; i++)
-            printf("%d \n",clus_view[i].clusModuleStart());
+      ALPAKA_FN_ACC void operator()(const TAcc &acc, SiPixelClustersSoAView clus_view) const {
+        if (cms::alpakatools::once_per_grid(acc)) {
+          for (int i = 0; i < TrackerTraits::numberOfModules; i++)
+            printf("%d \n", clus_view[i].clusModuleStart());
         }
       }
     };
@@ -666,23 +664,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // MUST be ONE block
         // const auto workDivOneBlock = cms::alpakatools::make_workdiv<Acc1D>(1u, 1024u);
         // alpaka::exec<Acc1D>(queue, workDivOneBlock, FillHitsModuleStart<TrackerTraits>{}, clusters_d->view());
-        
+
         constexpr auto threadsPrefixScan = 1024;
-        constexpr auto blocksPrefixScan  = (TrackerTraits::numberOfModules + threadsPrefixScan - 1) / threadsPrefixScan;
-        auto workDivPrefixScan = cms::alpakatools::make_workdiv<Acc1D>(blocksPrefixScan,threadsPrefixScan);
+        constexpr auto blocksPrefixScan = (TrackerTraits::numberOfModules + threadsPrefixScan - 1) / threadsPrefixScan;
+        auto workDivPrefixScan = cms::alpakatools::make_workdiv<Acc1D>(blocksPrefixScan, threadsPrefixScan);
         auto bCounter = make_device_buffer<int32_t>(queue);
         alpaka::memset(queue, bCounter, 0);
-             
+
         alpaka::exec<Acc1D>(queue,
-                           workDivPrefixScan,
-                           multiBlockPrefixScan<uint32_t>(),
-                           clusters_d->view().clusInModule(),
-                           clusters_d->view().clusModuleStart() + 1,
-                           TrackerTraits::numberOfModules,
-                           blocksPrefixScan,
-                           bCounter.data(),
-                           alpaka::getPreferredWarpSize(alpaka::getDev(queue)));
-        
+                            workDivPrefixScan,
+                            multiBlockPrefixScan<uint32_t>(),
+                            clusters_d->view().clusInModule(),
+                            clusters_d->view().clusModuleStart() + 1,
+                            TrackerTraits::numberOfModules,
+                            blocksPrefixScan,
+                            bCounter.data(),
+                            alpaka::getPreferredWarpSize(alpaka::getDev(queue)));
+
         // last element holds the number of all clusters
         const auto clusModuleStartLastElement =
             cms::alpakatools::make_device_view(queue, clusters_d->const_view().clusModuleStart() + numberOfModules, 1u);

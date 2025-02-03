@@ -10,7 +10,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
 namespace reco {
-    template <typename TDev>
-    using CAGeometryDevice = PortableDeviceMultiCollection<TDev, CALayersSoA, CAGraphSoA, CAModulesSoA>;
+  template <typename TDev>
+  using CAGeometryDevice = PortableDeviceMultiCollection<TDev, CALayersSoA, CAGraphSoA, CAModulesSoA>;
 }
 #endif  // RecoTracker_PixelSeeding_interface_CAGeometryDevice_H

@@ -52,7 +52,6 @@ class PixelTrackProducerFromSoAAlpaka : public edm::global::EDProducer<> {
   using IndToEdm = std::vector<uint32_t>;
   using TrackHitSoA = reco::TrackHitSoA;
 
-
 public:
   explicit PixelTrackProducerFromSoAAlpaka(const edm::ParameterSet &iConfig);
   ~PixelTrackProducerFromSoAAlpaka() override = default;
@@ -74,7 +73,6 @@ private:
 
   int32_t const minNumberOfHits_;
   pixelTrack::Quality const minQuality_;
-  const bool useStripHits_;
 
 };
 
@@ -85,16 +83,8 @@ PixelTrackProducerFromSoAAlpaka::PixelTrackProducerFromSoAAlpaka(const edm::Para
       idealMagneticFieldToken_(esConsumes()),
       ttTopoToken_(esConsumes()),
       minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
-      minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))),
-      useStripHits_(iConfig.getParameter<bool>("useStripHits")) {
-  
-  if (useStripHits_) {
-    cpuStripHits_ = consumes<SiStripMatchedRecHit2DCollection>(iConfig.getParameter<edm::InputTag>("stripRecHitLegacySrc"));
-    hmsToken_ = consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("hitModuleStartSrc"));
-  }
-  else {
-    hmsToken_ = consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"));
-  }
+      minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))) {
+  hmsToken_ = consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("pixelRecHitLegacySrc"));
 
   if (minQuality_ == pixelTrack::Quality::notQuality) {
     throw cms::Exception("PixelTrackConfiguration")
@@ -125,8 +115,8 @@ void PixelTrackProducerFromSoAAlpaka::fillDescriptions(edm::ConfigurationDescrip
 }
 
 void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
-                                                             edm::Event &iEvent,
-                                                             const edm::EventSetup &iSetup) const {
+                                              edm::Event &iEvent,
+                                              const edm::EventSetup &iSetup) const {
   // enum class Quality : uint8_t { bad = 0, edup, dup, loose, strict, tight, highPurity };
   reco::TrackBase::TrackQuality recoQuality[] = {reco::TrackBase::undefQuality,
                                                  reco::TrackBase::undefQuality,
@@ -190,7 +180,7 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
   }
 
   std::vector<const TrackingRecHit *> hits;
-  hits.reserve(5); //TODO move to a configurable parameter?
+  hits.reserve(5);  //TODO move to a configurable parameter?
 
   auto const &tsoa = iEvent.get(tokenTrack_);
   auto const *quality = tsoa.view().quality();
@@ -229,17 +219,17 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     ++nt;
 
     hits.resize(nHits);
-    auto start = (it==0)? 0 : hitOffs[it-1];
+    auto start = (it == 0) ? 0 : hitOffs[it - 1];
     auto end = hitOffs[it];
 
     for (auto iHit = start; iHit < end; ++iHit)
       hits[iHit - start] = hitmap[hitIdxs[iHit]];
-    
+
 #ifdef GPU_DEBUG
     std::cout << "track soa : " << it << " with hits: ";
     for (auto iHit = start; iHit < end; ++iHit)
       std::cout << hitIdxs[iHit] << " - ";
-    std::cout << std::endl;  
+    std::cout << std::endl;
 #endif
 
     // mind: this values are respect the beamspot!

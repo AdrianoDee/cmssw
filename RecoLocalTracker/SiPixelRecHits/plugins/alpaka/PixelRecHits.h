@@ -41,7 +41,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         // outer loop: one block per module
         for (uint32_t module : cms::alpakatools::independent_groups(acc, nonEmptyModules)) {
-        #ifdef CA_TRIPLETS_HOLE
+#ifdef CA_TRIPLETS_HOLE
           // This is necessary only once - consider moving it somewhere else.
           // Copy the average geometry corrected by the beamspot.
           if (0 == module) {
@@ -63,8 +63,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               agc.endCapZ[1] = ag.endCapZ[1] - bs->z;
             }
           }
-         #endif // CA_TRIPLETS_HOLE
-          // to be moved in common namespace...
+#endif  // CA_TRIPLETS_HOLE \
+    // to be moved in common namespace...
           using pixelClustering::invalidModuleId;
           constexpr int32_t maxHitsInIter = pixelCPEforDevice::MaxHitsInIter;
 

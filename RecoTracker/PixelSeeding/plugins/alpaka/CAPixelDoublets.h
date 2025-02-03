@@ -13,7 +13,7 @@
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   using namespace alpaka;
   using namespace cms::alpakatools;
-  
+
   namespace caPixelDoublets {
 
     // template <typename TrackerTraits>
@@ -78,15 +78,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
       ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                     CASimpleCell<TrackerTraits> const* __restrict__ cells,
-                                    uint32_t* nCells, //could be size
+                                    uint32_t* nCells,  //could be size
                                     uint32_t offsetBPIX2,
                                     HitToCell* outerHitHisto) const {
-        for (auto cellIndex : cms::alpakatools::uniform_elements(acc, *nCells))
-        {
+        for (auto cellIndex : cms::alpakatools::uniform_elements(acc, *nCells)) {
 #ifdef GPU_DEBUG
-          printf("outerHitHisto;%d;%d\n",cellIndex,cells[cellIndex].outer_hit_id());
+          printf("outerHitHisto;%d;%d\n", cellIndex, cells[cellIndex].outer_hit_id());
 #endif
-          outerHitHisto->fill(acc,cells[cellIndex].outer_hit_id()-offsetBPIX2,cellIndex);
+          outerHitHisto->fill(acc, cells[cellIndex].outer_hit_id() - offsetBPIX2, cellIndex);
         }
       }
     };
