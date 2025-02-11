@@ -63,6 +63,7 @@ def customizeHLTfor46935(process):
         if hasattr(prod, 'recHitsLabelCPUEE'):
             prod.outputLabelEE = prod.recHitsLabelCPUEE
             delattr(prod, 'recHitsLabelCPUEE')
+
     return process
 
 def customiseHLTFor46647(process):
@@ -133,7 +134,6 @@ def customizeHLTfor47017(process):
         if hasattr(prod, 'VerboseLevel'):
             delattr(prod, 'VerboseLevel')
 
->>>>>>> 54e55125eb0 (Updating customizeHLTforCMSSW)
     return process
 
 
@@ -223,7 +223,12 @@ def customizeHLTforXYZ(process):
     if not hasattr(process, 'HLTRecoPixelTracksSequence'):
         return process
         
-    producers = ['CAHitNtupletAlpakaPhase1@alpaka','alpaka_serial_sync::CAHitNtupletAlpakaPhase1']
+    ca_producers = ['CAHitNtupletAlpakaPhase1@alpaka','alpaka_serial_sync::CAHitNtupletAlpakaPhase1']
+
+    ca_parameters = [ 'CAThetaCutBarrel', 'CAThetaCutForward', 
+        'dcaCutInnerTriplet', 'dcaCutOuterTriplet', 
+        'doPtCut', 'doZ0Cut', 'idealConditions', 
+        'includeJumpingForwardDoublets', 'phiCuts'] 
 
     process.hltCAGeometry = cms.ESProducer('CAGeometryESProducer@alpaka',
         caDCACuts = cms.vdouble(
@@ -270,15 +275,15 @@ def customizeHLTforXYZ(process):
             7., 5., 5., 20., 6., 
             6., 5., 5., 20., 20., 
             9., 9., 9., 9.),
-        appendToDataLabel = cms.string(''),
+        appendToDataLabel = cms.string('hltCAGeometry'),
         alpaka = cms.untracked.PSet(
         backend = cms.untracked.string(''),
         synchronize = cms.optional.untracked.bool
         )
     )
 
-    for producer in producers:
-        for prod in producers_by_type(process, producer):
+    for ca_producer in ca_producers:
+        for prod in producers_by_type(process, ca_producer):
             
             if hasattr(prod, 'CPE'):
                 delattr(prod, 'CPE')
@@ -289,12 +294,12 @@ def customizeHLTforXYZ(process):
             if hasattr(prod, 'maxNumberOfDoublets'):
                 v = getattr(prod, 'maxNumberOfDoublets')
                 delattr(prod, 'maxNumberOfDoublets')
-                setattr(prod, 'maxNumberOfDoublets', cms.string(str(v)))
+                setattr(prod, 'maxNumberOfDoublets', cms.string(str(v.value())))
             
             if hasattr(prod, 'maxNumberOfTuples'):
                 v = getattr(prod, 'maxNumberOfTuples')
                 delattr(prod, 'maxNumberOfTuples')
-                setattr(prod, 'maxNumberOfTuples', cms.string(str(v)))
+                setattr(prod, 'maxNumberOfTuples', cms.string(str(v.value())))
             
             if not hasattr(prod, 'avgCellsPerCell'):
                 setattr(prod, 'avgCellsPerCell', cms.double(2))
@@ -307,11 +312,16 @@ def customizeHLTforXYZ(process):
             
             if not hasattr(prod, 'avgTracksPerCell'):
                 setattr(prod, 'avgTracksPerCell', cms.double(2))
+            
+            for par in ca_parameters:
+                if hasattr(prod, par):
+                    delattr(prod,par)
 
+    for prod in producers_by_type(process, 'PixelTrackProducerFromSoAAlpakaPhase1'):
+        print(prod)
 
     return process
 
->>>>>>> b84fc66044f (Start customizeHLTforCMSSW.py and move to rebase)
 # CMSSW version specific customizations
 def customizeHLTforCMSSW(process, menuType="GRun"):
 
@@ -319,10 +329,11 @@ def customizeHLTforCMSSW(process, menuType="GRun"):
 
     # add call to action function in proper order: newest last!
     # process = customiseFor12718(process)
+    
     process = customizeHLTforXYZ(process)
 
     process = customizeHLTfor46935(process)
-    #process = customizeHLTfor47017(process)
+    process = customizeHLTfor47017(process)
     process = customizeHLTfor47079(process)
     process = customizeHLTfor47047(process)
     process = customizeHLTfor47107(process)

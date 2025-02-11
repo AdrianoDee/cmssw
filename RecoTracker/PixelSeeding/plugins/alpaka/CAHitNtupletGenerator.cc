@@ -37,22 +37,38 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     //Common Params
     void fillDescriptionsCommon(edm::ParameterSetDescription& desc) {
-      // 87 cm/GeV = 1/(3.8T * 0.3)
-      // take less than radius given by the hardPtCut and reject everything below
-      // auto hardCurvCut = 1.f/(0.35 * 87.f);
-      desc.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
-      desc.add<double>("hardCurvCut", 1.f / (0.35 * 87.f))
-          ->setComment("Cut on minimum curvature, used in DCA ntuplet selection");
+      
+      // Cell Cuts
+      desc.add<bool>("doClusterCut", true)
+          ->setComment("Cut on inner hit cluster size (in Y) for barrel-forward cells.");
+      desc.add<bool>("doZSizeCut", true)
+          ->setComment("Cut on cluster size differences (in Y) for barrel-forward cells.");
+
       desc.add<double>("cellZ0Cut", 12.0f)->setComment("Z0 cut for cells");
       desc.add<double>("cellPtCut", 0.5f)->setComment("Preliminary pT cut at cell building level.");
-
+      
+      //// Pixel Cluster Cuts (@cell level)
+      desc.add<double>("dzdrFact", 8.0f * 0.0285f / 0.015f);
+      desc.add<unsigned int>("minYsizeB1", 36);
+      desc.add<unsigned int>("minYsizeB2", 28);
+      desc.add<unsigned int>("maxDYsize12", 28);
+      desc.add<unsigned int>("maxDYsize", 20);
+      desc.add<unsigned int>("maxDYPred", 20);
+      
+      // Container sizes
       desc.add<std::string>("maxNumberOfDoublets", std::to_string(pixelTopology::Phase1::maxNumberOfDoublets));
       desc.add<std::string>("maxNumberOfTuples", std::to_string(pixelTopology::Phase1::maxNumberOfTuples));
-
       desc.add<double>("avgHitsPerTrack", 5.0f);
       desc.add<double>("avgCellsPerHit", 25.0f);
       desc.add<double>("avgCellsPerCell", 2.0f);
       desc.add<double>("avgTracksPerCell", 1.0f);
+      
+      // nTuplet Cuts and Params
+      desc.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
+      //// 87 cm/GeV = 1/(3.8T * 0.3)
+      //// take less than radius given by the hardPtCut and reject everything below
+      desc.add<double>("hardCurvCut", 1.f / (0.35 * 87.f))
+          ->setComment("Cut on minimum curvature, used in DCA ntuplet selection");
 
       desc.add<bool>("earlyFishbone", true);
       desc.add<bool>("lateFishbone", false);
@@ -67,11 +83,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
       desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
       desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
-
-      desc.add<bool>("doClusterCut", true)
-          ->setComment("Cut on inner hit cluster size (in Y) for barrel-forward cells.");
-      desc.add<bool>("doZSizeCut", true)
-          ->setComment("Cut on cluster size differences (in Y) for barrel-forward cells.");
     }
 
     AlgoParams makeCommonParams(edm::ParameterSet const& cfg) {
@@ -90,6 +101,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           (float)cfg.getParameter<double>("hardCurvCut"),
           (float)cfg.getParameter<double>("cellZ0Cut"),
           (float)cfg.getParameter<double>("cellPtCut"),
+          
+          // Pixel Cluster Cut Params
+          (float)cfg.getParameter<double>("dzdrFact"),
+          (uint16_t)cfg.getParameter<unsigned int>("minYsizeB1"),
+          (uint16_t)cfg.getParameter<unsigned int>("minYsizeB2"),
+          (uint16_t)cfg.getParameter<unsigned int>("maxDYsize12"),
+          (uint16_t)cfg.getParameter<unsigned int>("maxDYsize"),
+          (uint16_t)cfg.getParameter<unsigned int>("maxDYPred"),
+
+          // Flags
           cfg.getParameter<bool>("useRiemannFit"),
           cfg.getParameter<bool>("fitNas4"),
           cfg.getParameter<bool>("earlyFishbone"),
@@ -274,7 +295,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         m_params, hits_d.nHits(), hits_d.offsetBPIX2(), nDoublets, nTracks, geometry_d.view().metadata().size(), queue);
 
     kernels.prepareHits(hits_d.view(), hits_d.view<::reco::HitModuleSoA>(), geometry_d.view(), queue);
-    kernels.buildDoublets(hits_d.view(), geometry_d.view<::reco::CAGraphSoA>(), hits_d.offsetBPIX2(), queue);
+    kernels.buildDoublets(hits_d.view(), geometry_d.view<::reco::CAGraphSoA>(), geometry_d.view<::reco::CALayersSoA>(), hits_d.offsetBPIX2(), queue);
     kernels.launchKernels(hits_d.view(),
                           hits_d.offsetBPIX2(),
                           geometry_d.view().metadata().size(),

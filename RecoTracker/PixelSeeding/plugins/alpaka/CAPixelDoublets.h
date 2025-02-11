@@ -63,12 +63,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     // cms::alpakatools::AtomicPairCounter *apc,
                                     HitsConstView hh,
                                     ::reco::CAGraphSoAConstView cc,
+                                    ::reco::CALayersSoAConstView ll,
                                     uint32_t const* __restrict__ offsets,
                                     PhiBinner<TrackerTraits> const* phiBinner,
                                     HitToCell* outerHitHisto,
                                     AlgoParams const& params) const {
         doubletsFromHisto<TrackerTraits>(
-            acc, maxNumOfDoublets, cells, nCells, /*apc,*/ hh, cc, offsets, phiBinner, outerHitHisto, params);
+            acc, maxNumOfDoublets, cells, nCells, hh, cc, ll, offsets, phiBinner, outerHitHisto, params);
       }
     };
 

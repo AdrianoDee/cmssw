@@ -34,22 +34,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                   CellToTracks const* __restrict__ cellTracksHisto,
                                   uint32_t outerHits,
                                   bool checkTrack) const {
-      // constexpr auto maxCellsPerHit = TrackerTraits::maxCellsPerHit;
-
-      // auto const isOuterHitOfCell = isOuterHitOfCellWrap->container;
-
-      // float x[maxCellsPerHit], y[maxCellsPerHit], z[maxCellsPerHit], n[maxCellsPerHit];
-      // uint32_t cc[maxCellsPerHit];
-      // uint16_t d[maxCellsPerHit];
-      // uint8_t l[maxCellsPerHit];
 
       // outermost parallel loop, using all grid elements along the slower dimension (Y or 0 in a 2D grid)
       for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, outerHits)) {
-        // auto const& vc = isOuterHitOfCell[idy];
-        uint32_t size = outerHitHisto->size(idy);  //TODO have this offset in the histo building directly
-                                                   // #ifdef GPU_DEBUG
-                                                   //         printf("hist %d histSize %d \n",idy,size);
-                                                   // #endif
+        uint32_t size = outerHitHisto->size(idy);  
         // printf("fishbone ---> outerhit %d size %d - ",idy,size);
 
         if (size < 2)
@@ -63,13 +51,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         auto xo = c0.outer_x(hh);
         auto yo = c0.outer_y(hh);
         auto zo = c0.outer_z(hh);
-        //printf("first cell %d x0 %.2f y0 %.2f z0 %.2f - ",bin[0],c0.outer_x(hh),c0.outer_y(hh),c0.outer_z(hh));
-
-        // this could be moved below
-        // precomputing these here has
-        // the advantage we then loop on less
-        // entries but we can anyway skip them below and avoid having
-        // the arrays above
+        //printf("first cell %d x0 %.2f y0 %.2f z0 %.2f - ",bin[0],c0.outer_x(hh),c0.outer_y(hh),c0.outer_z(hh));ve
 
         // #ifdef GPU_DEBUG
         //         for (auto idx = 0u; idx < size; idx++) {
@@ -77,18 +59,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         //           printf("vc[0] %d idx %d vc[idx] %d otherCell %d \n",vc[0],idx,vc[idx],otherCell);
         //         }
         // #endif
-        //TODO CHECK nInBin == size
-        // for (auto idx = 0u; idx < nInBin; idx++) {
         for (uint32_t ic : cms::alpakatools::independent_group_elements_x(acc, size)) {
-          // for (int32_t ic = 0; ic < size; ++ic) {
-          // for (auto ic = 0u; ic < size; ic++) {
+          
           unsigned int otherCell = bin[ic];
-          auto& ci = cells[otherCell];  //vc[ic]];
-          // unsigned int otherCell = bin[ic] - nHitsBPix1;
-          // auto& ci = cells[otherCell];
+          auto& ci = cells[otherCell];
+
           if (ci.unused())
-            continue;                                               // for triplets equivalent to next
-          if (checkTrack && cellTracksHisto->size(otherCell) == 0)  //ci.tracks().empty())
+            continue; // for triplets equivalent to next
+          if (checkTrack && cellTracksHisto->size(otherCell) == 0)
             continue;
 
           auto x1 = (ci.inner_x(hh) - xo);

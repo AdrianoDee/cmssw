@@ -9,8 +9,9 @@
 namespace pixelTopology {
 
   constexpr auto maxNumberOfLadders = 160;
-  constexpr uint32_t maxLayers = 28;
-
+  constexpr uint8_t maxLayers = 28;
+  constexpr uint8_t maxPairs = 64;
+  
   // TODO
   // Once CUDA is dropped this could be wrapped in #ifdef CA_TRIPLETS_HOLE
   // see DataFormats/TrackingRecHitSoa/interface/TrackingRecHitSoA.h

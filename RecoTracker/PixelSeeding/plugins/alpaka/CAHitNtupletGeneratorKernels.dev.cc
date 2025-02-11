@@ -298,7 +298,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::cout << "Early fishbone -> Done!" << std::endl;
 #endif
     }
-    blockSize = 128;
+    blockSize = 64;
     numberOfBlocks = cms::alpakatools::divide_up_by(3 * maxDoublets / 4, blockSize);
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
     alpaka::exec<Acc1D>(queue,
@@ -498,6 +498,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TrackerTraits>
   void CAHitNtupletGeneratorKernels<TrackerTraits>::buildDoublets(const HitsConstView &hh,
                                                                   const ::reco::CAGraphSoAConstView &cc,
+                                                                  const ::reco::CALayersSoAConstView &ll,
                                                                   uint32_t offsetBPIX2,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
@@ -528,18 +529,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::exec<Acc2D>(queue,
                         workDiv2D,
                         GetDoubletsFromHisto<TrackerTraits>{},
-                        // this->device_theCells_.data(),
                         maxDoublets,
                         this->device_simpleCells_.data(),
                         this->device_nCells_.data(),
-                        // this->device_cellCell_apc_,
-                        // this->device_theCellNeighbors_.data(),
-                        // this->device_theCellTracks_.data(),
                         hh,
                         cc,
+                        ll,
                         this->device_layerStarts_.data(),
                         this->device_hitPhiHist_.data(),
-                        // this->isOuterHitOfCell_.data(),
                         this->device_hitToCell_.data(),
                         this->m_params.algoParams_);
 
@@ -616,9 +613,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
     if (this->m_params.algoParams_.doSharedHitCut_ || this->m_params.algoParams_.doStats_) {
-      //   // Hits -> Track
-      //   HitToTuple::template launchInit<Acc1D>(device_hitToTupleView_, queue);
-
+     
       // fill hit->track "map"
       numberOfBlocks = cms::alpakatools::divide_up_by(3 * maxTuples / 4, blockSize);
       workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
@@ -644,8 +639,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     if (this->m_params.algoParams_.doSharedHitCut_) {
       // mark duplicates (tracks that share at least one hit)
-      numberOfBlocks = cms::alpakatools::divide_up_by(3 * maxTuples / 4,
-                                                      blockSize);  // TODO: Check if correct
+      numberOfBlocks = cms::alpakatools::divide_up_by(3 * maxTuples / 4, blockSize); 
       workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
       alpaka::exec<Acc1D>(queue,
                           workDiv1D,
@@ -717,12 +711,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           this->device_tupleMultiplicity_.data(),
                           this->device_hitToTuple_.data(),
                           this->device_hitTuple_apc_,
-                          //   this->device_theCells_.data(),
                           this->device_simpleCells_.data(),
                           this->device_nCells_.data(),
-                          //   this->device_theCellNeighbors_.data(),
-                          //   this->device_theCellTracks_.data(),
-                          //   this->isOuterHitOfCell_.data(),
+                          this->device_nTriplets_.data(),
+                          this->device_nCellTracks_.data(),
+                          this->deviceTriplets_.view(),
+                          this->deviceTracksCells_.view(),
                           nhits,
                           this->maxNumberOfDoublets_,
                           this->m_params.algoParams_,

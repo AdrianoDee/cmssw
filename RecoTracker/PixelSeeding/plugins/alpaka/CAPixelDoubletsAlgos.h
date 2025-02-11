@@ -30,30 +30,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   using namespace ::caStructures;
   using namespace ::reco;
 
-  template <typename TrackerTraits>
-  using CellNeighbors = CellNeighborsT<TrackerTraits>;
-  template <typename TrackerTraits>
-  using CellTracks = CellTracksT<TrackerTraits>;
-  template <typename TrackerTraits>
-  using CellNeighborsVector = CellNeighborsVectorT<TrackerTraits>;
-  template <typename TrackerTraits>
-  using CellTracksVector = CellTracksVectorT<TrackerTraits>;
-  template <typename TrackerTraits>
-  using OuterHitOfCell = OuterHitOfCellT<TrackerTraits>;
-
   using HitToCell = GenericContainer;
 
   template <typename TrackerTraits>
   using PhiBinner = PhiBinnerT<TrackerTraits>;
-
   //Move this ^ definition in CAStructures maybe
-  template <typename T, typename TAcc>
+
+  template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool __attribute__((always_inline)) zSizeCut(const TAcc& acc,
                                                                               HitsConstView hh,
+                                                                              ::reco::CALayersSoAConstView ll,
+                                                                              AlgoParams const& params,
                                                                               int i,
                                                                               int o) {
     const uint32_t mi = hh[i].detectorIndex();
-    bool innerB1 = mi < T::last_bpix1_detIndex;
+    const auto last_barrel = ll.layerStarts()[4] - 1;
+    const auto last_bpix1 = ll.layerStarts()[1] - 1;
+    bool innerB1 = mi <= last_bpix1;
     bool isOuterLadder = 0 == (mi / 8) % 2;
     auto mes = (!innerB1) || isOuterLadder ? hh[i].clusterSizeY() : -1;
 
@@ -66,38 +59,42 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     auto dz = hh[i].zGlobal() - hh[o].zGlobal();
     auto dr = hh[i].rGlobal() - hh[o].rGlobal();
 
-    auto innerBarrel = mi < T::last_barrel_detIndex;
-    auto onlyBarrel = mo < T::last_barrel_detIndex;
+    auto innerBarrel = mi <= last_barrel;
+    auto onlyBarrel = mo <= last_barrel;
 
     if (not innerBarrel and not onlyBarrel)
       return false;
-    auto dy = innerB1 ? T::maxDYsize12 : T::maxDYsize;
+    auto dy = innerB1 ? params.maxDYsize12_ : params.maxDYsize_;
 
     return onlyBarrel ? so > 0 && std::abs(so - mes) > dy
-                      : innerBarrel && std::abs(mes - int(std::abs(dz / dr) * T::dzdrFact + 0.5f)) > T::maxDYPred;
+                      : innerBarrel && std::abs(mes - int(std::abs(dz / dr) * params.dzdrFact_ + 0.5f)) > params.maxDYPred_;
   }
 
-  template <typename T, typename TAcc>
+  template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool __attribute__((always_inline)) clusterCut(const TAcc& acc,
                                                                                 HitsConstView hh,
+                                                                                ::reco::CALayersSoAConstView ll,
+                                                                                AlgoParams const& params,
                                                                                 uint32_t i) {
     const uint32_t mi = hh[i].detectorIndex();
-    bool innerB1orB2 = mi < T::last_bpix2_detIndex;
+    const auto last_bpix1 = ll.layerStarts()[1] - 1;
+    const auto last_bpix2 = ll.layerStarts()[2] - 1;                                                              
+    bool innerB1orB2 = mi < ll.layerStarts()[2]; 
 
     if (!innerB1orB2)
       return false;
 
-    bool innerB1 = mi < T::last_bpix1_detIndex;
+    bool innerB1 = mi <= last_bpix1;
     const bool idealConditions_ = false;
     bool isOuterLadder = idealConditions_ ? true : 0 == (mi / 8) % 2;
     auto mes = (!innerB1) || isOuterLadder ? hh[i].clusterSizeY() : -1;
 
     if (innerB1)  // B1
-      if (mes > 0 && mes < T::minYsizeB1)
+      if (mes > 0 && mes < params.minYsizeB1_)
         return true;                                                                 // only long cluster  (5*8)
-    bool innerB2 = (mi >= T::last_bpix1_detIndex) && (mi < T::last_bpix2_detIndex);  //FIXME number
+    bool innerB2 = (mi > last_bpix1) && (mi <= last_bpix2);  //FIXME number
     if (innerB2)                                                                     // B2 and F1
-      if (mes > 0 && mes < T::minYsizeB2)
+      if (mes > 0 && mes < params.minYsizeB2_)
         return true;
 
     return false;
@@ -112,6 +109,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       // cms::alpakatools::AtomicPairCounter *apc, // just to zero them
       HitsConstView hh,
       ::reco::CAGraphSoAConstView cc,
+      ::reco::CALayersSoAConstView ll,
       uint32_t const* __restrict__ offsets,
       PhiBinner<TrackerTraits> const* phiBinner,
       HitToCell* outerHitHisto,
@@ -130,7 +128,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     // nPairsMax to be optimized later (originally was 64).
     // If it should much be bigger, consider using a block-wide parallel prefix scan,
     // e.g. see  https://nvlabs.github.io/cub/classcub_1_1_warp_scan.html
-    auto& innerLayerCumulativeSize = alpaka::declareSharedVar<uint32_t[TrackerTraits::nPairs], __COUNTER__>(acc);
+    auto& innerLayerCumulativeSize = alpaka::declareSharedVar<uint32_t[pixelTopology::maxPairs], __COUNTER__>(acc);
     auto& ntot = alpaka::declareSharedVar<uint32_t, __COUNTER__>(acc);
 
 #ifdef GPU_DEBUG
@@ -168,8 +166,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       ALPAKA_ASSERT_ACC(j < innerLayerCumulativeSize[pairLayerId]);
       ALPAKA_ASSERT_ACC(0 == pairLayerId || j >= innerLayerCumulativeSize[pairLayerId - 1]);
 
-      uint8_t inner = cc.graph()[pairLayerId][0];  //TrackerTraits::layerPairs[2 * pairLayerId]; //FIXME
-      uint8_t outer = cc.graph()[pairLayerId][1];  //TrackerTraits::layerPairs[2 * pairLayerId + 1];
+      uint8_t inner = cc.graph()[pairLayerId][0];
+      uint8_t outer = cc.graph()[pairLayerId][1];
       ALPAKA_ASSERT_ACC(outer > inner);
 
       auto hoff = PhiHisto::histOff(outer);
@@ -180,7 +178,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       ALPAKA_ASSERT_ACC(i < offsets[inner + 1]);
 
       // found hit corresponding to our worker thread, now do the job
-      if (hh[i].detectorIndex() > pixelClustering::maxNumModules)
+      if (hh[i].detectorIndex() > pixelClustering::maxNumModules) //FIXME use cc
         continue;  // invalid
 
       /* maybe clever, not effective when zoCut is on
@@ -195,7 +193,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         continue;
 
       if (params.doClusterCut_ && outer > pixelTopology::last_barrel_layer &&
-          clusterCut<TrackerTraits, TAcc>(acc, hh, i))
+          clusterCut<TAcc>(acc, hh, ll, params, i))
         continue;
 
       auto mep = hh[i].iphi();
@@ -252,7 +250,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           auto mo = hh[oi].detectorIndex();
 
           // invalid
-          if (mo > pixelClustering::maxNumModules)
+          if (mo > pixelClustering::maxNumModules) //FIXME use cc
             continue;
 
           if (params.cellZ0Cut_ > 0. && z0cutoff(oi))
@@ -264,7 +262,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           if (idphi > iphicut)
             continue;
 
-          if (params.doZSizeCut_ && zSizeCut<TrackerTraits, TAcc>(acc, hh, i, oi))
+          if (params.doZSizeCut_ && zSizeCut<TAcc>(acc, hh, ll, params, i, oi))
             continue;
 
           if (params.cellPtCut_ > 0. && ptcut(oi, idphi))
@@ -284,29 +282,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #ifdef GPU_DEBUG
           printf("doublet: %d layerPair: %d inner: %d outer: %d i: %d oi: %d\n", ind, pairLayerId, inner, outer, i, oi);
 #endif
-          //           isOuterHitOfCell[oi].push_back(acc, ind);
-          // #ifdef GPU_DEBUG
-          //           if (isOuterHitOfCell[oi].full())
-          //             ++tooMany;
-          //           ++tot;
-          // #endif
         }
       }
-      //      #endif
-      // #ifdef GPU_DEBUG
-      //       if (tooMany > 0 or tot > 0)
-      //         printf("OuterHitOfCell for %d in layer %d/%d, %d,%d %d, %d %.3f %.3f %s\n",
-      //                i,
-      //                inner,
-      //                outer,
-      //                nmin,
-      //                tot,
-      //                tooMany,
-      //                iphicut,
-      //                TrackerTraits::minz[pairLayerId],
-      //                TrackerTraits::maxz[pairLayerId],
-      //                tooMany > 0 ? "FULL!!" : "not full.");
-      // #endif
     }  // loop in block...
   }
 

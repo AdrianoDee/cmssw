@@ -161,14 +161,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        uint16_t nLayers,
                        TkSoAView& track_view,
                        TkHitsSoAView& track_hits_view,
-                       const ::reco::CALayersSoAConstView& ca_layers,
-                       const ::reco::CAGraphSoAConstView& ca_cells,
+                       const ::reco::CALayersSoAConstView& ll,
+                       const ::reco::CAGraphSoAConstView& cc,
                        Queue& queue);
 
     void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
 
     void buildDoublets(const HitsConstView& hh,
                        const ::reco::CAGraphSoAConstView& cc,
+                       const ::reco::CALayersSoAConstView& ll,
                        uint32_t offsetBPIX2,
                        Queue& queue);
 

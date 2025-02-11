@@ -162,6 +162,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // trying to free the track building process from hardcoded layers, leaving
     // the visit of the graph based on the neighborhood connections between cells.
+
     template <int DEPTH, typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void find_ntuplets(TAcc const& acc,
                                                       const ::reco::CAGraphSoAConstView& cc,
@@ -189,16 +190,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ALPAKA_ASSERT_ACC(tmpNtuplet.size() <= int(TrackerTraits::maxHitsOnTrack - 3));
 
         bool last = true;
-        // for (auto o = cellNeighborsHisto->begin(doubletId); o != cellNeighborsHisto->end(doubletId); ++o)
-        //  printf("doubletIdHisto: %ld -> %d\n",doubletId,*o);
         auto const* __restrict__ bin = cellNeighborsHisto->begin(doubletId);
         auto nInBin = cellNeighborsHisto->size(doubletId);
 
         for (auto idx = 0u; idx < nInBin; idx++) {
           // FIXME implement alpaka::ldg and use it here? or is it const* __restrict__ enough?
           unsigned int otherCell = bin[idx];
-          // for (unsigned int otherCell : outerNeighbors()) {
-          // #ifdef GPU_DEBUG
           if (cells[otherCell].isKilled())
             continue;
 #ifdef GPU_DEBUG
@@ -263,9 +260,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                     break;
                   }
                   cellTracksHisto->count(acc, c);
-                  // #ifdef GPU_DEBUG
-                  //                   printf("cellToTrack n. %d cell %d track %d\n",t_ind,c,it);
-                  // #endif
+
                   ct[t_ind].inner() = c;   //cell
                   ct[t_ind].outer() = it;  //track
                 }

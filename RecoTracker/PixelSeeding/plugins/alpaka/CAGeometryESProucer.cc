@@ -22,8 +22,9 @@
 
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 
-#define GPU_DEBUG
+//#define GPU_DEBUG
 
+//Stay here or in RecoTracker/GeometryESProducers? or /Records?
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   class CAGeometryESProducer : public ESProducer {
   public:

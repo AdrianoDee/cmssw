@@ -93,7 +93,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   cms::alpakatools::AtomicPairCounter *apc,
                                   CASimpleCell<TrackerTraits> const *__restrict__ cells,
                                   uint32_t const *__restrict__ nCells,
-                                  int32_t nHits,  //could be just the nOnes() of hitToTuple
+                                  uint32_t const *__restrict__ nTrips,
+                                  uint32_t const *__restrict__ nCellTracks,
+                                  caStructures::CACoupleSoAConstView cellCell,
+                                  caStructures::CACoupleSoAConstView cellTrack,
+                                  int32_t nHits, 
                                   uint32_t maxNumberOfDoublets,
                                   AlgoParams const &params,
                                   Counters *counters) const {
@@ -118,7 +122,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                apc->get().first,
                apc->get().second,
                nHits);
-        if (apc->get().first < TrackerTraits::maxNumberOfQuadruplets) {
+        if (apc->get().first < tracks_view.metadata().size()) {
           ALPAKA_ASSERT_ACC(foundNtuplets->size(apc->get().first) == 0);
           ALPAKA_ASSERT_ACC(foundNtuplets->size() == apc->get().second);
         }
@@ -134,32 +138,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 #endif
 
       if (cms::alpakatools::once_per_grid(acc)) {
-        if (apc->get().first >= TrackerTraits::maxNumberOfQuadruplets)
+        if (apc->get().first >= uint32_t(tracks_view.metadata().size()))
           printf("Tuples overflow\n");
         if (*nCells >= maxNumberOfDoublets)
           printf("Cells overflow\n");
-        //         if (cellNeighbors && cellNeighbors->full())
-        //           printf("cellNeighbors overflow %d %d \n", cellNeighbors->capacity(), cellNeighbors->size());
-        //         if (cellTracks && cellTracks->full())
-        //           printf("cellTracks overflow\n");
-        //         if (int(hitToTuple->nOnes()) < nHits)
-        //           printf("ERROR hitToTuple  overflow %d %d\n", hitToTuple->nOnes(), nHits);
-        // #ifdef GPU_DEBUG
-        //         printf("size of cellNeighbors %d \n cellTracks %d \n hitToTuple %d \n",
-        //                cellNeighbors->size(),
-        //                cellTracks->size(),
-        //                hitToTuple->size());
-        // #endif
+        if (*nTrips >= uint32_t(cellCell.metadata().size()))
+          printf("Triplets overflow\n");
+        if (*nCellTracks >= uint32_t(cellTrack.metadata().size()))
+          printf("TracksToCell overflow\n");
       }
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, *nCells)) {
         auto const &thisCell = cells[idx];
         if (thisCell.hasFishbone() && !thisCell.isKilled())
           alpaka::atomicAdd(acc, &c.nFishCells, 1ull, alpaka::hierarchy::Blocks{});
-        // if (thisCell.outerNeighbors().full())  //++tooManyNeighbors[thisCell.theLayerPairId];
-        //   printf("OuterNeighbors overflow %d in %d\n", idx, thisCell.layerPairId());
-        // if (thisCell.tracks().full())  //++tooManyTracks[thisCell.theLayerPairId];
-        //   printf("Tracks overflow %d in %d\n", idx, thisCell.layerPairId());
         if (thisCell.isKilled())
           alpaka::atomicAdd(acc, &c.nKilledCells, 1ull, alpaka::hierarchy::Blocks{});
         if (!thisCell.unused())
@@ -167,11 +159,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         if ((0 == hitToTuple->size(thisCell.inner_hit_id())) && (0 == hitToTuple->size(thisCell.outer_hit_id())))
           alpaka::atomicAdd(acc, &c.nZeroTrackCells, 1ull, alpaka::hierarchy::Blocks{});
       }
-
-      // // FIXME this loop was up to nHits - isOuterHitOfCell.offset in the CUDA version
-      // for (auto idx : cms::alpakatools::uniform_elements(acc, nHits))
-      //   if ((*isOuterHitOfCell).container[idx].full())  // ++tooManyOuterHitOfCell;
-      //     printf("OuterHitOfCell overflow %d\n", idx);
     }
   };
 
@@ -264,8 +251,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       const auto ntNCells = (*nCells);
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, ntNCells)) {
-        // auto const &thisCell = cells[idx];
-        // if (thisCell.tracks().size() < 2)
         if (cellTracksHisto->size(idx) < 2)
           continue;
 
@@ -276,11 +261,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
         // full crazy combinatorics
         auto const *__restrict__ thisCellTracks = cellTracksHisto->begin(idx);
-        // int ntr = thisCell.tracks().size();
         int ntr = cellTracksHisto->size(idx);
         for (int i = 0; i < ntr - 1; i++) {
-          // for (int i = 0; i < ntr - 1; ++i) {
-          auto it = thisCellTracks[i];  //thisCell.tracks()[i];
+          auto it = thisCellTracks[i];  
           auto qi = tracks_view[it].quality();
           if (qi <= reject)
             continue;
@@ -289,8 +272,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto cti = tracks_view[it].state()(3);
           auto e2cti = tracks_view[it].covariance()(12);
           for (int j = i + 1; j < ntr; ++j) {
-            // auto j = bin[jj];
-            auto jt = thisCellTracks[j];  //thisCell.tracks()[j];
+
+            auto jt = thisCellTracks[j];
             auto qj = tracks_view[jt].quality();
             if (qj <= reject)
               continue;
@@ -313,7 +296,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
         // find maxQual
         auto maxQual = reject;  // no duplicate!
-        // for (auto it : thisCell.tracks()) {
         for (int i = 0; i < ntr; i++) {
           auto it = thisCellTracks[i];
           if (tracks_view[it].quality() > maxQual)
@@ -324,7 +306,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           continue;
 
         // find min score
-        // for (auto it : thisCell.tracks()) {
         for (int i = 0; i < ntr; i++) {
           auto it = thisCellTracks[i];
           if (tracks_view[it].quality() == maxQual && score(it) < mc) {
@@ -337,7 +318,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           continue;
 
         // mark all other duplicates  (not yet, keep it loose)
-        // for (auto it : thisCell.tracks()) {
         for (int i = 0; i < ntr; i++) {
           auto it = thisCellTracks[i];
           if (tracks_view[it].quality() > loose && it != im)
@@ -353,16 +333,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc,
                                   cms::alpakatools::AtomicPairCounter *apc,  // just to zero them
-                                  // cms::alpakatools::AtomicPairCounter *cellAPC,
                                   HitsConstView hh,
                                   reco::CALayersSoAConstView ll,
                                   caStructures::CACoupleSoAView cn,
-                                  // CACellT<TrackerTraits> *cells,
                                   CASimpleCell<TrackerTraits> *cells,
                                   uint32_t const *nCells,
                                   uint32_t *nTrips,
-                                  // CellNeighborsVector<TrackerTraits> *cellNeighbors,
-                                  // OuterHitOfCell<TrackerTraits> *isOuterHitOfCell,
                                   HitToCell const *__restrict__ outerHitHisto,
                                   CellToCell *cellNeighborsHisto,
                                   AlgoParams const &params) const {
@@ -384,9 +360,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         auto const *__restrict__ outerHitCells = outerHitHisto->begin(innerHitId);
         auto const numberOfPossibleNeighbors = outerHitHisto->size(innerHitId);
 
-        // uint32_t numberOfPossibleNeighbors = (*isOuterHitOfCell)[innerHitId].size(); //REMOVE ME!
-        // uint32_t numberOfPossibleNeighbors = outerHitHisto->size(innerHitId);
-        // numberOfPossibleNeighbors = numberOfPossibleFromHisto;
 #ifdef GPU_DEBUG
         printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d\n",
                *nCells,
@@ -395,8 +368,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                thisCell.innerLayer(),
                numberOfPossibleNeighbors);
 #endif
-        //printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d;%d\n",*nCells,innerHitId,cellIndex,thisCell.innerLayer(),numberOfPossibleNeighbors,numberOfPossibleFromHisto);
-        // auto vi = (*isOuterHitOfCell)[innerHitId].data();
         auto ri = thisCell.inner_r(hh);
         auto zi = thisCell.inner_z(hh);
         auto ro = thisCell.outer_r(hh);
@@ -426,14 +397,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                    oc.inner_hit_id(),
                    oc.outer_hit_id());
 #endif
-            // printf("t_ind %d\n",t_ind);
-            // #ifdef GPU_DEBUG
-            //             printf("filling cell no. %d %d: %d -> %d\n",t_ind,cellNeighborsHisto->size(),otherCell,cellIndex);
-            // #endif
-            // oc.addOuterNeighbor(acc, cellIndex, *cellNeighbors);
 
-            // ALPAKA_ASSERT_ACC(t_ind == );
-            // add check for size?
+#ifdef GPU_DEBUG
+//TODO: this is a lot of printouts, maybe differentiate from basic GPU_DEBUG
+            printf("filling cell no. %d %d: %d -> %d\n",t_ind,cellNeighborsHisto->size(),otherCell,cellIndex);
+#endif
+
             if (t_ind >= maxTriplets) {
               printf("Warning!!!! Too many cell->cell (triplets) associations (limit = %d)!\n", cn.metadata().size());
               alpaka::atomicSub(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});

@@ -11,6 +11,7 @@ namespace caStructures {
 
   //Configuration params common to all topologies, for the algorithms
   struct AlgoParams {
+    
     // Container sizes
     float avgHitsPerTrack_;
     float avgCellsPerHit_;
@@ -24,6 +25,16 @@ namespace caStructures {
     float hardCurvCut_;
     float cellZ0Cut_;
     float cellPtCut_;
+    
+    // Pixel Cluster Cut Params
+    float dzdrFact_;  // from dz/dr to "DY"
+    uint16_t minYsizeB1_;
+    uint16_t minYsizeB2_;
+    uint16_t maxDYsize12_;
+    uint16_t maxDYsize_;
+    uint16_t maxDYPred_;
+
+    // Flags
     bool useRiemannFit_;
     bool fitNas4_;
     bool earlyFishbone_;
