@@ -97,11 +97,10 @@ from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
 ### Alpaka Pixel Track Reco
 
 from Configuration.ProcessModifiers.alpaka_cff import alpaka
-from Configuration.ProcessModifiers.stripNtupletFit_cff import stripNtupletFit
 #from RecoTracker.PixelSeeding.caGeometryESProducer_cfi import caGeometryESProducer as _caGeometryESProducer
 def _addCAGeometryESProducer(process):
     process.load("RecoTracker.PixelSeeding.CAGeometryESProducer_cfi")
-    # process.caGeometryESProducer.appendToDataLabel = cms.string("caGeometry")
+    process.CAGeometryESProducer.appendToDataLabel = cms.string("caGeometry")
 
     # phase2_tracker.toModify(process.caGeometryESProducer,
     #     pairGraph = [ 0,  1,  0,  4,  0,  16,  ##BPIX1 (3)

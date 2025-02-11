@@ -1,8 +1,8 @@
 import FWCore.ParameterSet.Config as cms
-from RecoTracker.PixelSeeding.caGeometryESProducer_cfi import caGeometryESProducer as _caGeometryESProducer
-_caGeometryESProducer.appendToDataLabel = cms.string("caGeometry")
+from RecoTracker.PixelSeeding.caGeometryESProducer_cfi import caGeometryESProducer as CAGeometryESProducer
+from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
 
-phase2_tracker.toModify(_caGeometryESProducer,
+phase2_tracker.toModify(CAGeometryESProducer,
     pairGraph = [ 0,  1,  0,  4,  0,  16,  ##BPIX1 (3)
       1,  2,  1,  4,  1,  16,  ##BPIX2 (6)
       2,  3,  2,  4,  2,  16,  ##BPIX3 & Forward (9)
@@ -49,12 +49,3 @@ phase2_tracker.toModify(_caGeometryESProducer,
                                              9.0, 9.0, 8.0, 8.0, 8.0, 11.0, 9.0, 9.0, 9.0, 8.0, 8.0, 8.0, 11.0]
       )
 
-stripNtupletFit.toModify(_caGeometryESProducer,
-    pairGraph = list(getattr(_caGeometryESProducer, "pairGraph")) + [0, 11],
-    maxZ = list(getattr(_caGeometryESProducer, "maxZ")) + [1000.0],
-    caDCACuts = list(getattr(_caGeometryESProducer, "caDCACuts")) + [0.3],
-    caThetaCuts = list(getattr(_caGeometryESProducer, "caThetaCuts")) + [0.25],
-    minZ =  list(getattr(_caGeometryESProducer, "minZ")) + [-1000.0],
-    maxR =  list(getattr(_caGeometryESProducer, "maxR")) + [10000.0],
-    phiCuts = list(getattr(_caGeometryESProducer, "phiCuts")) + [1000]
-)
