@@ -58,3 +58,9 @@
   <use name="HeterogeneousCore/CUDAUtilities"/>
   <flags CXXFLAGS="-g -DGPU_DEBUG"/>
 </bin>
+
+<bin name="testRadixSortDigi" file="alpaka/radixSortDigis_t.dev.cc">
+  <use name="alpaka"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
