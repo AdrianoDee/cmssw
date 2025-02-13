@@ -26,25 +26,32 @@ using namespace cms::alpakatools;
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 
 
-void sortDigis(Queue& queue, bool useShared) {
+void sortDigis(Queue& queue, bool shuffle, const int blockSize = 5000) {
 
   std::chrono::high_resolution_clock::duration delta = 0ns;
   constexpr auto nbytes = 4;
 
-  constexpr int blocks = 1200; // > 512 * 1024 digis
-  constexpr int blockSize = 5000;
-  constexpr int N = blockSize * blocks;
+  constexpr int blocks = 120;
+  const int N = blockSize * blocks;  // > 500k digis
   std::vector <uint32_t> digis(N); // just to use is_sorted
 
+  std::cout << " - N : " << N << std::endl;
   auto v_h = cms::alpakatools::make_host_buffer<uint32_t[]>(queue, N);
 
   for (long long int j = 0; j < N; j++)
     v_h[j] = digis[j] = j/1000; // 1000 digis per module
-
+  
   //insert spurious
-  for (long long int j = 0; j < N; j = j + 10)
-    v_h[j] = digis[j] = j/120;
+  for (long long int j = 0; j < N; j = j + 5)
+    v_h[j] = digis[j] = j/12;
 
+  if (shuffle)
+  {
+    std::mt19937 eng;
+    std::shuffle(v_h.data(), v_h.data() + N, eng);
+    for (long long int j = 0; j < N; j++)
+      digis[j] = v_h[j];
+  }
   
   if (N < 1e3) // avoid huge printouts
   {
@@ -60,7 +67,7 @@ void sortDigis(Queue& queue, bool useShared) {
   offsets_h[0] = 0;
   for (int j = 1; j < blocks + 1; ++j) {
     offsets_h[j] = offsets_h[j - 1] + blockSize - blockSize/10;
-    assert(offsets_h[j] <= N);
+    assert(int(offsets_h[j]) <= N);
   }
 
   auto v_d = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, N);
@@ -76,47 +83,45 @@ void sortDigis(Queue& queue, bool useShared) {
 
   auto workdiv = make_workdiv<Acc1D>(blocks, nthreads);
 
-  if(useShared)
-  { 
-    int iteration = 0;
-    std::vector<uint32_t> sortedDigis(N);
-    do{
-      std::cout << "Iteration: " << iteration++ << std::endl;
+  int iteration = 0;
+  std::vector<uint32_t> sortedDigis(N);
+  do{
+    std::cout << "Iteration: " << iteration++ << std::endl;
 
-      sortedDigis.clear();
-      auto start = std::chrono::high_resolution_clock::now();
-      alpaka::enqueue(queue,
-        alpaka::createTaskKernel<Acc1D>(workdiv,
-                                        radixSortMultiWrapper<uint32_t, nbytes>{},
-                                        v_d.data(),
-                                        ind_d.data(),
-                                        off_d.data(),
-                                        nullptr,
-                                        blockSize * sizeof(uint16_t)));
+    sortedDigis.clear();
+    auto start = std::chrono::high_resolution_clock::now();
+    alpaka::enqueue(queue,
+      alpaka::createTaskKernel<Acc1D>(workdiv,
+                                      radixSortMultiWrapper<uint32_t, nbytes>{},
+                                      v_d.data(),
+                                      ind_d.data(),
+                                      off_d.data(),
+                                      nullptr,
+                                      blockSize * sizeof(uint16_t)));
 
-      alpaka::memcpy(queue, ind_h, ind_d);
-      alpaka::wait(queue);
-      delta += std::chrono::high_resolution_clock::now() - start;
-      
-      auto I = 0;
-      for (int ib = 0; ib < blocks; ++ib) {
-        for (auto j = offsets_h[ib] + 1; j < offsets_h[ib + 1]; j++) {
-
-          auto a = v_h.data() + offsets_h[ib];
-          auto k1 = a[ind_h[j]];
-          sortedDigis[I++] = k1;
-          if (N < 1e3)
-            std::cout << k1 << ";";
-        }
-      }
-      if (N < 1e3)
-        std::cout << std::endl;
-
-    } while (not std::is_sorted(sortedDigis.begin(),sortedDigis.end()));
+    alpaka::memcpy(queue, ind_h, ind_d);
+    alpaka::wait(queue);
+    delta += std::chrono::high_resolution_clock::now() - start;
     
-    std::cout << "Done in " << iteration << " iterations and " 
-        << std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() << " milliseconds " << std::endl;
-}
+    auto I = 0;
+    for (int ib = 0; ib < blocks; ++ib) {
+      for (auto j = offsets_h[ib] + 1; j < offsets_h[ib + 1]; j++) {
+
+        auto a = v_h.data() + offsets_h[ib];
+        auto k1 = a[ind_h[j]];
+        sortedDigis[I++] = k1;
+        if (N < 1e3)
+          std::cout << k1 << ";";
+      }
+    }
+    if (N < 1e3)
+      std::cout << std::endl;
+
+  } while (not std::is_sorted(sortedDigis.begin(),sortedDigis.end()));
+  
+  std::cout << "Done in " << iteration << " iterations and " 
+      << std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() << " milliseconds " << std::endl;
+
 }
 
 int main() {
@@ -128,12 +133,22 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
+  int devCount = 1;
   for (auto const& device : devices) {
     Queue queue(device);
+    std::cout << "= Device " << devCount++ << std::endl;
+    std::cout << "> Sorting digis with spurious!" << std::endl;
 
-    std::cout << "Sorting digis!" << std::endl;
+    sortDigis(queue, false, 1000);
+    sortDigis(queue, false, 5000);
+    sortDigis(queue, false, 10000);
+    sortDigis(queue, false, 20000);
 
-    sortDigis(queue, true);
+    std::cout << "> Sorting shuffled digis!" << std::endl;
+    sortDigis(queue, true, 1000);
+    sortDigis(queue, true, 5000);
+    sortDigis(queue, true, 10000);
+    sortDigis(queue, true, 20000);
   }
   return 0;
 }
