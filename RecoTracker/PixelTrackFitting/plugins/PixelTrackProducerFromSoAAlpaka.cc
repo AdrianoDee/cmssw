@@ -73,7 +73,6 @@ private:
 
   int32_t const minNumberOfHits_;
   pixelTrack::Quality const minQuality_;
-
 };
 
 PixelTrackProducerFromSoAAlpaka::PixelTrackProducerFromSoAAlpaka(const edm::ParameterSet &iConfig)
@@ -110,7 +109,6 @@ void PixelTrackProducerFromSoAAlpaka::fillDescriptions(edm::ConfigurationDescrip
   desc.add<edm::InputTag>("pixelRecHitLegacySrc", edm::InputTag("siPixelRecHitsPreSplittingLegacy"));
   desc.add<int>("minNumberOfHits", 0);
   desc.add<std::string>("minQuality", "loose");
-  desc.add<bool>("useStripHits",false);
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -147,7 +145,6 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
   std::vector<TrackingRecHit const *> hitmap;
   auto const &pixelRecHits = pixelRecHitsDSV.data();
   auto const nPixelHits = pixelRecHits.size();
-  auto nPixelModules = pixelRecHitsDSV.size();
 
   auto const &hitsModuleStart = iEvent.get(hmsToken_);
 
@@ -164,19 +161,6 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
 
     assert(nullptr == hitmap[idx]);
     hitmap[idx] = &pixelHit;
-  }
-
-  if (useStripHits_) {
-    for (const auto& stripModuleHits : *stripRechitsDSV) {
-
-      auto moduleIdx = stripModuleHits.begin()->det()->index();
-
-      for (auto i = 0u; i < stripModuleHits.size(); ++i) {
-        auto j = hitsModuleStart[moduleIdx] + i;
-        hitmap[j] = &*(stripModuleHits.begin() + i);
-        // ++counter[j];
-      }
-    }
   }
 
   std::vector<const TrackingRecHit *> hits;
@@ -281,9 +265,9 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     // filter???
     tracks.emplace_back(track.release(), hits);
   }
-//#ifdef GPU_DEBUG
+#ifdef GPU_DEBUG
   std::cout << "processed " << nt << " good tuples " << tracks.size() << " out of " << indToEdm.size() << std::endl;
-//#endif
+#endif
 
   // store tracks
   storeTracks(iEvent, tracks, httopo);
