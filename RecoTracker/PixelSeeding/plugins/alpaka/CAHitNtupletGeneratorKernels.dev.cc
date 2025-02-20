@@ -235,16 +235,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         kernelConnectWorkDiv,
                         Kernel_connect<TrackerTraits>{},
                         this->device_hitTuple_apc_,  // needed only to be reset, ready for next kernel
-                        // this->device_cellCell_apc_,
                         hh,
                         ll,
                         this->deviceTriplets_.view(),
-                        // this->device_theCells_.data(),
                         this->device_simpleCells_.data(),
                         this->device_nCells_.data(),
                         this->device_nTriplets_.data(),
-                        // this->device_theCellNeighbors_.data(),
-                        // this->isOuterHitOfCell_.data(),
                         this->device_hitToCell_.data(),
                         this->device_cellToNeighbors_.data(),
                         this->m_params.algoParams_);
@@ -285,10 +281,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           fishboneWorkDiv,
                           CAFishbone<TrackerTraits>{},
                           hh,
-                          //   this->device_theCells_.data(),
                           this->device_simpleCells_.data(),
                           this->device_nCells_.data(),
-                          //   this->isOuterHitOfCell_.data(),
                           this->device_hitToCell_.data(),
                           this->device_cellToTracks_.data(),
                           nhits - offsetBPIX2,
@@ -320,46 +314,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Kernel_find_ntuplets -> Done!" << std::endl;
-#endif
-    //     alpaka::exec<Acc1D>(queue,
-    //                         workDiv1D,
-    //                         Kernel_find_triplets<TrackerTraits>{},
-    //                         cc,
-    //                         tracks_view,
-    //                         this->device_hitContainer_.data(),
-    //                         this->device_cellToNeighbors_.data(),
-    //                         this->device_cellToTracks_.data(),
-    //                         this->deviceTracksCells_.view(),
-    //                         this->deviceTriplets_.view(),
-    //                         this->device_simpleCells_.data(),
-    //                         this->device_nCellTracks_.data(),
-    //                         this->device_nTriplets_.data(),
-    //                         this->device_hitTuple_apc_);
-
-    // #ifdef GPU_DEBUG
-    //     alpaka::wait(queue);
-    //     std::cout << "Kernel_find_triplets -> Done!" << std::endl;
-    // #endif
-
-    // alpaka::exec<Acc1D>(queue,
-    //                         workDiv1D,
-    //                         Kernel_extend_triplets<TrackerTraits>{},
-    //                         cc,
-    //                         tracks_view,
-    //                         this->device_hitContainer_.data(),
-    //                         this->device_cellToNeighbors_.data(),
-    //                         this->device_cellToTracks_.data(),
-    //                         this->deviceTracksCells_.view(),
-    //                         this->deviceTriplets_.view(),
-    //                         this->device_simpleCells_.data(),
-    //                         this->device_nCellTracks_.data(),
-    //                         this->device_nTriplets_.data(),
-    //                         this->device_hitTuple_apc_,
-    //                         this->m_params.algoParams_);
-
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Kernel_extend_triplets -> Done!" << std::endl;
 #endif
 
     CellToTracks::template launchFinalize<Acc1D>(this->device_cellToTracksView_, queue);
@@ -455,6 +409,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_tupleMultiplicity_.data());
     GenericContainer::template launchFinalize<Acc1D>(this->device_tupleMultiplicityView_, queue);
 
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
+    std::cout << "Kernel_countMultiplicity   -> done!" << std::endl;
+#endif
+
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
@@ -525,6 +484,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef GPU_DEBUG
     std::cout << "nActualPairs = " << cc.metadata().size() << std::endl;
+    std::cout << blocks << " - " << threadsPerBlock << " - " << stride << std::endl;
 #endif
     alpaka::exec<Acc2D>(queue,
                         workDiv2D,
@@ -546,6 +506,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     blocks = cms::alpakatools::divide_up_by(maxDoublets, threadsPerBlock);
     auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
 
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
+    std::cout << "GetDoubletsFromHisto   -> done!" << std::endl;
+#endif
+
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
                         FillDoubletsHisto<TrackerTraits>{},
@@ -556,6 +521,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
+    std::cout << "FillDoubletsHisto   -> done!" << std::endl;
 #endif
   }
 
@@ -645,7 +611,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           workDiv1D,
                           Kernel_rejectDuplicate<TrackerTraits>{},
                           tracks_view,
-                          this->m_params.algoParams_.minHitsForSharingCut_,
                           this->m_params.algoParams_.dupPassThrough_,
                           this->device_hitToTuple_.data());
 #ifdef GPU_DEBUG
@@ -674,7 +639,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             workDiv1D,
                             Kernel_simpleTripletCleaner<TrackerTraits>{},
                             tracks_view,
-                            this->m_params.algoParams_.minHitsForSharingCut_,
                             this->m_params.algoParams_.dupPassThrough_,
                             this->device_hitToTuple_.data());
 #ifdef GPU_DEBUG
@@ -689,7 +653,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             workDiv1D,
                             Kernel_tripletCleaner<TrackerTraits>{},
                             tracks_view,
-                            this->m_params.algoParams_.minHitsForSharingCut_,
                             this->m_params.algoParams_.dupPassThrough_,
                             this->device_hitToTuple_.data());
 #ifdef GPU_DEBUG

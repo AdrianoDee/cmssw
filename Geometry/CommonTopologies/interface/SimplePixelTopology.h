@@ -346,7 +346,7 @@ namespace pixelTopology {
 
     static constexpr uint32_t maxSizeCluster = 2047;
 
-    static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
+    static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 128;  // for both x and y
     static constexpr uint32_t getDoubletsFromHistoMinBlocksPerMP = 16;
 
     static constexpr uint16_t last_bpix1_detIndex = 108;

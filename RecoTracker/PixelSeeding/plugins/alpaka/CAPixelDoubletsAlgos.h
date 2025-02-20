@@ -22,8 +22,8 @@
 #include "CAStructures.h"
 #include "CAHitNtupletGeneratorKernels.h"
 
-//#define GPU_DEBUG
-//#define NTUPLE_DEBUG
+// #define GPU_DEBUG
+// #define DOUBLETS_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   using namespace cms::alpakatools;
@@ -106,7 +106,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       uint32_t maxNumOfDoublets,
       CASimpleCell<TrackerTraits>* cells,
       uint32_t* nCells,
-      // cms::alpakatools::AtomicPairCounter *apc, // just to zero them
       HitsConstView hh,
       ::reco::CAGraphSoAConstView cc,
       ::reco::CALayersSoAConstView ll,
@@ -131,7 +130,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     auto& innerLayerCumulativeSize = alpaka::declareSharedVar<uint32_t[pixelTopology::maxPairs], __COUNTER__>(acc);
     auto& ntot = alpaka::declareSharedVar<uint32_t, __COUNTER__>(acc);
 
-#ifdef GPU_DEBUG
+#ifdef DOUBLETS_DEBUG
     if (cms::alpakatools::once_per_grid(acc))
       printf("cellZ0Cut_ = %.2f cellPtCut_ = %.2f doClusterCut = %d doZ0Cut = %d  doPtCut = %d doZSizeCut = %d\n",
              params.cellZ0Cut_,
@@ -279,7 +278,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           outerHitHisto->count(acc, oi - hh.offsetBPIX2());
           // cells[ind].init(*cellNeighbors, *cellTracks, hh, pairLayerId, inner, outer, i, oi);
           cells[ind].init(hh, pairLayerId, inner, outer, i, oi);
-#ifdef GPU_DEBUG
+#ifdef DOUBLETS_DEBUG
           printf("doublet: %d layerPair: %d inner: %d outer: %d i: %d oi: %d\n", ind, pairLayerId, inner, outer, i, oi);
 #endif
         }

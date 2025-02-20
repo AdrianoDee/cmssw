@@ -63,7 +63,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               agc.endCapZ[1] = ag.endCapZ[1] - bs->z;
             }
           }
-#endif  // CA_TRIPLETS_HOLE \
+#endif  // CA_TRIPLETS_HOLE 
+
     // to be moved in common namespace...
           using pixelClustering::invalidModuleId;
           constexpr int32_t maxHitsInIter = pixelCPEforDevice::MaxHitsInIter;
