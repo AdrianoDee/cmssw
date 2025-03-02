@@ -11,46 +11,48 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 
-#include "DataFormats/TrackSoA/interface/TracksHost.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsHost.h"
+
+#include <vector>
 
 namespace edmtest {
 
-  class TestReadHostTrackSoA : public edm::global::EDAnalyzer<> {
+  class TestReadHostHitSoA : public edm::global::EDAnalyzer<> {
   public:
-    TestReadHostTrackSoA(edm::ParameterSet const&);
+    TestReadHostHitSoA(edm::ParameterSet const&);
     void analyze(edm::StreamID, edm::Event const&, edm::EventSetup const&) const override;
     void throwWithMessage(const char*) const;
     static void fillDescriptions(edm::ConfigurationDescriptions&);
 
-    using TracksOnHost = ::reco::TracksHost;
+    using HitsOnHost = ::reco::TrackingRecHitHost;
 
   private:
 
-    edm::EDGetTokenT<TracksOnHost> getToken_;
+    edm::EDGetTokenT<HitsOnHost> getToken_;
   };
 
-  TestReadHostTrackSoA::TestReadHostTrackSoA(edm::ParameterSet const& iPSet)
+  TestReadHostHitSoA::TestReadHostHitSoA(edm::ParameterSet const& iPSet)
       : getToken_(consumes(iPSet.getParameter<edm::InputTag>("input"))) {}
 
-  void TestReadHostTrackSoA::analyze(edm::StreamID, edm::Event const& iEvent, edm::EventSetup const&) const {
-    auto const& tracks = iEvent.get(getToken_);
-    auto tracksView = tracks.view(); 
+  void TestReadHostHitSoA::analyze(edm::StreamID, edm::Event const& iEvent, edm::EventSetup const&) const {
+    auto const& hits = iEvent.get(getToken_);
+    auto hitsView = hits.view(); 
 
-    for (int i = 0; i < tracksView.metadata().size(); ++i) {
-      if(tracksView[i].eta() != float(i))
+    for (int i = 0; i < hitsView.metadata().size(); ++i) {
+      if(hitsView[i].xGlobal() != float(i))
       {
-        throw cms::Exception("TestReadHostTrackSoA Failure") << "TestReadHostTrackSoA::analyze, entry. i = " << i;
+        throw cms::Exception("TestWriteHostHitSoA Failure") << "TestReadHostHitSoA::analyze, entry. i = " << i;
       }
     }
   }
 
 
-  void TestReadHostTrackSoA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+  void TestReadHostHitSoA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
     desc.add<edm::InputTag>("input");
     descriptions.addDefault(desc);
   }
 }  // namespace edmtest
 
-using edmtest::TestReadHostTrackSoA;
-DEFINE_FWK_MODULE(TestReadHostTrackSoA);
+using edmtest::TestReadHostHitSoA;
+DEFINE_FWK_MODULE(TestReadHostHitSoA);

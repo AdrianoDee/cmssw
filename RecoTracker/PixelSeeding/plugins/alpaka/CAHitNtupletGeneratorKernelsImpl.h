@@ -81,6 +81,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     }
   };
 
+  class Kernel_printSizes {
+  public:
+    template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
+    ALPAKA_FN_ACC void operator()(TAcc const &acc, 
+      HitsConstView hh,
+      uint32_t const *__restrict__ nCells,
+      uint32_t const *__restrict__ nTrips,
+      uint32_t const *__restrict__ nCellTracks) const {
+
+        if (cms::alpakatools::once_per_grid(acc))
+          printf("nSizes:%d;%d;%d;%d\n",hh.metadata().size(),*nCells,*nTrips,*nCellTracks);
+      }
+    };
+
   template <typename TrackerTraits>
   class Kernel_checkOverflows {
   public:

@@ -1,12 +1,3 @@
-// -*- C++ -*-
-
-//
-/**\class edmtest::TestWriteHostHitSoA
-  This is a test for writing the HitSoA to event
-*/
-// Original Author:  W. David Dagenhart
-//         Created:  25 Sep 2023
-
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/global/EDProducer.h"

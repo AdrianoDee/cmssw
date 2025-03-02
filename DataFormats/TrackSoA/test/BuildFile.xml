@@ -12,10 +12,12 @@
 <flags ALPAKA_BACKENDS="cuda serial"/>
 </bin>
 
-<library name="testTrackSoA" file="TestWriteHostTrackSoA.cc">
+<library name="testTrackSoA" file="TestWriteHostTrackSoA.cc,TestReadHostTrackSoA.cc,">
   <flags EDM_PLUGIN="1"/>
   <use name="alpaka"/>
   <use name="FWCore/Framework"/>
   <use name="FWCore/ParameterSet"/>
   <use name="FWCore/Utilities"/>
 </library>
+
+<test name="testWriteAndReadTrackSoA" command="testWriteAndReadTrackSoA.sh" />

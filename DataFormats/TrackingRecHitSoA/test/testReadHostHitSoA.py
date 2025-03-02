@@ -5,8 +5,8 @@ process = cms.Process("READ")
 
 process.source = cms.Source("PoolSource", fileNames = cms.untracked.vstring("file:"+sys.argv[1]))
 
-process.testReadHostTrackSoA = cms.EDAnalyzer("TestReadHostTrackSoA",
-    input = cms.InputTag("trackSoA", "", "WRITE")
+process.testReadHostHitSoA = cms.EDAnalyzer("TestReadHostHitSoA",
+    input = cms.InputTag("hitSoA", "", "WRITE")
 )
 
 process.out = cms.OutputModule("PoolOutputModule",
@@ -14,6 +14,6 @@ process.out = cms.OutputModule("PoolOutputModule",
     fastCloning = cms.untracked.bool(False)
 )
 
-process.path = cms.Path(process.testReadHostTrackSoA)
+process.path = cms.Path(process.testReadHostHitSoA)
 
 process.endPath = cms.EndPath(process.out)

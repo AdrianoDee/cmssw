@@ -686,6 +686,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           this->counters_.data());
     }
 
+#ifdef CA_STATS
+    alpaka::wait(queue);
+    workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(1, 1);
+    alpaka::exec<Acc1D>(queue,
+        workDiv1D,
+        Kernel_printSizes{},
+        hh,
+        this->device_nCells_.data(),
+        this->device_nTriplets_.data(),
+        this->device_nCellTracks_.data());
+
+    alpaka::wait(queue);
+#endif
     if (this->m_params.algoParams_.doStats_) {
       // counters (add flag???)
 
