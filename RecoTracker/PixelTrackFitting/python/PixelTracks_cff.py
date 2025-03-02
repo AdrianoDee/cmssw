@@ -98,6 +98,13 @@ from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
 
 from Configuration.ProcessModifiers.alpaka_cff import alpaka
 
+def _addCAGeometryESProducer(process):
+    process.load("RecoTracker.PixelSeeding.CAGeometryESProducer_cfi")
+    process.CAGeometryESProducer.appendToDataLabel = cms.string("caGeometry")
+
+modifyConfigurationForAlpakaCAGeometry_ = alpaka.makeProcessModifier(_addCAGeometryESProducer)
+
+
 # pixel tracks SoA producer on the device
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase1_cfi import caHitNtupletAlpakaPhase1 as _pixelTracksAlpakaPhase1
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase2_cfi import caHitNtupletAlpakaPhase2 as _pixelTracksAlpakaPhase2
@@ -105,7 +112,32 @@ from RecoTracker.PixelSeeding.caHitNtupletAlpakaHIonPhase1_cfi import caHitNtupl
 
 pixelTracksAlpaka = _pixelTracksAlpakaPhase1.clone()
 phase2_tracker.toReplaceWith(pixelTracksAlpaka,_pixelTracksAlpakaPhase2.clone())
-(pp_on_AA & ~phase2_tracker).toReplaceWith(pixelTracksAlpaka, _pixelTracksAlpakaHIonPhase1.clone())
+phase2_tracker.toModify(pixelTracksAlpaka,
+    maxNumberOfDoublets = str(1500000),
+    maxNumberOfTuples = str(256 * 1024),
+    avgHitsPerTrack = 9.0,
+    avgCellsPerHit = 15.0,
+    avgCellsPerCell = 2.0,
+    avgTracksPerCell = 2.0,
+    cellPtCut = 0.85,
+    cellZ0Cut = 7.5,
+    minYsizeB1 = 25,
+    minYsizeB2 = 15,
+    maxDYsize12 = 12,
+    maxDYsize = 10,
+    maxDYPred = 20,
+)
+
+(pp_on_AA & ~phase2_tracker).toModify(pixelTracksAlpaka,
+    maxNumberOfDoublets = str(3145728),
+    maxNumberOfTuples = str(256 * 1024),
+    avgHitsPerTrack = 4.0,
+    avgCellsPerHit = 50.0,
+    avgCellsPerCell = 1.0,
+    avgTracksPerCell = 1.0,
+    cellPtCut = 0.5,
+    cellZ0Cut = 8.0,
+)
 
 # pixel tracks SoA producer on the cpu, for validation
 pixelTracksAlpakaSerial = makeSerialClone(pixelTracksAlpaka,
@@ -113,21 +145,14 @@ pixelTracksAlpakaSerial = makeSerialClone(pixelTracksAlpaka,
 )
 
 # legacy pixel tracks from SoA
-from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpakaPhase1_cfi import pixelTrackProducerFromSoAAlpakaPhase1 as _pixelTrackProducerFromSoAAlpakaPhase1
-from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpakaPhase2_cfi import pixelTrackProducerFromSoAAlpakaPhase2 as _pixelTrackProducerFromSoAAlpakaPhase2
-from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpakaHIonPhase1_cfi import pixelTrackProducerFromSoAAlpakaHIonPhase1 as _pixelTrackProducerFromSoAAlpakaHIonPhase1
+from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpaka_cfi import pixelTrackProducerFromSoAAlpaka as _pixelTrackProducerFromSoAAlpaka
 
-(alpaka & ~phase2_tracker).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpakaPhase1.clone(
+(alpaka).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpaka.clone(
     pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
 ))
 
-(alpaka & phase2_tracker).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpakaPhase2.clone(
-    pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
-))
-
-(alpaka & ~phase2_tracker & pp_on_AA).toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpakaHIonPhase1.clone(
-    pixelRecHitLegacySrc = "siPixelRecHitsPreSplitting",
-))
+# (alpaka & stripNtupletFit).toModify(pixelTracks, 
+#         useStripHits = True)
 
 alpaka.toReplaceWith(pixelTracksTask, cms.Task(
     # Build the pixel ntuplets and the pixel tracks in SoA format with alpaka on the device

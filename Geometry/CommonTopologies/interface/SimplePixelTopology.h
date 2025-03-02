@@ -9,7 +9,12 @@
 namespace pixelTopology {
 
   constexpr auto maxNumberOfLadders = 160;
-  constexpr uint32_t maxLayers = 28;
+  constexpr uint8_t maxLayers = 28;
+  constexpr uint8_t maxPairs = 64;
+  
+  // TODO
+  // Once CUDA is dropped this could be wrapped in #ifdef CA_TRIPLETS_HOLE
+  // see DataFormats/TrackingRecHitSoa/interface/TrackingRecHitSoA.h
 
   template <typename TrackerTraits>
   struct AverageGeometryT {
@@ -131,7 +136,7 @@ namespace phase1PixelTopology {
   using pixelTopology::phi0p06;
   using pixelTopology::phi0p07;
 
-  constexpr uint32_t numberOfLayers = 28;
+  constexpr uint32_t numberOfLayers = 10;
   constexpr int nPairs = 13 + 2 + 4;
   constexpr uint16_t numberOfModules = 1856;
 
@@ -325,7 +330,7 @@ namespace pixelTopology {
 
     static constexpr uint32_t maxCellNeighbors = 64;
     static constexpr uint32_t maxCellTracks = 302;
-    static constexpr uint32_t maxHitsOnTrack = 15;
+    static constexpr uint32_t maxHitsOnTrack = 20;
     static constexpr uint32_t maxHitsOnTrackForFullFit = 6;
     static constexpr uint32_t avgHitsPerTrack = 7;
     static constexpr uint32_t maxCellsPerHit = 256;
@@ -341,7 +346,7 @@ namespace pixelTopology {
 
     static constexpr uint32_t maxSizeCluster = 2047;
 
-    static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
+    static constexpr uint32_t getDoubletsFromHistoMaxBlockSize = 128;  // for both x and y
     static constexpr uint32_t getDoubletsFromHistoMinBlocksPerMP = 16;
 
     static constexpr uint16_t last_bpix1_detIndex = 108;

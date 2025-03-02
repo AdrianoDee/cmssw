@@ -2,5 +2,15 @@
 <bin file="alpaka/Hits_test.cc alpaka/Hits_test.dev.cc" name="Hits_test">
   <use name="alpaka"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
-  <flags ALPAKA_BACKENDS="1"/>
+  <flags ALPAKA_BACKENDS="cuda serial"/>
 </bin>
+
+<library name="testHitSoA" file="TestWriteHostHitSoA.cc,TestReadHostHitSoA.cc,">
+  <flags EDM_PLUGIN="1"/>
+  <use name="alpaka"/>
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+</library>
+
+<test name="testWriteAndReadHitSoA" command="testWriteAndReadHitSoA.sh" />
