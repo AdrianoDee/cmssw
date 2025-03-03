@@ -86,12 +86,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
     ALPAKA_FN_ACC void operator()(TAcc const &acc, 
       HitsConstView hh,
+      TkSoAView tt,
       uint32_t const *__restrict__ nCells,
       uint32_t const *__restrict__ nTrips,
       uint32_t const *__restrict__ nCellTracks) const {
 
         if (cms::alpakatools::once_per_grid(acc))
-          printf("nSizes:%d;%d;%d;%d\n",hh.metadata().size(),*nCells,*nTrips,*nCellTracks);
+          printf("nSizes:%d;%d;%d;%d;%d;%d;%d\n",hh.metadata().size(),hh.metadata().size() - hh.offsetBPIX2(),*nCells,*nTrips,*nCellTracks,tt.nTracks(),tt.metadata().size());
       }
     };
 
@@ -420,7 +421,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 #endif
 
             if (t_ind >= maxTriplets) {
+#ifdef CA_DEBUG
               printf("Warning!!!! Too many cell->cell (triplets) associations (limit = %d)!\n", cn.metadata().size());
+#endif
               alpaka::atomicSub(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
               break;
             }

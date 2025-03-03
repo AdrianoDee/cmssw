@@ -255,8 +255,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   auto t_ind = alpaka::atomicAdd(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
 
                   if (t_ind >= uint32_t(ct.metadata().size())) {
+#ifdef GPU_DEBUG
                     printf("Warning!!!! Too many cell->tracks associations (limit = %d)!\n", ct.metadata().size());
-                    alpaka::atomicSub(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
+#endif
+		    alpaka::atomicSub(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
                     break;
                   }
                   cellTracksHisto->count(acc, c);

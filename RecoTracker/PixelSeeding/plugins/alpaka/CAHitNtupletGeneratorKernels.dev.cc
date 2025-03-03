@@ -19,6 +19,7 @@
 
 // #define GPU_DEBUG
 // #define NTUPLE_DEBUG
+// #define CA_STATS
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -693,6 +694,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         workDiv1D,
         Kernel_printSizes{},
         hh,
+    	tracks_view,
         this->device_nCells_.data(),
         this->device_nTriplets_.data(),
         this->device_nCellTracks_.data());
