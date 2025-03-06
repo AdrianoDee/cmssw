@@ -113,7 +113,7 @@ from RecoTracker.PixelSeeding.caHitNtupletAlpakaHIonPhase1_cfi import caHitNtupl
 pixelTracksAlpaka = _pixelTracksAlpakaPhase1.clone()
 phase2_tracker.toReplaceWith(pixelTracksAlpaka,_pixelTracksAlpakaPhase2.clone())
 phase2_tracker.toModify(pixelTracksAlpaka,
-    maxNumberOfDoublets = str(1500000),
+    maxNumberOfDoublets = str(5*512*1024),
     maxNumberOfTuples = str(256 * 1024),
     avgHitsPerTrack = 9.0,
     avgCellsPerHit = 15.0,
@@ -129,7 +129,7 @@ phase2_tracker.toModify(pixelTracksAlpaka,
 )
 
 (pp_on_AA & ~phase2_tracker).toModify(pixelTracksAlpaka,
-    maxNumberOfDoublets = str(3145728),
+    maxNumberOfDoublets = str(6 * 512 *1024),
     maxNumberOfTuples = str(256 * 1024),
     avgHitsPerTrack = 4.0,
     avgCellsPerHit = 50.0,

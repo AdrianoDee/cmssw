@@ -16,22 +16,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   namespace caPixelDoublets {
 
-    // Not used for the moment, see below.
-    //constexpr auto getDoubletsFromHistoMaxBlockSize = 64;  // for both x and y
-    //constexpr auto getDoubletsFromHistoMinBlocksPerMP = 16;
-
     template <typename TrackerTraits>
     class GetDoubletsFromHisto {
     public:
       template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
       // #ifdef __CUDACC__
-      //       __launch_bounds__(getDoubletsFromHistoMaxBlockSize, getDoubletsFromHistoMinBlocksPerMP)  // TODO: Alapakify
+      //       __launch_bounds__(getDoubletsFromHistoMaxBlockSize, getDoubletsFromHistoMinBlocksPerMP)  // TODO: Alapakafy
       // #endif
       ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                     uint32_t maxNumOfDoublets,
                                     CASimpleCell<TrackerTraits>* cells,
                                     uint32_t* nCells,
-                                    // cms::alpakatools::AtomicPairCounter *apc,
                                     HitsConstView hh,
                                     ::reco::CAGraphSoAConstView cc,
                                     ::reco::CALayersSoAConstView ll,
@@ -50,7 +45,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
       ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                     CASimpleCell<TrackerTraits> const* __restrict__ cells,
-                                    uint32_t* nCells,  //could be size
+                                    uint32_t* nCells,
                                     uint32_t offsetBPIX2,
                                     HitToCell* outerHitHisto) const {
         for (auto cellIndex : cms::alpakatools::uniform_elements(acc, *nCells)) {

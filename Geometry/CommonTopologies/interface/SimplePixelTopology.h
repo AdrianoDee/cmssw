@@ -236,10 +236,9 @@ namespace phase2PixelTopology {
       16, 18, 17, 19, 18, 20, 19, 21, 20, 22, 21, 23, 22, 24,  // NEG Jump (55)
   };
   HOST_DEVICE_CONSTANT uint32_t layerStart[numberOfLayers + 1] = {0,
-                                                                  108,
-                                                                  324,
-                                                                  504,  // Barrel
-                                                                  756,
+                                                                  216,
+                                                                  432,
+                                                                  612,
                                                                   864,
                                                                   972,
                                                                   1080,
@@ -248,10 +247,10 @@ namespace phase2PixelTopology {
                                                                   1404,
                                                                   1512,
                                                                   1620,
-                                                                  1796,
-                                                                  1972,
-                                                                  2148,  // Fp
-                                                                  2324,
+                                                                  1728,
+                                                                  1904,
+                                                                  2080,
+                                                                  2256,
                                                                   2432,
                                                                   2540,
                                                                   2648,
@@ -260,9 +259,10 @@ namespace phase2PixelTopology {
                                                                   2972,
                                                                   3080,
                                                                   3188,
-                                                                  3364,
-                                                                  3540,
-                                                                  3716,  // Np
+                                                                  3296,
+                                                                  3472,
+                                                                  3648,
+                                                                  3824,
                                                                   numberOfModules};
 
   HOST_DEVICE_CONSTANT int16_t phicuts[nPairs]{

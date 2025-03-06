@@ -41,6 +41,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const std::vector<double> caDCACuts_;
 
     // Cells params
+    // TODO: move to unsigned int here
     const std::vector<int> pairGraph_;
     const std::vector<int> startingPairs_;
     const std::vector<int> phiCuts_;
@@ -85,11 +86,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     assert(int(n_pairs) == int(minZ_.size()));
     assert(*std::max_element(startingPairs_.begin(), startingPairs_.end()) <= n_pairs);
+    assert(*std::max_element(pairGraph_.begin(), pairGraph_.end()) < n_layers);
 
     const auto& trackerTopology = &iRecord.get(tTopologyToken_);
     const auto& trackerGeometry = &iRecord.get(tGeometryToken_);
-    auto const& detUnits = trackerGeometry->detUnits();
     auto const& dets = trackerGeometry->dets();
+
 #ifdef GPU_DEBUG
     auto subSystem = 1;
     auto subSystemName = GeomDetEnumerators::tkDetEnum[subSystem];
@@ -101,6 +103,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     subSystemName = GeomDetEnumerators::tkDetEnum[++subSystem];
     subSystemOffset = trackerGeometry->offsetDU(subSystemName);
 #endif
+    
     auto oldLayer = 0u;
     auto layerCount = 0;
 
