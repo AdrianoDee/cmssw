@@ -149,6 +149,25 @@ def customiseTrackingNtupleHLT(process):
 
     return process
 
+def customiseTrackingNtuplePixelTracks(process):
+
+    # to be used with pixel tracking only wfs
+
+    process.raw2digi_step1 = cms.Path(process.RawToDigi)
+    process.reconstruction_step1 = cms.Path(process.reconstruction_trackingOnly)
+    process.schedule.extend([process.raw2digi_step1,process.reconstruction_step1])
+
+    customiseTrackingNtupleTool(process, isRECO = True)
+
+    process.trackingNtuple.tracks = cms.untracked.InputTag("pixelTracks")
+    process.trackingNtuple.vertices = cms.untracked.InputTag("pixelVertices")
+    process.trackingNtuple.includeSeeds = False
+    process.trackingNtuple.includeMVA = False
+    process.tpClusterProducer.pixelClusterSrc = cms.InputTag("siPixelClustersPreSplitting")
+    process.trackingNtuple.pixelRecHits = cms.untracked.InputTag("siPixelRecHitsPreSplitting")
+
+    return process
+
 def extendedContent(process):
     process.trackingParticlesIntime.intimeOnly = False
     process.trackingNtuple.includeOOT = True
