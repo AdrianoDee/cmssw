@@ -13,6 +13,23 @@ def customizePixelTracksForTriplets(process):
          producer.minHitsPerNtuplet = 3
          has_producer = True
 
+         if name == 'CAHitNtupletAlpakaPhase1@alpaka':
+          
+            producer.avgHitsPerTrack    = 4.5      
+            producer.avgCellsPerHit     = 27
+            producer.avgCellsPerCell    = 0.071 
+            producer.avgTracksPerCell   = 0.127 
+            producer.maxNumberOfDoublets = str(512*1024) # this is actually low, should be ~630k, keeping the same for a fair comparison with master
+            producer.maxNumberOfTuples   = str(32 * 1024) # this is on spot (µ+5*σ = 31.8k)
+            
+         elif name == 'CAHitNtupletAlpakaPhase2@alpaka':
+
+            producer.avgHitsPerTrack    = 6.5      
+            producer.avgCellsPerHit     = 6 # actually this is the same, quads has the same graph at the moment
+            producer.avgCellsPerCell    = 0.151 
+            producer.avgTracksPerCell   = 0.130 
+            producer.maxNumberOfDoublets = str(5*512*1024) # could be lowered to 1.4M, keeping the same for a fair comparison with master
+            producer.maxNumberOfTuples   = str(256 * 1024) # could be lowered to 120k, same as above
       
       if has_producer and name == 'CAHitNtupletAlpakaPhase1@alpaka':
          for esproducer in esproducers_by_type(process,ca_es_producer):

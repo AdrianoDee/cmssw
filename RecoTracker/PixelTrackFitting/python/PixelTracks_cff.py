@@ -110,15 +110,22 @@ from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase1_cfi import caHitNtupletAl
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase2_cfi import caHitNtupletAlpakaPhase2 as _pixelTracksAlpakaPhase2
 from RecoTracker.PixelSeeding.caHitNtupletAlpakaHIonPhase1_cfi import caHitNtupletAlpakaHIonPhase1 as _pixelTracksAlpakaHIonPhase1
 
-pixelTracksAlpaka = _pixelTracksAlpakaPhase1.clone()
+pixelTracksAlpaka = _pixelTracksAlpakaPhase1.clone(
+    avgHitsPerTrack    = 4.6,      
+    avgCellsPerHit     = 13,
+    avgCellsPerCell    = 0.0268, 
+    avgTracksPerCell   = 0.0123, 
+    maxNumberOfDoublets = str(512*1024), # could be lowered to 315k, keeping the same for a fair comparison with master
+    maxNumberOfTuples   = str(32 * 1024), # this couul be much lower (2.1k, these are quads)
+)
 phase2_tracker.toReplaceWith(pixelTracksAlpaka,_pixelTracksAlpakaPhase2.clone())
 phase2_tracker.toModify(pixelTracksAlpaka,
     maxNumberOfDoublets = str(5*512*1024),
     maxNumberOfTuples = str(256 * 1024),
-    avgHitsPerTrack = 9.0,
-    avgCellsPerHit = 15.0,
-    avgCellsPerCell = 2.0,
-    avgTracksPerCell = 2.0,
+    avgHitsPerTrack = 7.0,
+    avgCellsPerHit = 6,
+    avgCellsPerCell = 0.151,
+    avgTracksPerCell = 0.040,
     cellPtCut = 0.85,
     cellZ0Cut = 7.5,
     minYsizeB1 = 25,
@@ -128,15 +135,16 @@ phase2_tracker.toModify(pixelTracksAlpaka,
     maxDYPred = 20,
 )
 
+
 (pp_on_AA & ~phase2_tracker).toModify(pixelTracksAlpaka,
-    maxNumberOfDoublets = str(6 * 512 *1024),
-    maxNumberOfTuples = str(256 * 1024),
-    avgHitsPerTrack = 4.0,
-    avgCellsPerHit = 50.0,
-    avgCellsPerCell = 1.0,
-    avgTracksPerCell = 1.0,
-    cellPtCut = 0.5,
-    cellZ0Cut = 8.0,
+    maxNumberOfDoublets = str(6 * 512 *1024), # this could be 2.3M
+    maxNumberOfTuples = str(256 * 1024), # this could be 4.7
+    avgHitsPerTrack = 5.0,
+    avgCellsPerHit = 40,
+    avgCellsPerCell = 0.07,     # with maxNumberOfDoublets ~= 3.14M; 0.02  for HLT HI on 2024 HI Data 
+    avgTracksPerCell = 0.03, # with maxNumberOfDoublets ~= 3.14M; 0.005 for HLT HI on 2024 HI Data
+    cellPtCut = 0.5, # setup currenlty used @ HLT (was 0.0) 
+    cellZ0Cut = 8.0, # setup currenlty used @ HLT (was 10.0) 
 )
 
 # pixel tracks SoA producer on the cpu, for validation

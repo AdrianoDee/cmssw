@@ -306,16 +306,16 @@ def customizeHLTforXYZ(process):
                 setattr(prod, 'maxNumberOfTuples', cms.string(str(v.value())))
             
             if not hasattr(prod, 'avgCellsPerCell'):
-                setattr(prod, 'avgCellsPerCell', cms.double(2))
+                setattr(prod, 'avgCellsPerCell', cms.double(0.071))
             
             if not hasattr(prod, 'avgCellsPerHit'):
-                setattr(prod, 'avgCellsPerHit', cms.double(25))
+                setattr(prod, 'avgCellsPerHit', cms.double(27))
             
             if not hasattr(prod, 'avgHitsPerTrack'):
-                setattr(prod, 'avgHitsPerTrack', cms.double(5))
+                setattr(prod, 'avgHitsPerTrack', cms.double(4.5))
             
             if not hasattr(prod, 'avgTracksPerCell'):
-                setattr(prod, 'avgTracksPerCell', cms.double(2))
+                setattr(prod, 'avgTracksPerCell', cms.double(0.127))
             
             for par in ca_parameters:
                 if hasattr(prod, par):
