@@ -670,7 +670,6 @@ struct SortByModuleID_kernel {
 #ifdef GPU_DEBUG
         alpaka::wait(queue);
 #endif
-        //Matej: I stopped here and got a huge headache
         constexpr auto threadsPerBlockChargeCut = 256;
         const auto workDivChargeCut = cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, threadsPerBlockChargeCut);
         // apply charge cut
