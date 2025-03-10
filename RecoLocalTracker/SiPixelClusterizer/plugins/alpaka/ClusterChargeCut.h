@@ -31,13 +31,15 @@ namespace pixelClustering {
 #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc)) {
         printf("All digis before cut: \n");
-        for (uint32_t i = 0; i < numElements; i++)
+        for (uint32_t rowIdx = 0; rowIdx < numElements; rowIdx++){
+          uint32_t i = digi_view[rowIdx].sortedDigiIdx();
           printf("%d %d %d %d %d \n",
                  i,
                  digi_view[i].rawIdArr(),
                  digi_view[i].clus(),
                  digi_view[i].pdigi(),
                  digi_view[i].adc());
+        }
       }
       alpaka::syncBlockThreads(acc);
 #endif
@@ -54,14 +56,15 @@ namespace pixelClustering {
       auto endModule = clus_view[0].moduleStart();
 
       for (auto module : cms::alpakatools::independent_groups(acc, endModule)) {
-        auto firstPixel = clus_view[1 + module].moduleStart();
+        auto firstPixelRow = clus_view[1 + module].moduleStart();
+        uint32_t firstPixel = digi_view[firstPixelRow].sortedDigiIdx(); //sorted
         auto thisModuleId = digi_view[firstPixel].moduleId();
-        while (thisModuleId == invalidModuleId and firstPixel < numElements) {
+        while (thisModuleId == invalidModuleId and firstPixelRow < numElements) {
           // skip invalid or duplicate pixels
           ++firstPixel;
           thisModuleId = digi_view[firstPixel].moduleId();
         }
-        if (firstPixel >= numElements) {
+        if (firstPixelRow >= numElements) {
           // reached the end of the input while skipping the invalid pixels, nothing left to do
           break;
         }
@@ -84,7 +87,8 @@ namespace pixelClustering {
 
         if (nclus > maxNumClustersPerModules) {
           // remove excess  FIXME find a way to cut charge first....
-          for (auto i : cms::alpakatools::independent_group_elements(acc, firstPixel, numElements)) {
+          for (auto rowIdx : cms::alpakatools::independent_group_elements(acc, firstPixel, numElements)) {
+            uint32_t i = digi_view[rowIdx].sortedDigiIdx();
             if (digi_view[i].moduleId() == invalidModuleId)
               continue;  // not valid
             if (digi_view[i].moduleId() != thisModuleId)
@@ -109,7 +113,8 @@ namespace pixelClustering {
         }
         alpaka::syncBlockThreads(acc);
 
-        for (auto i : cms::alpakatools::independent_group_elements(acc, firstPixel, numElements)) {
+        for (auto rowIdx : cms::alpakatools::independent_group_elements(acc, firstPixel, numElements)) {
+          uint32_t i = digi_view[rowIdx].sortedDigiIdx();
           if (digi_view[i].moduleId() == invalidModuleId)
             continue;  // not valid
           if (digi_view[i].moduleId() != thisModuleId)
@@ -180,7 +185,8 @@ namespace pixelClustering {
         clus_view[thisModuleId].clusInModule() = newclusId[nclus - 1];
 
         // reassign id
-        for (auto i : cms::alpakatools::independent_group_elements(acc, firstPixel, numElements)) {
+        for (auto rowIdx : cms::alpakatools::independent_group_elements(acc, firstPixel, numElements)) {
+          uint32_t i = digi_view[rowIdx].sortedDigiIdx();
           if (digi_view[i].moduleId() == invalidModuleId)
             continue;  // not valid
           if (digi_view[i].moduleId() != thisModuleId)
@@ -196,13 +202,15 @@ namespace pixelClustering {
 #ifdef GPU_DEBUG
         if (cms::alpakatools::once_per_grid(acc)) {
           printf("All digis AFTER cut: \n");
-          for (uint32_t i = 0; i < numElements; i++)
+          for (uint32_t rowIdx = 0; rowIdx < numElements; rowIdx++){
+            uint32_t i = digi_view[rowIdx].sortedDigiIdx();
             printf("%d %d %d %d %d \n",
                    i,
                    digi_view[i].rawIdArr(),
                    digi_view[i].clus(),
                    digi_view[i].pdigi(),
                    digi_view[i].adc());
+          }
         }
 #endif
       }

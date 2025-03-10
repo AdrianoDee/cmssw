@@ -29,6 +29,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/warpsize.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoLocalTracker/SiPixelClusterizer/interface/SiPixelClusterThresholds.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 
 // local includes
 #include "CalibPixel.h"
@@ -304,6 +305,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         if (cms::alpakatools::once_per_grid(acc))
           err.size() = 0;
 
+        digisView.nDigis()=wordCounter;
         for (auto gIndex : cms::alpakatools::uniform_elements(acc, wordCounter)) {
           auto dvgi = digisView[gIndex];
           dvgi.xx() = 0;
@@ -319,6 +321,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           dvgi.pdigi() = 0;
           dvgi.rawIdArr() = 0;
           dvgi.moduleId() = ::pixelClustering::invalidModuleId;
+          dvgi.sortedDigiIdx() = gIndex;//Before sorting, set it to the row number
 
           uint32_t ww = word[gIndex];  // Array containing 32 bit raw data
           if (ww == 0) {
@@ -427,6 +430,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       }  // end of Raw to Digi kernel operator()
     };  // end of Raw to Digi struct
+
+  // template <bool debug = false>
+  // struct SortByModuleID {
+  //   template <typename TAcc>
+  //   ALPAKA_FN_ACC void operator()(const TAcc &acc,
+  //                                 SiPixelDigisSoAView data) const {
+
+  //     uint32_t const& nDigis = data.nDigis();  
+  //     uint32_t* __restrict__ sortedDigiIdx = data.sortedDigiIdx();
+  //     uint16_t* __restrict__ moduleID = data.moduleId(); 
+      
+  //     // Sort the digis by their moduleId
+  //     if constexpr (not cms::alpakatools::requires_single_thread_per_block_v<TAcc>) {
+  //         auto& sws = alpaka::declareSharedVar<uint16_t[1024], __COUNTER__>(acc);
+  //         cms::alpakatools::radixSort<TAcc, uint16_t, 2>(acc, moduleID, sortedDigiIdx, sws, nDigis);
+  //     } else {
+  //         std::sort(sortedDigiIdx, sortedDigiIdx + nDigis, 
+  //                   [&](auto i, auto j) { return moduleID[i] < moduleID[j]; });
+  //     }
+  //   }
+  // };
+
 
     template <typename TrackerTraits>
     struct FillHitsModuleStart {
@@ -570,9 +595,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         alpaka::wait(queue);
         std::cout << "RawToDigi_kernel was run smoothly!" << std::endl;
 #endif
+
       }
       // End of Raw2Digi and passing data for clustering
-
       {
         // clusterizer
         using namespace pixelClustering;
@@ -609,6 +634,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               gains,
                               wordCounter);
         }
+
+        if(true) //TODO add a flag instead of "true", understand also how to handle the fact that they may be already sorted
+        {
+          using DigisHisto = HistoContainer<uint16_t, 4000 + 1, -1, 12, uint32_t>; //TODO replace with maxNumberOfModules
+          auto histo = make_device_buffer<DigisHisto>(queue);
+          auto histo_storage = make_device_buffer<typename DigisHisto::index_type[]>(queue, digis_d->view().metadata().size());
+          // auto histo_storage_h = make_host_buffer<typename DigisHisto::index_type[]>(queue, digis_d->view().metadata().size());
+          auto offsets_h = make_host_buffer<uint32_t[]>(queue,2);
+          auto offsets_d = make_device_buffer<uint32_t[]>(queue,2);
+          alpaka::memset(queue, histo, 0);
+          offsets_h[0] = 0;
+          offsets_h[1] = digis_d->view().metadata().size();
+          alpaka::memcpy(queue, offsets_d, offsets_h);
+          
+          typename DigisHisto::View digisHistoView;
+
+          digisHistoView.assoc = histo.data();
+          digisHistoView.offSize = -1;
+          digisHistoView.offStorage = nullptr;
+          digisHistoView.contentSize = digis_d->view().metadata().size();
+          digisHistoView.contentStorage = digis_d->view().sortedDigiIdx();
+          
+          cms::alpakatools::fillManyFromVector<Acc1D>(histo.data(), digisHistoView, 1, digis_d->view().moduleId(), offsets_d.data(), digis_d->view().metadata().size(), 1024, queue);
+          
+        }
+        
+
 #ifdef GPU_DEBUG
         alpaka::wait(queue);
         std::cout << "CountModules kernel launch with " << blocks << " blocks of " << threadsPerBlockOrElementsPerThread
@@ -633,7 +685,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef GPU_DEBUG
         alpaka::wait(queue);
 #endif
-
         constexpr auto threadsPerBlockChargeCut = 256;
         const auto workDivChargeCut = cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, threadsPerBlockChargeCut);
         // apply charge cut
