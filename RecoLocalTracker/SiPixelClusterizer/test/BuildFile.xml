@@ -58,3 +58,10 @@
   <use name="HeterogeneousCore/CUDAUtilities"/>
   <flags CXXFLAGS="-g -DGPU_DEBUG"/>
 </bin>
+
+
+<bin name="testHistoSortDigi" file="alpaka/histoSortDigis_t.dev.cc">
+  <use name="alpaka"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <flags ALPAKA_BACKENDS="cuda rocm"/>
+</bin>

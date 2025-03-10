@@ -21,8 +21,8 @@
 // local include(s)
 #include "PixelClusterizerBase.h"
 
-//#define EDM_ML_DEBUG
-//#define GPU_DEBUG
+#define EDM_ML_DEBUG
+#define GPU_DEBUG
 
 template <typename TrackerTraits>
 class SiPixelDigisClustersFromSoAAlpaka : public edm::global::EDProducer<> {
@@ -92,7 +92,8 @@ void SiPixelDigisClustersFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID,
   edm::DetSet<PixelDigi>* detDigis = nullptr;
   uint32_t detId = 0;
 
-  for (uint32_t i = 0; i < nDigis; i++) {
+  for (uint32_t digi_idx = 0; digi_idx < nDigis; digi_idx++) {
+    uint32_t i = digisView[digi_idx].sortedDigiIdx();
     // check for uninitialized digis
     // this is set in RawToDigi_kernel in SiPixelRawToClusterGPUKernel.cu
     if (digisView[i].rawIdArr() == 0)
@@ -159,7 +160,8 @@ void SiPixelDigisClustersFromSoAAlpaka<TrackerTraits>::produce(edm::StreamID,
 #ifdef GPU_DEBUG
   std::cout << "Dumping all digis. nDigis = " << nDigis << std::endl;
 #endif
-  for (uint32_t i = 0; i < nDigis; i++) {
+  for (uint32_t digi_idx = 0; digi_idx < nDigis; digi_idx++) {
+    uint32_t i = digisView[digi_idx].sortedDigiIdx();
     // check for uninitialized digis
     if (digisView[i].rawIdArr() == 0)
       continue;

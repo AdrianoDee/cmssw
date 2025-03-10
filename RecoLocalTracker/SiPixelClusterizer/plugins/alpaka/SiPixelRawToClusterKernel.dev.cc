@@ -28,6 +28,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/prefixScan.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoLocalTracker/SiPixelClusterizer/interface/SiPixelClusterThresholds.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 
 // local includes
 #include "CalibPixel.h"
@@ -35,7 +36,7 @@
 #include "PixelClustering.h"
 #include "SiPixelRawToClusterKernel.h"
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace pixelDetails {
@@ -304,6 +305,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         if (cms::alpakatools::once_per_grid(acc))
           err.size() = 0;
 
+        digisView.nDigis()=wordCounter;
         for (auto gIndex : cms::alpakatools::uniform_elements(acc, wordCounter)) {
           auto dvgi = digisView[gIndex];
           dvgi.xx() = 0;
@@ -319,6 +321,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           dvgi.pdigi() = 0;
           dvgi.rawIdArr() = 0;
           dvgi.moduleId() = ::pixelClustering::invalidModuleId;
+          dvgi.sortedDigiIdx() = gIndex;//Before sorting, set it to the row number
 
           uint32_t ww = word[gIndex];  // Array containing 32 bit raw data
           if (ww == 0) {
@@ -428,6 +431,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }  // end of Raw to Digi kernel operator()
     };  // end of Raw to Digi struct
 
+  // template <bool debug = false>
+  // struct SortByModuleID {
+  //   template <typename TAcc>
+  //   ALPAKA_FN_ACC void operator()(const TAcc &acc,
+  //                                 SiPixelDigisSoAView data) const {
+
+  //     uint32_t const& nDigis = data.nDigis();  
+  //     uint32_t* __restrict__ sortedDigiIdx = data.sortedDigiIdx();
+  //     uint16_t* __restrict__ moduleID = data.moduleId(); 
+      
+  //     // Sort the digis by their moduleId
+  //     if constexpr (not cms::alpakatools::requires_single_thread_per_block_v<TAcc>) {
+  //         auto& sws = alpaka::declareSharedVar<uint16_t[1024], __COUNTER__>(acc);
+  //         cms::alpakatools::radixSort<TAcc, uint16_t, 2>(acc, moduleID, sortedDigiIdx, sws, nDigis);
+  //     } else {
+  //         std::sort(sortedDigiIdx, sortedDigiIdx + nDigis, 
+  //                   [&](auto i, auto j) { return moduleID[i] < moduleID[j]; });
+  //     }
+  //   }
+  // };
+
+
     template <typename TrackerTraits>
     struct FillHitsModuleStart {
       template <typename TAcc>
@@ -494,25 +519,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           }
           alpaka::syncBlockThreads(acc);
         }
-#ifdef GPU_DEBUG
-        ALPAKA_ASSERT_ACC(0 == clus_view[1].moduleStart());
-        auto c0 = std::min(maxHitsInModule, clus_view[2].clusModuleStart());
-        ALPAKA_ASSERT_ACC(c0 == clus_view[2].moduleStart());
-        ALPAKA_ASSERT_ACC(clus_view[1024].moduleStart() >= clus_view[1023].moduleStart());
-        ALPAKA_ASSERT_ACC(clus_view[1025].moduleStart() >= clus_view[1024].moduleStart());
-        ALPAKA_ASSERT_ACC(clus_view[numberOfModules].moduleStart() >= clus_view[1025].moduleStart());
+// #ifdef GPU_DEBUG
+//         ALPAKA_ASSERT_ACC(0 == clus_view[1].moduleStart());
+//         auto c0 = std::min(maxHitsInModule, clus_view[2].clusModuleStart());
+//         ALPAKA_ASSERT_ACC(c0 == clus_view[2].moduleStart());
+//         ALPAKA_ASSERT_ACC(clus_view[1024].moduleStart() >= clus_view[1023].moduleStart());
+//         ALPAKA_ASSERT_ACC(clus_view[1025].moduleStart() >= clus_view[1024].moduleStart());
+//         ALPAKA_ASSERT_ACC(clus_view[numberOfModules].moduleStart() >= clus_view[1025].moduleStart());
 
-        for (uint32_t i : cms::alpakatools::independent_group_elements(acc, numberOfModules + 1)) {
-          if (0 != i)
-            ALPAKA_ASSERT_ACC(clus_view[i].moduleStart() >= clus_view[i - 1].moduleStart());
-          // Check BPX2 (1), FP1 (4)
-          constexpr auto bpix2 = TrackerTraits::layerStart[1];
-          constexpr auto fpix1 = TrackerTraits::layerStart[4];
-          if (i == bpix2 || i == fpix1)
-            printf("moduleStart %d %d\n", i, clus_view[i].moduleStart());
-        }
+//         for (uint32_t i : cms::alpakatools::independent_group_elements(acc, numberOfModules + 1)) {
+//           if (0 != i)
+//             ALPAKA_ASSERT_ACC(clus_view[i].moduleStart() >= clus_view[i - 1].moduleStart());
+//           // Check BPX2 (1), FP1 (4)
+//           constexpr auto bpix2 = TrackerTraits::layerStart[1];
+//           constexpr auto fpix1 = TrackerTraits::layerStart[4];
+//           if (i == bpix2 || i == fpix1)
+//             printf("moduleStart %d %d\n", i, clus_view[i].moduleStart());
+//         }
 
-#endif
+// #endif
 
       }  // end of FillHitsModuleStart kernel operator()
     };  // end of FillHitsModuleStart struct
@@ -530,6 +555,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         const uint32_t fedCounter,
         bool useQualityInfo,
         bool includeErrors,
+        bool sortDigis,
         bool debug) {
       nDigis = wordCounter;
 
@@ -591,9 +617,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         alpaka::wait(queue);
         std::cout << "RawToDigi_kernel was run smoothly!" << std::endl;
 #endif
+
       }
       // End of Raw2Digi and passing data for clustering
-
       {
         // clusterizer
         using namespace pixelClustering;
@@ -630,6 +656,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               gains,
                               wordCounter);
         }
+
+        if(sortDigis) //TODO add a flag instead of "true", understand also how to handle the fact that they may be already sorted
+        {
+            std::cout << "Sorting digis" << std::endl;
+            using DigisHisto = HistoContainer<uint16_t, ::pixelClustering::invalidModuleId + 1, -1, 13, uint32_t>; //TODO replace with maxNumberOfModules
+
+            std::cout << "wordCounter" << wordCounter << std::endl;
+            std::cout << "digis.view().metadata().size()" << digis_d->view().metadata().size() << std::endl;
+
+            auto digisView = digis_d->view();
+            auto histo = make_device_buffer<DigisHisto>(queue);
+            auto histo_storage = make_device_buffer<typename DigisHisto::index_type[]>(queue, wordCounter);
+            // auto histo_storage_h = make_host_buffer<typename DigisHisto::index_type[]>(queue, wordCounter);
+            alpaka::wait(queue);
+            auto offsets_h = make_host_buffer<uint32_t[]>(queue,2);
+            auto offsets_d = make_device_buffer<uint32_t[]>(queue,2);
+            alpaka::memset(queue, histo, 0);
+            auto ms_d = cms::alpakatools::make_device_view(alpaka::getDev(queue), clusters_d->view().moduleStart(), numberOfModules+1);
+            alpaka::memset(queue,ms_d,0);
+            offsets_h[0] = 0;
+            offsets_h[1] = wordCounter;
+            alpaka::memcpy(queue, offsets_d, offsets_h);
+            alpaka::wait(queue);
+            std::cout << __LINE__ << std::endl;
+            typename DigisHisto::View digisHistoView;
+            auto nDigis = digis_d->view().metadata().size();
+            auto v_d = cms::alpakatools::make_device_view(alpaka::getDev(queue), digisView.moduleId(), nDigis);
+            std::cout << __LINE__ << std::endl;
+            alpaka::wait(queue);
+            digisHistoView.assoc = histo.data();
+            digisHistoView.offSize = -1;
+            digisHistoView.offStorage = nullptr;
+            digisHistoView.contentSize = wordCounter;
+            digisHistoView.contentStorage = digisView.sortedDigiIdx();
+            std::cout << __LINE__ << std::endl;
+            cms::alpakatools::fillManyFromVector<Acc1D>(histo.data(), digisHistoView, 1, v_d.data(), offsets_d.data(), wordCounter, 1024, queue);
+            std::cout << __LINE__ << std::endl;
+        }
+        
+
 #ifdef GPU_DEBUG
         alpaka::wait(queue);
         std::cout << "CountModules kernel launch with " << blocks << " blocks of " << threadsPerBlockOrElementsPerThread
@@ -654,7 +720,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef GPU_DEBUG
         alpaka::wait(queue);
 #endif
-
         constexpr auto threadsPerBlockChargeCut = 256;
         const auto workDivChargeCut = cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, threadsPerBlockChargeCut);
         // apply charge cut

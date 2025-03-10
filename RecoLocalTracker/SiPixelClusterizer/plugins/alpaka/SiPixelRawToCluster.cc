@@ -73,6 +73,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     PixelDataFormatter::Errors errors_;
 
     const bool includeErrors_;
+    const bool sortDigis_;
     const bool useQuality_;
     uint32_t nDigis_;
     const SiPixelClusterThresholds clusterThresholds_;
@@ -88,6 +89,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         cablingMapToken_(esConsumes<SiPixelFedCablingMap, SiPixelFedCablingMapRcd>(
             edm::ESInputTag("", iConfig.getParameter<std::string>("CablingMapLabel")))),
         includeErrors_(iConfig.getParameter<bool>("IncludeErrors")),
+        sortDigis_(iConfig.getParameter<bool>("SortDigis")),
         useQuality_(iConfig.getParameter<bool>("UseQualityInfo")),
         clusterThresholds_{iConfig.getParameter<int32_t>("clusterThreshold_layer1"),
                            iConfig.getParameter<int32_t>("clusterThreshold_otherLayers"),
@@ -110,6 +112,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void SiPixelRawToCluster<TrackerTraits>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
     desc.add<bool>("IncludeErrors", true);
+    desc.add<bool>("SortDigis", false);
     desc.add<bool>("UseQualityInfo", false);
     // Note: this parameter is obsolete: it is ignored and will have no effect.
     // It is kept to avoid breaking older configurations, and will not be printed in the generated cfi.py file.
@@ -251,6 +254,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   fedCounter,
                                   useQuality_,
                                   includeErrors_,
+                                  sortDigis_,
                                   edm::MessageDrop::instance()->debugEnabled);
   }
 
