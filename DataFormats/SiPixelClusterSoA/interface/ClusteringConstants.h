@@ -26,7 +26,7 @@ namespace pixelClustering {
   constexpr uint16_t maxNumModules = 5000;          // This is an upperlimit taking into account D110 has 4000 modules
 
   constexpr int32_t maxNumClustersPerModules = maxHitsInModule();
-  constexpr uint16_t invalidModuleId = std::numeric_limits<uint16_t>::max() - 1;
+  constexpr uint16_t invalidModuleId = maxNumModules + 1;//std::numeric_limits<uint16_t>::max() - 1;
   constexpr int invalidClusterId = -9999;
   static_assert(invalidModuleId > maxNumModules);  // invalidModuleId must be > maxNumModules
 

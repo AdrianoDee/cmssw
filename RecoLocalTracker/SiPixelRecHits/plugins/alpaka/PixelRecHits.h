@@ -77,9 +77,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef GPU_DEBUG
           if (cms::alpakatools::once_per_block(acc)) {
-            auto k = clusters[1 + module].moduleStart();
+            auto digi_idx = clusters[1 + module].moduleStart();
+            auto k = digi_idx[digi_idx].sortedDigiIdx();
             while (digis[k].moduleId() == invalidModuleId)
-              ++k;
+              k = digi_idx[++digi_idx].sortedDigiIdx();
             ALPAKA_ASSERT_ACC(digis[k].moduleId() == me);
           }
 
@@ -94,7 +95,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           auto& clusParams = alpaka::declareSharedVar<pixelCPEforDevice::ClusParams, __COUNTER__>(acc);
           for (int startClus = 0, endClus = nclus; startClus < endClus; startClus += maxHitsInIter) {
             auto first = clusters[1 + module].moduleStart();
-
+            
             int nClusInIter = alpaka::math::min(acc, maxHitsInIter, endClus - startClus);
             int lastClus = startClus + nClusInIter;
             ALPAKA_ASSERT_ACC(nClusInIter <= nclus);
@@ -118,7 +119,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             alpaka::syncBlockThreads(acc);
 
             // one thread or element per "digi"
-            for (uint32_t i : cms::alpakatools::independent_group_elements(acc, first, numElements)) {
+            for (uint32_t digi_idx : cms::alpakatools::independent_group_elements(acc, first, numElements)) {
+              auto i = digis[digi_idx].sortedDigiIdx();
               auto id = digis[i].moduleId();
               if (id == invalidModuleId)
                 continue;  // not valid
@@ -141,7 +143,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             alpaka::syncBlockThreads(acc);
 
             auto pixmx = cpeParams->detParams(me).pixmx;
-            for (uint32_t i : cms::alpakatools::independent_group_elements(acc, first, numElements)) {
+            for (uint32_t digi_idx : cms::alpakatools::independent_group_elements(acc, first, numElements)) {
+              auto i = digis[digi_idx].sortedDigiIdx();
               auto id = digis[i].moduleId();
               if (id == invalidModuleId)
                 continue;  // not valid

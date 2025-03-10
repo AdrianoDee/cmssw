@@ -160,6 +160,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                    const uint32_t fedCounter,
                                    bool useQualityInfo,
                                    bool includeErrors,
+				   bool sortDigis,
                                    bool debug);
 
       void makePhase2ClustersAsync(Queue& queue,
