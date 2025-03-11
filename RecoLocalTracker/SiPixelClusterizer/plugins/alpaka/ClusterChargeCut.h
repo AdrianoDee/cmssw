@@ -31,7 +31,7 @@ namespace pixelClustering {
 #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc)) {
         printf("All digis before cut: \n");
-        for (uint32_t rowIdx = 0; i < numElements; i++){
+        for (uint32_t rowIdx = 0; rowIdx < numElements; rowIdx++){
           uint32_t i = digi_view[rowIdx].sortedDigiIdx();
           printf("%d %d %d %d %d \n",
                  i,
@@ -202,7 +202,7 @@ namespace pixelClustering {
 #ifdef GPU_DEBUG
         if (cms::alpakatools::once_per_grid(acc)) {
           printf("All digis AFTER cut: \n");
-          for (uint32_t rowIdx = 0; i < numElements; i++){
+          for (uint32_t rowIdx = 0; rowIdx < numElements; rowIdx++){
             uint32_t i = digi_view[rowIdx].sortedDigiIdx();
             printf("%d %d %d %d %d \n",
                    i,

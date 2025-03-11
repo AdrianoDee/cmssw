@@ -431,25 +431,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }  // end of Raw to Digi kernel operator()
     };  // end of Raw to Digi struct
 
-template <bool debug = false>
-struct SortByModuleID_kernel {
-  template <typename TAcc>
-  ALPAKA_FN_ACC void operator()(const TAcc &acc,
-                                SiPixelDigisSoAView data) const {
-    uint32_t const& nDigis = data.nDigis();  
-    uint32_t* __restrict__ sortedDigiIdx = data.sortedDigiIdx();
-    uint16_t* __restrict__ moduleID = data.moduleId(); 
+// template <bool debug = false>
+// struct SortByModuleID_kernel {
+//   template <typename TAcc>
+//   ALPAKA_FN_ACC void operator()(const TAcc &acc,
+//                                 SiPixelDigisSoAView data) const {
+//     uint32_t const& nDigis = data.nDigis();  
+//     uint32_t* __restrict__ sortedDigiIdx = data.sortedDigiIdx();
+//     uint16_t* __restrict__ moduleID = data.moduleId(); 
 
-    // Sort the digis by their moduleId
-    if constexpr (not cms::alpakatools::requires_single_thread_per_block_v<TAcc>) {
-        auto& sws = alpaka::declareSharedVar<uint16_t[1024], __COUNTER__>(acc);
-        cms::alpakatools::radixSort<TAcc, uint16_t, 2>(acc, moduleID, sortedDigiIdx, sws, nDigis);
-    } else {
-        std::sort(sortedDigiIdx, sortedDigiIdx + nDigis, 
-                  [&](auto i, auto j) { return moduleID[i] < moduleID[j]; });
-    }
-  }
-};
+//     // Sort the digis by their moduleId
+//     if constexpr (not cms::alpakatools::requires_single_thread_per_block_v<TAcc>) {
+//         auto& sws = alpaka::declareSharedVar<uint16_t[1024], __COUNTER__>(acc);
+//         cms::alpakatools::radixSort<TAcc, uint16_t, 2>(acc, moduleID, sortedDigiIdx, sws, nDigis);
+//     } else {
+//         std::sort(sortedDigiIdx, sortedDigiIdx + nDigis, 
+//                   [&](auto i, auto j) { return moduleID[i] < moduleID[j]; });
+//     }
+//   }
+// };
 
 
     template <typename TrackerTraits>
@@ -595,7 +595,7 @@ struct SortByModuleID_kernel {
         std::cout << "RawToDigi_kernel was run smoothly!" << std::endl;
 #endif
 
-        // Uncomment this to sort the digis before passing to clustering
+        // // Uncomment this to sort the digis before passing to clustering
         // if (debug) {
         //   alpaka::exec<Acc1D>(queue,
         //                       workDiv,
