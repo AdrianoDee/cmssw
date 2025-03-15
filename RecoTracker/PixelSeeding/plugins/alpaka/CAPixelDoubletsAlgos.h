@@ -23,7 +23,7 @@
 #include "CAHitNtupletGeneratorKernels.h"
 
 // #define GPU_DEBUG
-// #define DOUBLETS_DEBUG
+//#define DOUBLETS_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   using namespace cms::alpakatools;
@@ -85,14 +85,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
     const uint32_t mi = hh[i].detectorIndex();
     const auto first_bpix2 = ll.layerStarts()[1];
     const auto first_bpix3 = ll.layerStarts()[2];                                                              
-    bool innerB1orB2 = mi < ll.layerStarts()[2]; 
-
+    bool innerB1orB2 = mi < ll.layerStarts()[2];
+ 
+//    printf("i = %d mi = %d innerB1orB2 = %d innerB1 = %d innerB2 = %d minYsizeB1 = %d minYsizeB2 = %d isOuterLadder = %d mes = %d \n",i,mi,innerB1orB2,mi < first_bpix2,(mi >= first_bpix2) && (mi < first_bpix3), params.minYsizeB1_,params.minYsizeB2_, (0 == (mi / 8) % 2), (!(mi < first_bpix2)) || (0 == (mi / 8) % 2) ? hh[i].clusterSizeY() : -1);
     if (!innerB1orB2)
       return false;
 
     bool innerB1 = mi < first_bpix2;
-    const bool idealConditions_ = false;
-    bool isOuterLadder = idealConditions_ ? true : 0 == (mi / 8) % 2;
+    
+    bool isOuterLadder = 0 == (mi / 8) % 2;
     auto mes = (!innerB1) || isOuterLadder ? hh[i].clusterSizeY() : -1;
 
     if (innerB1)  // B1
@@ -199,8 +200,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
       if (mez < cc.minz()[pairLayerId] || mez > cc.maxz()[pairLayerId])
         continue;
+#ifdef DOUBLETS_DEBUG  
+     if (params.doClusterCut_ && outer > pixelTopology::last_barrel_layer)
+	printf("clustCut: %d %d \n",i,clusterCut<TAcc>(acc, hh, ll, params, i));
+#endif
 
-      if (params.doClusterCut_ && outer >= ll.layerStarts()[4] &&
+      if (params.doClusterCut_ && outer > pixelTopology::last_barrel_layer &&
           clusterCut<TAcc>(acc, hh, ll, params, i))
         continue;
 

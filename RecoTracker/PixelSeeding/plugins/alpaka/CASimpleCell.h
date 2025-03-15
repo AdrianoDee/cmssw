@@ -1,7 +1,9 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CASimpleCell_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CASimpleCell_h
 
-// #define GPU_DEBUG
+//#define GPU_DEBUG
+//#define CA_DEBUG
+
 #include <cmath>
 #include <limits>
 
@@ -198,7 +200,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           unsigned int otherCell = bin[idx];
           if (cells[otherCell].isKilled())
             continue;
-#ifdef GPU_DEBUG
+#ifdef CA_DEBUG
           printf("Doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) %d %d\n",
                  tmpNtuplet.size(),
                  idx,
@@ -244,18 +246,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               ALPAKA_ASSERT_ACC(nh < TrackerTraits::maxHitsOnTrack);
               hits[nh] = theOuterHitId;
               auto it = foundNtuplets.bulkFill(acc, apc, hits, nh + 1);
-#ifdef GPU_DEBUG
+#ifdef CA_DEBUG
               printf("track n. %d nhits %d with cells: ", it, nh + 1);
 #endif
               if (it >= 0) {  // if negative is overflow....
                 for (auto c : tmpNtuplet) {
-#ifdef GPU_DEBUG
+#ifdef CA_DEBUG
                   printf("%d - ", c);
 #endif
                   auto t_ind = alpaka::atomicAdd(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
 
                   if (t_ind >= uint32_t(ct.metadata().size())) {
-#ifdef GPU_DEBUG
+#ifdef CA_DEBUG
                     printf("Warning!!!! Too many cell->tracks associations (limit = %d)!\n", ct.metadata().size());
 #endif
 		    alpaka::atomicSub(acc, nCellTracks, (uint32_t)1, alpaka::hierarchy::Blocks{});
@@ -266,7 +268,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   ct[t_ind].inner() = c;   //cell
                   ct[t_ind].outer() = it;  //track
                 }
-#ifdef GPU_DEBUG
+#ifdef CA_DEBUG
                 printf("\n");
 #endif
                 quality[it] = bad;  // initialize to bad

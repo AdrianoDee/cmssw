@@ -44,7 +44,7 @@
  * objects from the output of SoA CA.
  */
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 
 class PixelTrackProducerFromSoAAlpaka : public edm::global::EDProducer<> {
   using TrackSoAHost = reco::TracksHost;
@@ -209,7 +209,7 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     for (auto iHit = start; iHit < end; ++iHit)
       hits[iHit - start] = hitmap[hitIdxs[iHit]];
 
-#ifdef GPU_DEBUG
+#ifdef CA_DEBUG
     std::cout << "track soa : " << it << " with hits: ";
     for (auto iHit = start; iHit < end; ++iHit)
       std::cout << hitIdxs[iHit] << " - ";

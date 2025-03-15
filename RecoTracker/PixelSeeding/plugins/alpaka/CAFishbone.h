@@ -17,6 +17,8 @@
 #include "CACell.h"
 #include "CAStructures.h"
 
+//#define GPU_DEBUG
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
   using HitToCell = caStructures::GenericContainer;
@@ -38,7 +40,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       // outermost parallel loop, using all grid elements along the slower dimension (Y or 0 in a 2D grid)
       for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, outerHits)) {
         uint32_t size = outerHitHisto->size(idy);  
-        // printf("fishbone ---> outerhit %d size %d - ",idy,size);
+        // printf("fishbone ---> outersize %d - ",idy,size);
 
         if (size < 2)
           continue;
@@ -51,7 +53,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         auto xo = c0.outer_x(hh);
         auto yo = c0.outer_y(hh);
         auto zo = c0.outer_z(hh);
-        //printf("first cell %d x0 %.2f y0 %.2f z0 %.2f - ",bin[0],c0.outer_x(hh),c0.outer_y(hh),c0.outer_z(hh));ve
+        //printf("first cell %d xo %.2f yo %.2f zo %.2f - ",bin[0],c0.outer_x(hh),c0.outer_y(hh),c0.outer_z(hh));ve
 
         // #ifdef GPU_DEBUG
         //         for (auto idx = 0u; idx < size; idx++) {
@@ -61,46 +63,56 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         // #endif
         for (uint32_t ic : cms::alpakatools::independent_group_elements_x(acc, size)) {
           
+//printf("cell0 = %d ci = %d\n",bin[0],bin[ic]);
           unsigned int otherCell = bin[ic];
           auto& ci = cells[otherCell];
-
+//	printf("xo = %.2f yo = %.2f zo = %.2f xi = %.2f yi = %.2f zi = %.2f \n",xo,yo,zo,ci.inner_x(hh),ci.inner_y(hh),ci.inner_z(hh));  
           if (ci.unused())
             continue; // for triplets equivalent to next
           if (checkTrack && cellTracksHisto->size(otherCell) == 0)
             continue;
 
-          auto x1 = (ci.inner_x(hh) - xo);
-          auto y1 = (ci.inner_y(hh) - yo);
-          auto z1 = (ci.inner_z(hh) - zo);
-          auto n1 = x1 * x1 + y1 * y1 + z1 * z1;
+          float x1 = (ci.inner_x(hh) - xo);
+          float y1 = (ci.inner_y(hh) - yo);
+          float z1 = (ci.inner_z(hh) - zo);
+          float n1 = x1 * x1 + y1 * y1 + z1 * z1;
 
           for (auto jc = ic + 1; jc < size; ++jc) {
-            auto& cj = cells[bin[jc]];
-            if (ci.inner_detIndex(hh) == cj.inner_detIndex(hh))
+            unsigned int nextCell = bin[jc];
+            auto& cj = cells[nextCell];
+	    if (cj.unused())
+	    continue;
+	    if (checkTrack && cellTracksHisto->size(nextCell) == 0)  
+	    continue;
+#ifdef GPU_DEBUG 
+printf("xx = %.2f yo = %.2f zo = %.2f xi = %.2f yi = %.2f zi = %.2f xj = %.2f yj = %.2f zj = %.2f\n",xo,yo,zo,ci.inner_x(hh),ci.inner_y(hh),ci.inner_z(hh),cj.inner_x(hh),cj.inner_y(hh),cj.inner_z(hh));
+#endif
+
+  if (ci.inner_detIndex(hh) == cj.inner_detIndex(hh))
               continue;
 
-            auto x2 = (cj.inner_x(hh) - xo);
-            auto y2 = (cj.inner_y(hh) - yo);
-            auto z2 = (cj.inner_z(hh) - zo);
-            auto n2 = x2 * x2 + y2 * y2 + z2 * z2;
+            float x2 = (cj.inner_x(hh) - xo);
+            float y2 = (cj.inner_y(hh) - yo);
+            float z2 = (cj.inner_z(hh) - zo);
+            float n2 = x2 * x2 + y2 * y2 + z2 * z2;
 
             auto cos12 = x1 * x2 + y1 * y2 + z1 * z2;
 
             if (cos12 * cos12 >= 0.99999f * (n1 * n2)) {
               // alligned:  kill farthest (prefer consecutive layers)
               // if same layer prefer farthest (longer level arm) and make space for intermediate hit
-              bool sameLayer = ci.layerPairId() == cj.layerPairId();
+              bool sameLayer = int(ci.layerPairId()) == int(cj.layerPairId());
               if (n1 > n2) {
                 if (sameLayer) {
                   cj.kill();  // closest
                   ci.setFishbone(acc, cj.inner_hit_id(), cj.inner_z(hh), hh);
 #ifdef GPU_DEBUG
-                  printf("hit %d same layer cell %d kill %d \n", idy, bin[ic], bin[jc]);
+                 printf("n1>n2 lic = %d ljc = %d dic = %.2f djc = %.2f cell %d kill %d cos = %.7f n1 = %.3f n2 = %.3f same\n",int(ci.layerPairId()),int(cj.layerPairId()),ci.inner_detIndex(hh), cj.inner_detIndex(hh), bin[ic], bin[jc],cos12 * cos12 / (n1*n2), n1, n2);
 #endif
                 } else {
                   ci.kill();  // farthest
 #ifdef GPU_DEBUG
-                  printf("hit %d same layer cell %d kill %d \n", idy, bin[jc], bin[ic]);
+             printf("n1>n2 lic = %d ljc = %d dic = %.2f djc = %.2f cell %d kill %d cos = %.7f n1 = %.3f n2 = %.3f diff\n",int(ci.layerPairId()),int(cj.layerPairId()),ci.inner_detIndex(hh), cj.inner_detIndex(hh), bin[jc], bin[ic],cos12 * cos12 / (n1*n2), n1, n2); 
 #endif
                   // break;  // removed to improve reproducibility, keep it for reference and tests
                 }
@@ -108,13 +120,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                 if (!sameLayer) {
                   cj.kill();  // farthest
 #ifdef GPU_DEBUG
-                  printf("hit %d diff layer cell %d kill %d \n", idy, bin[ic], bin[jc]);
+             printf("n2>n1 lic = %d ljc = %d dic = %.2f djc = %.2f cell %d kill %d cos = %.7f n1 = %.3f n2 = %.3f diff\n",int(ci.layerPairId()),int(cj.layerPairId()),ci.inner_detIndex(hh), cj.inner_detIndex(hh), bin[ic], bin[jc],cos12 * cos12 / (n1*n2), n1, n2); 
 #endif
                 } else {
                   ci.kill();  // closest
                   cj.setFishbone(acc, ci.inner_hit_id(), ci.inner_z(hh), hh);
 #ifdef GPU_DEBUG
-                  printf("hit %d diff layer cell %d kill %d \n", idy, bin[jc], bin[ic]);
+             printf("n2>n1 lic = %d ljc = %d dic = %.2f djc = %.2f cell %d kill %d cos = %.7f n1 = %.3f n2 = %.3f same\n",int(ci.layerPairId()),int(cj.layerPairId()),ci.inner_detIndex(hh), cj.inner_detIndex(hh), bin[jc], bin[ic],cos12 * cos12 / (n1*n2), n1, n2);
 #endif
                   // break;  // removed to improve reproducibility, keep it for reference and tests
                 }

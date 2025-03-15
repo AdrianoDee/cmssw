@@ -1,9 +1,9 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
 
-//#define GPU_DEBUG
+#define GPU_DEBUG
 //#define NTUPLE_DEBUG
-//#define CA_DEBUG
+#define CA_DEBUG
 
 // C++ includes
 #include <cmath>
@@ -406,8 +406,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
             auto t_ind = alpaka::atomicAdd(acc, nTrips, (uint32_t)1, alpaka::hierarchy::Blocks{});
 #ifdef CA_DEBUG
-            printf("Triplet no. %d %d %d -> (%d, %d, %d, %d) \n",
-                   t_ind,
+            printf("Triplet no. %.5f %.5f (%d %d) - %d %d -> (%d, %d, %d, %d) \n",  thetaCut, dcaCut, thisCell.layerPairId(), oc.layerPairId(),
                    otherCell,
                    cellIndex,
                    thisCell.inner_hit_id(),
@@ -482,11 +481,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
         auto const &thisCell = cells[idx];
 
-        // cut by earlyFishbone
+   // cut by earlyFishbone
         if (thisCell.isKilled())
           continue;
 
-        // we require at least three hits
+             // we require at least three hits
         if (cellNeighborsHisto->size(idx) == 0)
           continue;
 
@@ -501,6 +500,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                idx,
                cellNeighborsHisto->size(idx));
 #endif
+
         if (doit) {
           typename Cell::TmpTuple stack;
 
