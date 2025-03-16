@@ -191,6 +191,9 @@ void SiStripRecHitSoAConverter::produce(device::Event& iEvent, device::EventSetu
       stripHitsHost.view()[n_hits].zGlobal() = gz;
       stripHitsHost.view()[n_hits].rGlobal() = sqrt(gx * gx + gy * gy);
       stripHitsHost.view()[n_hits].iphi() = unsafe_atan2s<7>(gy, gx);
+      // These are only matched strip hits.
+      auto monoClust = recHit.monoClusterRef().siStripCluster().charge();
+      auto sterClust = recHit.stereoClusterRef().siStripCluster().charge();
       // clamp to 255 and pack in one uint16 = (value2 << 8) | value1  
       // stripHitsHost.view()[n_hits].chargeAndStatus().charge = ?
       // stripHitsHost.view()[n_hits].chargeAndStatus().status = ?
