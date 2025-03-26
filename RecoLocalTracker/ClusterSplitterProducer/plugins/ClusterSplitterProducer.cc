@@ -49,6 +49,10 @@
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDMetadata.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDMetadataSentry.h"
 
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisDevice.h"
+#include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisHost.h"
+#include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisSoACollection.h"
+
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
@@ -121,6 +125,9 @@ private:
   bool verbose_;
   const device::EDPutToken<CandidatesSoACollection> CandidatesSoACollection_;
   const device::EDPutToken<ClusterGeometrysSoACollection> ClusterGeometrysSoACollection_;
+  const device::EDPutToken<SiPixelDigisSoACollection> SiPixelDigisSoACollection_;
+  //const device::EDPutToken<ALPAKA_ACCELERATOR_NAMESPACE::SiPixelDigisSoACollection> SiPixelDigisSoACollection_;
+
 };
 
 HelperSplitter::HelperSplitter(edm::ParameterSet const& iConfig)
@@ -138,7 +145,8 @@ HelperSplitter::HelperSplitter(edm::ParameterSet const& iConfig)
       geomToken_(esConsumes()),
       verbose_(iConfig.getParameter<bool>("verbose")),
       CandidatesSoACollection_{produces()},
-      ClusterGeometrysSoACollection_{produces()}      
+      ClusterGeometrysSoACollection_{produces()},    
+      SiPixelDigisSoACollection_{produces()}      
 {}
 
 
@@ -220,6 +228,8 @@ void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::E
     if (verbose_) std::cout << "TrackerGeometry/Topology got it" << std::endl;
 
 
+    //auto const& clustersSoA = iEvent.get(SoAclusterToken_);
+
 
     // Get and process siPixelClusters
     auto const& PixelClusters = iEvent.get(clusterToken_);
@@ -231,21 +241,29 @@ void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::E
 
     // Calculate the total number of Clusters (to be used later in the cluster geo SoA)
     int calculateNumberOfClusters = 0;
+    int calculateNumberOfPixels = 0;
     for (auto detIt = PixelClusters.begin(); detIt != PixelClusters.end(); ++detIt) {
         calculateNumberOfClusters = calculateNumberOfClusters + detIt->size();
+
+        const edmNew::DetSet<SiPixelCluster>& detset = *detIt;
+        for (const auto& cluster : detset) {
+            const SiPixelCluster& aCluster = cluster;
+            calculateNumberOfPixels += aCluster.pixels().size();
+        }
     }
     if (verbose_) std::cout << "Calculated " << calculateNumberOfClusters << " clusters" << std::endl;
+    if (verbose_) std::cout << "Calculated " << calculateNumberOfPixels << " pixels" << std::endl;
 
 
     // Create the ClusterGeometrySoA on CPU (and its view)
     ClusterGeometrysHost geotkCluster(calculateNumberOfClusters, queue);
+    SiPixelDigisHost tkDigi(calculateNumberOfPixels, queue);
+
     auto geoclusterView = geotkCluster.view();
-    if (verbose_) std::cout << "Clusters done" << std::endl;
+    auto digiView = tkDigi.view();
 
     size_t clusterIndex = 0;
-
-    clusterIndex = 0;
-    //auto const& clustersSoA = iEvent.get(SoAclusterToken_);
+    size_t pixelIdx = 0;
 
     for (auto detIt = PixelClusters.begin(); detIt != PixelClusters.end(); ++detIt) {
         const edmNew::DetSet<SiPixelCluster>& detset = *detIt;
@@ -281,14 +299,28 @@ void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::E
         float transformZX = localZ.x(), transformZY = localZ.y(), transformZZ = localZ.z();
 
         unsigned int localClusterIdx = 0;
-        // Loop over the clusters in this detector set
+
+        // Loop over the clusters in this detector
+
         for (const auto& cluster : detset) {
             const SiPixelCluster& aCluster = cluster;
             std::vector<SiPixelCluster::Pixel> originalpixels = aCluster.pixels();
 
+
             // Fill GeoCluster SoA with necessary data
             geoclusterView.moduleId(clusterIndex) = moduleId;
             geoclusterView.clusterOffset(clusterIndex) = localClusterIdx;
+
+            // Fill digiSoA with pixel information
+            for (const auto& pixel : originalpixels) {
+                digiView.xx(pixelIdx) = pixel.x;
+                digiView.yy(pixelIdx) = pixel.y;                
+                digiView.adc(pixelIdx) = pixel.adc;
+                digiView.clus(pixelIdx) = localClusterIdx;                
+                digiView.rawIdArr(pixelIdx) = detset.id();
+                digiView.moduleId(pixelIdx) = moduleId;
+                pixelIdx++;
+            }
 
             // Use PixelCluster Parameter Estimator (CPE) to compute local parameters
             auto localParams = pp->localParametersV(cluster, (*geometry->idToDetUnit(detIt->id())));
@@ -299,9 +331,9 @@ void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::E
             geoclusterView.pitchX(clusterIndex) = pitchX;
             geoclusterView.pitchY(clusterIndex) = pitchY;
             geoclusterView.thickness(clusterIndex) = thickness;
-            geoclusterView.x(clusterIndex) = cPos.x();
             geoclusterView.sizeX(clusterIndex) = aCluster.sizeX();
             geoclusterView.sizeY(clusterIndex) = aCluster.sizeY();
+            geoclusterView.x(clusterIndex) = cPos.x();
             geoclusterView.y(clusterIndex) = cPos.y();
             geoclusterView.z(clusterIndex) = cPos.z();
             geoclusterView.transformXX(clusterIndex) = transformXX;
@@ -325,30 +357,36 @@ void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::E
                       << ", clusterOffset = " << geoclusterView.clusterOffset(clusterIndex)
                       << ", Global Position: (x = " << cPos.x() 
                       << ", y = " << cPos.y() 
-                      << ", z = " << cPos.z() << ")" << std::endl;
+                      << ", z = " << cPos.z() << ")" 
+                      << std::endl;
+
             ++clusterIndex;
 
             // Adjust cluster offset
             localClusterIdx++;
+
         }
     }
 
     if (verbose_) std::cout << "Done with siPixelClusters (cpu)" << std::endl;
 
-
     // Produce a device–resident copy, allocating a device collection
     ClusterGeometrysSoACollection tkClusterGeometryDevice(calculateNumberOfClusters, queue);
+    SiPixelDigisSoACollection tkDigiDevice(calculateNumberOfPixels, queue);
 
     // Copy from the host collection to the device one.
     alpaka::memcpy(queue, tkClusterGeometryDevice.buffer(), geotkCluster.buffer());
+    alpaka::memcpy(queue, tkDigiDevice.buffer(), tkDigi.buffer());
     alpaka::wait(queue);
 
     //if (verbose_) std::cout << "on Host: SiPixelClusters size (total number of pixels) " << nPixelClusters << std::endl;
     if (verbose_) std::cout << "on Device: geoclusterView.size() = " << geoclusterView.metadata().size() << std::endl;
 
+
     // produce output
     iEvent.emplace(CandidatesSoACollection_, std::move(tkCandidatesDevice));
     iEvent.emplace(ClusterGeometrysSoACollection_, std::move(tkClusterGeometryDevice));
+    iEvent.emplace(SiPixelDigisSoACollection_, std::move(tkDigiDevice));
 }
 
 void HelperSplitter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {

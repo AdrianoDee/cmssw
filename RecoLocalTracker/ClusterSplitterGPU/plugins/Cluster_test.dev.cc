@@ -139,7 +139,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                 if ( globalThreadId == 0 ) *clusterCounterDevice = 0;
 
                 // CHANGE THIS IN PRODUCTION!!!!
-                uint32_t clusterIdx = 328;
+                uint32_t clusterIdx = 327;
                 //uint32_t clusterIdx = globalThreadId;      // Each thread handles exactly one cluster
 
                 moduleId = geoclusterView.moduleId(clusterIdx);
