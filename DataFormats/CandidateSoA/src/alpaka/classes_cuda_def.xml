@@ -1,0 +1,9 @@
+<lcgdict>
+  <!-- CandidatesSoA-related collections -->
+  <class name="alpaka_cuda_async::PortableCollection<CandidatesSoA>" persistent="false"/>
+  <!-- CandidatesSoACollection inherits from PortableCollection<CandidatesSoA> -->
+  <class name="alpaka_cuda_async::CandidatesSoACollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::CandidatesSoACollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::CandidatesSoACollection>>" persistent="false"/>
+
+</lcgdict>

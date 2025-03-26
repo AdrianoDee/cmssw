@@ -1,0 +1,7 @@
+<lcgdict>
+  <class name="ClusterGeometrysSoA"/>
+  <class name="ClusterGeometrysSoA::View"/>
+  <class name="PortableHostCollection<ClusterGeometrysSoA>"/>
+  <class name="ClusterGeometrysHost"/>
+  <class name="edm::Wrapper<ClusterGeometrysHost>" splitLevel="0"/>
+</lcgdict>

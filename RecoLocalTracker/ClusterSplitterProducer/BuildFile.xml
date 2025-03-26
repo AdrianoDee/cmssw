@@ -1,0 +1,15 @@
+<use name="alpaka"/>
+<use name="rootcore"/>
+<use name="eigen"/>
+<use name="DataFormats/Common"/>
+<use name="DataFormats/Portable"/>
+<use name="DataFormats/SoATemplate" source_only="1"/>
+<use name="DataFormats/SiPixelDigi"/>
+<use name="DataFormats/SiPixelClusterSoA"/>
+<use name="DataFormats/Candidate"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="HeterogeneousCore/AlpakaCore"/>
+<use name="RecoLocalTracker/SiStripClusterizer"/>
+<use name="RecoLocalTracker/ClusterParameterEstimator"/>
+<use name="RecoLocalTracker/Records"/>
+<flags ALPAKA_BACKENDS="!serial"/>
