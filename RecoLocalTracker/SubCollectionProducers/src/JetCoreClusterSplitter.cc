@@ -394,20 +394,24 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
   std::vector<std::pair<int, SiPixelCluster::Pixel>> pixels;
   for (unsigned int j = 0; j < originalpixels.size(); j++) {
     int sub = originalpixels[j].adc / chargePerUnit_ * expectedADC / centralMIPCharge_;
-    if (sub < 1)
-      sub = 1;
+
+    if (sub < 1) sub = 1;
+    //printf("FOR j=%d  sub=%d\n",j,sub);
+
     int perDiv = originalpixels[j].adc / sub;
 
       std::cout << "Splitting  " << j << "  in [ " << pixels.size() << " , " << pixels.size() + sub
                 << " ], expected numb of clusters: " << meanExp << " original pixel (x,y) " << originalpixels[j].x
                 << " " << originalpixels[j].y << " sub " << sub << std::endl;
     for (int k = 0; k < sub; k++) {
-      if (k == sub - 1)
-        perDiv = originalpixels[j].adc - perDiv * k;
+      if (k == sub - 1) perDiv = originalpixels[j].adc - perDiv * k;
       pixels.push_back(std::make_pair(j, SiPixelCluster::Pixel(originalpixels[j].x, originalpixels[j].y, perDiv)));
+      //std::cout << "PUSH_BACK_ SIZE IS "<< pixels.size() << std::endl;
+
     }
   }
   std::vector<int> clusterForPixel(pixels.size());
+
   // initial values
   for (unsigned int j = 0; j < meanExp; j++) {
     oldclx[j] = -999;
@@ -429,7 +433,7 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
     std::vector<std::vector<float>> distanceMap(originalpixels.size(), std::vector<float>(meanExp));
     for (unsigned int j = 0; j < originalpixels.size(); j++) {
 
-      std::cout << "Original Pixel pos " << j << " " << pixels[j].second.x << " " << pixels[j].second.y << std::endl;
+      std::cout << "Original Pixel pos " << j << " " << originalpixels[j].x << " " << originalpixels[j].y << std::endl;
       for (unsigned int i = 0; i < meanExp; i++) {
         distanceMapX[j][i] = 1.f * originalpixels[j].x - clx[i];
         distanceMapY[j][i] = 1.f * originalpixels[j].y - cly[i];
@@ -450,8 +454,11 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
         }
         distanceMap[j][i] = sqrt(dist);
 
-          std::cout << "Cluster " << i << " Original Pixel " << j << " distances: " << distanceMapX[j][i] << " "
-                    << distanceMapY[j][i] << " " << distanceMap[j][i] << std::endl;
+          std::cout << "Cluster " << i 
+                    << " Original Pixel " << j 
+                    << " distanceMapX[" << j << "][" << i << "]=" << distanceMapX[j][i] 
+                    << " distanceMapY[" << j << "][" << i << "]=" << distanceMapY[j][i]
+                    << " distanceMap[" << j << "][" << i << "]" << distanceMap[j][i] << std::endl;
       }
     }
     // Compute scores for sequential addition. The first index is the
@@ -462,21 +469,33 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
     // Using different rankings to improve convergence (as Giulio proposed)
     scores = secondDistScore(distanceMap);
 
+    printf("Scores:\n");
+    for (const auto& pair : scores) {
+        printf("Score: %f, Index: %d\n", pair.first, pair.second);
+    }
+
     // Iterate starting from the ones with furthest second best clusters, i.e.
     // easy choices
     std::vector<float> weightOfPixel(pixels.size());
+    std::cout << "weightOfPixel SIZE IS "<< pixels.size() << std::endl;
     for (std::multimap<float, int>::iterator it = scores.begin(); it != scores.end(); it++) {
       int pixel_index = it->second;
 
-      std::cout << "Original Pixel " << pixel_index << " with score " << it->first << std::endl;
+      //std::cout << "Original Pixel " << pixel_index << " with score " << it->first << std::endl;
       // find cluster that is both close and has some charge still to assign
       int subpixel_counter = 0;
       for (auto subpixel = pixels.begin(); subpixel != pixels.end(); ++subpixel, ++subpixel_counter) {
+          printf("CHECKME subpixel_counter=%d break, subpixel->first=%d pixel_index=%d\n",subpixel_counter, subpixel->first, pixel_index);
+
         if (subpixel->first > pixel_index) {
+          printf("subpixel_counter=%d break, subpixel->first=%d\n",subpixel_counter, subpixel->first);
           break;
         } else if (subpixel->first != pixel_index) {
+          printf("subpixel_counter=%d continue\n subpixel->first=%d pixel_index=%d",subpixel_counter, subpixel->first, pixel_index);
           continue;
         } else {
+          printf("ELSE subpixel_counter=%d continue\n subpixel->first=%d pixel_index=%d",subpixel_counter, subpixel->first, pixel_index);
+
           float maxEst = 0;
           int cl = -1;
           for (unsigned int subcluster_index = 0; subcluster_index < meanExp; subcluster_index++) {
@@ -498,11 +517,12 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
           clusterForPixel[subpixel_counter] = cl;
           weightOfPixel[subpixel_counter] = maxEst;
 
-            std::cout << "Pixel weight j cl " << weightOfPixel[subpixel_counter] << " " << subpixel_counter << " " << cl
+            std::cout << "Pixel weight weightOfPixel["<<subpixel_counter<<"] " << weightOfPixel[subpixel_counter] << " subpixel_counter=" << subpixel_counter << " cl=" << cl
                       << std::endl;
         }
       }
     }
+
     // Recompute cluster centers
     std::cout << "Recomputing cluster centers......... " << std::endl;
     stop = true;

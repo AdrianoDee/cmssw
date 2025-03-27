@@ -347,18 +347,18 @@ void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::E
             geoclusterView.transformZZ(clusterIndex) = transformZZ;
 
             // Debug printout for the cluster
-            std::cout << "Processing clusterIndex = " << clusterIndex 
-                      << ", detset id = " << detset.id() 
-                      << ", module = " << moduleId
-                      << ", offset = " << localClusterIdx
-                      << ", pixels = " << originalpixels.size()  
-                      << ", csizeX = " << aCluster.sizeX()
-                      << ", csizeY = " << aCluster.sizeY()                                 
-                      << ", clusterOffset = " << geoclusterView.clusterOffset(clusterIndex)
-                      << ", Global Position: (x = " << cPos.x() 
-                      << ", y = " << cPos.y() 
-                      << ", z = " << cPos.z() << ")" 
-                      << std::endl;
+            //td::cout << "Processing clusterIndex = " << clusterIndex 
+            //          << ", detset id = " << detset.id() 
+            //          << ", module = " << moduleId
+            //          << ", offset = " << localClusterIdx
+            //          << ", pixels = " << originalpixels.size()  
+            //          << ", csizeX = " << aCluster.sizeX()
+            //          << ", csizeY = " << aCluster.sizeY()                                 
+            //          << ", clusterOffset = " << geoclusterView.clusterOffset(clusterIndex)
+            //          << ", Global Position: (x = " << cPos.x() 
+            //          << ", y = " << cPos.y() 
+            //          << ", z = " << cPos.z() << ")" 
+            //          << std::endl;
 
             ++clusterIndex;
 
