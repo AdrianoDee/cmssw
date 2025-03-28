@@ -47,6 +47,11 @@ namespace calibPixel {
 
       for (auto i : cms::alpakatools::uniform_elements(acc, numElements)) {
         auto dvgi = view[i];
+
+        if (i > 0)
+          if (dvgi.moduleId() < view[i-1].moduleId())
+            view.isSorted() = false; // to be used for sorting after this kernel
+
         if (dvgi.moduleId() == ::pixelClustering::invalidModuleId)
           continue;
 

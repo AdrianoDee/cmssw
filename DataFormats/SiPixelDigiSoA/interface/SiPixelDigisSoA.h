@@ -12,6 +12,7 @@ GENERATE_SOA_LAYOUT(SiPixelDigisLayout,
                     SOA_COLUMN(uint16_t, yy),
                     SOA_COLUMN(uint16_t, moduleId),
                     SOA_COLUMN(uint32_t, sortedDigiIdx),
+                    SOA_SCALAR(bool, isSorted),
                     SOA_SCALAR(uint32_t, nDigis)
                     )
 
