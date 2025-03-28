@@ -423,8 +423,8 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
   bool stop = false;
   int remainingSteps = 100;
   while (!stop && remainingSteps > 0) {
-    std::cout << "---------------------------------------" << std::endl;    
-    std::cout << "REMAINING STEPS" << remainingSteps << std::endl;    
+    printf("---------------\n");
+    printf("REMAINING STEPS : %d\n", remainingSteps);
 
     remainingSteps--;
     // Compute all distances
@@ -433,7 +433,7 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
     std::vector<std::vector<float>> distanceMap(originalpixels.size(), std::vector<float>(meanExp));
     for (unsigned int j = 0; j < originalpixels.size(); j++) {
 
-      std::cout << "Original Pixel pos " << j << " " << originalpixels[j].x << " " << originalpixels[j].y << std::endl;
+      //std::cout << "Original Pixel pos " << j << " " << originalpixels[j].x << " " << originalpixels[j].y << std::endl;
       for (unsigned int i = 0; i < meanExp; i++) {
         distanceMapX[j][i] = 1.f * originalpixels[j].x - clx[i];
         distanceMapY[j][i] = 1.f * originalpixels[j].y - cly[i];
@@ -454,11 +454,11 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
         }
         distanceMap[j][i] = sqrt(dist);
 
-          std::cout << "Cluster " << i 
-                    << " Original Pixel " << j 
-                    << " distanceMapX[" << j << "][" << i << "]=" << distanceMapX[j][i] 
-                    << " distanceMapY[" << j << "][" << i << "]=" << distanceMapY[j][i]
-                    << " distanceMap[" << j << "][" << i << "]" << distanceMap[j][i] << std::endl;
+         // std::cout << "Cluster " << i 
+         //           << " Original Pixel " << j 
+         //           << " distanceMapX[" << j << "][" << i << "]=" << distanceMapX[j][i] 
+         //           << " distanceMapY[" << j << "][" << i << "]=" << distanceMapY[j][i]
+         //           << " distanceMap[" << j << "][" << i << "]" << distanceMap[j][i] << std::endl;
       }
     }
     // Compute scores for sequential addition. The first index is the
@@ -477,7 +477,7 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
     // Iterate starting from the ones with furthest second best clusters, i.e.
     // easy choices
     std::vector<float> weightOfPixel(pixels.size());
-    std::cout << "weightOfPixel SIZE IS "<< pixels.size() << std::endl;
+    //std::cout << "weightOfPixel SIZE IS "<< pixels.size() << std::endl;
     for (std::multimap<float, int>::iterator it = scores.begin(); it != scores.end(); it++) {
       int pixel_index = it->second;
 
@@ -485,16 +485,12 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
       // find cluster that is both close and has some charge still to assign
       int subpixel_counter = 0;
       for (auto subpixel = pixels.begin(); subpixel != pixels.end(); ++subpixel, ++subpixel_counter) {
-          printf("CHECKME subpixel_counter=%d break, subpixel->first=%d pixel_index=%d\n",subpixel_counter, subpixel->first, pixel_index);
 
         if (subpixel->first > pixel_index) {
-          printf("subpixel_counter=%d break, subpixel->first=%d\n",subpixel_counter, subpixel->first);
           break;
         } else if (subpixel->first != pixel_index) {
-          printf("subpixel_counter=%d continue\n subpixel->first=%d pixel_index=%d",subpixel_counter, subpixel->first, pixel_index);
           continue;
         } else {
-          printf("ELSE subpixel_counter=%d continue\n subpixel->first=%d pixel_index=%d",subpixel_counter, subpixel->first, pixel_index);
 
           float maxEst = 0;
           int cl = -1;
@@ -517,14 +513,14 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
           clusterForPixel[subpixel_counter] = cl;
           weightOfPixel[subpixel_counter] = maxEst;
 
-            std::cout << "Pixel weight weightOfPixel["<<subpixel_counter<<"] " << weightOfPixel[subpixel_counter] << " subpixel_counter=" << subpixel_counter << " cl=" << cl
-                      << std::endl;
+          //std::cout << "Pixel weight weightOfPixel["<<subpixel_counter<<"] " << weightOfPixel[subpixel_counter] << " subpixel_counter=" << subpixel_counter << " cl=" << cl
+          //            << std::endl;
         }
       }
     }
 
     // Recompute cluster centers
-    std::cout << "Recomputing cluster centers......... " << std::endl;
+    //std::cout << "Recomputing cluster centers......... " << std::endl;
     stop = true;
     for (unsigned int subcluster_index = 0; subcluster_index < meanExp; subcluster_index++) {
       if (std::abs(clx[subcluster_index] - oldclx[subcluster_index]) > 0.01f)
@@ -536,6 +532,7 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
       clx[subcluster_index] = 0;
       cly[subcluster_index] = 0;
       cls[subcluster_index] = 1e-99;
+      //printf("clx[subcluster_index]=%f cly[subcluster_index]=%f\n",clx[subcluster_index],cly[subcluster_index]);
     }
     for (unsigned int pixel_index = 0; pixel_index < pixels.size(); pixel_index++) {
       if (clusterForPixel[pixel_index] < 0)
@@ -554,8 +551,9 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
         cly[subcluster_index] /= cls[subcluster_index];
       }
 
-        std::cout << "Center for cluster " << subcluster_index << " x,y " << clx[subcluster_index] << " "
-                  << cly[subcluster_index] << std::endl;
+      //printf("Center for cluster, clx[subcluster_index]=%f cly[subcluster_index]=%f\n",clx[subcluster_index],cly[subcluster_index]);
+
+
       cls[subcluster_index] = 0;
     }
   }
@@ -573,19 +571,23 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
         for (unsigned int k = j + 1; k < pixels.size(); k++) {
           if (pixels[k].second.adc != 0 and pixels[k].second.x == pixels[j].second.x and
               pixels[k].second.y == pixels[j].second.y and clusterForPixel[k] == cl) {
-            if (verbose)
-              std::cout << "Resetting all sub-pixel for location " << pixels[k].second.x << ", " << pixels[k].second.y
-                        << " at index " << k << " associated to cl " << clusterForPixel[k] << std::endl;
+
+              //std::cout << "Resetting all sub-pixel for location " << pixels[k].second.x << ", " << pixels[k].second.y
+              //          << " at index " << k << " associated to cl " << clusterForPixel[k] << std::endl;
+
+
             pixels[j].second.adc += pixels[k].second.adc;
             pixels[k].second.adc = 0;
           }
         }
-        for (unsigned int p = 0; p < pixels.size(); ++p)
-
+/*
+        for (unsigned int p = 0; p < pixels.size(); ++p) {
             std::cout << "index, x, y, ADC: " << p << ", " << pixels[p].second.x << ", " << pixels[p].second.y << ", "
                       << pixels[p].second.adc << " associated to cl " << clusterForPixel[p] << std::endl
                       << "Adding pixel " << pixels[j].second.x << ", " << pixels[j].second.y << " to cluster " << cl
                       << std::endl;
+            }
+*/
         pixelsForCl[cl].push_back(pixels[j].second);
       }
     }
@@ -595,21 +597,24 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
   //pixelMap(meanExp,std::vector<std::vector<SiPixelCluster::PixelPos *>
   //>(512,std::vector<SiPixelCluster::Pixel *>(512,0)));
 
+
+  printf("Final writing\n");
   for (int cl = 0; cl < (int)meanExp; cl++) {
 
-      std::cout << "---> Pixels of cl " << cl << " ";
+    std::cout << "---> Pixels of cl=" << cl << " ";
     for (unsigned int j = 0; j < pixelsForCl[cl].size(); j++) {
       SiPixelCluster::PixelPos newpix(pixelsForCl[cl][j].x, pixelsForCl[cl][j].y);
-      if (verbose)
-        std::cout << pixelsForCl[cl][j].x << "," << pixelsForCl[cl][j].y << "|";
+
+      std::cout << "pixelsForCl[cl][j].x=" <<pixelsForCl[cl][j].x << ", pixelsForCl[cl][j].y=" << pixelsForCl[cl][j].y << ", pixelsForCl[cl][j].adc=" << pixelsForCl[cl][j].adc << std::endl;
+
       if (j == 0) {
         output.emplace_back(newpix, pixelsForCl[cl][j].adc);
       } else {
         output.back().add(newpix, pixelsForCl[cl][j].adc);
       }
     }
-    if (verbose)
-      std::cout << std::endl;
+
+    std::cout << std::endl;
     if (!pixelsForCl[cl].empty()) {
       if (forceXError_ > 0)
         output.back().setSplitClusterErrorX(forceXError_);

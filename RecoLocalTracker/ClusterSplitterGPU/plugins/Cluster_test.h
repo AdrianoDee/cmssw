@@ -32,25 +32,25 @@ struct clusterProperties {
     float oldcly[maxSubClusters];
 
     // Copy the pixels from the SoA into original to keep them aligned to the following arrays
-    float originalpixels_x[maxPixels];
-    float originalpixels_y[maxPixels];
-    float originalpixels_ADC[maxPixels];
-    float originalpixels_rawIdArr[maxPixels];
+    uint32_t originalpixels_x[maxPixels];
+    uint32_t originalpixels_y[maxPixels];
+    uint32_t originalpixels_ADC[maxPixels];
+    uint32_t originalpixels_rawIdArr[maxPixels];
 
     // These are used to store temporary pixel information
     uint32_t pixelCounter;                // how many pixels in the cluster under study
-    int pixels[maxPixels];                // Storing the index of the pixel
-    float pixel_X[maxPixels];             // X position of each pixel
-    float pixel_Y[maxPixels];             // Y position of each pixel
-    float pixel_ADC[maxPixels];           // adc value of each pixel
+    uint32_t pixels[maxPixels];                // Storing the index of the pixel
+    int pixel_X[maxPixels];             // X position of each pixel
+    int pixel_Y[maxPixels];             // Y position of each pixel
+    uint32_t pixel_ADC[maxPixels];           // adc value of each pixel
     uint32_t rawIdArr[maxPixels];         // RawAddress of each pixel
 
     // These are used for the final sub-cluster (each subcluster contains pixels)
     uint32_t pixelsForClCounter[maxSubClusters];             // how many pixels in this Cluster
-    float pixelsForCl_X[maxSubClusters][maxPixels];          // position
-    float pixelsForCl_Y[maxSubClusters][maxPixels];          // position
-    float pixelsForCl_ADC[maxSubClusters][maxPixels];        // adc value
-    float pixelsForCl_rawIdArr[maxSubClusters][maxPixels];        // adc value
+    int pixelsForCl_X[maxSubClusters][maxPixels];          // position
+    int pixelsForCl_Y[maxSubClusters][maxPixels];          // position
+    uint32_t pixelsForCl_ADC[maxSubClusters][maxPixels];        // adc value
+    uint32_t pixelsForCl_rawIdArr[maxSubClusters][maxPixels];        // adc value
     //int pixelsForCl[maxSubClusters][maxPixels];              // Storing the index of the pixel
 
     // thse are used for k-map like algorithm and scoring

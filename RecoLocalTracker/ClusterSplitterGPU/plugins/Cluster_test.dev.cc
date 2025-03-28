@@ -336,8 +336,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                 float dist = clusterData[clusterIdx].distanceMap[pixelIdx][subClusterIdx];  // Access the distanceMap
 
                 // Debug print for each sub-cluster iteration
-                printf("DEBUG: pixelIdx=%d, subClusterIdx=%u, dist=%f, current minDist=%f, current secondMinDist=%f\n",
-                        pixelIdx, subClusterIdx, dist, minDist, secondMinDist);
+                //printf("DEBUG: pixelIdx=%d, subClusterIdx=%u, dist=%f, current minDist=%f, current secondMinDist=%f\n",
+                //        pixelIdx, subClusterIdx, dist, minDist, secondMinDist);
 
                 if (dist < minDist) {
                     secondMinDist = minDist;
@@ -359,7 +359,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         }
 
         ALPAKA_FN_ACC void secondDistScore(clusterProperties* clusterData, uint32_t clusterIdx, unsigned meanExp) const {
-            printf("running with clusterData[clusterIdx].pixelCounter=: %u\n", clusterData[clusterIdx].pixelCounter);
+            //printf("running with clusterData[clusterIdx].pixelCounter=: %u\n", clusterData[clusterIdx].pixelCounter);
 
             for (uint32_t pixelIdx = 0; pixelIdx < clusterData[clusterIdx].pixelCounter; pixelIdx++) {
                 if ( pixelIdx < maxPixels ) {
@@ -611,7 +611,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
                         int perDiv = clusterPropertiesDevice[clusterIdx].originalpixels_ADC[j] / sub;
 
-                        printf("Splitting %d in [   ], expected numb of clusters: %u original pixel (x,y) %f %f sub %d\n",
+                        printf("Splitting %d in [   ], expected numb of clusters: %u original pixel (x,y) %d %d sub %d\n",
                                j,  meanExp, clusterPropertiesDevice[clusterIdx].originalpixels_x[j], clusterPropertiesDevice[clusterIdx].originalpixels_y[j], sub);
 
                         // Iterate over the sub-clusters (split pixels)
@@ -643,13 +643,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 
                     while (!stop && remainingSteps > 0) {
+                        printf("---------------\n");
+                        printf("REMAINING STEPS : %d\n", remainingSteps);
                         remainingSteps--;
-                        printf("Remaining steps: %d\n", remainingSteps);
 
                         // Compute distances
                         for (uint32_t j = 0; j < clusterPropertiesDevice[clusterIdx].pixelCounter; ++j) {
 
-                            printf("Original Pixel pos %d %f %f\n", j, clusterPropertiesDevice[clusterIdx].originalpixels_x[j], clusterPropertiesDevice[clusterIdx].originalpixels_y[j]);
+                            //printf("Original Pixel pos %d %f %f\n", j, clusterPropertiesDevice[clusterIdx].originalpixels_x[j], clusterPropertiesDevice[clusterIdx].originalpixels_y[j]);
 
 
                             for (unsigned int i = 0; i < meanExp; i++) {
@@ -676,7 +677,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
                                 // Store the computed distance in the 2D array
                                 clusterPropertiesDevice[clusterIdx].distanceMap[j][i] = sqrt(dist);
-                                printf("Cluster=%u Original Pixel %u distanceMap[%u][%u] = %f\n", i, j, j, i, clusterPropertiesDevice[clusterIdx].distanceMap[j][i]);
+                                //printf("Cluster=%u Original Pixel %u distanceMap[%u][%u] = %f\n", i, j, j, i, clusterPropertiesDevice[clusterIdx].distanceMap[j][i]);
                             }
                         } // compute distances done
 
@@ -692,8 +693,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         // to mimic the multimap, I score manually both arrays
                         sortScores(clusterPropertiesDevice, clusterIdx);
 
-//fully tested up to here
-
                         // Iterating over Scores Indices and Values
                         for (unsigned int i = 0; i < clusterPropertiesDevice[clusterIdx].pixelCounter; i++) {
                             if (i < maxPixels) {
@@ -705,18 +704,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                 // Iterating over subpixels
                                 for (unsigned int subpixel = 0; subpixel < pixelsSize; subpixel++, subpixel_counter++) {
                                     if (subpixel< maxPixels) {
-          printf("CHECKME subpixel_counter=%d break, subpixel->first=%d pixel_index=%d\n",subpixel,clusterPropertiesDevice[clusterIdx].pixels[subpixel],pixel_index);
 
-                                        if (clusterPropertiesDevice[clusterIdx].pixels[subpixel] > pixel_index) {
-          printf("subpixel_counter=%d break, subpixel->first=%d\n",subpixel,clusterPropertiesDevice[clusterIdx].pixels[subpixel]);
+                                        if (clusterPropertiesDevice[clusterIdx].pixels[subpixel] > static_cast<uint32_t>(pixel_index)) {
                                             break;
-                                        } else if (clusterPropertiesDevice[clusterIdx].pixels[subpixel] != pixel_index) {
-          printf("subpixel_counter=%d continue, subpixel->first=%d pixel_index=%d\n",subpixel,clusterPropertiesDevice[clusterIdx].pixels[subpixel], pixel_index);
+                                        } else if (clusterPropertiesDevice[clusterIdx].pixels[subpixel] != static_cast<uint32_t>(pixel_index)) {
                                             continue;
                                         } else {
                                             float maxEst = 0;
                                             int cl = -1;
-          printf("ELSE subpixel_counter=%d continue, subpixel->first=%d pixel_index=%d\n",subpixel,clusterPropertiesDevice[clusterIdx].pixels[subpixel], pixel_index);
+
                                             // Iterating over subclusters to calculate the best fit
                                             for (unsigned int subcluster_index = 0; subcluster_index < meanExp; subcluster_index++) {
                                                 if (subcluster_index< maxSubClusters) {
@@ -733,20 +729,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                     }
                                                 }
                                             }
-                                            //if (cl >= 0 && cl < maxSubClusters-1) {
 
-                                                // Updating other cluster properties
-                                                clusterPropertiesDevice[clusterIdx].cls[cl] += clusterPropertiesDevice[clusterIdx].pixel_ADC[subpixel];                                                
-                                                clusterPropertiesDevice[clusterIdx].clusterForPixel[subpixel_counter] = cl;
-                                                clusterPropertiesDevice[clusterIdx].weightOfPixel[subpixel_counter] = maxEst;
+                                            // Updating other cluster properties
+                                            clusterPropertiesDevice[clusterIdx].cls[cl] += clusterPropertiesDevice[clusterIdx].pixel_ADC[subpixel];                                                
+                                            clusterPropertiesDevice[clusterIdx].clusterForPixel[subpixel_counter] = cl;
+                                            clusterPropertiesDevice[clusterIdx].weightOfPixel[subpixel_counter] = maxEst;
 
-                                                printf("Pixel weight weightOfPixel[%d] %f subpixel_counter=%d cl=%d\n", 
-                                                       subpixel_counter, clusterPropertiesDevice[clusterIdx].weightOfPixel[subpixel_counter], subpixel_counter, clusterPropertiesDevice[clusterIdx].clusterForPixel[subpixel_counter]);
-
-                                            //}
-                                        
+                                            //printf("Pixel weight weightOfPixel[%d] %f subpixel_counter=%d cl=%d\n", 
+                                            //       subpixel_counter, clusterPropertiesDevice[clusterIdx].weightOfPixel[subpixel_counter], subpixel_counter, clusterPropertiesDevice[clusterIdx].clusterForPixel[subpixel_counter]);                                        
                                         }
-
                                     }
                                     else {
                                         //printf("ERROR iterating over scores indices and values exceeds maxPixels %u", maxPixels);
@@ -756,6 +747,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         }
 
                         // Recompute cluster centers
+                        //printf("Recomputing cluster centers.........\n ");
+
                         stop = true;
                         for (unsigned int subcluster_index = 0; subcluster_index < meanExp; subcluster_index++) {
                             if (subcluster_index < maxSubClusters-1) {
@@ -767,11 +760,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                 clusterPropertiesDevice[clusterIdx].oldcly[subcluster_index] = clusterPropertiesDevice[clusterIdx].cly[subcluster_index];
                                 clusterPropertiesDevice[clusterIdx].clx[subcluster_index] = 0;
                                 clusterPropertiesDevice[clusterIdx].cly[subcluster_index] = 0;
-                                clusterPropertiesDevice[clusterIdx].cls[subcluster_index] = 1e-99;
+                                clusterPropertiesDevice[clusterIdx].cls[subcluster_index] = 1e-38f;//1e-99;
                             }
                         }
 
-                        for (unsigned int pixel_index = 0; pixel_index < clusterPropertiesDevice[clusterIdx].pixelCounter; pixel_index++) {
+                        for (unsigned int pixel_index = 0; pixel_index < pixelsSize; pixel_index++) {
                             if (pixel_index < maxPixels-1) {
                                 if (clusterPropertiesDevice[clusterIdx].clusterForPixel[pixel_index] < 0)
                                     continue;
@@ -787,32 +780,51 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     clusterPropertiesDevice[clusterIdx].clx[subcluster_index] /= clusterPropertiesDevice[clusterIdx].cls[subcluster_index];
                                     clusterPropertiesDevice[clusterIdx].cly[subcluster_index] /= clusterPropertiesDevice[clusterIdx].cls[subcluster_index];
                                 }
+                                //printf("Center for cluster, clx[subcluster_index]=%f cly[subcluster_index]=%f\n",clusterPropertiesDevice[clusterIdx].clx[subcluster_index], clusterPropertiesDevice[clusterIdx].cly[subcluster_index]);
+
                                 clusterPropertiesDevice[clusterIdx].cls[subcluster_index] = 0;
                             }
                         }
                     }
 
                     // accumulate pixel with same cl
+                    printf("accumulate pixel with same cl...\n");
                     int p = 0;
+
                     for (int cl = 0; cl < (int) meanExp; cl++) {
-                        for (unsigned int j = 0; j < clusterPropertiesDevice[clusterIdx].pixelCounter; j++) {
+                        p = 0;
+                        for (unsigned int j = 0; j < pixelsSize; j++) {
                             if (j < maxPixels) {                            
                                 if (clusterPropertiesDevice[clusterIdx].clusterForPixel[j] == cl and clusterPropertiesDevice[clusterIdx].pixel_ADC[j] != 0) {
 
                                     // cl find the other pixels
                                     // with same x,y and
                                     // accumulate+reset their adc
-                                    for (unsigned int k = j + 1; k < clusterPropertiesDevice[clusterIdx].pixelCounter; k++) {
+                                    for (unsigned int k = j + 1; k < pixelsSize; k++) {
                                         if (k < maxPixels) {                            
                                             if (clusterPropertiesDevice[clusterIdx].pixel_ADC[k] != 0 and 
                                                 clusterPropertiesDevice[clusterIdx].pixel_X[k] == clusterPropertiesDevice[clusterIdx].pixel_X[j] and 
                                                 clusterPropertiesDevice[clusterIdx].pixel_Y[k] == clusterPropertiesDevice[clusterIdx].pixel_Y[j] and 
                                                 clusterPropertiesDevice[clusterIdx].clusterForPixel[k] == cl) {
-                                                    clusterPropertiesDevice[clusterIdx].pixel_ADC[j] += clusterPropertiesDevice[clusterIdx].pixel_ADC[k];
-                                                    clusterPropertiesDevice[clusterIdx].pixel_ADC[k] = 0;
-                                                }
+
+
+                                                //printf("Resetting all sub-pixel for location %d, %d at index %d associated to cl %d\n", 
+                                                //       clusterPropertiesDevice[clusterIdx].pixel_X[k], clusterPropertiesDevice[clusterIdx].pixel_Y[k], k, clusterPropertiesDevice[clusterIdx].clusterForPixel[k]);
+
+                                                clusterPropertiesDevice[clusterIdx].pixel_ADC[j] += clusterPropertiesDevice[clusterIdx].pixel_ADC[k];
+                                                clusterPropertiesDevice[clusterIdx].pixel_ADC[k] = 0;
+                                            }
                                         }
                                     }
+/*
+                                    for (unsigned int p = 0; p < pixelsSize; ++p) {
+                                        printf("index, x, y, ADC: %u, %d, %d, %d associated to cl %d\n",
+                                               p, clusterPropertiesDevice[clusterIdx].pixel_X[p], clusterPropertiesDevice[clusterIdx].pixel_Y[p], clusterPropertiesDevice[clusterIdx].pixel_ADC[p], clusterPropertiesDevice[clusterIdx].clusterForPixel[p]);
+
+                                        printf("Adding pixel %d, %d to cluster %d\n",
+                                               clusterPropertiesDevice[clusterIdx].pixel_X[j], clusterPropertiesDevice[clusterIdx].pixel_Y[j], cl);
+                                    }
+*/
 
                                     clusterPropertiesDevice[clusterIdx].pixelsForCl_X[cl][p] = clusterPropertiesDevice[clusterIdx].pixel_X[j];
                                     clusterPropertiesDevice[clusterIdx].pixelsForCl_Y[cl][p] = clusterPropertiesDevice[clusterIdx].pixel_Y[j];
@@ -820,16 +832,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     clusterPropertiesDevice[clusterIdx].pixelsForCl_rawIdArr[cl][p] = clusterPropertiesDevice[clusterIdx].rawIdArr[j];
                                     p++;
                                     clusterPropertiesDevice[clusterIdx].pixelsForClCounter[cl] = p;
-
                                 }
                             }
                         }
                     }
 
                     // Final writing all the subcluster along with  all pixels
+                    printf("Final writing\n");
+
                     uint32_t idx = alpaka::atomicAdd(acc, clusterCounterDevice, uint32_t(0));
                     for (int cl = 0; cl < (int) meanExp; cl++) {
+
+                        printf("---> Pixels of cl=%d ",cl);
                         for (unsigned int j = 0; j < static_cast<uint32_t>(clusterPropertiesDevice[clusterIdx].pixelsForClCounter[cl]); j++) {
+
+                            printf("pixelsForCl[cl][j].x=%d, pixelsForCl[cl][j].y=%d, pixelsForCl[cl][j].adc=%d |\n",
+                                   clusterPropertiesDevice[clusterIdx].pixelsForCl_X[cl][j],
+                                   clusterPropertiesDevice[clusterIdx].pixelsForCl_Y[cl][j],
+                                   clusterPropertiesDevice[clusterIdx].pixelsForCl_ADC[cl][j]);
 
                             if ( (idx + p) >= static_cast<uint32_t>(outputDigis.metadata().size())) {
                                 printf("ERROR: Idx %u out of bounds (max %u)\n", idx, outputDigis.metadata().size());
@@ -848,12 +868,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                    outputDigis.yy(idx + j),
                                    outputDigis.adc(idx + j),
                                    outputDigis.rawIdArr(idx + j));
-
-
                         }
                         // Use atomicAdd to ensure pixels are added correctly
                         idx = alpaka::atomicAdd(acc, clusterCounterDevice, uint32_t(1));
-
                     }
                 }
             }
