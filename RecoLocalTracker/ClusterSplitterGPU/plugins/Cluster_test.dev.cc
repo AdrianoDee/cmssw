@@ -129,7 +129,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             /////////////////////////////////////////////////////
 */
 
-
             // Get total Clusters and Candidates
             uint32_t numClusters = static_cast<uint32_t>(geoclusterView.metadata().size());
             uint32_t numCandidates = static_cast<uint32_t>(candidateView.metadata().size());
@@ -276,7 +275,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                     float relY = y - vertexY;
                     float relZ = z - vertexZ;
                     if (verbose_) printf("Cluster direction (cPos - vertex):");
-                    if (verbose_) printf("  dx = %f, dy = %f, dz = %f\n", relX, relY, relZ);
+                    if (verbose_) printf(" dx = %.3f dy = %.3f dz = %.3f\n", relX, relY, relZ);
 
                     // Extract jet momentum components from candidateView
                     float jetPx = candidateView.px(candIdx);
@@ -291,8 +290,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
                     // Print the jet information 
                     if (verbose_) printf("Jet Information:\n");
-                    if (verbose_) printf("  jetPx = %f, jetPy = %f, jetPz = %f\n", jetPx, jetPy, jetPz);
-                    if (verbose_) printf("  jetPt = %f, jetEta = %f, jetPhi = %f\n\n", jetPt, jetEta, jetPhi);
+                    if (verbose_) printf("  jetPx = %.3f, jetPy = %.3f, jetPz = %.3f\n", jetPx, jetPy, jetPz);
+                    if (verbose_) printf("  jetPt = %.3f, jetEta = %.3f, jetPhi = %.3f\n\n", jetPt, jetEta, jetPhi);
 
                     // Compute the cluster's relative eta and phi
                     float r = sqrt(relX * relX + relY * relY + relZ * relZ);
@@ -440,10 +439,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                 }
             }
         // Print out the sorted scores
-            if (verbose_) printf("Scores\n");
+            if (verbose_) printf("Scores:\n");
 
           for (uint32_t k = 0; k < clusterData[clusterIdx].pixelCounter; k++) {
-            if (verbose_) printf("Score: %f, Index = %d\n",
+            if (verbose_) printf("Score = %.5f, Index = %d\n",
                    clusterData[clusterIdx].scoresValues[k],
                    clusterData[clusterIdx].scoresIndices[k]);
           }                
@@ -756,7 +755,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                             clusterPropertiesDevice[clusterIdx].clusterForPixel[subpixel_counter] = cl;
                                             clusterPropertiesDevice[clusterIdx].weightOfPixel[subpixel_counter] = maxEst;
 
-                                            if (verbose_) printf("Pixel weight weightOfPixel[%d]=%f  cl=%d\n", 
+                                            if (verbose_) printf("Pixel weight weightOfPixel[%d]=%.4f  cl=%d\n", 
                                                     subpixel_counter, clusterPropertiesDevice[clusterIdx].weightOfPixel[subpixel_counter], cl);                                        
                                         }
                                     }
@@ -768,7 +767,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         }
 
                         // Recompute cluster centers
-                        if (verbose_) printf("Recomputing cluster centers.........\n ");
+                        if (verbose_) printf("Recomputing cluster centers.........\n");
 
                         stop = true;
                         for (unsigned int subcluster_index = 0; subcluster_index < meanExp; subcluster_index++) {

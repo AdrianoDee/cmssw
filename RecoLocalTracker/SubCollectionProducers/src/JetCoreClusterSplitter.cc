@@ -222,11 +222,10 @@ void JetCoreClusterSplitter::produce(edm::Event& iEvent, const edm::EventSetup& 
             GlobalPoint ppv(pv.position().x(), pv.position().y(), pv.position().z());
             GlobalVector clusterDir = cPos - ppv;
             
-            if (verbose) std::cout << "Cluster direction (cPos - vertex):"
-                                  << " dx = " << clusterDir.x()
-                                  << " dy = " << clusterDir.y()
-                                  << " dz = " << clusterDir.z() << std::endl;
-            
+            if (verbose) printf("Cluster direction (cPos - vertex):");
+            if (verbose) printf(" dx = %.3f dy = %.3f dz = %.3f\n", clusterDir.x(), clusterDir.y(), clusterDir.z());
+
+
             // Compute and print the pseudorapidity and phi of the cluster (global)
             float clusterEta = cPos.eta();
             float clusterPhi = cPos.phi();
@@ -242,12 +241,12 @@ void JetCoreClusterSplitter::produce(edm::Event& iEvent, const edm::EventSetup& 
                     
                     // Print the jet information
                     if (verbose) printf("Jet Information:\n");
-                    if (verbose) printf("  jetPx = %f, jetPy = %f, jetPz = %f\n", jet.px(), jet.py(), jet.pz());
-                    if (verbose) printf("  jetPt = %f, jetEta = %f, jetPhi = %f\n\n", jet.pt(), jet.eta(), jet.phi());
+                    if (verbose) printf("  jetPx = %.3f, jetPy = %.3f, jetPz = %.3f\n", jet.px(), jet.py(), jet.pz());
+                    if (verbose) printf("  jetPt = %.3f, jetEta = %.3f, jetPhi = %.3f\n\n", jet.pt(), jet.eta(), jet.phi());
                     
                     
                     if (Geom::deltaR(jetDir, clusterDir) < deltaR_) {
-                        if (verbose) printf("This cluster: %u has deltaR < deltaR_ and it might be split\n", counter);
+                        if (verbose) printf("This clusterOffset: %u has deltaR < deltaR_ and it might be split\n", counter);
                         
                         // check if the cluster has to be splitted
                         
@@ -403,7 +402,7 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
         if (sub < 1) sub = 1;        
         int perDiv = originalpixels[j].adc / sub;
         
-        if (verbose) std::cout << "Splitting  " << j << "  in [ " << pixels.size() << " , " << pixels.size() + sub
+        if (verbose) std::cout << "Splitting " << j << " in [ " << pixels.size() << " , " << pixels.size() + sub
                                 << " ], expected numb of clusters: " << meanExp << " original pixel (x,y) " << originalpixels[j].x
                                 << " " << originalpixels[j].y << " sub " << sub << std::endl;
                                 
@@ -476,7 +475,7 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
         
         if (verbose) printf("Scores:\n");
         for (const auto& pair : scores) {
-            if (verbose) printf("Score: %f, Index: %d\n", pair.first, pair.second);
+            if (verbose) printf("Score = %.5f, Index = %d\n", pair.first, pair.second);
         }
         
         // Iterate starting from the ones with furthest second best clusters, i.e.
@@ -518,14 +517,14 @@ std::vector<SiPixelCluster> JetCoreClusterSplitter::fittingSplit(const SiPixelCl
                     clusterForPixel[subpixel_counter] = cl;
                     weightOfPixel[subpixel_counter] = maxEst;
                     
-                    printf("Pixel weight weightOfPixel[%d]=%f  cl=%d\n", 
+                    if (verbose) printf("Pixel weight weightOfPixel[%d]=%.4f  cl=%d\n", 
                             subpixel_counter, weightOfPixel[subpixel_counter], cl);                                        
                 }
             }
         }
         
         // Recompute cluster centers
-        if (verbose) std::cout << "Recomputing cluster centers......... " << std::endl;
+        if (verbose) std::cout << "Recomputing cluster centers........." << std::endl;
         stop = true;
         for (unsigned int subcluster_index = 0; subcluster_index < meanExp; subcluster_index++) {
             if (std::abs(clx[subcluster_index] - oldclx[subcluster_index]) > 0.01f)

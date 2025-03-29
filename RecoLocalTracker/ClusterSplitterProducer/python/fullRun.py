@@ -35,7 +35,7 @@ process.candidateDataSoA = cms.EDProducer("HelperSplitter",
     pixelCPE = cms.string("PixelCPEGeneric"),
     tanLorentzAngle = cms.double(0.0),
     tanLorentzAngleBarrelLayer1 = cms.double(0.0),
-    verbose = cms.bool(True),
+    verbose = cms.bool(False),
 )
 
 # trial producer (which uses the output from HelperSplitter)
