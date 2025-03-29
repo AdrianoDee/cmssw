@@ -124,6 +124,10 @@ private:
   //const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::ZVertexSoACollection> zVertexToken_;
   const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::ClusterGeometrysSoACollection> geometryToken_;
   bool verbose_;
+  bool debugMode;
+  int targetDetId;
+  int targetClusterOffset;
+  int targetEvent;
   edm::EDGetTokenT<reco::VertexCollection> vertices_;
   std::vector<Device> devices_;  
 };
@@ -153,6 +157,10 @@ trial::trial(edm::ParameterSet const& iConfig)
       //zVertexToken_(consumes(iConfig.getParameter<edm::InputTag>("zVertex"))),
       geometryToken_(consumes(iConfig.getParameter<edm::InputTag>("geometryInput"))),
       verbose_(iConfig.getParameter<bool>("verbose")),
+      debugMode(iConfig.getParameter<bool>("debugMode")),
+      targetDetId(iConfig.getParameter<int>("targetDetId")),
+      targetClusterOffset(iConfig.getParameter<int>("targetClusterOffset")),
+      targetEvent(iConfig.getParameter<int>("targetEvent")),
       vertices_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertices"))) 
       {
           devices_ = cms::alpakatools::devices<alpaka::PlatformCudaRt>();
@@ -169,6 +177,11 @@ trial::~trial() {
 }
 
 void trial::produce(edm::StreamID sid, device::Event& deviceEvent, device::EventSetup const& iSetup) const {
+
+    if ((debugMode) && (deviceEvent.id().event() != static_cast<edm::EventNumber_t>(targetEvent))) {
+        return;
+    }
+
     if (verbose_) std::cout << "Entering in produce method.. testing" << std::endl;
 
     // Ensure we're selecting the first available GPU device
@@ -179,7 +192,7 @@ void trial::produce(edm::StreamID sid, device::Event& deviceEvent, device::Event
 
     // Select the first GPU device
     auto const& device = deviceList[0];
-    std::cout << "Using GPU device: " << alpaka::getName(device) << std::endl;
+    if (verbose_) std::cout << "Using GPU device: " << alpaka::getName(device) << std::endl;
 
     // ---------------------------------------------------------------
     // RETRIEVE THE SOA COLLECTIONS TO BE USED IN THE KERNEL DEVICE
@@ -207,7 +220,7 @@ void trial::produce(edm::StreamID sid, device::Event& deviceEvent, device::Event
 
     // Use event ID as the offset
     int32_t eventOffset = deviceEvent.id().event();
-    std::cout << "Event offset: " << eventOffset << std::endl;
+    if (verbose_) std::cout << "Event offset: " << eventOffset << std::endl;
     for (const auto& device : devices_) {
         Queue queue(device);
 
@@ -330,7 +343,9 @@ void trial::produce(edm::StreamID sid, device::Event& deviceEvent, device::Event
             centralMIPCharge_, chargePerUnit_, fractionalWidth_, 
             tkOutputDigis.view(), tkOutputClusters.view(), 
             clusterPropertiesDevice.data(), clusterCounterDevice.data(),
-            forceXError_, forceYError_, vertexX, vertexY, vertexZ, vertexEta, vertexPhi, queue);
+            forceXError_, forceYError_, 
+            vertexX, vertexY, vertexZ, vertexEta, vertexPhi, 
+            verbose_, debugMode, targetDetId, targetClusterOffset, queue);
 
 
 
@@ -375,6 +390,10 @@ void trial::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     desc.add<edm::InputTag>("trackingRecHits", edm::InputTag(""))->setComment("Input tag for trackingRecHits data");
     //desc.add<edm::InputTag>("zVertex", edm::InputTag(""))->setComment("Input tag for zVertex data");
     desc.add<bool>("verbose", false)->setComment("Verbose output");
+    desc.add<bool>("debugMode", true);
+    desc.add<int>("targetDetId");
+    desc.add<int>("targetClusterOffset");
+    desc.add<int>("targetEvent");    
     desc.add<edm::InputTag>("vertices", edm::InputTag("offlinePrimaryVertices"));    
     descriptions.add("trial", desc);
 }

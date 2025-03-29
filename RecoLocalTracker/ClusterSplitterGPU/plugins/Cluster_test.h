@@ -88,6 +88,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::Splitting {
                   double forceXError_,
                   double forceYError_,
                   float vertexX, float vertexY, float vertexZ, float vertexEta, float vertexPhi,
+                  bool verbose_, bool debugMode, int targetDetId, int targetClusterOf,
                   Queue& queue);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::Splitting

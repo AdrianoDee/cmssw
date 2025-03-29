@@ -35,7 +35,7 @@ process.candidateDataSoA = cms.EDProducer("HelperSplitter",
     pixelCPE = cms.string("PixelCPEGeneric"),
     tanLorentzAngle = cms.double(0.0),
     tanLorentzAngleBarrelLayer1 = cms.double(0.0),
-    verbose = cms.bool(True)
+    verbose = cms.bool(True),
 )
 
 # trial producer (which uses the output from HelperSplitter)
@@ -67,6 +67,10 @@ process.trial = cms.EDProducer(
     #zVertex=cms.InputTag("pixelVerticesAlpaka"),
     geometryInput=cms.InputTag("candidateDataSoA"),
     verbose=cms.bool(True),
+    debugMode = cms.bool(True),             #is True, only one cluster will be analyzed
+    targetDetId = cms.int32(304181256),
+    targetClusterOffset = cms.int32(2),
+    targetEvent = cms.int32(1),    
     vertices = cms.InputTag('offlinePrimaryVertices'),
 )
 

@@ -143,7 +143,7 @@ HelperSplitter::HelperSplitter(edm::ParameterSet const& iConfig)
       tTrackingGeom_(esConsumes()),
       tTrackerTopo_(esConsumes()),
       geomToken_(esConsumes()),
-      verbose_(iConfig.getParameter<bool>("verbose")),
+      verbose_(iConfig.getParameter<bool>("verbose")),      
       CandidatesSoACollection_{produces()},
       ClusterGeometrysSoACollection_{produces()},    
       SiPixelDigisSoACollection_{produces()}      
@@ -155,7 +155,8 @@ HelperSplitter::~HelperSplitter() {
 }
 
 void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::EventSetup const& iSetup) const {
-    printf("*********************************Starting the HelperSplitter producer.\n");
+
+    if (verbose_) printf("*********************************Starting the HelperSplitter producer.\n");
 
     // Get geometry and parameter estimator
     const auto& geometry = &iSetup.getData(tTrackingGeom_);
@@ -381,7 +382,6 @@ void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::E
 
     //if (verbose_) std::cout << "on Host: SiPixelClusters size (total number of pixels) " << nPixelClusters << std::endl;
     if (verbose_) std::cout << "on Device: geoclusterView.size() = " << geoclusterView.metadata().size() << std::endl;
-
 
     // produce output
     iEvent.emplace(CandidatesSoACollection_, std::move(tkCandidatesDevice));
