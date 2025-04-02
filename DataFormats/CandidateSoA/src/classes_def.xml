@@ -1,0 +1,7 @@
+<lcgdict>
+  <class name="CandidatesSoA"/>
+  <class name="CandidatesSoA::View"/>
+  <class name="PortableHostCollection<CandidatesSoA>"/>
+  <class name="CandidatesHost"/>
+  <class name="edm::Wrapper<CandidatesHost>" splitLevel="0"/>
+</lcgdict>
