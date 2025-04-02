@@ -96,7 +96,6 @@
 #include "RecoLocalTracker/ClusterParameterEstimator/interface/PixelClusterParameterEstimator.h"
 #include "RecoLocalTracker/Records/interface/TkPixelCPERecord.h"
 
-
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 
 class HelperSplitter : public global::EDProducer<> {
@@ -113,9 +112,9 @@ private:
   //void endStream() override;
 
   const double ptMin_;
-  edm::ESGetToken<PixelClusterParameterEstimator, TkPixelCPERecord> const tCPE_;  
+  edm::ESGetToken<PixelClusterParameterEstimator, TkPixelCPERecord> const tCPE_;
   float tanLorentzAngle_;
-  float tanLorentzAngleBarrelLayer1_;  
+  float tanLorentzAngleBarrelLayer1_;
   edm::EDGetTokenT<SiPixelClusterCollectionNew> clusterToken_;
   //const edm::EDGetTokenT<SiPixelClustersHost> SoAclusterToken_;
   edm::EDGetTokenT<edm::View<reco::Candidate>> candidateToken_;
@@ -127,13 +126,12 @@ private:
   const device::EDPutToken<ClusterGeometrysSoACollection> ClusterGeometrysSoACollection_;
   const device::EDPutToken<SiPixelDigisSoACollection> SiPixelDigisSoACollection_;
   //const device::EDPutToken<ALPAKA_ACCELERATOR_NAMESPACE::SiPixelDigisSoACollection> SiPixelDigisSoACollection_;
-
 };
 
 HelperSplitter::HelperSplitter(edm::ParameterSet const& iConfig)
     : EDProducer(iConfig),
       ptMin_(iConfig.getParameter<double>("ptMin")),
-      tCPE_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("pixelCPE")))),      
+      tCPE_(esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("pixelCPE")))),
       tanLorentzAngle_(iConfig.getParameter<double>("tanLorentzAngle")),
       tanLorentzAngleBarrelLayer1_(iConfig.getParameter<double>("tanLorentzAngleBarrelLayer1")),
       //clusterToken_(consumes<SiPixelClusterCollectionNew>(iConfig.getParameter<edm::InputTag>("siPixelClusters"))),
@@ -143,264 +141,265 @@ HelperSplitter::HelperSplitter(edm::ParameterSet const& iConfig)
       tTrackingGeom_(esConsumes()),
       tTrackerTopo_(esConsumes()),
       geomToken_(esConsumes()),
-      verbose_(iConfig.getParameter<bool>("verbose")),      
+      verbose_(iConfig.getParameter<bool>("verbose")),
       CandidatesSoACollection_{produces()},
-      ClusterGeometrysSoACollection_{produces()},    
-      SiPixelDigisSoACollection_{produces()}      
-{}
+      ClusterGeometrysSoACollection_{produces()},
+      SiPixelDigisSoACollection_{produces()} {}
 
-
-
-HelperSplitter::~HelperSplitter() {
-}
+HelperSplitter::~HelperSplitter() {}
 
 void HelperSplitter::produce(edm::StreamID sid, device::Event& iEvent, device::EventSetup const& iSetup) const {
+  if (verbose_)
+    printf("*********************************Starting the HelperSplitter producer.\n");
 
-    if (verbose_) printf("*********************************Starting the HelperSplitter producer.\n");
+  // Get geometry and parameter estimator
+  const auto& geometry = &iSetup.getData(tTrackingGeom_);
+  const TrackerGeometry* geom_ = &iSetup.getData(geomToken_);
+  const PixelClusterParameterEstimator* pp = &iSetup.getData(tCPE_);
 
-    // Get geometry and parameter estimator
-    const auto& geometry = &iSetup.getData(tTrackingGeom_);
-    const TrackerGeometry* geom_ = &iSetup.getData(geomToken_);
-    const PixelClusterParameterEstimator* pp = &iSetup.getData(tCPE_);
+  // Create the queue for the (now GPU) device
+  auto const& device = cms::alpakatools::devices<alpaka::PlatformCudaRt>()[0];
+  Queue queue(device);
+  if (verbose_)
+    std::cout << "Queue done" << std::endl;
 
-    // Create the queue for the (now GPU) device
-    auto const& device = cms::alpakatools::devices<alpaka::PlatformCudaRt>()[0];
-    Queue queue(device);
-    if (verbose_) std::cout << "Queue done" << std::endl;
+  // Get and Process candidates
+  auto const& candidates = iEvent.get(candidateToken_);
+  size_t nCandidates = candidates.size();
+  if (verbose_)
+    std::cout << "Number of Candidates: " << nCandidates << std::endl;
 
-
-    // Get and Process candidates
-    auto const& candidates = iEvent.get(candidateToken_);
-    size_t nCandidates = candidates.size();
-    if (verbose_) std::cout << "Number of Candidates: " << nCandidates << std::endl;
-
-    // Count the number of valid candidates that pass the ptMin_ filter
-    size_t validCandidatesCount = 0;
-    for (const auto& candidate : candidates) {
-        if (candidate.pt() > ptMin_) {
-            ++validCandidatesCount;
-        }
+  // Count the number of valid candidates that pass the ptMin_ filter
+  size_t validCandidatesCount = 0;
+  for (const auto& candidate : candidates) {
+    if (candidate.pt() > ptMin_) {
+      ++validCandidatesCount;
     }
-    if (verbose_) std::cout << "Number of valid Candidates: " << validCandidatesCount << std::endl;
+  }
+  if (verbose_)
+    std::cout << "Number of valid Candidates: " << validCandidatesCount << std::endl;
 
-    // Create the CandidateSoA on the host (tkCandidates)
-    CandidatesHost tkCandidates(nCandidates, queue);
-    auto candidateView = tkCandidates.view();
+  // Create the CandidateSoA on the host (tkCandidates)
+  CandidatesHost tkCandidates(nCandidates, queue);
+  auto candidateView = tkCandidates.view();
 
-    // Fill the CandidateSoA on the host
-    size_t candidateIndex = 0;
-    for (const auto& candidate : candidates) {
-        if (candidate.pt() > ptMin_) {
-            candidateView.px(candidateIndex) = static_cast<float>(candidate.px());
-            candidateView.py(candidateIndex) = static_cast<float>(candidate.py());
-            candidateView.pz(candidateIndex) = static_cast<float>(candidate.pz());
-            candidateView.pt(candidateIndex) = static_cast<float>(candidate.pt());
-            candidateView.eta(candidateIndex) = static_cast<float>(candidate.eta());
-            candidateView.phi(candidateIndex) = static_cast<float>(candidate.phi());
-            ++candidateIndex;
-            if (verbose_) std::cout << "Candidate index=" << candidateIndex 
-                                                          << " px=" << static_cast<float>(candidate.px())
-                                                          << " py=" << static_cast<float>(candidate.py())
-                                                          << " pz=" << static_cast<float>(candidate.pz())
-                                                          << " pt=" << static_cast<float>(candidate.pt())
-                                                          << " eta=" << static_cast<float>(candidate.eta())
-                                                          << " eta=" << static_cast<float>(candidate.phi()) << std::endl;
-        }
+  // Fill the CandidateSoA on the host
+  size_t candidateIndex = 0;
+  for (const auto& candidate : candidates) {
+    if (candidate.pt() > ptMin_) {
+      candidateView.px(candidateIndex) = static_cast<float>(candidate.px());
+      candidateView.py(candidateIndex) = static_cast<float>(candidate.py());
+      candidateView.pz(candidateIndex) = static_cast<float>(candidate.pz());
+      candidateView.pt(candidateIndex) = static_cast<float>(candidate.pt());
+      candidateView.eta(candidateIndex) = static_cast<float>(candidate.eta());
+      candidateView.phi(candidateIndex) = static_cast<float>(candidate.phi());
+      ++candidateIndex;
+      if (verbose_)
+        std::cout << "Candidate index=" << candidateIndex << " px=" << static_cast<float>(candidate.px())
+                  << " py=" << static_cast<float>(candidate.py()) << " pz=" << static_cast<float>(candidate.pz())
+                  << " pt=" << static_cast<float>(candidate.pt()) << " eta=" << static_cast<float>(candidate.eta())
+                  << " eta=" << static_cast<float>(candidate.phi()) << std::endl;
     }
-    if (verbose_) std::cout << "Done with Candidates (cpu)" << std::endl;
+  }
+  if (verbose_)
+    std::cout << "Done with Candidates (cpu)" << std::endl;
 
-    // Produce a device–resident copy, allocating a device candidate collection
-    CandidatesSoACollection tkCandidatesDevice(nCandidates, queue);
+  // Produce a device–resident copy, allocating a device candidate collection
+  CandidatesSoACollection tkCandidatesDevice(nCandidates, queue);
 
-    if (verbose_) std::cout << "Overallocation check......"  << std::endl;
-    if (verbose_) std::cout << "on Host: Candidates should be " << nCandidates << std::endl;
-    if (verbose_) std::cout << "on Device: tkCandidatesDevice.size() = " << candidateView.metadata().size() << std::endl;
+  if (verbose_)
+    std::cout << "Overallocation check......" << std::endl;
+  if (verbose_)
+    std::cout << "on Host: Candidates should be " << nCandidates << std::endl;
+  if (verbose_)
+    std::cout << "on Device: tkCandidatesDevice.size() = " << candidateView.metadata().size() << std::endl;
 
-    // Copy from the host candidate collection to the device one.
-    alpaka::memcpy(queue, tkCandidatesDevice.buffer(), tkCandidates.buffer());
-    alpaka::wait(queue);
-    if (verbose_) std::cout << "Copied CandidateSoA to device\n\n" << std::endl;
+  // Copy from the host candidate collection to the device one.
+  alpaka::memcpy(queue, tkCandidatesDevice.buffer(), tkCandidates.buffer());
+  alpaka::wait(queue);
+  if (verbose_)
+    std::cout << "Copied CandidateSoA to device\n\n" << std::endl;
 
+  // Retrieve TrackerGeometry, trackerTopology from EventSetup
+  const auto& trackingGeometry = iSetup.getData(tTrackingGeom_);
+  const auto& trackerTopology = iSetup.getData(tTrackerTopo_);
+  if (verbose_)
+    std::cout << "TrackerGeometry/Topology got it" << std::endl;
 
+  //auto const& clustersSoA = iEvent.get(SoAclusterToken_);
 
-    // Retrieve TrackerGeometry, trackerTopology from EventSetup
-    const auto& trackingGeometry = iSetup.getData(tTrackingGeom_);
-    const auto& trackerTopology = iSetup.getData(tTrackerTopo_);
-    if (verbose_) std::cout << "TrackerGeometry/Topology got it" << std::endl;
+  // Get and process siPixelClusters
+  auto const& PixelClusters = iEvent.get(clusterToken_);
+  if (verbose_)
+    std::cout << "siPixelClusters got it" << std::endl;
 
+  // Process clusterToken_
+  //size_t nPixelClusters = PixelClusters.size();
+  //if (verbose_) std::cout << "Number of SiPixelClusters: " << nPixelClusters << std::endl;
 
-    //auto const& clustersSoA = iEvent.get(SoAclusterToken_);
+  // Calculate the total number of Clusters (to be used later in the cluster geo SoA)
+  int calculateNumberOfClusters = 0;
+  int calculateNumberOfPixels = 0;
+  for (auto detIt = PixelClusters.begin(); detIt != PixelClusters.end(); ++detIt) {
+    calculateNumberOfClusters = calculateNumberOfClusters + detIt->size();
 
-
-    // Get and process siPixelClusters
-    auto const& PixelClusters = iEvent.get(clusterToken_);
-    if (verbose_) std::cout << "siPixelClusters got it" << std::endl;
-
-    // Process clusterToken_
-    //size_t nPixelClusters = PixelClusters.size();
-    //if (verbose_) std::cout << "Number of SiPixelClusters: " << nPixelClusters << std::endl;
-
-    // Calculate the total number of Clusters (to be used later in the cluster geo SoA)
-    int calculateNumberOfClusters = 0;
-    int calculateNumberOfPixels = 0;
-    for (auto detIt = PixelClusters.begin(); detIt != PixelClusters.end(); ++detIt) {
-        calculateNumberOfClusters = calculateNumberOfClusters + detIt->size();
-
-        const edmNew::DetSet<SiPixelCluster>& detset = *detIt;
-        for (const auto& cluster : detset) {
-            const SiPixelCluster& aCluster = cluster;
-            calculateNumberOfPixels += aCluster.pixels().size();
-        }
+    const edmNew::DetSet<SiPixelCluster>& detset = *detIt;
+    for (const auto& cluster : detset) {
+      const SiPixelCluster& aCluster = cluster;
+      calculateNumberOfPixels += aCluster.pixels().size();
     }
-    if (verbose_) std::cout << "Calculated " << calculateNumberOfClusters << " clusters" << std::endl;
-    if (verbose_) std::cout << "Calculated " << calculateNumberOfPixels << " pixels" << std::endl;
+  }
+  if (verbose_)
+    std::cout << "Calculated " << calculateNumberOfClusters << " clusters" << std::endl;
+  if (verbose_)
+    std::cout << "Calculated " << calculateNumberOfPixels << " pixels" << std::endl;
 
+  // Create the ClusterGeometrySoA on CPU (and its view)
+  ClusterGeometrysHost geotkCluster(calculateNumberOfClusters, queue);
+  SiPixelDigisHost tkDigi(calculateNumberOfPixels, queue);
 
-    // Create the ClusterGeometrySoA on CPU (and its view)
-    ClusterGeometrysHost geotkCluster(calculateNumberOfClusters, queue);
-    SiPixelDigisHost tkDigi(calculateNumberOfPixels, queue);
+  auto geoclusterView = geotkCluster.view();
+  auto digiView = tkDigi.view();
 
-    auto geoclusterView = geotkCluster.view();
-    auto digiView = tkDigi.view();
+  size_t clusterIndex = 0;
+  size_t pixelIdx = 0;
 
-    size_t clusterIndex = 0;
-    size_t pixelIdx = 0;
+  for (auto detIt = PixelClusters.begin(); detIt != PixelClusters.end(); ++detIt) {
+    const edmNew::DetSet<SiPixelCluster>& detset = *detIt;
+    const GeomDet* det = trackingGeometry.idToDet(detset.id());
 
-    for (auto detIt = PixelClusters.begin(); detIt != PixelClusters.end(); ++detIt) {
-        const edmNew::DetSet<SiPixelCluster>& detset = *detIt;
-        const GeomDet* det = trackingGeometry.idToDet(detset.id());
+    const GeomDetUnit* genericDet = geom_->idToDetUnit(detset.id());
+    auto const gind = genericDet->index();
+    //std::cout << "gind " << static_cast<uint32_t>(gind) << std::endl;
+    uint32_t moduleId = static_cast<uint32_t>(gind);
 
-        const GeomDetUnit* genericDet = geom_->idToDetUnit(detset.id());
-        auto const gind = genericDet->index();
-        //std::cout << "gind " << static_cast<uint32_t>(gind) << std::endl;
-        uint32_t moduleId = static_cast<uint32_t>(gind);
+    // Convert detset.id() to DetId
+    DetId detId(detset.id());
 
-        // Convert detset.id() to DetId
-        DetId detId(detset.id());
+    if (!det)
+      continue;
 
-        if (!det) continue;
+    // Retrieve detector topology and pitch information
+    const PixelTopology& topo = static_cast<const PixelTopology&>(det->topology());
+    float pitchX, pitchY;
+    std::tie(pitchX, pitchY) = topo.pitch();
+    float thickness = det->surface().bounds().thickness();
 
-        // Retrieve detector topology and pitch information
-        const PixelTopology& topo = static_cast<const PixelTopology&>(det->topology());
-        float pitchX, pitchY;
-        std::tie(pitchX, pitchY) = topo.pitch();
-        float thickness = det->surface().bounds().thickness();
+    // Extract the Lorentz angle if needed
+    float tanLorentzAngle = tanLorentzAngle_;
 
-        // Extract the Lorentz angle if needed
-        float tanLorentzAngle = tanLorentzAngle_;
+    // Extract the transformation matrix from local to global coordinates
+    auto localX = det->surface().toLocal(GlobalVector(1, 0, 0));
+    auto localY = det->surface().toLocal(GlobalVector(0, 1, 0));
+    auto localZ = det->surface().toLocal(GlobalVector(0, 0, 1));
 
-        // Extract the transformation matrix from local to global coordinates
-        auto localX = det->surface().toLocal(GlobalVector(1, 0, 0));
-        auto localY = det->surface().toLocal(GlobalVector(0, 1, 0));
-        auto localZ = det->surface().toLocal(GlobalVector(0, 0, 1));
+    // Store transformation coefficients for later use
+    float transformXX = localX.x(), transformXY = localX.y(), transformXZ = localX.z();
+    float transformYX = localY.x(), transformYY = localY.y(), transformYZ = localY.z();
+    float transformZX = localZ.x(), transformZY = localZ.y(), transformZZ = localZ.z();
 
-        // Store transformation coefficients for later use
-        float transformXX = localX.x(), transformXY = localX.y(), transformXZ = localX.z();
-        float transformYX = localY.x(), transformYY = localY.y(), transformYZ = localY.z();
-        float transformZX = localZ.x(), transformZY = localZ.y(), transformZZ = localZ.z();
+    unsigned int localClusterIdx = 0;
 
-        unsigned int localClusterIdx = 0;
+    // Loop over the clusters in this detector
 
-        // Loop over the clusters in this detector
+    for (const auto& cluster : detset) {
+      const SiPixelCluster& aCluster = cluster;
+      std::vector<SiPixelCluster::Pixel> originalpixels = aCluster.pixels();
 
-        for (const auto& cluster : detset) {
-            const SiPixelCluster& aCluster = cluster;
-            std::vector<SiPixelCluster::Pixel> originalpixels = aCluster.pixels();
+      // Fill GeoCluster SoA with necessary data
+      geoclusterView.moduleId(clusterIndex) = moduleId;
+      geoclusterView.clusterOffset(clusterIndex) = localClusterIdx;
 
+      // Fill digiSoA with pixel information
+      for (const auto& pixel : originalpixels) {
+        digiView.xx(pixelIdx) = pixel.x;
+        digiView.yy(pixelIdx) = pixel.y;
+        digiView.adc(pixelIdx) = pixel.adc;
+        digiView.clus(pixelIdx) = localClusterIdx;
+        digiView.rawIdArr(pixelIdx) = detset.id();
+        digiView.moduleId(pixelIdx) = moduleId;
+        pixelIdx++;
+      }
 
-            // Fill GeoCluster SoA with necessary data
-            geoclusterView.moduleId(clusterIndex) = moduleId;
-            geoclusterView.clusterOffset(clusterIndex) = localClusterIdx;
+      // Use PixelCluster Parameter Estimator (CPE) to compute local parameters
+      auto localParams = pp->localParametersV(cluster, (*geometry->idToDetUnit(detIt->id())));
+      GlobalPoint cPos = det->surface().toGlobal(localParams[0].first);
 
-            // Fill digiSoA with pixel information
-            for (const auto& pixel : originalpixels) {
-                digiView.xx(pixelIdx) = pixel.x;
-                digiView.yy(pixelIdx) = pixel.y;                
-                digiView.adc(pixelIdx) = pixel.adc;
-                digiView.clus(pixelIdx) = localClusterIdx;                
-                digiView.rawIdArr(pixelIdx) = detset.id();
-                digiView.moduleId(pixelIdx) = moduleId;
-                pixelIdx++;
-            }
+      // Save the global cluster position and geometry info into SoA
+      geoclusterView.clusterIds(clusterIndex) = detset.id();
+      geoclusterView.pitchX(clusterIndex) = pitchX;
+      geoclusterView.pitchY(clusterIndex) = pitchY;
+      geoclusterView.thickness(clusterIndex) = thickness;
+      geoclusterView.sizeX(clusterIndex) = aCluster.sizeX();
+      geoclusterView.sizeY(clusterIndex) = aCluster.sizeY();
+      geoclusterView.x(clusterIndex) = cPos.x();
+      geoclusterView.y(clusterIndex) = cPos.y();
+      geoclusterView.z(clusterIndex) = cPos.z();
+      geoclusterView.transformXX(clusterIndex) = transformXX;
+      geoclusterView.transformXY(clusterIndex) = transformXY;
+      geoclusterView.transformXZ(clusterIndex) = transformXZ;
+      geoclusterView.transformYX(clusterIndex) = transformYX;
+      geoclusterView.transformYY(clusterIndex) = transformYY;
+      geoclusterView.transformYZ(clusterIndex) = transformYZ;
+      geoclusterView.transformZX(clusterIndex) = transformZX;
+      geoclusterView.transformZY(clusterIndex) = transformZY;
+      geoclusterView.transformZZ(clusterIndex) = transformZZ;
 
-            // Use PixelCluster Parameter Estimator (CPE) to compute local parameters
-            auto localParams = pp->localParametersV(cluster, (*geometry->idToDetUnit(detIt->id())));
-            GlobalPoint cPos = det->surface().toGlobal(localParams[0].first);
+      // Debug printout for the cluster
+      //td::cout << "Processing clusterIndex = " << clusterIndex
+      //          << ", detset id = " << detset.id()
+      //          << ", module = " << moduleId
+      //          << ", offset = " << localClusterIdx
+      //          << ", pixels = " << originalpixels.size()
+      //          << ", csizeX = " << aCluster.sizeX()
+      //          << ", csizeY = " << aCluster.sizeY()
+      //          << ", clusterOffset = " << geoclusterView.clusterOffset(clusterIndex)
+      //          << ", Global Position: (x = " << cPos.x()
+      //          << ", y = " << cPos.y()
+      //          << ", z = " << cPos.z() << ")"
+      //          << std::endl;
 
-            // Save the global cluster position and geometry info into SoA
-            geoclusterView.clusterIds(clusterIndex) = detset.id();
-            geoclusterView.pitchX(clusterIndex) = pitchX;
-            geoclusterView.pitchY(clusterIndex) = pitchY;
-            geoclusterView.thickness(clusterIndex) = thickness;
-            geoclusterView.sizeX(clusterIndex) = aCluster.sizeX();
-            geoclusterView.sizeY(clusterIndex) = aCluster.sizeY();
-            geoclusterView.x(clusterIndex) = cPos.x();
-            geoclusterView.y(clusterIndex) = cPos.y();
-            geoclusterView.z(clusterIndex) = cPos.z();
-            geoclusterView.transformXX(clusterIndex) = transformXX;
-            geoclusterView.transformXY(clusterIndex) = transformXY;
-            geoclusterView.transformXZ(clusterIndex) = transformXZ;
-            geoclusterView.transformYX(clusterIndex) = transformYX;
-            geoclusterView.transformYY(clusterIndex) = transformYY;
-            geoclusterView.transformYZ(clusterIndex) = transformYZ;
-            geoclusterView.transformZX(clusterIndex) = transformZX;
-            geoclusterView.transformZY(clusterIndex) = transformZY;
-            geoclusterView.transformZZ(clusterIndex) = transformZZ;
+      ++clusterIndex;
 
-            // Debug printout for the cluster
-            //td::cout << "Processing clusterIndex = " << clusterIndex 
-            //          << ", detset id = " << detset.id() 
-            //          << ", module = " << moduleId
-            //          << ", offset = " << localClusterIdx
-            //          << ", pixels = " << originalpixels.size()  
-            //          << ", csizeX = " << aCluster.sizeX()
-            //          << ", csizeY = " << aCluster.sizeY()                                 
-            //          << ", clusterOffset = " << geoclusterView.clusterOffset(clusterIndex)
-            //          << ", Global Position: (x = " << cPos.x() 
-            //          << ", y = " << cPos.y() 
-            //          << ", z = " << cPos.z() << ")" 
-            //          << std::endl;
-
-            ++clusterIndex;
-
-            // Adjust cluster offset
-            localClusterIdx++;
-
-        }
+      // Adjust cluster offset
+      localClusterIdx++;
     }
+  }
 
-    if (verbose_) std::cout << "Done with siPixelClusters (cpu)" << std::endl;
+  if (verbose_)
+    std::cout << "Done with siPixelClusters (cpu)" << std::endl;
 
-    // Produce a device–resident copy, allocating a device collection
-    ClusterGeometrysSoACollection tkClusterGeometryDevice(calculateNumberOfClusters, queue);
-    SiPixelDigisSoACollection tkDigiDevice(calculateNumberOfPixels, queue);
+  // Produce a device–resident copy, allocating a device collection
+  ClusterGeometrysSoACollection tkClusterGeometryDevice(calculateNumberOfClusters, queue);
+  SiPixelDigisSoACollection tkDigiDevice(calculateNumberOfPixels, queue);
 
-    // Copy from the host collection to the device one.
-    alpaka::memcpy(queue, tkClusterGeometryDevice.buffer(), geotkCluster.buffer());
-    alpaka::memcpy(queue, tkDigiDevice.buffer(), tkDigi.buffer());
-    alpaka::wait(queue);
+  // Copy from the host collection to the device one.
+  alpaka::memcpy(queue, tkClusterGeometryDevice.buffer(), geotkCluster.buffer());
+  alpaka::memcpy(queue, tkDigiDevice.buffer(), tkDigi.buffer());
+  alpaka::wait(queue);
 
-    //if (verbose_) std::cout << "on Host: SiPixelClusters size (total number of pixels) " << nPixelClusters << std::endl;
-    if (verbose_) std::cout << "on Device: geoclusterView.size() = " << geoclusterView.metadata().size() << std::endl;
+  //if (verbose_) std::cout << "on Host: SiPixelClusters size (total number of pixels) " << nPixelClusters << std::endl;
+  if (verbose_)
+    std::cout << "on Device: geoclusterView.size() = " << geoclusterView.metadata().size() << std::endl;
 
-    // produce output
-    iEvent.emplace(CandidatesSoACollection_, std::move(tkCandidatesDevice));
-    iEvent.emplace(ClusterGeometrysSoACollection_, std::move(tkClusterGeometryDevice));
-    iEvent.emplace(SiPixelDigisSoACollection_, std::move(tkDigiDevice));
+  // produce output
+  iEvent.emplace(CandidatesSoACollection_, std::move(tkCandidatesDevice));
+  iEvent.emplace(ClusterGeometrysSoACollection_, std::move(tkClusterGeometryDevice));
+  iEvent.emplace(SiPixelDigisSoACollection_, std::move(tkDigiDevice));
 }
 
 void HelperSplitter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-
-    edm::ParameterSetDescription desc;
-    desc.add<bool>("verbose", false)->setComment("Verbose output");
-    desc.add<double>("ptMin", 0.5)->setComment("Minimum pt for filtering candidates");
-    desc.add<std::string>("pixelCPE", "PixelCPEGeneric");
-    desc.add<double>("tanLorentzAngle", 0.1)->setComment("Lorentz angle tangent");
-    desc.add<double>("tanLorentzAngleBarrelLayer1", 0.2)->setComment("Lorentz angle tangent for Barrel Layer 1");
-    desc.add<edm::InputTag>("siPixelClusters", edm::InputTag("siPixelClusters"))->setComment("Collection for siPixelClusters");
-    //desc.add<edm::InputTag>("siPixelClustersSoA", edm::InputTag("siPixelClustersSoA"))->setComment("Collection for siPixelClustersSoA");
-    desc.add<edm::InputTag>("Candidate", edm::InputTag("Candidate"))->setComment("Candidates");
-    descriptions.add("HelperSplitter", desc);
+  edm::ParameterSetDescription desc;
+  desc.add<bool>("verbose", false)->setComment("Verbose output");
+  desc.add<double>("ptMin", 0.5)->setComment("Minimum pt for filtering candidates");
+  desc.add<std::string>("pixelCPE", "PixelCPEGeneric");
+  desc.add<double>("tanLorentzAngle", 0.1)->setComment("Lorentz angle tangent");
+  desc.add<double>("tanLorentzAngleBarrelLayer1", 0.2)->setComment("Lorentz angle tangent for Barrel Layer 1");
+  desc.add<edm::InputTag>("siPixelClusters", edm::InputTag("siPixelClusters"))
+      ->setComment("Collection for siPixelClusters");
+  //desc.add<edm::InputTag>("siPixelClustersSoA", edm::InputTag("siPixelClustersSoA"))->setComment("Collection for siPixelClustersSoA");
+  desc.add<edm::InputTag>("Candidate", edm::InputTag("Candidate"))->setComment("Candidates");
+  descriptions.add("HelperSplitter", desc);
 }
 
 DEFINE_FWK_MODULE(HelperSplitter);

@@ -11,7 +11,6 @@ class ClusterGeometrysHost : public PortableHostCollection<ClusterGeometrysSoA> 
 public:
   ClusterGeometrysHost(edm::Uninitialized) : PortableHostCollection<ClusterGeometrysSoA>{edm::kUninitialized} {}
 
-
   template <typename TQueue>
   explicit ClusterGeometrysHost(size_t maxFedWords, TQueue queue)
       : PortableHostCollection<ClusterGeometrysSoA>(maxFedWords + 1, queue) {}

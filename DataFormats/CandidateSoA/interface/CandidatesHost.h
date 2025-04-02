@@ -4,10 +4,8 @@
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
 #include "DataFormats/CandidateSoA/interface/CandidatesSoA.h"
 
-
 class CandidatesHost : public PortableHostCollection<CandidatesSoA> {
 public:
-
   CandidatesHost(edm::Uninitialized) : PortableHostCollection<CandidatesSoA>{edm::kUninitialized} {}
 
   template <typename TQueue>

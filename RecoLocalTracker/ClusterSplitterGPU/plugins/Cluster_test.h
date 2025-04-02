@@ -23,43 +23,42 @@ constexpr int maxPixels = 500;
 
 // This represent a per-cluster data needed in the Splitting algorithm
 struct clusterProperties {
+  // These are used to split original cluster into subclusters
+  float clx[maxSubClusters];
+  float cly[maxSubClusters];
+  float cls[maxSubClusters];
+  float oldclx[maxSubClusters];
+  float oldcly[maxSubClusters];
 
-    // These are used to split original cluster into subclusters
-    float clx[maxSubClusters];
-    float cly[maxSubClusters];
-    float cls[maxSubClusters];
-    float oldclx[maxSubClusters];
-    float oldcly[maxSubClusters];
+  // Copy the pixels from the SoA into original to keep them aligned to the following arrays
+  uint32_t originalpixels_x[maxPixels];
+  uint32_t originalpixels_y[maxPixels];
+  uint32_t originalpixels_ADC[maxPixels];
+  uint32_t originalpixels_rawIdArr[maxPixels];
 
-    // Copy the pixels from the SoA into original to keep them aligned to the following arrays
-    uint32_t originalpixels_x[maxPixels];
-    uint32_t originalpixels_y[maxPixels];
-    uint32_t originalpixels_ADC[maxPixels];
-    uint32_t originalpixels_rawIdArr[maxPixels];
+  // These are used to store temporary pixel information
+  uint32_t pixelCounter;          // how many pixels in the cluster under study
+  uint32_t pixels[maxPixels];     // Storing the index of the pixel
+  int pixel_X[maxPixels];         // X position of each pixel
+  int pixel_Y[maxPixels];         // Y position of each pixel
+  uint32_t pixel_ADC[maxPixels];  // adc value of each pixel
+  uint32_t rawIdArr[maxPixels];   // RawAddress of each pixel
 
-    // These are used to store temporary pixel information
-    uint32_t pixelCounter;                // how many pixels in the cluster under study
-    uint32_t pixels[maxPixels];                // Storing the index of the pixel
-    int pixel_X[maxPixels];             // X position of each pixel
-    int pixel_Y[maxPixels];             // Y position of each pixel
-    uint32_t pixel_ADC[maxPixels];           // adc value of each pixel
-    uint32_t rawIdArr[maxPixels];         // RawAddress of each pixel
+  // These are used for the final sub-cluster (each subcluster contains pixels)
+  uint32_t pixelsForClCounter[maxSubClusters];               // how many pixels in this Cluster
+  int pixelsForCl_X[maxSubClusters][maxPixels];              // position
+  int pixelsForCl_Y[maxSubClusters][maxPixels];              // position
+  uint32_t pixelsForCl_ADC[maxSubClusters][maxPixels];       // adc value
+  uint32_t pixelsForCl_rawIdArr[maxSubClusters][maxPixels];  // adc value
+  //int pixelsForCl[maxSubClusters][maxPixels];              // Storing the index of the pixel
 
-    // These are used for the final sub-cluster (each subcluster contains pixels)
-    uint32_t pixelsForClCounter[maxSubClusters];             // how many pixels in this Cluster
-    int pixelsForCl_X[maxSubClusters][maxPixels];          // position
-    int pixelsForCl_Y[maxSubClusters][maxPixels];          // position
-    uint32_t pixelsForCl_ADC[maxSubClusters][maxPixels];        // adc value
-    uint32_t pixelsForCl_rawIdArr[maxSubClusters][maxPixels];        // adc value
-    //int pixelsForCl[maxSubClusters][maxPixels];              // Storing the index of the pixel
+  // thse are used for k-map like algorithm and scoring
+  float distanceMap[maxPixels][maxSubClusters];
+  int scoresIndices[maxPixels];   // need this because can't to map
+  float scoresValues[maxPixels];  // need this because can't to map
 
-    // thse are used for k-map like algorithm and scoring
-    float distanceMap[maxPixels][maxSubClusters];
-    int scoresIndices[maxPixels];           // need this because can't to map
-    float scoresValues[maxPixels];          // need this because can't to map
-
-    int clusterForPixel[maxPixels];
-    float weightOfPixel[maxPixels];
+  int clusterForPixel[maxPixels];
+  float weightOfPixel[maxPixels];
 };
 
 using namespace reco;
@@ -87,8 +86,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::Splitting {
                   uint32_t* clusterCounterDevice,
                   double forceXError_,
                   double forceYError_,
-                  float vertexX, float vertexY, float vertexZ, float vertexEta, float vertexPhi,
-                  bool verbose_, bool debugMode, int targetDetId, int targetClusterOf,
+                  float vertexX,
+                  float vertexY,
+                  float vertexZ,
+                  float vertexEta,
+                  float vertexPhi,
+                  bool verbose_,
+                  bool debugMode,
+                  int targetDetId,
+                  int targetClusterOf,
                   Queue& queue);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::Splitting

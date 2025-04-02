@@ -12,8 +12,8 @@
 template <typename TDev>
 class ClusterGeometrysDevice : public PortableDeviceCollection<ClusterGeometrysSoA, TDev> {
 public:
-
-  ClusterGeometrysDevice(edm::Uninitialized) : PortableDeviceCollection<ClusterGeometrysSoA, TDev>{edm::kUninitialized} {}
+  ClusterGeometrysDevice(edm::Uninitialized)
+      : PortableDeviceCollection<ClusterGeometrysSoA, TDev>{edm::kUninitialized} {}
 
   template <typename TQueue>
   explicit ClusterGeometrysDevice(size_t maxFedWords, TQueue queue)

@@ -94,7 +94,6 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
-
   void produce(edm::StreamID sid, device::Event& event, device::EventSetup const& setup) const override;
 
   uint32_t nHits_;
@@ -105,7 +104,7 @@ private:
   double deltaR_;
   double chargeFracMin_;
   float tanLorentzAngle_;
-  float tanLorentzAngleBarrelLayer1_;  
+  float tanLorentzAngleBarrelLayer1_;
 
   float expSizeXAtLorentzAngleIncidence_;
   float expSizeXDeltaPerTanAlpha_;
@@ -113,13 +112,14 @@ private:
   double centralMIPCharge_;
   double chargePerUnit_;
   double forceXError_;
-  double forceYError_;  
+  double forceYError_;
   double fractionalWidth_;
   const edm::EDGetTokenT<SiPixelClustersHost> clusterToken_;
   const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::SiPixelDigisSoACollection> digisToken_;
-  //const edm::EDGetTokenT<SiPixelClustersHost> digisToken_;  
+  //const edm::EDGetTokenT<SiPixelClustersHost> digisToken_;
   //const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::SiPixelClustersSoACollection> clusterToken_;
-  const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::TrackingRecHitsSoACollection<pixelTopology::Phase1>> recHitsToken_;
+  const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::TrackingRecHitsSoACollection<pixelTopology::Phase1>>
+      recHitsToken_;
   const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::CandidatesSoACollection> candidateToken_;
   //const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::ZVertexSoACollection> zVertexToken_;
   const device::EDGetToken<ALPAKA_ACCELERATOR_NAMESPACE::ClusterGeometrysSoACollection> geometryToken_;
@@ -129,7 +129,7 @@ private:
   int targetClusterOffset;
   int targetEvent;
   edm::EDGetTokenT<reco::VertexCollection> vertices_;
-  std::vector<Device> devices_;  
+  std::vector<Device> devices_;
 };
 
 trial::trial(edm::ParameterSet const& iConfig)
@@ -161,13 +161,11 @@ trial::trial(edm::ParameterSet const& iConfig)
       targetDetId(iConfig.getParameter<int>("targetDetId")),
       targetClusterOffset(iConfig.getParameter<int>("targetClusterOffset")),
       targetEvent(iConfig.getParameter<int>("targetEvent")),
-      vertices_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertices"))) 
-      {
-          devices_ = cms::alpakatools::devices<alpaka::PlatformCudaRt>();
-          rootFile_ = new TFile("config_output.root", "RECREATE");
-          //produces<std::vector<int>>("outputHits");
-      }
-
+      vertices_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertices"))) {
+  devices_ = cms::alpakatools::devices<alpaka::PlatformCudaRt>();
+  rootFile_ = new TFile("config_output.root", "RECREATE");
+  //produces<std::vector<int>>("outputHits");
+}
 
 trial::~trial() {
   if (rootFile_) {
@@ -177,227 +175,250 @@ trial::~trial() {
 }
 
 void trial::produce(edm::StreamID sid, device::Event& deviceEvent, device::EventSetup const& iSetup) const {
+  if ((debugMode) && (deviceEvent.id().event() != static_cast<edm::EventNumber_t>(targetEvent))) {
+    return;
+  }
 
-    if ((debugMode) && (deviceEvent.id().event() != static_cast<edm::EventNumber_t>(targetEvent))) {
-        return;
+  if (verbose_)
+    std::cout << "Entering in produce method.. testing" << std::endl;
+
+  // Ensure we're selecting the first available GPU device
+  auto const& deviceList = cms::alpakatools::devices<alpaka::PlatformCudaRt>();
+  if (deviceList.empty()) {
+    throw cms::Exception("Configuration") << "No available Alpaka GPU devices found!";
+  }
+
+  // Select the first GPU device
+  auto const& device = deviceList[0];
+  if (verbose_)
+    std::cout << "Using GPU device: " << alpaka::getName(device) << std::endl;
+
+  // ---------------------------------------------------------------
+  // RETRIEVE THE SOA COLLECTIONS TO BE USED IN THE KERNEL DEVICE
+  // (THE FOLLOWING DATA ARE ALREADY ALPAKA-FRIENDLY)
+
+  auto const& clusters = deviceEvent.get(clusterToken_);
+  auto const& digis = deviceEvent.get(digisToken_);
+  auto const& recHits = deviceEvent.get(recHitsToken_);
+  //auto const& zVertices = deviceEvent.get(zVertexToken_);
+  auto const& candidates = deviceEvent.get(candidateToken_);
+  auto const& clustergeometry = deviceEvent.get(geometryToken_);
+  auto const& vertices = deviceEvent.get(vertices_);
+
+  const reco::Vertex& pv = vertices[0];
+
+  float vertexX = pv.position().x();
+  float vertexY = pv.position().y();
+  float vertexZ = pv.position().z();
+  GlobalPoint ppv(vertexX, vertexY, vertexZ);
+  float vertexEta = ppv.eta();
+  float vertexPhi = ppv.phi();
+
+  if (verbose_)
+    std::cout << "All Things retrievied..." << std::endl;
+
+  // Use event ID as the offset
+  int32_t eventOffset = deviceEvent.id().event();
+  if (verbose_)
+    std::cout << "Event offset: " << eventOffset << std::endl;
+  for (const auto& device : devices_) {
+    Queue queue(device);
+
+    // Define moduleStart data
+    auto moduleStartH =
+        cms::alpakatools::make_host_buffer<uint32_t[]>(queue, pixelTopology::Phase1::numberOfModules + 1);
+    for (size_t i = 0; i < pixelTopology::Phase1::numberOfModules + 1; ++i) {
+      moduleStartH[i] = i * 2;
     }
+    auto moduleStartD =
+        cms::alpakatools::make_device_buffer<uint32_t[]>(queue, pixelTopology::Phase1::numberOfModules + 1);
+    alpaka::memcpy(queue, moduleStartD, moduleStartH);
+    alpaka::wait(queue);  // Ensure the data copy is complete
 
-    if (verbose_) std::cout << "Entering in produce method.. testing" << std::endl;
+    if (verbose_)
+      std::cout << "Module Start (host/device) done" << std::endl;
 
-    // Ensure we're selecting the first available GPU device
-    auto const& deviceList = cms::alpakatools::devices<alpaka::PlatformCudaRt>();
-    if (deviceList.empty()) {
-        throw cms::Exception("Configuration") << "No available Alpaka GPU devices found!";
-    }
+    // ------------- CREATE DEVICE BUFFERS -------------------------------
 
-    // Select the first GPU device
-    auto const& device = deviceList[0];
-    if (verbose_) std::cout << "Using GPU device: " << alpaka::getName(device) << std::endl;
-
-    // ---------------------------------------------------------------
-    // RETRIEVE THE SOA COLLECTIONS TO BE USED IN THE KERNEL DEVICE
-    // (THE FOLLOWING DATA ARE ALREADY ALPAKA-FRIENDLY)
-
-    auto const& clusters = deviceEvent.get(clusterToken_);
-    auto const& digis = deviceEvent.get(digisToken_);
-    auto const& recHits = deviceEvent.get(recHitsToken_);
-    //auto const& zVertices = deviceEvent.get(zVertexToken_);
-    auto const& candidates = deviceEvent.get(candidateToken_);
-    auto const& clustergeometry = deviceEvent.get(geometryToken_);
-    auto const& vertices = deviceEvent.get(vertices_);
-
-    const reco::Vertex& pv = vertices[0];
-
-    float vertexX = pv.position().x();
-    float vertexY = pv.position().y();
-    float vertexZ = pv.position().z();
-    GlobalPoint ppv(vertexX, vertexY, vertexZ);
-    float vertexEta = ppv.eta();
-    float vertexPhi = ppv.phi();
-
-
-    if (verbose_) std::cout << "All Things retrievied..." << std::endl;
-
-    // Use event ID as the offset
-    int32_t eventOffset = deviceEvent.id().event();
-    if (verbose_) std::cout << "Event offset: " << eventOffset << std::endl;
-    for (const auto& device : devices_) {
-        Queue queue(device);
-
-        // Define moduleStart data
-        auto moduleStartH =
-            cms::alpakatools::make_host_buffer<uint32_t[]>(queue, pixelTopology::Phase1::numberOfModules + 1);
-        for (size_t i = 0; i < pixelTopology::Phase1::numberOfModules + 1; ++i) {
-          moduleStartH[i] = i * 2;
-        }
-        auto moduleStartD =
-            cms::alpakatools::make_device_buffer<uint32_t[]>(queue, pixelTopology::Phase1::numberOfModules + 1);
-        alpaka::memcpy(queue, moduleStartD, moduleStartH);
-        alpaka::wait(queue);            // Ensure the data copy is complete
-
-        if (verbose_) std::cout << "Module Start (host/device) done" << std::endl;
-
-        // ------------- CREATE DEVICE BUFFERS -------------------------------
-
-        /* RecHits
+    /* RecHits
            the TrackingRecHitsSoACollection is an alias for: TrackingRecHitDevice (gpu) 
                                                             TrackingRecHitHost (cpu)  */
-        size_t nHits = recHits.nHits();
-        TrackingRecHitsSoACollection<pixelTopology::Phase1> tkHit(queue, nHits, eventOffset, moduleStartD.data());
-        if (verbose_) std::cout << "TrackingRecHitsSoACollection done " << nHits << std::endl;
-        //- - - - - - - - - - - - - - - - - - -
+    size_t nHits = recHits.nHits();
+    TrackingRecHitsSoACollection<pixelTopology::Phase1> tkHit(queue, nHits, eventOffset, moduleStartD.data());
+    if (verbose_)
+      std::cout << "TrackingRecHitsSoACollection done " << nHits << std::endl;
+    //- - - - - - - - - - - - - - - - - - -
 
-
-        /* Digis 
+    /* Digis 
         the SiPixelDigisSoACollection is an alias for: SiPixelDigisDevice (gpu) or 
                                                           SiPixelDigisHost (cpu)
         but it's not templated so <pixelTopology> won't work
         I could also: SiPixelDigisDevice<Device> digisDevice(nDigis, queue); */
 
-        size_t nDigis = digis.view().metadata().size();
-        SiPixelDigisSoACollection tkDigi(nDigis, queue);
-        //tkDigi.setNModules(pixelTopology::Phase1::numberOfModules);         // Set additional metadata
-        if (verbose_) std::cout << "SiPixelDigisSoACollection done " << nDigis << std::endl;
+    size_t nDigis = digis.view().metadata().size();
+    SiPixelDigisSoACollection tkDigi(nDigis, queue);
+    //tkDigi.setNModules(pixelTopology::Phase1::numberOfModules);         // Set additional metadata
+    if (verbose_)
+      std::cout << "SiPixelDigisSoACollection done " << nDigis << std::endl;
 
-        //- - - - - - - - - - - - - - - - - - -
+    //- - - - - - - - - - - - - - - - - - -
 
-        /* Clusters
+    /* Clusters
            the SiPixelClustersSoACollection is an alias for: SiPixelClustersDevice (gpu) 
                                                              SiPixelClustersHost (cpu)  */
-        size_t nClusters = clusters.view().metadata().size();
-        SiPixelClustersSoACollection tkClusters(nClusters, queue); // It seems the above class has no topology and no Modules.. not sure why
-        if (verbose_) std::cout << "SiPixelClustersSoACollection done " << nClusters << std::endl;
+    size_t nClusters = clusters.view().metadata().size();
+    SiPixelClustersSoACollection tkClusters(
+        nClusters, queue);  // It seems the above class has no topology and no Modules.. not sure why
+    if (verbose_)
+      std::cout << "SiPixelClustersSoACollection done " << nClusters << std::endl;
 
-        alpaka::memcpy(queue, tkClusters.buffer(), clusters.buffer());
-        alpaka::wait(queue);  // Ensure copy is finished before checking
+    alpaka::memcpy(queue, tkClusters.buffer(), clusters.buffer());
+    alpaka::wait(queue);  // Ensure copy is finished before checking
 
+    /* Candidates*/
+    size_t nCandidates = candidates.view().metadata().size();
+    CandidatesSoACollection tkCandidates(nCandidates, queue);
+    auto CandidatesdeviceView = tkCandidates.view();
+    if (verbose_)
+      std::cout << "CandidatesSoACollection done " << nCandidates << std::endl;
+    //- - - - - - - - - - - - - - - - - - -
 
-        /* Candidates*/
-        size_t nCandidates = candidates.view().metadata().size();
-        CandidatesSoACollection tkCandidates(nCandidates, queue);
-        auto CandidatesdeviceView = tkCandidates.view();
-        if (verbose_) std::cout << "CandidatesSoACollection done " << nCandidates << std::endl;
-        //- - - - - - - - - - - - - - - - - - -
+    /* Geometry*/
+    size_t ngeoClusters = clustergeometry.view().metadata().size();
+    ClusterGeometrysSoACollection tkgeoclusters(ngeoClusters, queue);
+    auto deviceView = tkgeoclusters.view();
+    if (verbose_)
+      std::cout << "ClusterGeometrysSoACollection done " << ngeoClusters << std::endl;
+    //- - - - - - - - - - - - - - - - - - -
 
+    /* Vertices                    */
+    //ZVertexSoACollection tkVertices(queue);
+    //- - - - - - - - - - - - - - - - - - -
 
-        /* Geometry*/
-        size_t ngeoClusters = clustergeometry.view().metadata().size();
-        ClusterGeometrysSoACollection tkgeoclusters(ngeoClusters, queue);
-        auto deviceView = tkgeoclusters.view();
-        if (verbose_) std::cout << "ClusterGeometrysSoACollection done " << ngeoClusters << std::endl;
-        //- - - - - - - - - - - - - - - - - - -
+    /* SoA for the output                    */
+    SiPixelDigisSoACollection tkOutputDigis(nDigis, queue);
+    SiPixelClustersSoACollection tkOutputClusters(nClusters, queue);
+    if (verbose_)
+      std::cout << "SoA for the output done" << std::endl;
 
+    // ------------- COPY FROM HOST TO DEVICE BUFFERS -------------------------------
+    // The output SoA are initialized with the input ones (in case no cluster will be split)
 
-        /* Vertices                    */
-        //ZVertexSoACollection tkVertices(queue);
-        //- - - - - - - - - - - - - - - - - - -
+    alpaka::memcpy(queue, tkHit.buffer(), recHits.buffer());
+    alpaka::wait(queue);  // Ensure copy is finished before checking
 
-        /* SoA for the output                    */
-        SiPixelDigisSoACollection tkOutputDigis(nDigis, queue);
-        SiPixelClustersSoACollection tkOutputClusters(nClusters, queue);
-        if (verbose_) std::cout << "SoA for the output done" << std::endl;
+    alpaka::memcpy(queue, tkDigi.buffer(), digis.buffer());
+    alpaka::wait(queue);  // Ensure copy is finished before checking
 
-        // ------------- COPY FROM HOST TO DEVICE BUFFERS -------------------------------
-        // The output SoA are initialized with the input ones (in case no cluster will be split)
+    //alpaka::memcpy(queue, tkClusters.buffer(), clusters.buffer());
+    //alpaka::memcpy(queue, tkVertices.buffer(), zVertices.buffer());
+    //alpaka::wait(queue);  // Ensure copy is finished before checking
 
-        alpaka::memcpy(queue, tkHit.buffer(), recHits.buffer());
-        alpaka::wait(queue);  // Ensure copy is finished before checking
+    alpaka::memcpy(queue, tkCandidates.buffer(), candidates.buffer());
+    alpaka::wait(queue);  // Ensure copy is finished before checking
 
-        alpaka::memcpy(queue, tkDigi.buffer(), digis.buffer());
-        alpaka::wait(queue);  // Ensure copy is finished before checking
+    alpaka::memcpy(queue, tkgeoclusters.buffer(), clustergeometry.buffer());
+    alpaka::wait(queue);  // Ensure copy is finished before checking
 
-        //alpaka::memcpy(queue, tkClusters.buffer(), clusters.buffer());
-        //alpaka::memcpy(queue, tkVertices.buffer(), zVertices.buffer());
-        //alpaka::wait(queue);  // Ensure copy is finished before checking
+    if (verbose_)
+      std::cout << "Most memcpy done" << std::endl;
 
-        alpaka::memcpy(queue, tkCandidates.buffer(), candidates.buffer());
-        alpaka::wait(queue);  // Ensure copy is finished before checking
+    // Handling the per cluster calculation attributes in a struct
+    std::vector<clusterProperties> gpuAlgo;
+    auto clusterPropertiesHost = cms::alpakatools::make_host_buffer<clusterProperties[]>(queue, nClusters);
+    auto clusterPropertiesDevice = cms::alpakatools::make_device_buffer<clusterProperties[]>(queue, nClusters);
+    std::copy(gpuAlgo.begin(), gpuAlgo.end(), clusterPropertiesHost.data());
+    alpaka::memcpy(queue, clusterPropertiesDevice, clusterPropertiesHost);
+    alpaka::wait(queue);  // Ensure copy is finished before checking
 
-        alpaka::memcpy(queue, tkgeoclusters.buffer(), clustergeometry.buffer());
-        alpaka::wait(queue);  // Ensure copy is finished before checking
+    if (verbose_)
+      std::cout << "All memcpy done" << std::endl;
 
-        if (verbose_) std::cout << "Most memcpy done" << std::endl;
+    // Handling a global counter of the output (new) clusters (initialized to zero here)
+    auto clusterCounterDevice = cms::alpakatools::make_device_buffer<uint32_t>(queue);
+    alpaka::memset(queue, clusterCounterDevice, 0);
+    alpaka::wait(queue);  // Ensure the transfer is complete
 
-        // Handling the per cluster calculation attributes in a struct
-        std::vector<clusterProperties> gpuAlgo;
-        auto clusterPropertiesHost = cms::alpakatools::make_host_buffer<clusterProperties[]>(queue, nClusters);
-        auto clusterPropertiesDevice = cms::alpakatools::make_device_buffer<clusterProperties[]>(queue, nClusters);
-        std::copy(gpuAlgo.begin(), gpuAlgo.end(), clusterPropertiesHost.data());
-        alpaka::memcpy(queue, clusterPropertiesDevice, clusterPropertiesHost);
-        alpaka::wait(queue);  // Ensure copy is finished before checking
-        
-        if (verbose_) std::cout << "All memcpy done" << std::endl;
+    // Execute the kernel
+    if (verbose_)
+      std::cout << "About to start the kernel" << std::endl;
+    Splitting::runKernels<pixelTopology::Phase1>(tkHit.view(),
+                                                 tkDigi.view(),
+                                                 tkClusters.view(),
+                                                 tkCandidates.view(),
+                                                 tkgeoclusters.view(),
+                                                 ptMin_,
+                                                 deltaR_,
+                                                 chargeFracMin_,
+                                                 expSizeXAtLorentzAngleIncidence_,
+                                                 expSizeXDeltaPerTanAlpha_,
+                                                 expSizeYAtNormalIncidence_,
+                                                 centralMIPCharge_,
+                                                 chargePerUnit_,
+                                                 fractionalWidth_,
+                                                 tkOutputDigis.view(),
+                                                 tkOutputClusters.view(),
+                                                 clusterPropertiesDevice.data(),
+                                                 clusterCounterDevice.data(),
+                                                 forceXError_,
+                                                 forceYError_,
+                                                 vertexX,
+                                                 vertexY,
+                                                 vertexZ,
+                                                 vertexEta,
+                                                 vertexPhi,
+                                                 verbose_,
+                                                 debugMode,
+                                                 targetDetId,
+                                                 targetClusterOffset,
+                                                 queue);
 
-        // Handling a global counter of the output (new) clusters (initialized to zero here)
-        auto clusterCounterDevice = cms::alpakatools::make_device_buffer<uint32_t>(queue);
-        alpaka::memset(queue, clusterCounterDevice, 0);
-        alpaka::wait(queue);  // Ensure the transfer is complete
+    // Update from device to host
+    //alpaka::memcpy(queue, gpuSharedHost, gpuSharedDevice);  // Copy device buffer to host buffer
+    //alpaka::wait(queue);  // Ensure the transfer is complete
+    //        tkHit.updateFromDevice(queue);
 
+    //TrackingRecHitHost<pixelTopology::Phase1> hostRecHits = cms::alpakatools::CopyToHost<TrackingRecHitDevice<pixelTopology::Phase1, Device>>::copyAsync(queue, tkHit);
+    //SiPixelDigisHost digisHost = cms::alpakatools::CopyToHost<SiPixelDigisDevice<Device>>::copyAsync(queue, tkDigi);
+    //SiPixelClustersHost clustersHost = cms::alpakatools::CopyToHost<SiPixelClustersDevice<Device>>::copyAsync(queue, tkClusters);
+    //        SiPixelDigisHost outputDigisHost = cms::alpakatools::CopyToHost<SiPixelDigisDevice<Device>>::copyAsync(queue, tkOutputDigis);
+    //        SiPixelClustersHost outputClustersHost = cms::alpakatools::CopyToHost<SiPixelClustersDevice<Device>>::copyAsync(queue, tkOutputClusters);
 
-        // Execute the kernel
-        if (verbose_) std::cout << "About to start the kernel" << std::endl;
-        Splitting::runKernels<pixelTopology::Phase1>(
-            tkHit.view(), tkDigi.view(), tkClusters.view(), tkCandidates.view(), 
-            tkgeoclusters.view(), ptMin_, deltaR_, chargeFracMin_, 
-            expSizeXAtLorentzAngleIncidence_, expSizeXDeltaPerTanAlpha_, expSizeYAtNormalIncidence_, 
-            centralMIPCharge_, chargePerUnit_, fractionalWidth_, 
-            tkOutputDigis.view(), tkOutputClusters.view(), 
-            clusterPropertiesDevice.data(), clusterCounterDevice.data(),
-            forceXError_, forceYError_, 
-            vertexX, vertexY, vertexZ, vertexEta, vertexPhi, 
-            verbose_, debugMode, targetDetId, targetClusterOffset, queue);
-
-
-
-        // Update from device to host
-        //alpaka::memcpy(queue, gpuSharedHost, gpuSharedDevice);  // Copy device buffer to host buffer
-        //alpaka::wait(queue);  // Ensure the transfer is complete
-//        tkHit.updateFromDevice(queue);
-
-        //TrackingRecHitHost<pixelTopology::Phase1> hostRecHits = cms::alpakatools::CopyToHost<TrackingRecHitDevice<pixelTopology::Phase1, Device>>::copyAsync(queue, tkHit);
-        //SiPixelDigisHost digisHost = cms::alpakatools::CopyToHost<SiPixelDigisDevice<Device>>::copyAsync(queue, tkDigi);
-        //SiPixelClustersHost clustersHost = cms::alpakatools::CopyToHost<SiPixelClustersDevice<Device>>::copyAsync(queue, tkClusters);
-//        SiPixelDigisHost outputDigisHost = cms::alpakatools::CopyToHost<SiPixelDigisDevice<Device>>::copyAsync(queue, tkOutputDigis);
-//        SiPixelClustersHost outputClustersHost = cms::alpakatools::CopyToHost<SiPixelClustersDevice<Device>>::copyAsync(queue, tkOutputClusters);
-
-        alpaka::wait(queue);
-    }
-       
+    alpaka::wait(queue);
+  }
 }
-
 
 void trial::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-    edm::ParameterSetDescription desc;
-    desc.add<uint32_t>("nHits", 100)->setComment("Number of hits for the test");
-    desc.add<int32_t>("offset", 0)->setComment("Offset for hits");
-    desc.add<double>("ptMin", 200.0)->setComment("Minimum pt");
-    desc.add<double>("deltaR", 0.05)->setComment("Delta R");
-    desc.add<double>("chargeFracMin", 2.0)->setComment("Minimum charge fraction");
-    desc.add<double>("tanLorentzAngle", 0.02)->setComment("Lorentz angle");
-    desc.add<double>("tanLorentzAngleBarrelLayer1", 0.015)->setComment("Lorentz angle for Barrel Layer 1");
-    desc.add<double>("expSizeXAtLorentzAngleIncidence", 0.1)->setComment("Expected size X at Lorentz angle incidence");
-    desc.add<double>("expSizeXDeltaPerTanAlpha", 0.02)->setComment("Expected size X delta per tan(alpha)");
-    desc.add<double>("expSizeYAtNormalIncidence", 0.1)->setComment("Expected size Y at normal incidence");
-    desc.add<double>("centralMIPCharge", 26000.0)->setComment("Central MIP charge");
-    desc.add<double>("chargePerUnit", 2000.0)->setComment("Charge per unit");
-    desc.add<double>("forceXError", 100.0)->setComment("Force X error");
-    desc.add<double>("forceYError", 150.0)->setComment("Force Y error");
-    desc.add<double>("fractionalWidth", 0.4)->setComment("Fractional width");
-    desc.add<edm::InputTag>("candidateInput", edm::InputTag(""))->setComment("Input tag for candidate data");
-    desc.add<edm::InputTag>("geometryInput", edm::InputTag(""))->setComment("Input tag for geometry data");
-    desc.add<edm::InputTag>("siPixelClusters", edm::InputTag(""))->setComment("Input tag for siPixelClusters data");
-    desc.add<edm::InputTag>("siPixelDigis", edm::InputTag(""))->setComment("Input tag for siPixelDigis data");
-    desc.add<edm::InputTag>("trackingRecHits", edm::InputTag(""))->setComment("Input tag for trackingRecHits data");
-    //desc.add<edm::InputTag>("zVertex", edm::InputTag(""))->setComment("Input tag for zVertex data");
-    desc.add<bool>("verbose", false)->setComment("Verbose output");
-    desc.add<bool>("debugMode", true);
-    desc.add<int>("targetDetId");
-    desc.add<int>("targetClusterOffset");
-    desc.add<int>("targetEvent");    
-    desc.add<edm::InputTag>("vertices", edm::InputTag("offlinePrimaryVertices"));    
-    descriptions.add("trial", desc);
+  edm::ParameterSetDescription desc;
+  desc.add<uint32_t>("nHits", 100)->setComment("Number of hits for the test");
+  desc.add<int32_t>("offset", 0)->setComment("Offset for hits");
+  desc.add<double>("ptMin", 200.0)->setComment("Minimum pt");
+  desc.add<double>("deltaR", 0.05)->setComment("Delta R");
+  desc.add<double>("chargeFracMin", 2.0)->setComment("Minimum charge fraction");
+  desc.add<double>("tanLorentzAngle", 0.02)->setComment("Lorentz angle");
+  desc.add<double>("tanLorentzAngleBarrelLayer1", 0.015)->setComment("Lorentz angle for Barrel Layer 1");
+  desc.add<double>("expSizeXAtLorentzAngleIncidence", 0.1)->setComment("Expected size X at Lorentz angle incidence");
+  desc.add<double>("expSizeXDeltaPerTanAlpha", 0.02)->setComment("Expected size X delta per tan(alpha)");
+  desc.add<double>("expSizeYAtNormalIncidence", 0.1)->setComment("Expected size Y at normal incidence");
+  desc.add<double>("centralMIPCharge", 26000.0)->setComment("Central MIP charge");
+  desc.add<double>("chargePerUnit", 2000.0)->setComment("Charge per unit");
+  desc.add<double>("forceXError", 100.0)->setComment("Force X error");
+  desc.add<double>("forceYError", 150.0)->setComment("Force Y error");
+  desc.add<double>("fractionalWidth", 0.4)->setComment("Fractional width");
+  desc.add<edm::InputTag>("candidateInput", edm::InputTag(""))->setComment("Input tag for candidate data");
+  desc.add<edm::InputTag>("geometryInput", edm::InputTag(""))->setComment("Input tag for geometry data");
+  desc.add<edm::InputTag>("siPixelClusters", edm::InputTag(""))->setComment("Input tag for siPixelClusters data");
+  desc.add<edm::InputTag>("siPixelDigis", edm::InputTag(""))->setComment("Input tag for siPixelDigis data");
+  desc.add<edm::InputTag>("trackingRecHits", edm::InputTag(""))->setComment("Input tag for trackingRecHits data");
+  //desc.add<edm::InputTag>("zVertex", edm::InputTag(""))->setComment("Input tag for zVertex data");
+  desc.add<bool>("verbose", false)->setComment("Verbose output");
+  desc.add<bool>("debugMode", true);
+  desc.add<int>("targetDetId");
+  desc.add<int>("targetClusterOffset");
+  desc.add<int>("targetEvent");
+  desc.add<edm::InputTag>("vertices", edm::InputTag("offlinePrimaryVertices"));
+  descriptions.add("trial", desc);
 }
-
 
 DEFINE_FWK_MODULE(trial);
 
