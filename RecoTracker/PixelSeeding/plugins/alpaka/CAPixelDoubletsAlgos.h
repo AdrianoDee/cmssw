@@ -335,3 +335,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets
 
 #endif  // RecoTracker_PixelSeeding_plugins_alpaka_CAPixelDoubletsAlgos_h
+

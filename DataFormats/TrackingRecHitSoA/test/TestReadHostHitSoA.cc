@@ -52,3 +52,4 @@ namespace edmtest {
 
 using edmtest::TestReadHostHitSoA;
 DEFINE_FWK_MODULE(TestReadHostHitSoA);
+

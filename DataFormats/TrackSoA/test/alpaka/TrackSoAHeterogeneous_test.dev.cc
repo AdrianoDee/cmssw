@@ -70,3 +70,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }  // namespace testTrackSoA
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+

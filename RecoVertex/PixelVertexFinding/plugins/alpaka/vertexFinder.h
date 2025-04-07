@@ -76,3 +76,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder
 
 #endif  // RecoVertex_PixelVertexFinding_plugins_alpaka_vertexFinder_h
+

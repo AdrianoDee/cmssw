@@ -62,3 +62,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif  // RecoTracker_PixelSeeding_plugins_alpaka_CAPixelDoublets_h
+

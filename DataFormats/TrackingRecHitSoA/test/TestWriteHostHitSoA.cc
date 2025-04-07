@@ -50,3 +50,4 @@ namespace edmtest {
 
 using edmtest::TestWriteHostHitSoA;
 DEFINE_FWK_MODULE(TestWriteHostHitSoA);
+

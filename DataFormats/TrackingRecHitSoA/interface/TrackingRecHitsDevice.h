@@ -72,3 +72,4 @@ namespace reco {
 }  // namespace reco
 
 #endif  // DataFormats_RecHits_interface_TrackingRecHitSoADevice_h
+

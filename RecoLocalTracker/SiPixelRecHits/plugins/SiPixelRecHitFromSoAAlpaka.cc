@@ -187,3 +187,4 @@ DEFINE_FWK_MODULE(SiPixelRecHitFromSoAAlpaka);
 DEFINE_FWK_MODULE(SiPixelRecHitFromSoAAlpakaPhase1);
 DEFINE_FWK_MODULE(SiPixelRecHitFromSoAAlpakaPhase2);
 DEFINE_FWK_MODULE(SiPixelRecHitFromSoAAlpakaHIonPhase1);
+

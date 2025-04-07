@@ -43,3 +43,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif  // RecoLocalTracker_SiPixelRecHits_PixelRecHitKernel_h
+

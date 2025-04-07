@@ -84,3 +84,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   }  // namespace pixelgpudetails
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+

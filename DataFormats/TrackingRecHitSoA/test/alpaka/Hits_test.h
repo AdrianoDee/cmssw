@@ -11,3 +11,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::testTrackingRecHitSoA {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::testTrackingRecHitSoA
 
 #endif  // DataFormats_TrackingRecHitSoA_test_alpaka_Hits_test_h
+

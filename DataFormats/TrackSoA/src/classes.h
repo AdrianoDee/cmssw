@@ -6,3 +6,4 @@
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 
 #endif  // DataFormats_TrackSoA_src_classes_h
+

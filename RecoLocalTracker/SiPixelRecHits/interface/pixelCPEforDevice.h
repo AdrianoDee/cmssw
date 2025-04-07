@@ -423,3 +423,4 @@ namespace pixelCPEforDevice {
 }  // namespace pixelCPEforDevice
 
 #endif  // RecoLocalTracker_SiPixelRecHits_interface_pixelCPEforDevice_h
+

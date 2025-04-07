@@ -18,3 +18,4 @@ namespace caStructures {
 }  // namespace caStructures
 
 #endif  // RecoTracker_PixelSeeding_interface_CACoupleSoA_h
+

@@ -553,3 +553,4 @@ namespace pixelTopology {
 }  // namespace pixelTopology
 
 #endif  // Geometry_CommonTopologies_SimplePixelTopology_h
+

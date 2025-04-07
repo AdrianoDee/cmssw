@@ -11,3 +11,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::testTrackSoA {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::testTrackSoA
 
 #endif  // DataFormats_TrackSoA_test_alpaka_TrackSoAHeterogeneous_test_h
+

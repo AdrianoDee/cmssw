@@ -71,3 +71,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::test {
   template void testTrackSoA<pixelTopology::Phase2>(Queue& queue, reco::TrackSoAView& tracks);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::test
+

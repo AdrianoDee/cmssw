@@ -114,3 +114,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 DEFINE_FWK_ALPAKA_MODULE(PixelVertexProducerAlpakaPhase1);
 DEFINE_FWK_ALPAKA_MODULE(PixelVertexProducerAlpakaPhase2);
 DEFINE_FWK_ALPAKA_MODULE(PixelVertexProducerAlpakaHIonPhase1);
+

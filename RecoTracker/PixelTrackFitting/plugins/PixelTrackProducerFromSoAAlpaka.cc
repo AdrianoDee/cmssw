@@ -282,3 +282,4 @@ using PixelTrackProducerFromSoAAlpakaHIonPhase1 = PixelTrackProducerFromSoAAlpak
 DEFINE_FWK_MODULE(PixelTrackProducerFromSoAAlpakaPhase1);
 DEFINE_FWK_MODULE(PixelTrackProducerFromSoAAlpakaPhase2);
 DEFINE_FWK_MODULE(PixelTrackProducerFromSoAAlpakaHIonPhase1);
+

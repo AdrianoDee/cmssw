@@ -14,3 +14,4 @@ namespace reco {
   using CAGeometryDevice = PortableDeviceMultiCollection<TDev, CALayersSoA, CAGraphSoA, CAModulesSoA>;
 }
 #endif  // RecoTracker_PixelSeeding_interface_CAGeometryDevice_H
+

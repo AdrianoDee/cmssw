@@ -77,3 +77,4 @@ using PixelTrackDumpAlpakaHIonPhase1 = PixelTrackDumpAlpakaT<pixelTopology::HIon
 DEFINE_FWK_MODULE(PixelTrackDumpAlpakaPhase1);
 DEFINE_FWK_MODULE(PixelTrackDumpAlpakaPhase2);
 DEFINE_FWK_MODULE(PixelTrackDumpAlpakaHIonPhase1);
+

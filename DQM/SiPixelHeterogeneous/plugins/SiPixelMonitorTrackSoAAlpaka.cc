@@ -199,3 +199,4 @@ DEFINE_FWK_MODULE(SiPixelMonitorTrackSoAAlpaka);
 DEFINE_FWK_MODULE(SiPixelPhase1MonitorTrackSoAAlpaka);
 DEFINE_FWK_MODULE(SiPixelPhase2MonitorTrackSoAAlpaka);
 DEFINE_FWK_MODULE(SiPixelHIonPhase1MonitorTrackSoAAlpaka);
+

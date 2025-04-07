@@ -24,3 +24,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::reco {
 ASSERT_DEVICE_MATCHES_HOST_COLLECTION(reco::CAGeometrySoACollection, reco::CAGeometryHost);
 
 #endif  // RecoTracker_PixelSeeding_interface_CAGeometrySoACollection_h
+

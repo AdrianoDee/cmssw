@@ -3,3 +3,4 @@
 
 using namespace reco;
 SET_PORTABLEHOSTMULTICOLLECTION_READ_RULES(HitPortableCollectionHost);
+

@@ -13,3 +13,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::test {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::test
 
 #endif  // DataFormats_TrackSoA_test_alpaka_TrajectoryStateSoA_t_h
+

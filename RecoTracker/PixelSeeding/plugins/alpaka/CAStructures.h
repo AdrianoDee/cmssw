@@ -122,3 +122,4 @@ namespace caStructures {
 }  // namespace caStructures
 
 #endif  // RecoTracker_PixelSeeding_plugins_alpaka_CAStructures_h
+

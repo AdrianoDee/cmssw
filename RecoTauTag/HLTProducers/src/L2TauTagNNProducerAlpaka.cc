@@ -821,3 +821,4 @@ void L2TauNNProducerAlpaka::produce(edm::Event& event, const edm::EventSetup& ev
 //define this as a plug-in
 #include "FWCore/Framework/interface/MakerMacros.h"
 DEFINE_FWK_MODULE(L2TauNNProducerAlpaka);
+

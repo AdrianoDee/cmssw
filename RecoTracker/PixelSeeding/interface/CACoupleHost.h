@@ -13,3 +13,4 @@ namespace caStructures {
   using CACoupleHost = PortableHostCollection<CACoupleSoA>;
 }
 #endif  // RecoTracker_PixelSeeding_interface_CACoupleHost_h
+

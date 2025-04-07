@@ -43,3 +43,4 @@ _hltPhase2PixelTracksSoASingleIterPatatrack = hltPhase2PixelTracksSoA.clone(
 
 from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
 singleIterPatatrack.toReplaceWith(hltPhase2PixelTracksSoA, _hltPhase2PixelTracksSoASingleIterPatatrack)
+

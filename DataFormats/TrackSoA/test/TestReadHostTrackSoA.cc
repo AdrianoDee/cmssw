@@ -48,3 +48,4 @@ namespace edmtest {
 
 using edmtest::TestReadHostTrackSoA;
 DEFINE_FWK_MODULE(TestReadHostTrackSoA);
+

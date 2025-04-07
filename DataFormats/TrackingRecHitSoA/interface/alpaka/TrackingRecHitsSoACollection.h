@@ -92,3 +92,4 @@ namespace cms::alpakatools {
 ASSERT_DEVICE_MATCHES_HOST_COLLECTION(reco::TrackingRecHitsSoACollection, reco::TrackingRecHitHost);
 
 #endif  // DataFormats_TrackingRecHitSoA_interface_alpaka_TrackingRecHitsSoACollection_h
+

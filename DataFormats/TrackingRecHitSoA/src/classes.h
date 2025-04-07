@@ -7,3 +7,4 @@
 #include "DataFormats/TrackingRecHitSoA/interface/SiPixelHitStatus.h"
 
 #endif  // DataFormats_TrackingRecHitSoA_src_classes_h
+

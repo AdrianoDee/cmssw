@@ -208,3 +208,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template class Producer<pixelTopology::HIonPhase1>;
   }  // namespace vertexFinder
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+

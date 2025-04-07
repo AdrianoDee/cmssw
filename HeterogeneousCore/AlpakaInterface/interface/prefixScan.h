@@ -246,3 +246,4 @@ namespace alpaka::trait {
 }  // namespace alpaka::trait
 
 #endif  // HeterogeneousCore_AlpakaInterface_interface_prefixScan_h
+

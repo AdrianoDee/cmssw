@@ -56,3 +56,4 @@ namespace reco {
 
 }  // namespace reco
 #endif  // RecoTracker_PixelSeeding_interface_CAGeometry_h
+

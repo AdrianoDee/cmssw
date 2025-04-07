@@ -1142,3 +1142,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels
 
 #endif  // RecoTracker_PixelSeeding_plugins_alpaka_CAHitNtupletGeneratorKernelsImpl_h
+

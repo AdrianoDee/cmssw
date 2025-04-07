@@ -25,3 +25,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::reco {
 ASSERT_DEVICE_MATCHES_HOST_COLLECTION(reco::TracksSoACollection, reco::TracksHost);
 
 #endif  // DataFormats_TrackSoA_interface_alpaka_TracksSoACollection_h
+

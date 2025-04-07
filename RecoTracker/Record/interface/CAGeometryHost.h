@@ -13,3 +13,4 @@ namespace reco {
   using CAGeometryHost = PortableHostMultiCollection<CALayersSoA, CAGraphSoA, CAModulesSoA>;
 }
 #endif  // RecoTracker_PixelSeeding_interface_CAGeometryHost_H
+

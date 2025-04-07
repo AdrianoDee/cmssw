@@ -225,3 +225,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif  // RecoLocalTracker_SiPixelRecHits_plugins_alpaka_PixelRecHits_h
+

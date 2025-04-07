@@ -60,3 +60,4 @@ namespace reco {
 }  // namespace reco
 
 #endif  // DataFormats_TrackingRecHitSoA_interface_TrackingRecHitsHost_h
+

@@ -15,3 +15,4 @@ namespace caStructures {
 }
 
 #endif  // RecoTracker_PixelSeeding_interface_CACoupleDevice_H
+

@@ -63,3 +63,4 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   }  // namespace testTrackingRecHitSoA
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+
