@@ -36,12 +36,12 @@
 #include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
 #include "DataFormats/SiStripDetId/interface/StripSubdetector.h"
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 
 namespace reco {
-struct CAGeoemtryParams {
+struct CAGeometryParams {
   //Constructor from ParameterSet
-  CAGeoemtryParams(edm::ParameterSet const& iConfig)
+  CAGeometryParams(edm::ParameterSet const& iConfig)
     : caThetaCuts_(iConfig.getParameter<std::vector<double>>("caThetaCuts")),
     caDCACuts_(iConfig.getParameter<std::vector<double>>("caDCACuts")),
     pairGraph_(iConfig.getParameter<std::vector<int>>("pairGraph")),
@@ -74,7 +74,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 template <typename TrackerTraits>
 class CAHitNtupletAlpaka
-: public stream::EDProducer<edm::GlobalCache<::reco::CAGeoemtryParams>,
+: public stream::EDProducer<edm::GlobalCache<::reco::CAGeometryParams>,
 edm::RunCache<cms::alpakatools::MoveToDeviceCache<Device, ::reco::CAGeometryHost>>> {
   using HitsConstView = ::reco::TrackingRecHitConstView;
   using HitsOnDevice = reco::TrackingRecHitsSoACollection;
@@ -90,12 +90,12 @@ edm::RunCache<cms::alpakatools::MoveToDeviceCache<Device, ::reco::CAGeometryHost
   using Frame = SOAFrame<float>;
 
 public:
-  explicit CAHitNtupletAlpaka(const edm::ParameterSet& iConfig, const ::reco::CAGeoemtryParams* iCache);
+  explicit CAHitNtupletAlpaka(const edm::ParameterSet& iConfig, const ::reco::CAGeometryParams* iCache);
   ~CAHitNtupletAlpaka() override = default;
 
   void produce(device::Event& iEvent, const device::EventSetup& es) override;
 
-  static void globalEndJob(::reco::CAGeoemtryParams const*) { /* Do nothing */ };
+  static void globalEndJob(::reco::CAGeometryParams const*) { /* Do nothing */ };
   static void globalEndRun(edm::Run const& iRun,
                            edm::EventSetup const&,
                            RunContext const* iContext) { /* Do nothing */ };
@@ -287,8 +287,8 @@ public:
     return std::make_shared<CAGeometryCache>(std::move(product));
   }
 
-  static std::unique_ptr<::reco::CAGeoemtryParams> initializeGlobalCache(edm::ParameterSet const& iConfig) {
-    return std::make_unique<::reco::CAGeoemtryParams>(iConfig.getParameterSet("geometry"));
+  static std::unique_ptr<::reco::CAGeometryParams> initializeGlobalCache(edm::ParameterSet const& iConfig) {
+    return std::make_unique<::reco::CAGeometryParams>(iConfig.getParameterSet("geometry"));
   }
 
 private:
@@ -303,7 +303,7 @@ private:
 
 template <typename TrackerTraits>
 CAHitNtupletAlpaka<TrackerTraits>::CAHitNtupletAlpaka(const edm::ParameterSet& iConfig,
-                                                      const ::reco::CAGeoemtryParams* iCache)
+                                                      const ::reco::CAGeometryParams* iCache)
   : EDProducer(iConfig),
   tokenField_(esConsumes()),
   tokenHit_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
@@ -352,3 +352,4 @@ using CAHitNtupletAlpakaPhase2OT = CAHitNtupletAlpaka<pixelTopology::Phase2OT>;
 DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaPhase1);
 DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaHIonPhase1);
 DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaPhase2);
+DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaPhase2OT);
