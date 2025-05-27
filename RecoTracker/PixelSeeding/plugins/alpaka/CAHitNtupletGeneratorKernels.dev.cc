@@ -41,7 +41,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // Hits -> Track
         device_hitToTuple_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
         device_hitToTupleStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(
-            queue, int(nHits * m_params.algoParams_.avgHitsPerTrack_) + 1)},
+            queue, int(maxTuples * m_params.algoParams_.avgHitsPerTrack_) + 1)},
         device_hitToTupleOffsets_{cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nHits + 1)},
         device_hitToTupleView_{device_hitToTuple_.data(),
                                device_hitToTupleOffsets_.data(),
@@ -258,7 +258,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
-                        Kernel_fillGenericCouple<TrackerTraits>{},
+                        Kernel_fillGenericPair{},
                         this->deviceTriplets_.view(),
                         this->device_nTriplets_.data(),
                         this->device_cellToNeighbors_.data());
@@ -323,7 +323,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
-                        Kernel_fillGenericCouple<TrackerTraits>{},
+                        Kernel_fillGenericPair{},
                         this->deviceTracksCells_.view(),
                         this->device_nCellTracks_.data(),
                         this->device_cellToTracks_.data());
