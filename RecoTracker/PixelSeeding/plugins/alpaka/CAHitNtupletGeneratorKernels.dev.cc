@@ -32,108 +32,131 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                             uint16_t nLayers,
                                                                             Queue &queue)
       : m_params(params),
+        counters_{cms::alpakatools::make_device_buffer<Counters>(queue)},
+      {
         //////////////////////////////////////////////////////////
         // ALLOCATIONS FOR THE INTERMEDIATE RESULTS (STAYS ON WORKER)
         //////////////////////////////////////////////////////////
-        counters_{cms::alpakatools::make_device_buffer<Counters>(queue)},
 
-        // One to Many Maps
+        // Here we define the OneToMany maps and the histograms 
+        // allocating the buffers and defining the views. 
+        // For each map/histo, we need:
+        // - a buffer for the offsets sized as the number of ones + 1 
+        //   (with the last bin holding the total number of ones)
+        // - a buffer fot the content/storage itself sized as the number of many
+
+        auto const& algoParams = m_params.algoParams_;
+        int outerHits = nHits - offsetBPIX2; // the number of hits tha may be used as outer hits for a cell (not on bpix1)
+
+        // These hold the number of associations we may build
+        int nHitsToTracks  = std::min(int(maxTuples * algoParams.avgHitsPerTrack_),1);
+        int nHitsToCells   = std::min(int(outerHits * algoParams.avgCellsPerHit_),1);
+        int nCellsToCells  = std::min(int(maxTuples * algoParams.avgHitsPerTrack_),1);
+        int nCellsToTracks = std::min(int(maxDoublets * algoParams.avgTracksPerCell_),1);
+
+#ifdef GPU_DEBUG
+    std::cout << "Allocation for tuple building. N hits " << nHits << std::endl;
+    std::cout << "maxTrips       = " << nCellsToCells << std::endl;
+    std::cout << "maxHitsCells   = " << nHitsToCells << std::endl;
+    std::cout << "maxDoublets    = " << maxDoublets << std::endl;
+    std::cout << "maxTracksCells = " << nCellsToTracks << std::endl;
+    std::cout << "maxHitsTracks  = " << nHitsToTracks << std::endl;
+#endif
+
         // Hits -> Track
-        device_hitToTuple_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_hitToTupleStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(
-            queue, int(maxTuples * m_params.algoParams_.avgHitsPerTrack_) + 1)},
-        device_hitToTupleOffsets_{cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nHits + 1)},
-        device_hitToTupleView_{device_hitToTuple_.data(),
-                               device_hitToTupleOffsets_.data(),
-                               device_hitToTupleStorage_.data(),
-                               int(nHits + 1),
-                               int(nHits * m_params.algoParams_.avgHitsPerTrack_) + 1},
+        device_hitToTuple_ = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
+        device_hitToTupleStorage_ = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(
+            queue, nHitsToTracks);
+        device_hitToTupleOffsets_ = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nHits + 1);
+        device_hitToTupleView_ = {device_hitToTuple_.data(),
+                                device_hitToTupleOffsets_.data(),
+                                device_hitToTupleStorage_.data(),
+                                int(nHits + 1),
+                                nHitsToTracks};
 
-        // (Outer) Hits-> Cells
-        device_hitToCell_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_hitToCellStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(
-            queue, int((nHits - offsetBPIX2) * m_params.algoParams_.avgCellsPerHit_) + 1)},
-        device_hitToCellOffsets_{
-            cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nHits - offsetBPIX2 + 1)},
-        device_hitToCellView_{device_hitToCell_.data(),
-                              device_hitToCellOffsets_.data(),
-                              device_hitToCellStorage_.data(),
-                              int(nHits - offsetBPIX2 + 1),
-                              int((nHits - offsetBPIX2) * m_params.algoParams_.avgCellsPerHit_) + 1},
+        HitToTuple::template launchZero<Acc1D>(device_hitToTupleView_, queue);
+        
+        // (Outer) Hits-> Cells                    
+        device_hitToCell_ = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
+        device_hitToCellStorage_ = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(
+            queue, nHitsToCells);
+        device_hitToCellOffsets_ = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, outerHits + 1);
+        device_hitToCellView_ = {device_hitToCell_.data(),
+                                device_hitToCellOffsets_.data(),
+                                device_hitToCellStorage_.data(),
+                                outerHits + 1,
+                                nHitsToCells};
+        
+        HitToCell::template launchZero<Acc1D>(device_hitToCellView_, queue);
 
-        // Hits
-        device_hitPhiHist_{cms::alpakatools::make_device_buffer<PhiBinner>(queue)},
-        device_phiBinnerStorage_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, nHits)},
-        device_hitPhiView_{device_hitPhiHist_.data(), nullptr, device_phiBinnerStorage_.data(), -1, int(nHits)},
-        device_layerStarts_{cms::alpakatools::make_device_buffer<hindex_type[]>(queue, nLayers + 1)},
-
+        // Hits Phi Histograms: one histogram per layer
+        device_hitPhiHist_ = cms::alpakatools::make_device_buffer<PhiBinner>(queue);
+        device_phiBinnerStorage_ = cms::alpakatools::make_device_buffer<hindex_type[]>(queue, nHits);
+        device_hitPhiView_ = {device_hitPhiHist_.data(), nullptr, device_phiBinnerStorage_.data(), -1, int(nHits)};
+        // This will hold where each layer starts in the hit soa
+        device_layerStarts_ = cms::alpakatools::make_device_buffer<hindex_type[]>(queue, nLayers + 1);
+        
         // Cell -> Neighbor Cells
-        device_cellToNeighbors_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_cellToNeighborsStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(
-            queue, int(maxDoublets * m_params.algoParams_.avgCellsPerCell_) + 1)},
-        device_cellToNeighborsOffsets_{
-            cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, maxDoublets + 1)},
-        device_cellToNeighborsView_{device_cellToNeighbors_.data(),
+        device_cellToNeighbors_ = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
+        device_cellToNeighborsStorage_ = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, nCellsToCells);
+        device_cellToNeighborsOffsets_ = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, maxDoublets + 1);
+        device_cellToNeighborsView_ = {device_cellToNeighbors_.data(),
                                     device_cellToNeighborsOffsets_.data(),
                                     device_cellToNeighborsStorage_.data(),
                                     int(maxDoublets + 1),
-                                    int(maxDoublets * m_params.algoParams_.avgCellsPerCell_)},
+                                    nCellsToCells};
+        
+        CellToCell::template launchZero<Acc1D>(device_cellToNeighborsView_, queue);
 
         // Cell -> Tracks
-        device_cellToTracks_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_cellToTracksStorage_{cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(
-            queue, int(maxDoublets * m_params.algoParams_.avgTracksPerCell_) + 1)},
-        device_cellToTracksOffsets_{
-            cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, maxDoublets + 1)},
-        device_cellToTracksView_{device_cellToTracks_.data(),
-                                 device_cellToTracksOffsets_.data(),
-                                 device_cellToTracksStorage_.data(),
-                                 int(maxDoublets + 1),
-                                 int(maxDoublets * m_params.algoParams_.avgTracksPerCell_) + 1},
+        device_cellToTracks_ = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
+        device_cellToTracksStorage_ = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, nCellsToTracks);
+        device_cellToTracksOffsets_ = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, maxDoublets + 1);
+        device_cellToTracksView_ = {device_cellToTracks_.data(),
+                                    device_cellToTracksOffsets_.data(),
+                                    device_cellToTracksStorage_.data(),
+                                    int(maxDoublets + 1),
+                                    nCellsToTracks};
+        
+        CellToTrack::template launchZero<Acc1D>(device_cellToTracksView_, queue);
 
-        // Tracks -> Hits
-        device_hitContainer_{cms::alpakatools::make_device_buffer<SequentialContainer>(queue)},
-        device_hitContainerStorage_{cms::alpakatools::make_device_buffer<SequentialContainerStorage[]>(
-            queue, int(m_params.algoParams_.avgHitsPerTrack_ * maxTuples) + 1)},
-        device_hitContainerOffsets_{
-            cms::alpakatools::make_device_buffer<SequentialContainerOffsets[]>(queue, maxTuples + 1)},
-        device_hitContainerView_{device_hitContainer_.data(),
-                                 device_hitContainerOffsets_.data(),
-                                 device_hitContainerStorage_.data(),
-                                 int(maxTuples + 1),
-                                 int(m_params.algoParams_.avgHitsPerTrack_ * maxTuples) + 1},
+        // Track -> Hits
+        // - This is a OneToManyAssocSequential since each bin is filled 
+        //   in one go: all the hits forming a track are pushed together. 
+        device_hitContainer_ = cms::alpakatools::make_device_buffer<SequentialContainer>(queue);
+        device_hitContainerStorage_ = cms::alpakatools::make_device_buffer<SequentialContainerStorage[]>(queue, nHitsToTracks);
+        device_hitContainerOffsets_ = cms::alpakatools::make_device_buffer<SequentialContainerOffsets[]>(queue, maxTuples + 1);
+        device_hitContainerView_ = {device_hitContainer_.data(),
+                                    device_hitContainerOffsets_.data(),
+                                    device_hitContainerStorage_.data(),
+                                    int(maxTuples + 1),
+                                    nHitsToTracks};
+        
+        TupleMultiplicity::template launchZero<Acc1D>(device_tupleMultiplicityView_, queue);
 
-        // No.Hits -> Track (Multiplicity)
-        device_tupleMultiplicity_{cms::alpakatools::make_device_buffer<GenericContainer>(queue)},
-        device_tupleMultiplicityStorage_{
-            cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, maxTuples)},
-        device_tupleMultiplicityOffsets_{
-            cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, TrackerTraits::maxHitsOnTrack + 1)},
-        device_tupleMultiplicityView_{device_tupleMultiplicity_.data(),
-                                      device_tupleMultiplicityOffsets_.data(),
-                                      device_tupleMultiplicityStorage_.data(),
-                                      int(TrackerTraits::maxHitsOnTrack + 1),
-                                      int(maxTuples)},
+        // No.Hits -> Track (track multiplicity)
+        device_tupleMultiplicity_ = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
+        device_tupleMultiplicityStorage_ = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, maxTuples);
+        device_tupleMultiplicityOffsets_ = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, TrackerTraits::maxHitsOnTrack + 1);
+        device_tupleMultiplicityView_ = {device_tupleMultiplicity_.data(),
+                                        device_tupleMultiplicityOffsets_.data(),
+                                        device_tupleMultiplicityStorage_.data(),
+                                        int(TrackerTraits::maxHitsOnTrack + 1), //TODO: this could become configurable with some work
+                                        int(maxTuples)};
+        
+        HitContainer::template launchZero<Acc1D>(device_hitContainerView_, queue);
 
         // Structures and Counters Storage
-        device_simpleCells_{cms::alpakatools::make_device_buffer<SimpleCell[]>(queue, maxDoublets)},
-        device_extraStorage_{
-            cms::alpakatools::make_device_buffer<cms::alpakatools::AtomicPairCounter::DoubleWord[]>(queue, 5u)},
-        device_hitTuple_apc_{reinterpret_cast<cms::alpakatools::AtomicPairCounter *>(device_extraStorage_.data())},
-        device_nCells_{
-            cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 2))},
-        device_nTriplets_{
-            cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 3))},
-        device_nCellTracks_{
-            cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 4))},
-        deviceTriplets_{CAPairSoACollection(maxDoublets * m_params.algoParams_.avgCellsPerCell_, queue)},
-        deviceTracksCells_{CAPairSoACollection(int(maxDoublets * m_params.algoParams_.avgTracksPerCell_) + 1, queue)} {
-#ifdef GPU_DEBUG
-    std::cout << "Allocation for tuple building. N hits " << nHits << std::endl;
-    std::cout << "maxTrips     = " << int(maxDoublets * m_params.algoParams_.avgCellsPerCell_) + 1 << std::endl;
-    std::cout << "maxDoublets  = " << maxDoublets << std::endl;
-    std::cout << "maxTrackCell = " << int(maxDoublets * m_params.algoParams_.avgTracksPerCell_) + 1 << std::endl;
-#endif
+        device_simpleCells_ = cms::alpakatools::make_device_buffer<SimpleCell[]>(queue, maxDoublets);
+
+        device_extraStorage_ = cms::alpakatools::make_device_buffer<cms::alpakatools::AtomicPairCounter::DoubleWord[]>(queue, 5u);
+        device_hitTuple_apc_ = reinterpret_cast<cms::alpakatools::AtomicPairCounter *>(device_extraStorage_.data());
+        device_nCells_ = cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 2));
+        device_nTriplets_ = cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 3));
+        device_nCellTracks_ = cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(device_extraStorage_.data() + 4));
+
+        deviceTriplets_ = CAPairSoACollection(maxDoublets * algoParams.avgCellsPerCell_, queue);
+        deviceTracksCells_ = CAPairSoACollection(nCellsToTracks, queue);
 
     //TODO: if doStats?
     alpaka::memset(queue, counters_, 0);
@@ -141,24 +164,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::memset(queue, device_nCells_, 0);
     alpaka::memset(queue, device_nTriplets_, 0);
     alpaka::memset(queue, device_nCellTracks_, 0);
-
-    // Hits -> Track
-    HitToTuple::template launchZero<Acc1D>(device_hitToTupleView_, queue);
-
-    // (Outer) Hits-> Cells
-    HitToCell::template launchZero<Acc1D>(device_hitToCellView_, queue);
-
-    // Cells-> Neighbor Cells
-    CellToCell::template launchZero<Acc1D>(device_cellToNeighborsView_, queue);
-
-    // Cells-> Neighbor Cells
-    CellToTrack::template launchZero<Acc1D>(device_cellToTracksView_, queue);
-
-    // Tracks -> Hits
-    TupleMultiplicity::template launchZero<Acc1D>(device_tupleMultiplicityView_, queue);
-
-    // No.Hits -> Track (Multiplicity)
-    HitContainer::template launchZero<Acc1D>(device_hitContainerView_, queue);
 
     maxNumberOfDoublets_ = maxDoublets;
 
