@@ -677,11 +677,12 @@ void L2TauNNProducerAlpaka::fillPatatracks(tensorflow::Tensor& cellGridMatrix,
     const float tauPhi = allTaus[tau_idx]->phi();
 
     for (const auto it : trkGood) {
-      const float patatrackPt = patatracks_tsoa.const_view()[it].pt();
+      auto tsoa = patatracks_tsoa.const_view()[it];
+      const float patatrackPt = tsoa.pt();
       if (patatrackPt <= 0)
         continue;
-      const float patatrackPhi = reco::phi(patatracks_tsoa.const_view(), it);
-      const float patatrackEta = patatracks_tsoa.const_view()[it].eta();
+      const float patatrackPhi = tsoa.phi();
+      const float patatrackEta = tsoa.eta();
       const float patatrackCharge = reco::charge(patatracks_tsoa.const_view(), it);
       const float patatrackChi2OverNdof = patatracks_tsoa.view()[it].chi2();
       const auto n_hits = nHits(patatracks_tsoa.const_view(), it);

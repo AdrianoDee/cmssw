@@ -198,6 +198,7 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     indToEdm[it] = nt;
     ++nt;
 
+    auto track = tsoa.view()[it];
     hits.resize(nHits);
     auto start = (it == 0) ? 0 : hitOffs[it - 1];
     auto end = hitOffs[it];
@@ -213,8 +214,8 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
 #endif
 
     // mind: this values are respect the beamspot!
-    float chi2 = tsoa.view()[it].chi2();
-    float phi = reco::phi(tsoa.view(), it);
+    float chi2 = track.chi2();
+    float phi = track.pthi();
 
     riemannFit::Vector5d ipar, opar;
     riemannFit::Matrix5d icov, ocov;

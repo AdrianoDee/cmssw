@@ -18,6 +18,31 @@ namespace reco {
   using Vector15f = Eigen::Matrix<float, 15, 1>;
   using Quality = pixelTrack::Quality;
 
+
+  GENERATE_SOA_LAYOUT(DummySoA,
+    SOA_COLUMN(double, x),
+    SOA_COLUMN(double, y),
+    SOA_COLUMN(double, z),
+    
+    // methods operating on const_element
+    SOA_CONST_METHODS(
+      auto norm() const {
+        return sqrt(x()*x() + y()+y() + z()*z());
+      }
+    ),
+
+    // methods operating on element
+    SOA_METHODS(
+      void scale(float arg) {
+        x() *= arg;
+        y() *= arg;
+        z() *= arg;
+      }
+    ),
+    
+    SOA_SCALAR(int, detectorType)
+  );
+
   GENERATE_SOA_LAYOUT(TrackLayout,
                       SOA_COLUMN(Quality, quality),
                       SOA_COLUMN(float, chi2),
@@ -25,12 +50,50 @@ namespace reco {
                       SOA_COLUMN(float, eta),
                       SOA_COLUMN(float, pt),
                       // state at the beam spot: {phi, tip, 1/pt, cotan(theta), zip}
+                      SOA_CONST_ELEMENT_METHODS(
+
+                        float phi() const
+                        {
+                          return state()(0);
+                        }
+                      ),
+                      SOA_CONST_ELEMENT_METHODS(
+                        float tip() const
+                        {
+                          return state()(1);
+                        }
+                      ),
+                      SOA_CONST_ELEMENT_METHODS(
+                        float zip() const
+                        {
+                          return state()(2);
+                        }
+                      ),
+                      SOA_CONST_ELEMENT_METHODS(
+                        float phi() const
+                        {
+                          return state()(0);
+                        }
+                      ),
+                      SOA_CONST_ELEMENT_METHODS(
+                        float phi() const
+                        {
+                          return state()(0);
+                        }
+                      ),
                       SOA_EIGEN_COLUMN(Vector5f, state),
                       SOA_EIGEN_COLUMN(Vector15f, covariance),
                       SOA_SCALAR(int, nTracks),
-                      SOA_COLUMN(uint32_t, hitOffsets))
+                      SOA_COLUMN(uint32_t, hitOffsets),
 
-  GENERATE_SOA_LAYOUT(TrackHitsLayout, SOA_COLUMN(uint32_t, id), SOA_COLUMN(uint32_t, detId))
+                      // SOA_CONST_METHODS(
+                      //   auto phi() const { 
+                      //     return pt; 
+                      //   }
+                      // ),
+                    );
+
+  GENERATE_SOA_LAYOUT(TrackHitsLayout, SOA_COLUMN(uint32_t, id), SOA_COLUMN(uint32_t, detId));
 
   using TrackSoA = TrackLayout<>;
   using TrackSoAView = TrackSoA::View;
@@ -76,7 +139,7 @@ namespace reco {
     return float((0.0f < v) - (v < 0.0f));
   }
 
-  ALPAKA_FN_HOST_ACC inline float phi(const TrackSoAConstView &tracks, int32_t i) { return tracks[i].state()(0); }
+  // ALPAKA_FN_HOST_ACC inline float phi(const TrackSoAConstView &tracks, int32_t i) { return tracks[i].state()(0); }
 
   ALPAKA_FN_HOST_ACC inline float tip(const TrackSoAConstView &tracks, int32_t i) { return tracks[i].state()(1); }
 

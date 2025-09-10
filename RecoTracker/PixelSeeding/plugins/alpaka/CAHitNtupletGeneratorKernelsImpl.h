@@ -1072,20 +1072,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         auto nh = foundNtuplets->size(i);
         if (nh < 3)
           continue;
-        if (tracks_view[i].quality() < loose)
+        auto track = tracks_view[i];
+        if (track.quality() < loose)
           continue;
         printf("TK: %d %d %d %d %f %f %f %f %f %f %f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
                10000 * iev + i,
-               int(tracks_view[i].quality()),
+               int(track.quality()),
                nh,
-               tracks_view[i].nLayers(),
+               track.nLayers(),
                reco::charge(tracks_view, i),
-               tracks_view[i].pt(),
-               tracks_view[i].eta(),
-               reco::phi(tracks_view, i),
+               track.pt(),
+               track.eta(),
+               track.phi(),
                reco::tip(tracks_view, i),
                reco::zip(tracks_view, i),
-               tracks_view[i].chi2(),
+               track.chi2(),
                hh[*foundNtuplets->begin(i)].zGlobal(),
                hh[*(foundNtuplets->begin(i) + 1)].zGlobal(),
                hh[*(foundNtuplets->begin(i) + 2)].zGlobal(),
