@@ -36,9 +36,15 @@ from Configuration.PyReleaseValidation.relval_upgrade import workflows as _upgra
 # mc Run4   
 # no PU
 #           Alpaka pixel-only:                                  TTbar: quadruplets any backend, any backend vs cpu validation, profiling, triplets      
+#           Alpaka ECAL-only development:                       TTbar: any backend
 #           Alpaka pixel-only:                                  Single Nu E10: any backend
+#           Alpaka LST-only:                                    TTbar: TRK-only w/ 2 iterations and LST building on any backend
+#           Alpaka HLTTiming75e33:                              TTbar: any backend
+#           Alpaka HLTTiming75e33:                              Single Nu E10: any backend
 # with PU
-#           Alpaka pixel-only:                                  TTbar with PU: quadruplets any backend, any backend vs cpu validation, profiling 
+#           Alpaka pixel-only:                                  TTbar: quadruplets any backend, any backend vs cpu validation, profiling 
+#           Alpaka LST-only:                                    TTbar: TRK-only w/ 2 iterations and LST building on any backend
+#           Alpaka HLTTiming75e33:                              TTbar: any backend
 
 numWFIB = [
 
@@ -67,15 +73,17 @@ numWFIB = [
            17061.402,
 
            # Run4, Alpaka-based noPU
-           29634.402, 29634.403, 29634.404, 29634.406, 29634.704,
+           29634.402, 29634.403, 29634.404, 29634.406, 
+           29634.612,
            29661.402,
+           29634.704, 
+           29634.751,
+           29661.751,
 
            # Run4, Alpaka-based PU
-           29834.402, 29834.403, 29834.404, 29834.704,
-
-           #FIXME 2024 wfs, to be removed when the bot wfs are migrated
-           12834.402, 12834.403, 12834.406, 
-           12834.412, 12834.422, 12834.423
+           29834.402, 29834.403, 29834.404, 
+           29834.704,
+           29834.751,
         ]
 
 for numWF in numWFIB:
