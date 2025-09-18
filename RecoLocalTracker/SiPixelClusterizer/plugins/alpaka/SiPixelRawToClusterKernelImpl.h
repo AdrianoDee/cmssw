@@ -1,3 +1,6 @@
+#ifndef RecoLocalTracker_SiPixelClusterizer_SiPixelRawToClusterKernelClustering_h
+#define RecoLocalTracker_SiPixelClusterizer_SiPixelRawToClusterKernelClustering_h
+
 // C++ includes
 #include <algorithm>
 #include <cassert>
@@ -36,17 +39,17 @@
 #include "PixelClustering.h"
 #include "SiPixelRawToClusterKernel.h"
 #include "SiPixelMorphingConfig.h"
-
+// #include "SiPixelRawToClusterKernelRawToDigi.h"
 //#define GPU_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   namespace pixelDetails {
 
-    ALPAKA_FN_ACC bool isBarrel(uint32_t rawId) {
+    ALPAKA_FN_ACC inline bool isBarrel(uint32_t rawId) {
       return (PixelSubdetector::PixelBarrel == ((rawId >> DetId::kSubdetOffset) & DetId::kSubdetMask));
     }
 
-    ALPAKA_FN_ACC ::pixelDetails::DetIdGPU getRawId(const SiPixelMappingSoAConstView &cablingMap,
+    ALPAKA_FN_ACC inline ::pixelDetails::DetIdGPU getRawId(const SiPixelMappingSoAConstView &cablingMap,
                                                     uint8_t fed,
                                                     uint32_t link,
                                                     uint32_t roc) {
@@ -59,7 +62,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     //reference http://cmsdoxygen.web.cern.ch/cmsdoxygen/CMSSW_9_2_0/doc/html/dd/d31/FrameConversion_8cc_source.html
     //http://cmslxr.fnal.gov/source/CondFormats/SiPixelObjects/src/PixelROC.cc?v=CMSSW_9_2_0#0071
     // Convert local pixel to pixelDetails::global pixel
-    ALPAKA_FN_ACC ::pixelDetails::Pixel frameConversion(
+    ALPAKA_FN_ACC inline ::pixelDetails::Pixel frameConversion(
         bool bpix, int side, uint32_t layer, uint32_t rocIdInDetUnit, ::pixelDetails::Pixel local) {
       int slopeRow = 0, slopeCol = 0;
       int rowOffset = 0, colOffset = 0;
@@ -165,12 +168,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return errorType;
     }
 
-    ALPAKA_FN_ACC bool rocRowColIsValid(uint32_t rocRow, uint32_t rocCol) {
+    ALPAKA_FN_ACC inline bool rocRowColIsValid(uint32_t rocRow, uint32_t rocCol) {
       /// row and column in ROC representation
       return ((rocRow < ::pixelDetails::numRowsInRoc) & (rocCol < ::pixelDetails::numColsInRoc));
     }
 
-    ALPAKA_FN_ACC bool dcolIsValid(uint32_t dcol, uint32_t pxid) { return ((dcol < 26) & (2 <= pxid) & (pxid < 162)); }
+    ALPAKA_FN_ACC inline bool dcolIsValid(uint32_t dcol, uint32_t pxid) { return ((dcol < 26) & (2 <= pxid) & (pxid < 162)); }
 
     // error decoding and handling copied from EventFilter/SiPixelRawToDigi/src/ErrorChecker.cc
     template <bool debug = false>
@@ -291,7 +294,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // Kernel to perform Raw to Digi conversion
     template <bool debug = false>
     struct RawToDigi_kernel {
-      ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
                                     const SiPixelMappingSoAConstView &cablingMap,
                                     const unsigned char *modToUnp,
                                     const uint32_t wordCounter,
@@ -570,27 +573,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         {
           const int blocks = 64;
-          const auto elementsPerBlockFindClus = FindClus<TrackerTraits>::maxElementsPerBlock;
-          const auto workDivMaxNumModules = cms::alpakatools::make_workdiv<Acc1D>(blocks, elementsPerBlockFindClus);
+
+          const auto elementsPerBlockFindClus = digiMorphingConfig.applyDigiMorphing ? FindClus<TrackerTraits>::maxElementsPerBlockMorph : FindClus<TrackerTraits>::maxElementsPerBlock;
+          const auto workDivFindClus = cms::alpakatools::make_workdiv<Acc1D>(blocks, elementsPerBlockFindClus);
 
           // allocate a transient collection for the fake pixels recovered by the digi morphing algorithm
           auto fakes_d = SiPixelDigisSoACollection(blocks * digiMorphingConfig.maxFakesInModule, queue);
-
 #ifdef GPU_DEBUG
-          std::cout << " FindClus kernel launch with " << numberOfModules << " blocks of " << elementsPerBlockFindClus
+          alpaka::wait(queue);
+          std::cout << "FindClus kernel launch with " << blocks << " blocks of " << elementsPerBlockFindClus
                     << " threadsPerBlockOrElementsPerThread\n";
 #endif
 
           // Use device buffer created by producer and the module count stored in digiMorphingConfig
           alpaka::exec<Acc1D>(queue,
-                              workDivMaxNumModules,
+                              workDivFindClus,
                               FindClus<TrackerTraits>{},
                               digis_d->view(),
                               fakes_d.view(),
                               digiMorphingConfig.applyDigiMorphing,
                               morphingModulesDevice,
                               digiMorphingConfig.numMorphingModules,
-                              digiMorphingConfig.maxFakesInModule,
+                              digiMorphingConfig.maxFakesInModule, 
                               clusters_d->view(),
                               wordCounter);
 #ifdef GPU_DEBUG
@@ -761,10 +765,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
     }  //
 
-    template class SiPixelRawToClusterKernel<pixelTopology::Phase1>;
-    template class SiPixelRawToClusterKernel<pixelTopology::Phase2>;
-    template class SiPixelRawToClusterKernel<pixelTopology::HIonPhase1>;
-
   }  // namespace pixelDetails
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+
+#endif
