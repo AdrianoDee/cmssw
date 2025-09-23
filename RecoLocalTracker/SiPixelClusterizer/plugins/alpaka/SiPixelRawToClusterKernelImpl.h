@@ -1,5 +1,5 @@
-#ifndef RecoLocalTracker_SiPixelClusterizer_SiPixelRawToClusterKernelClustering_h
-#define RecoLocalTracker_SiPixelClusterizer_SiPixelRawToClusterKernelClustering_h
+#ifndef RecoLocalTracker_SiPixelClusterizer_SiPixelRawToClusterKernelImpl_h
+#define RecoLocalTracker_SiPixelClusterizer_SiPixelRawToClusterKernelImpl_h
 
 // C++ includes
 #include <algorithm>
@@ -39,7 +39,7 @@
 #include "PixelClustering.h"
 #include "SiPixelRawToClusterKernel.h"
 #include "SiPixelMorphingConfig.h"
-// #include "SiPixelRawToClusterKernelRawToDigi.h"
+
 //#define GPU_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
@@ -572,7 +572,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         alpaka::memcpy(queue, nModules_Clusters_h, moduleStartFirstElement);
 
         {
-          const int blocks = 64;
+          const int blocks = 32;
 
           const auto elementsPerBlockFindClus = digiMorphingConfig.applyDigiMorphing ? FindClus<TrackerTraits>::maxElementsPerBlockMorph : FindClus<TrackerTraits>::maxElementsPerBlock;
           const auto workDivFindClus = cms::alpakatools::make_workdiv<Acc1D>(blocks, elementsPerBlockFindClus);

@@ -475,7 +475,7 @@ namespace pixelTopology {
 
     static constexpr uint32_t maxPixInModule = 6000;
     static constexpr uint32_t maxPixInModuleForMorphing = maxPixInModule * 7/5;
-    static constexpr uint32_t maxIterClustering = 16;
+    static constexpr uint32_t maxIterClustering = 24;
 
     static constexpr uint32_t maxNumClustersPerModules = phase1PixelTopology::maxNumClustersPerModules;
     static constexpr uint32_t maxHitsInModule = phase1PixelTopology::maxNumClustersPerModules;
