@@ -765,8 +765,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
     }  //
 
-  }  // namespace pixelDetails
+    template class SiPixelRawToClusterKernel<pixelTopology::Phase1>;
+    template class SiPixelRawToClusterKernel<pixelTopology::Phase2>;
+    template class SiPixelRawToClusterKernel<pixelTopology::HIonPhase1>;
 
+  }  // namespace pixelDetails
+  
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif
