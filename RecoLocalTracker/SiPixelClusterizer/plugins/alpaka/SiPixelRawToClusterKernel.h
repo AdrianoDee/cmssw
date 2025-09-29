@@ -25,7 +25,7 @@
 #include "DataFormats/SiPixelDetId/interface/PixelChannelIdentifier.h"
 #include "SiPixelMorphingConfig.h"
 
-namespace pixelDetails {
+inline namespace pixelDetails {
 
   constexpr auto MAX_LINK = pixelgpudetails::MAX_LINK;
   constexpr auto MAX_SIZE = pixelgpudetails::MAX_SIZE;
