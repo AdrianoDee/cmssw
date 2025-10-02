@@ -16,7 +16,8 @@ import json
 
 ## Helpers
 base_cert_url = "https://cms-service-dqmdc.web.cern.ch/CAF/certification/"
-base_cert_path = "/eos/user/c/cmsdqm/www/CAF/certification/"
+base_cert_eos = "/eos/user/c/cmsdqm/www/CAF/certification/"
+base_cert_cvmfs = "/cvmfs/cms-griddata.cern.ch/cat/metadata/DC/"
 
 def get_url_clean(url):
     
@@ -142,20 +143,33 @@ if __name__ == '__main__':
         elif "HI" in PD:
             cert_type = "Collisions" + str(year) + "HI"
         
-        cert_path = base_cert_path + cert_type + "/"
+        cert_path = base_cert_cvmfs + cert_type + "/"
         web_fallback = False
 
-        ## if we have access to eos we get from there ...
+        ## if we have access to cvmfs we get from there ...
         if os.path.isdir(cert_path):
+            print("cvmfs")
+            json_list = os.listdir(cert_path + "latest/")
+            if len(json_list) == 0:
+                web_fallback == True 
+            json_list = [c for c in json_list if "golden" in c.lower() and "era" not in c.lower() and "ppref" not in c.lower()]
+            json_list = [c for c in json_list if c.lower().startswith("cert_c") and c.endswith("json")]
+        
+        ## ... if not we try eos ...
+        if (not os.path.isdir(cert_path) or web_fallback) and os.path.isdir(base_cert_eos + cert_type +"/"):
+            print("eos")
+            cert_path = base_cert_eos + cert_type +"/"
             json_list = os.listdir(cert_path)
             if len(json_list) == 0:
                 web_fallback == True 
             json_list = [c for c in json_list if "golden" in c.lower() and "era" not in c.lower() and "ppref" not in c.lower()]
             json_list = [c for c in json_list if c.lower().startswith("cert_c") and c.endswith("json")]
         else:
+            print("web?")
             web_fallback = True
         ## ... if not we go to the website
         if web_fallback:
+            print("web!")
             cert_url = base_cert_url + cert_type + "/"
             json_list = get_url_clean(cert_url).split("\n")
             json_list = [c for c in json_list if "golden" in c.lower() and "era" not in c.lower() and "cert_c" in c.lower() and "ppref" not in c.lower()]
