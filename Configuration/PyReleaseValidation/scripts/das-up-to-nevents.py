@@ -144,10 +144,11 @@ if __name__ == '__main__':
             cert_type = "Collisions" + str(year) + "HI"
         
         cert_path = base_cert_cvmfs + cert_type + "/"
-        web_fallback = False
+        web_fallback = True
 
         ## if we have access to cvmfs we get from there ...
         if os.path.isdir(cert_path):
+            web_fallback = False
             print("cvmfs")
             json_list = os.listdir(cert_path + "latest/")
             if len(json_list) == 0:
@@ -156,17 +157,16 @@ if __name__ == '__main__':
             json_list = [c for c in json_list if c.lower().startswith("cert_c") and c.endswith("json")]
         
         ## ... if not we try eos ...
-        if (not os.path.isdir(cert_path) or web_fallback) and os.path.isdir(base_cert_eos + cert_type +"/"):
+        if web_fallback and os.path.isdir(base_cert_eos + cert_type +"/"):
             print("eos")
+            web_fallback = False
             cert_path = base_cert_eos + cert_type +"/"
             json_list = os.listdir(cert_path)
             if len(json_list) == 0:
                 web_fallback == True 
             json_list = [c for c in json_list if "golden" in c.lower() and "era" not in c.lower() and "ppref" not in c.lower()]
             json_list = [c for c in json_list if c.lower().startswith("cert_c") and c.endswith("json")]
-        else:
-            print("web?")
-            web_fallback = True
+            
         ## ... if not we go to the website
         if web_fallback:
             print("web!")
