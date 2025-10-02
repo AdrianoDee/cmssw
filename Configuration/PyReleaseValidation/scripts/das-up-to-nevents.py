@@ -148,9 +148,9 @@ if __name__ == '__main__':
 
         ## if we have access to cvmfs we get from there ...
         if os.path.isdir(cert_path):
+            cert_path = cert_path + "/latest/"
             web_fallback = False
-            print("cvmfs")
-            json_list = os.listdir(cert_path + "latest/")
+            json_list = os.listdir(cert_path)
             if len(json_list) == 0:
                 web_fallback == True 
             json_list = [c for c in json_list if "golden" in c.lower() and "era" not in c.lower() and "ppref" not in c.lower()]
@@ -158,7 +158,6 @@ if __name__ == '__main__':
         
         ## ... if not we try eos ...
         if web_fallback and os.path.isdir(base_cert_eos + cert_type +"/"):
-            print("eos")
             web_fallback = False
             cert_path = base_cert_eos + cert_type +"/"
             json_list = os.listdir(cert_path)
@@ -166,10 +165,9 @@ if __name__ == '__main__':
                 web_fallback == True 
             json_list = [c for c in json_list if "golden" in c.lower() and "era" not in c.lower() and "ppref" not in c.lower()]
             json_list = [c for c in json_list if c.lower().startswith("cert_c") and c.endswith("json")]
-            
+
         ## ... if not we go to the website
         if web_fallback:
-            print("web!")
             cert_url = base_cert_url + cert_type + "/"
             json_list = get_url_clean(cert_url).split("\n")
             json_list = [c for c in json_list if "golden" in c.lower() and "era" not in c.lower() and "cert_c" in c.lower() and "ppref" not in c.lower()]
