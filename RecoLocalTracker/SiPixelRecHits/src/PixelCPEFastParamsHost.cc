@@ -1,5 +1,11 @@
 #include <alpaka/alpaka.hpp>
 
+#define DUMPDETS
+#ifdef DUMPDETS
+#include <fstream>
+#include <iostream>
+#endif
+
 #include "CondFormats/SiPixelTransient/interface/SiPixelGenError.h"
 #include "DataFormats/GeometrySurface/interface/SOARotation.h"
 #include "DataFormats/SiPixelClusterSoA/interface/ClusteringConstants.h"
@@ -312,6 +318,34 @@ void PixelCPEFastParamsHost<TrackerTraits>::fillParamsForDevice() {
   LogDebug("PixelCPEFastParamsHost") << aveGeom.endCapZ[0] << ' ' << aveGeom.endCapZ[1];
 #endif  // EDM_ML_DEBUG
 #endif  //ONLY_TRIPLETS_IN_HOLE
+
+#ifdef DUMPDETS
+  {
+    // pick a unique output name, e.g. "PixelCPEFastParams_<TrackerTraits>.bin"
+    std::string filename = std::string("PixelCPEFastParams") + TrackerTraits::nameModifier + ".bin";
+    std::ofstream out(filename, std::ios::binary);
+    if (!out.is_open()) {
+      std::cerr << "Cannot open file " << filename << " for writing\n";
+      return;
+    }
+
+    auto const &params = *buffer_.data();  // ParamsOnDeviceT<TrackerTraits>
+
+    // Write common params
+    out.write(reinterpret_cast<const char*>(&params.m_commonParams),
+              sizeof(pixelCPEforDevice::CommonParams));
+
+    // Write number of modules
+    unsigned int nModules = TrackerTraits::numberOfModules;
+    out.write(reinterpret_cast<const char*>(&nModules), sizeof(unsigned int));
+
+    // Write detParams array
+    out.write(reinterpret_cast<const char*>(params.m_detParams),
+              nModules * sizeof(pixelCPEforDevice::DetParams));
+
+  }
+#endif
+
 }
 
 template <typename TrackerTraits>
