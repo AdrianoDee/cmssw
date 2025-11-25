@@ -714,6 +714,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->size())) {
         ALPAKA_ASSERT_ACC(foundNtuplets->content[idx] < (uint32_t)hh.metadata().size());
         track_hits_view[idx].id() = foundNtuplets->content[idx];
+        ///TODO: do we really use this anywhere, anymore?
         track_hits_view[idx].detId() = hh[foundNtuplets->content[idx]].detectorIndex();
 #ifdef CA_DEBUG
         printf("Kernel_fillHitDetIndices %d %d %d \n",

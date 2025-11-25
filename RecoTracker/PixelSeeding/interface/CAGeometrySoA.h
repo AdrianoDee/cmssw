@@ -27,7 +27,7 @@ namespace reco {
   using GraphNode = std::array<uint32_t, 2>;
   using DetFrame = SOAFrame<float>;
 
-  GENERATE_SOA_LAYOUT(CAModulesLayout, SOA_COLUMN(DetFrame, detFrame))
+  // GENERATE_SOA_LAYOUT(CAModulesLayout, SOA_COLUMN(DetFrame, detFrame))
 
   GENERATE_SOA_LAYOUT(CALayersLayout,
                       SOA_COLUMN(uint32_t, layerStarts),

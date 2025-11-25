@@ -4,3 +4,8 @@
 <flags EDM_PLUGIN="1"/>
 <library file="TrackerRecoGeometryAnalyzer.cc" name="testRecoTrackerGeometryESProducer">
 </library>
+<library file="alpaka/TrackerRecoGeometrySoA_t.cc" name="testRecoTrackerGeometrySoA">
+  <flags EDM_PLUGIN="1"/>
+  <use name="alpaka"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+</library>

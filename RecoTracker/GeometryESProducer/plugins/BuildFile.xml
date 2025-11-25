@@ -5,3 +5,12 @@
 <library file="*.cc" name="RecoTrackerGeometryESProducerPlugin">
   <flags EDM_PLUGIN="1"/>
 </library>
+
+<library file="alpaka/*.cc" name="RecoTrackerGeometryESProducerPluginPortable">
+  <use name="alpaka"/>
+  <use name="DataFormats/Portable"/>
+  <!-- work around for cms-sw/cmssw#45179 -->
+  <use name="no-array-bounds-flag" for="alpaka/serial"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags EDM_PLUGIN="1"/>
+</library>

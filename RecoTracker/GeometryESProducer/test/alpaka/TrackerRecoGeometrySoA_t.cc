@@ -1,0 +1,1 @@
+#include "RecoTracker/GeometryESProducer/interface/alpaka/TrackerGeometrySoACollection.h"

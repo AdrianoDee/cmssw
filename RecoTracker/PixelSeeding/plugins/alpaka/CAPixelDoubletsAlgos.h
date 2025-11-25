@@ -37,6 +37,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   using PhiBinner = PhiBinnerT<TrackerTraits>;
   //Move this ^ definition in CAStructures maybe
 
+  /// TODO: these could be simplified with isPhase1/2Topology
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool moduleIsOuterLadderPhase1(int const moduleId) {
     return (0 == (moduleId / 8) % 2);
   }
