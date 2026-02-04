@@ -4848,15 +4848,15 @@ defaultDataSets['2022FS']='CMSSW_14_0_18-140X_mcRun3_2022_realistic_v12_2022_Fas
 defaultDataSets['2023']='CMSSW_13_0_10-130X_mcRun3_2023_realistic_withEarly2023BS_v1_2023-v'
 defaultDataSets['2023FS']='CMSSW_13_0_11-130X_mcRun3_2023_realistic_withEarly2023BS_v1_FastSim-v'
 defaultDataSets['2024']='CMSSW_14_2_0_pre4-140X_mcRun3_2024_realistic_v26_STD_RegeneratedGS_2024_noPU-v'
-defaultDataSets['2025']='CMSSW_15_1_0_pre5-151X_mcRun3_2025_realistic_v4_STD_RegeneratedGS_2025_noPU-v'
-defaultDataSets['2026']='CMSSW_15_1_0_pre5-151X_mcRun3_2025_realistic_v4_STD_RegeneratedGS_2025_noPU-v'
+defaultDataSets['2025']='CMSSW_16_1_0_pre1-151X_mcRun3_2025_realistic_v4_STD_RegeneratedGS_2025_noPU-v'
+defaultDataSets['2026']='CMSSW_16_1_0_pre1-151X_mcRun3_2025_realistic_v4_STD_RegeneratedGS_2025_noPU-v'
 defaultDataSets['2024HLTOnDigi'] = defaultDataSets["2024SimOnGen"] = defaultDataSets['2024']
 defaultDataSets["2025HLTOnDigi"] = defaultDataSets["2025SimOnGen"] = defaultDataSets['2025']
 defaultDataSets["2026HLTOnDigi"] = defaultDataSets["2026SimOnGen"] = defaultDataSets['2026']
 defaultDataSets['2024FS']='CMSSW_13_0_11-130X_mcRun3_2023_realistic_withEarly2023BS_v1_FastSim-v' #To replace with new dataset
 defaultDataSets['2025FS']='CMSSW_13_0_11-130X_mcRun3_2023_realistic_withEarly2023BS_v1_FastSim-v' #To replace with new dataset
-defaultDataSets['Run4D110']='CMSSW_15_1_0_pre5-150X_mcRun4_realistic_v1_STD_RegeneratedGS_Run4D110_noPU-v'
-defaultDataSets['Run4D121']='CMSSW_16_0_0_pre2-150X_mcRun4_realistic_v1_STD_RegeneratedGS_Run4D121_noPU-v'
+defaultDataSets['Run4D110']='CMSSW_16_1_0_pre1-150X_mcRun4_realistic_v1_STD_RegeneratedGS_Run4D110_noPU-v'
+defaultDataSets['Run4D121']='CMSSW_16_1_0_pre1-150X_mcRun4_realistic_v1_STD_RegeneratedGS_Run4D121_noPU-v'
 
 ## HIN
 defaultDataSets['2023HIN']='CCMSSW_14_1_0-PU_140X_mcRun3_2023_realistic_HI_v4_STD_2023HIN_PU-v'
