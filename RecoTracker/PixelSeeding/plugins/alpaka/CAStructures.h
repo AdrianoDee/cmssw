@@ -9,6 +9,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/SimpleVector.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
+#include "RecoTracker/PixelSeeding/interface/NeighborCell.h"
 
 namespace caStructures {
 
@@ -89,6 +90,11 @@ namespace caStructures {
   using hindex_type = uint32_t;
   using tindex_type = uint32_t;
   using cindex_type = uint32_t;
+
+  using NeighborCellContainer = cms::alpakatools::OneToManyAssocRandomAccess<NeighborCell, cms::alpakatools::kDynamicSize, cms::alpakatools::kDynamicSize>;
+  using NeighborCellContainerStorage = typename NeighborCellContainer::value_type;
+  using NeighborCellContainerOffsets = typename NeighborCellContainer::Counter;
+  using NeighborCellContainerView = typename NeighborCellContainer::View;
 
   using GenericContainer = cms::alpakatools::
       OneToManyAssocRandomAccess<hindex_type, cms::alpakatools::kDynamicSize, cms::alpakatools::kDynamicSize>;

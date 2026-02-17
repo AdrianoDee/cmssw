@@ -6,17 +6,26 @@
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
+#include "NeighborCell.h"
 
 namespace caStructures {
 
-  GENERATE_SOA_LAYOUT(CAPairLayout,
-                      SOA_COLUMN(uint32_t, inner),
-                      SOA_COLUMN(uint32_t, outer),
-                      SOA_COLUMN(int16_t, phiResid))  // quantized phi residual at middle hit [rad]
+  // pair of indices
+  GENERATE_SOA_LAYOUT(CAPairLayout, SOA_COLUMN(uint32_t, inner), SOA_COLUMN(uint32_t, outer))
 
   using CAPairSoA = CAPairLayout<>;
   using CAPairSoAView = CAPairSoA::View;
   using CAPairSoAConstView = CAPairSoA::ConstView;
+
+  // pair of index and NeighborCell
+  GENERATE_SOA_LAYOUT(CACellPairLayout,
+                      SOA_COLUMN(uint32_t, inner),
+                      SOA_COLUMN(NeighborCell, outer),
+                      SOA_COLUMN(int16_t, phiResid))  // quantized phi residual at middle hit [rad]
+
+  using CACellPairSoA = CACellPairLayout<>;
+  using CACellPairSoAView = CACellPairSoA::View;
+  using CACellPairSoAConstView = CACellPairSoA::ConstView;
 
 }  // namespace caStructures
 

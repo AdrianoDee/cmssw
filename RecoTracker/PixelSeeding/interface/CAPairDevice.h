@@ -12,6 +12,9 @@
 namespace caStructures {
   template <typename TDev>
   using CAPairDevice = PortableDeviceCollection<TDev, CAPairSoA>;
-}
+
+  template <typename TDev>
+  using CACellPairDevice = PortableDeviceCollection<TDev, CACellPairSoA>;
+}  // namespace caStructures
 
 #endif  // RecoTracker_PixelSeeding_interface_CAPairDevice_H
