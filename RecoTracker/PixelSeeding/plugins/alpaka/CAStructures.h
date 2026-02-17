@@ -62,6 +62,8 @@ namespace caStructures {
     bool doSharedHitCut_;
     bool dupPassThrough_;
     bool useSimpleTripletCleaner_;
+    bool disableTripletCleaner_;
+    bool disableFastDuplicateRemover_;
     bool doEarlyDuplicateRemoval_;
 
     // Reachability filter (Phase2OTStubs only)

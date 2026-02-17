@@ -218,6 +218,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
       desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
       desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+      desc.add<bool>("disableTripletCleaner", false)
+          ->setComment(
+              "Disable the triplet cleaner entirely.");  // FIXME this should be implemented as an automatic check (simple if) that disables if minHitsPerNtuplet > 3
+      desc.add<bool>("disableFastDuplicateRemover", false)->setComment("Disable the fastDuplicateRemover");
       desc.add<bool>("doEarlyDuplicateRemoval", true)
           ->setComment("Remove shorter tracks sharing a cell before fitting");
 
@@ -278,6 +282,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           cfg.getParameter<bool>("doSharedHitCut"),
           cfg.getParameter<bool>("dupPassThrough"),
           cfg.getParameter<bool>("useSimpleTripletCleaner"),
+          cfg.getParameter<bool>("disableTripletCleaner"),
+          cfg.getParameter<bool>("disableFastDuplicateRemover"),
           cfg.getParameter<bool>("doEarlyDuplicateRemoval"),
 
           // Reachability filter
