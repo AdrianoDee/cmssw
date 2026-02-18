@@ -802,7 +802,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       alpaka::wait(queue);
       std::cout << "Kernel_sharedHitCleaner   -> done!" << std::endl;
 #endif
-      if (!(this->m_params.algoParams_.disableTripletCleaner_)) {
+      if (!(this->m_params.algoParams_.disableTripletCleaner_) && (this->m_params.algoParams_.minHitsPerNtuplet_ > 3)) {
         if (this->m_params.algoParams_.useSimpleTripletCleaner_) {
           numberOfBlocks =
               cms::alpakatools::divide_up_by(int(nhits * this->m_params.algoParams_.avgHitsPerTrack_) + 1, blockSize);
