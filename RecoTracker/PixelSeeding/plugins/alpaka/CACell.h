@@ -54,7 +54,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     static constexpr auto invalidHitId = std::numeric_limits<hindex_type>::max();
 
-    using TmpTuple = cms::alpakatools::VecArray<uint32_t, TrackerTraits::maxDepth>;
+    using TmpTuple = cms::alpakatools::VecArray<uint32_t, TrackerTraits::maxLayersPerTrack>;
     using HitContainer = caStructures::SequentialContainer;
     using CellToCell = caStructures::NeighborCellContainer;
     using CellToTracks = caStructures::GenericContainer;
@@ -258,7 +258,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       } else {
         auto doubletId = this - cells;
         tmpNtuplet.push_back_unsafe(doubletId);  // if we move this to be safe we could parallelize further below?
-        ALPAKA_ASSERT_ACC(tmpNtuplet.size() <= int(TrackerTraits::maxHitsOnTrack - 3));
+        ALPAKA_ASSERT_ACC(tmpNtuplet.size() <= int(TrackerTraits::maxLayersPerTrack - 1));
 
         bool last = true;
         auto const* __restrict__ bin = cellNeighborsHisto->begin(doubletId);
@@ -322,13 +322,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
             {
-              hindex_type hits[TrackerTraits::maxDepth + 2];
-              auto nh = 0U;
-              constexpr int maxFB = 2;  // for the time being let's limit this
-              int nfb = 0;
+              hindex_type hits[TrackerTraits::maxHitsOnTrack];  // maxHitsOnTracks takes fishbone hits into account
+              uint32_t nh = 0U;
+              uint32_t nfb = 0U;
               for (auto c : tmpNtuplet) {
                 hits[nh++] = cells[c].theInnerHitId_;
-                if (nfb < maxFB && cells[c].hasFishbone()) {
+                if (nfb < TrackerTraits::maxFishboneHitsPerTrack && cells[c].hasFishbone()) {
                   ++nfb;
                   hits[nh++] = cells[c].theFishboneId_;  // Fishbone hit is always outer than inner hit
                 }
