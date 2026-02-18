@@ -39,6 +39,7 @@ namespace reco {
                       SOA_COLUMN(float, caDCACut),
                       SOA_COLUMN(float, caDCurvCut),
                       SOA_COLUMN(float, caDCurv0),
+                      SOA_COLUMN(float, fishboneCut),
                       SOA_COLUMN(float, caDCAFloor),  // Additive DCA floor for high-pT tracks (negative = disabled)
                       SOA_COLUMN(bool, isBarrel),
                       SOA_COLUMN(float, geomKappaSigmaCut),  // Geometric-vs-stub kappa significance cut (negative = disabled)

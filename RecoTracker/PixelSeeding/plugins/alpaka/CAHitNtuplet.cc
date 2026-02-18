@@ -55,6 +55,7 @@ namespace reco {
           caDCurvCuts_(iConfig.getParameter<std::vector<double>>("caDCurvCuts")),
           caDCurv0_(iConfig.getParameter<std::vector<double>>("caDCurv0")),
           startMaxInnerR_(iConfig.getParameter<std::vector<double>>("startMaxInnerR")),
+          fishboneCuts_(iConfig.getParameter<std::vector<double>>("fishboneCuts")),
           pairGraph_(iConfig.getParameter<std::vector<unsigned int>>("pairGraph")),
           startingPairs_(iConfig.getParameter<std::vector<unsigned int>>("startingPairs")),
           phiCuts_(iConfig.getParameter<std::vector<int>>("phiCuts")),
@@ -114,6 +115,7 @@ namespace reco {
     const std::vector<double> caDCurvCuts_;
     const std::vector<double> caDCurv0_;
     const std::vector<double> startMaxInnerR_;
+    const std::vector<double> fishboneCuts_;
     const std::vector<int> isBarrel_;
 
     // Cells params
@@ -192,6 +194,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       assert(iCache->caThetaCuts_.size() == iCache->caDCurv0_.size());
       assert(iCache->caThetaCuts_.size() == iCache->caDCACuts_.size());
       assert(iCache->caThetaCuts_.size() == iCache->startMaxInnerR_.size());
+      assert(iCache->caThetaCuts_.size() == iCache->fishboneCuts_.size());
 
       int n_layers = iCache->caThetaCuts_.size();
       int n_pairs = iCache->pairGraph_.size() / 2;
@@ -425,6 +428,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         layerSoA.caDCACut()[i] = iCache->caDCACuts_[i];
         layerSoA.caDCurvCut()[i] = iCache->caDCurvCuts_[i];
         layerSoA.caDCurv0()[i] = iCache->caDCurv0_[i];
+        layerSoA.fishboneCut()[i] = iCache->fishboneCuts_[i];
         layerSoA.isBarrel()[i] = layerIsBarrel[i];
         layerSoA.geomKappaSigmaCut()[i] =
             (!iCache->geomKappaSigmaCuts_.empty()) ? static_cast<float>(iCache->geomKappaSigmaCuts_[i]) : -1.0f;
