@@ -242,6 +242,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       CAPairSoAView ct,
                                                       cms::alpakatools::AtomicPairCounter& apc,
                                                       Quality* __restrict__ quality,
+                                                      int8_t* __restrict__ nLayers,
                                                       TmpTuple& tmpNtuplet,
                                                       const unsigned int minHitsPerNtuplet,
                                                       int16_t const* __restrict__ connectionPhiResid,
@@ -313,14 +314,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                              ct,
                                                              apc,
                                                              quality,
+                                                             nLayers,
                                                              tmpNtuplet,
                                                              minHitsPerNtuplet,
                                                              connectionPhiResid,
                                                              chainPhiResidCut,
                                                              thisCurvature);
         }
-        if (last) {  // if long enough save...
-          if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
+        if (last) {
+          const uint8_t nl = tmpNtuplet.size() + 1;  // numLayers in tuplet
+          // if long enough save...
+          if (nl >= minHitsPerNtuplet) {
             {
               hindex_type hits[TrackerTraits::maxHitsOnTrack];  // maxHitsOnTracks takes fishbone hits into account
               uint32_t nh = 0U;
@@ -355,12 +359,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   }
                   cellTracksHisto->count(acc, c);
 
-                  ct[t_ind].inner() = c;   //cell
-                  ct[t_ind].outer() = it;  //track
+                  ct[t_ind].inner() = c;   // cell
+                  ct[t_ind].outer() = it;  // track
                 }
 #ifdef CA_DEBUG
                 printf("\n");
 #endif
+                // set number of layers in the TrackSoA (if not done here, one would need to recalculate it from the hits later)
+                nLayers[it] = int8_t(nl);
                 quality[it] = bad;  // initialize to bad
               }
 #ifdef CA_WARNINGS

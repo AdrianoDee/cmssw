@@ -1034,6 +1034,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                     ct,
                                                     *apc,
                                                     tracks_view.quality().data(),
+                                                    tracks_view.nLayers().data(),
                                                     stack,
                                                     params.minHitsPerNtuplet_,
                                                     connectionPhiResid,
@@ -1378,9 +1379,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   TkSoAView tracks_view,
                                   TkHitSoAView track_hits_view,
                                   HitContainer const *__restrict__ foundNtuplets,
-                                  HitsConstView hh) const {
+                                  HitsConstView hh,
+                                  cms::alpakatools::AtomicPairCounter *apc) const {
+      // clamp the number of tracks to the capacity of the SoA
+      if (cms::alpakatools::once_per_grid(acc))
+        tracks_view.nTracks() = std::min<int>(apc->get().first, tracks_view.metadata().size() - 1);
+
       // copy offsets
-      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes() - 1)) {
+      for (auto idx : cms::alpakatools::uniform_elements(acc, tracks_view.nTracks())) {
         tracks_view[idx].hitOffsets() = foundNtuplets->off[idx + 1];  // offset for track 0 is always 0
       }
       // fill hit indices
