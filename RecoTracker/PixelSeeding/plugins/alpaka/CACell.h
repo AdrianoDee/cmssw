@@ -22,6 +22,7 @@
 #include "RecoTracker/PixelSeeding/interface/CAPairSoA.h"
 
 #include "CAStructures.h"
+#include "RecoTracker/PixelSeeding/interface/NeighborCell.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -261,13 +262,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         tmpNtuplet.push_back_unsafe(doubletId);  // if we move this to be safe we could parallelize further below?
         ALPAKA_ASSERT_ACC(tmpNtuplet.size() <= int(TrackerTraits::maxLayersPerTrack - 1));
 
-        bool last = true;
-        auto const* __restrict__ bin = cellNeighborsHisto->begin(doubletId);
-        auto nInBin = cellNeighborsHisto->size(doubletId);
+        // bin with neighbors (non-layer-skipping and skipping are consecutive in memory!)
+        auto const* __restrict__ neighborCells = cellNeighborsHisto->begin(2 * doubletId);
+        auto nNonSkippingNeighbors = cellNeighborsHisto->size(2 * doubletId);
+        auto nSkippingNeighbors = cellNeighborsHisto->size(2 * doubletId + 1);
 
-        for (auto idx = 0u; idx < nInBin; idx++) {
+        bool tripletOrMore = ((unsigned int)(tmpNtuplet.size()) > 1);
+        bool foundNeighbor = false;
+        for (auto idx = 0u; idx < (nNonSkippingNeighbors + nSkippingNeighbors); idx++) {
+          // only explore the skipping neighbors if no good non-skipping ones were found
+          if ((idx == nNonSkippingNeighbors) && foundNeighbor && tripletOrMore)
+            break;
+
           // FIXME implement alpaka::ldg and use it here? or is it const* __restrict__ enough?
-          auto [otherCell, thisCurvature] = bin[idx];
+          auto [otherCell, thisCurvature] = neighborCells[idx];
           if (cells[otherCell].isKilled())
             continue;
 
@@ -285,8 +293,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 
           // check compatiblity of triplets
-          if (((unsigned int)(tmpNtuplet.size()) > 1) &&
-              cells[otherCell].quadrupletCut(preCurvature, thisCurvature, ll))
+          if (tripletOrMore && cells[otherCell].quadrupletCut(preCurvature, thisCurvature, ll))
             continue;
 #ifdef CA_DEBUG
           printf("Doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) %d %d\n",
@@ -300,10 +307,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                  cells[otherCell].inner_hit_id(),
                  cells[otherCell].outer_hit_id(),
                  idx,
-                 nInBin);
+                 (nNonSkippingNeighbors + nSkippingNeighbors));
 #endif
 
-          last = false;
+          foundNeighbor = true;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(acc,
                                                              ll,
                                                              cells,
@@ -321,7 +328,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                              chainPhiResidCut,
                                                              thisCurvature);
         }
-        if (last) {
+
+        // if no more doublets were found, save N-tuplet if long enough
+        if (!foundNeighbor) {
           const uint8_t nl = tmpNtuplet.size() + 1;  // numLayers in tuplet
           // if long enough save...
           if (nl >= minHitsPerNtuplet) {

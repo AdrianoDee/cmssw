@@ -58,6 +58,7 @@ namespace caStructures {
     bool fitNas4_;
     bool earlyFishbone_;
     bool lateFishbone_;
+    bool onlySameLayersFishbone_;
     bool doStats_;
     bool doSharedHitCut_;
     bool dupPassThrough_;
