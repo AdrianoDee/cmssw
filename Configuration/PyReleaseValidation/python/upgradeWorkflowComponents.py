@@ -2615,6 +2615,62 @@ upgradeWFs['HeavyFlavor'] = UpgradeWorkflow_HeavyFlavor(
     offset = 0.81,
 )
 
+## Wf to include all the needed quantities for displaced signatures
+# see cms-sw#50253 
+class UpgradeWorkflow_Displaced(UpgradeWorkflow):
+    def setup_(self, step, stepName, stepDict, k, properties):
+        
+        self.__frags = ["Displaced","stop"]
+        
+        thisStep = stepDict[step][k]["-s"]
+        thisContent = ""
+
+        if "--eventcontent" in stepDict[step][k]:
+            thisContent = stepDict[step][k]["--eventcontent"]
+
+        if 'Gen' in step:
+            if "GEN" in thisStep and "SIM" in thisStep:
+                output_gen = {"--outputCommand" : "'keep *_genParticlePlusGeant_*_*,keep *_packedGenParticlePlusGeant_*_*,keep *_prunedGenParticlePlusGeant_*_*'"}
+                customise  = {"--customise" : "SimG4Core/CustomPhysics/Exotica_HSCP_SIM_cfi.customise,SimG4Core/CustomPhysics/GenPlusSimParticles_cfi.customizeKeep,SimG4Core/CustomPhysics/GenPlusSimParticles_cfi.customizeProduce"}
+                stepDict[stepName][k] = merge([output_gen, customise, stepDict[step][k]])
+    
+        if 'Reco' in step or 'Min' in step:
+            custom_content = "--customise_commands"
+
+            if "MINIAODSIM" in thisContent:
+                
+                custom_command = "process.AODSIMoutput.outputCommands.extend(['keep *_genParticlePlusGeant_*_*','keep *_packedGenParticlePlusGeant_*_*','keep *_prunedGenParticlePlusGeant_*_*'])"
+                stepDict[stepName][k] = merge([{custom_command : custom_command}, stepDict[step][k]])
+
+            elif "AODSIM" in thisContent:
+
+                custom_command = "process.MINIAODSIMoutput.outputCommands.extend(['keep *_genParticlePlusGeant_*_*','keep *_packedGenParticlePlusGeant_*_*','keep *_prunedGenParticlePlusGeant_*_*'])"
+                stepDict[stepName][k] = merge([{custom_command : custom_command}, stepDict[step][k]])
+
+    def condition(self, fragment, stepList, key, hasHarvest):
+        return any(frag.lower() in fragment.lower() for frag in self.__frags)
+
+upgradeWFs['Displaced'] = UpgradeWorkflow_Displaced(
+    steps = [
+        'GenSim',
+        'MiniAOD',
+        'Reco',
+        'RecoFakeHLT',
+        'RecoNano',
+        'RecoNanoFakeHLT',
+    ],
+    PU = [
+        'GenSim',
+        'MiniAOD',
+        'Reco',
+        'RecoFakeHLT',
+        'RecoNano',
+        'RecoNanoFakeHLT',
+    ],
+    suffix = '_Displaced',
+    offset = 0.82,
+)
+
 
 class UpgradeWorkflow_JMENano(UpgradeWorkflow):
     def setup_(self, step, stepName, stepDict, k, properties):
