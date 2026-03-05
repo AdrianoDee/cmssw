@@ -47,7 +47,8 @@ namespace reco {
                       SOA_COLUMN(float, maxDZ),
                       SOA_COLUMN(float, minDZ),
                       SOA_COLUMN(float, maxDR),
-                      SOA_COLUMN(float, ptCuts))
+                      SOA_COLUMN(float, ptCuts),
+                      SOA_COLUMN(float, stubSigmaCut))  // Stub-stub pairwise sigma cut (negative = disabled)
 
   GENERATE_SOA_BLOCKS(CALayoutTemplate,
                       SOA_BLOCK(layers, CALayersLayout),

@@ -2133,6 +2133,51 @@ upgradeWFs['HLTTiming75e33TiclBarrel'].step3 = {
     '-s':'HARVESTING:@hltValidation'
 }
 
+upgradeWFs['HLTTiming75e33CAExtension'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTTiming75e33CAExtension'].suffix = '_HLT75e33TimingCAExtension'
+upgradeWFs['HLTTiming75e33CAExtension'].offset = 0.7511
+upgradeWFs['HLTTiming75e33CAExtension'].step2 = {
+    '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
+    '--procModifiers': 'phase2CAExtension',
+    '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
+    '--eventcontent':'FEVTDEBUGHLT,DQMIO'
+}
+upgradeWFs['HLTTiming75e33CAExtension'].step3 = {
+    '-s':'HARVESTING:@hltValidation'
+}
+
+# Stub-based CA tracking workflow
+upgradeWFs['HLTTiming75e33CAStubs'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTTiming75e33CAStubs'].suffix = '_HLT75e33TimingCAStubs'
+upgradeWFs['HLTTiming75e33CAStubs'].offset = 0.7512
+upgradeWFs['HLTTiming75e33CAStubs'].step2 = {
+    '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
+    '--procModifiers': 'phase2CAStubs',
+    '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
+    '--eventcontent':'FEVTDEBUGHLT,DQMIO'
+}
+upgradeWFs['HLTTiming75e33CAStubs'].step3 = {
+    '-s':'HARVESTING:@hltValidation',
+    '--procModifiers': 'phase2CAStubs'
+}
+
+# Truth-matched stubs workflow (overlay on phase2CAStubs)
+upgradeWFs['HLTTiming75e33CATrueStubs'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTTiming75e33CATrueStubs'].suffix = '_HLT75e33TimingCATrueStubs'
+upgradeWFs['HLTTiming75e33CATrueStubs'].offset = 0.7513
+upgradeWFs['HLTTiming75e33CATrueStubs'].step2 = {
+    '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
+    '--procModifiers': 'phase2CAStubs,phase2CATrueStubs',
+    '--accelerators': 'cpu',
+    '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
+    '--eventcontent':'FEVTDEBUGHLT,DQMIO'
+}
+upgradeWFs['HLTTiming75e33CATrueStubs'].step3 = {
+    '-s':'HARVESTING:@hltValidation',
+    '--procModifiers': 'phase2CAStubs,phase2CATrueStubs',
+    '--accelerators': 'cpu'
+}
+
 class UpgradeWorkflow_HLTPhase2_WithNano(UpgradeWorkflow):
     def setup_(self, step, stepName, stepDict, k, properties):
         # skip RECO, ALCA and HLT
@@ -2295,6 +2340,19 @@ upgradeWFs['NGTScoutingAll'].step2 = {
 upgradeWFs['NGTScoutingAll'].step3 = {
     '--procModifiers': 'ngtScouting,alpaka,ticl_v5,ticl_barrel',
    '-s':'HARVESTING:@hltValidation'
+}
+
+upgradeWFs['NGTScoutingCAExtension'] = deepcopy(upgradeWFs['NGTScouting'])
+upgradeWFs['NGTScoutingCAExtension'].suffix = '_NGTScoutingCAExtension'
+upgradeWFs['NGTScoutingCAExtension'].offset = 0.774
+upgradeWFs['NGTScoutingCAExtension'].step2 = {
+    '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
+    '--procModifiers': 'ngtScouting,phase2CAExtension',
+    '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
+    '--eventcontent':'FEVTDEBUGHLT,DQMIO'
+}
+upgradeWFs['NGTScoutingCAExtension'].step3 = {
+    '-s':'HARVESTING:@hltValidation'
 }
 
 upgradeWFs['NGTScoutingCAExtensionMergeT5'] = deepcopy(upgradeWFs['NGTScouting'])

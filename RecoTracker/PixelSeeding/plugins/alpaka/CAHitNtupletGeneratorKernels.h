@@ -3,6 +3,7 @@
 
 // #define GPU_DEBUG
 // #define DUMP_GPU_TK_TUPLES
+#define CA_PIPELINE_COUNTERS
 
 #include <cstdint>
 
@@ -20,6 +21,7 @@
 #include "RecoTracker/PixelSeeding/interface/alpaka/CAPairSoACollection.h"
 
 #include "CACell.h"
+#include "CAPipelineCounters.h"
 #include "CAPixelDoublets.h"
 #include "CAStructures.h"
 
@@ -28,6 +30,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   using namespace ::caStructures;
 
   namespace caHitNtupletGenerator {
+
+    // Re-export pipeline counter enum from global namespace
+    using namespace ::caHitNtupletGenerator;
 
     //Counters
     struct Counters {
@@ -151,6 +156,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_->data(); }
     HitContainer const* hitContainer() const { return device_hitContainer_->data(); }
     HitToCell const* hitToCell() const { return device_hitToCell_->data(); }
+
+    // Pipeline counter pointer: returns device pointer when enabled, nullptr otherwise
+    uint32_t* pipelineCountersPtr() {
+#ifdef CA_PIPELINE_COUNTERS
+      return device_pipelineCounters_->data();
+#else
+      return nullptr;
+#endif
+    }
     HitToTuple const* hitToTuple() const { return device_hitToTuple_->data(); }
     CellToCell const* cellToCell() const { return device_cellToNeighbors_->data(); }
     CellToTrack const* cellToTrack() const { return device_cellToTracks_->data(); }
@@ -236,6 +250,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     std::optional<CAPairSoACollection> deviceTriplets_;
     std::optional<CAPairSoACollection> deviceTracksCells_;
+
+#ifdef CA_PIPELINE_COUNTERS
+    // Pipeline stage counters for diagnostic funnel
+    std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> device_pipelineCounters_;
+#endif
 
     // this could be inferred from the above buffers
     // but seems cleaner to have a dedicate variable

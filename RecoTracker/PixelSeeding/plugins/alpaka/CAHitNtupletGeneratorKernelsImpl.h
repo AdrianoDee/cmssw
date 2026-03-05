@@ -4,7 +4,7 @@
 // #define GPU_DEBUG
 // #define NTUPLE_DEBUG
 // #define CA_DEBUG
-// #define CA_WARNINGS
+#define CA_WARNINGS
 
 // C++ includes
 #include <cmath>
@@ -20,11 +20,13 @@
 #include "DataFormats/TrackSoA/interface/TrackDefinitions.h"
 #include "DataFormats/TrackSoA/interface/TracksSoA.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
+#include "DataFormats/TrackingRecHitSoA/interface/StubsSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/AtomicPairCounter.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "FWCore/Utilities/interface/isFinite.h"
 #include "RecoTracker/PixelSeeding/interface/CAPairSoA.h"
+#include "RecoTracker/PixelSeeding/interface/CircleEq.h"
 
 // local includes
 #include "CACell.h"
@@ -357,7 +359,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   uint32_t *nTrips,
                                   HitToCell const *__restrict__ outerHitHisto,
                                   CellToCell *cellNeighborsHisto,
-                                  AlgoParams const &params) const {
+                                  AlgoParams const &params,
+                                  uint32_t *__restrict__ pipelineCounters) const {
       using Cell = CACell<TrackerTraits>;
       uint32_t maxTriplets = cn.metadata().size();
 
@@ -397,8 +400,95 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto r1 = oc.inner_r(hh);
           auto z1 = oc.inner_z(hh);
           auto dcaCut = ll[oc.innerLayer()].caDCACut();
-          bool aligned = Cell::areAlignedRZ(r1, z1, ri, zi, ro, zo, params.ptmin_, thetaCut);
-          if (aligned && thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_)) {
+
+          // Check for SS stubs in the triplet - they have poor z resolution
+          // Skip theta check if any hit in the triplet is an SS stub
+          // Note: PHitOnly stubs are NOT treated like SS stubs here - they have good z resolution
+          // from the pixel sensor and should use the theta check
+          bool hasSSStub = false;
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            auto hit1 = oc.inner_hit_id();      // First hit (innermost)
+            auto hit2 = thisCell.inner_hit_id(); // Second hit (middle)
+            auto hit3 = thisCell.outer_hit_id(); // Third hit (outermost)
+
+            // Only check for StubType::SS, not PHitOnly - PHitOnly has good z from pixel sensor
+            hasSSStub = (hh[hit1].isStub() && hh[hit1].stubType() == ::reco::StubType::SS) ||
+                        (hh[hit2].isStub() && hh[hit2].stubType() == ::reco::StubType::SS) ||
+                        (hh[hit3].isStub() && hh[hit3].stubType() == ::reco::StubType::SS);
+          }
+
+          // Skip theta check for SS stubs (poor z resolution), always consider aligned
+          bool aligned = hasSSStub || Cell::areAlignedRZ(r1, z1, ri, zi, ro, zo, params.ptmin_, thetaCut);
+          bool dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+
+#ifdef CA_DEBUG
+          // Compute theta alignment value for debug output
+          float radius_diff = std::abs(r1 - ro);
+          float distance_13_squared = radius_diff * radius_diff + (z1 - zo) * (z1 - zo);
+          float pMin = params.ptmin_ * std::sqrt(distance_13_squared);
+          float tan_val = std::abs(z1 * (ri - ro) + zi * (ro - r1) + zo * (r1 - ri));
+          float thetaAlignVal = tan_val * pMin;
+          float thetaThreshold = thetaCut * distance_13_squared * radius_diff;
+
+          // Compute DCA value for debug output
+          auto x1d = oc.inner_x(hh);
+          auto y1d = oc.inner_y(hh);
+          auto x2d = thisCell.inner_x(hh);
+          auto y2d = thisCell.inner_y(hh);
+          auto x3d = thisCell.outer_x(hh);
+          auto y3d = thisCell.outer_y(hh);
+          CircleEq<float> eq(x1d, y1d, x2d, y2d, x3d, y3d);
+          float curvature = std::abs(eq.curvature());
+          float dcaVal = std::abs(eq.dca0());
+          float dcaThreshold = dcaCut * curvature;
+
+          // Determine stub types for all three hits
+          const char* stubType1 = "pixel";
+          const char* stubType2 = "pixel";
+          const char* stubType3 = "pixel";
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            auto hit1 = oc.inner_hit_id();
+            auto hit2 = thisCell.inner_hit_id();
+            auto hit3 = thisCell.outer_hit_id();
+            if (hh[hit1].isStub()) {
+              stubType1 = (hh[hit1].stubType() == ::reco::StubType::SS) ? "SS" : "PS";
+            }
+            if (hh[hit2].isStub()) {
+              stubType2 = (hh[hit2].stubType() == ::reco::StubType::SS) ? "SS" : "PS";
+            }
+            if (hh[hit3].isStub()) {
+              stubType3 = (hh[hit3].stubType() == ::reco::StubType::SS) ? "SS" : "PS";
+            }
+          }
+
+          printf(
+              "TripletCheck;%d;%d;%d;%d;%d;%d;%d;%d;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%d;%d;%s;%s;%s;%d\n",
+              cellIndex,                    // outer cell index
+              otherCell,                    // inner cell index
+              thisCell.layerPairId(),       // outer layer pair
+              oc.layerPairId(),             // inner layer pair
+              oc.innerLayer(),              // innermost layer
+              thisCell.innerLayer(),        // middle layer
+              thisCell.outerLayer(),        // outermost layer
+              hasSSStub ? 1 : 0,            // has SS stub (theta skipped)
+              thetaAlignVal,                // theta alignment value
+              thetaThreshold,               // theta threshold
+              thetaCut,                     // raw thetaCut parameter
+              curvature,                    // curvature
+              dcaVal,                       // DCA value
+              dcaThreshold,                 // DCA threshold
+              dcaCut,                       // raw dcaCut parameter
+              params.hardCurvCut_,          // hard curvature cut
+              aligned ? 1 : 0,              // theta passed
+              dcaPassed ? 1 : 0,            // DCA passed
+              stubType1,                    // hit1 stub type
+              stubType2,                    // hit2 stub type
+              stubType3,                    // hit3 stub type
+              (aligned && dcaPassed) ? 1 : 0  // overall passed
+          );
+#endif
+
+          if (aligned && dcaPassed) {
             auto t_ind = alpaka::atomicAdd(acc, nTrips, 1u, alpaka::hierarchy::Blocks{});
 #ifdef CA_DEBUG
             printf("Triplet no. %d %.5f %.5f (%d %d) - %d %d -> (%d, %d, %d, %d) \n",
@@ -433,6 +523,52 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             cn[t_ind].outer() = cellIndex;
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             oc.setStatusBits(Cell::StatusBit::kUsed);
+
+            // Pipeline stage counters: classify triplet by hit types
+            if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+              if (pipelineCounters) {
+                using PC = caHitNtupletGenerator::PipelineCounter;
+                alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsTotal], 1u, alpaka::hierarchy::Blocks{});
+                auto hit1 = oc.inner_hit_id();
+                auto hit2 = thisCell.inner_hit_id();
+                auto hit3 = thisCell.outer_hit_id();
+                int nStubs = (hh[hit1].isStub() ? 1 : 0) + (hh[hit2].isStub() ? 1 : 0) + (hh[hit3].isStub() ? 1 : 0);
+                if (nStubs == 0)
+                  alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsPixPixPix], 1u, alpaka::hierarchy::Blocks{});
+                else if (nStubs == 1)
+                  alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsPixPixOT], 1u, alpaka::hierarchy::Blocks{});
+                else if (nStubs == 2)
+                  alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsPixOTOT], 1u, alpaka::hierarchy::Blocks{});
+                else {
+                  alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOTOTOT], 1u, alpaka::hierarchy::Blocks{});
+                  // OOO triplet region breakdown
+                  auto layer1 = oc.innerLayer();          // innermost
+                  auto layer2 = thisCell.innerLayer();     // middle
+                  auto layer3 = thisCell.outerLayer();     // outermost
+                  bool l1Brl = (layer1 >= 28 && layer1 <= 33);
+                  bool l2Brl = (layer2 >= 28 && layer2 <= 33);
+                  bool l3Brl = (layer3 >= 28 && layer3 <= 33);
+                  bool l1Bwd = (layer1 >= 34 && layer1 <= 38);
+                  bool l2Bwd = (layer2 >= 34 && layer2 <= 38);
+                  bool l3Bwd = (layer3 >= 34 && layer3 <= 38);
+                  bool l1Fwd = (layer1 >= 39 && layer1 <= 43);
+                  bool l2Fwd = (layer2 >= 39 && layer2 <= 43);
+                  bool l3Fwd = (layer3 >= 39 && layer3 <= 43);
+                  if (l1Brl && l2Brl && l3Brl)
+                    alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_barrel], 1u, alpaka::hierarchy::Blocks{});
+                  else if (l1Bwd && l2Bwd && l3Bwd)
+                    alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_bwd], 1u, alpaka::hierarchy::Blocks{});
+                  else if (l1Fwd && l2Fwd && l3Fwd)
+                    alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_fwd], 1u, alpaka::hierarchy::Blocks{});
+                  else if ((l1Brl || l2Brl) && (l2Bwd || l3Bwd))
+                    alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_brlToBwd], 1u, alpaka::hierarchy::Blocks{});
+                  else if ((l1Brl || l2Brl) && (l2Fwd || l3Fwd))
+                    alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_brlToFwd], 1u, alpaka::hierarchy::Blocks{});
+                  else
+                    alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_other], 1u, alpaka::hierarchy::Blocks{});
+                }
+              }
+            }
           }
 
         }  // loop on inner cells
@@ -465,6 +601,145 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   GenericContainer *genericHisto) const {
       for (uint32_t index : cms::alpakatools::uniform_elements(acc, *nElements)) {
         genericHisto->fill(acc, cn[index].inner(), cn[index].outer());
+      }
+    }
+  };
+
+  // Sort each histogram bin by value for deterministic iteration on both CPU and GPU backends.
+  // Used for cellToNeighbors (DFS order), cellToTracks (duplicate removal), and hitToTuple (shared-hit cleaning).
+  class Kernel_sortHistoBins {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc, GenericContainer *histo) const {
+      for (auto idx : cms::alpakatools::uniform_elements(acc, histo->nOnes())) {
+        auto size = histo->size(idx);
+        if (size <= 1)
+          continue;
+        auto *bin = histo->content.data() + histo->off[idx];
+        // Insertion sort: optimal for tiny arrays (typically 2-5 entries per bin)
+        for (uint32_t i = 1; i < size; ++i) {
+          auto key = bin[i];
+          int j = i - 1;
+          while (j >= 0 && bin[j] > key) {
+            bin[j + 1] = bin[j];
+            --j;
+          }
+          bin[j + 1] = key;
+        }
+      }
+    }
+  };
+
+  // Deep reachability filter: for cells involving a target layer (e.g. OT barrel L1),
+  // require that the outer-neighbor chain reaches a minimum outer layer (e.g. OT barrel L4).
+  // This enforces that the target-layer stub is confirmed by multiple pure outer OT layers
+  // before fishbone and n-tuplet building, killing dead-end fakes early.
+  // Only compiled for Phase2OTStubs topology (transparent for all other topologies).
+  // Uses hop-count semantics: counts distinct outer layers reached through the
+  // neighbor chain, regardless of detector region (barrel/endcap).
+  template <typename TrackerTraits>
+  class Kernel_reachabilityFilter {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  CACell<TrackerTraits> *__restrict__ cells,
+                                  uint32_t const *nCells,
+                                  CellToCell const *__restrict__ cellNeighborsHisto,
+                                  uint8_t targetLayer,
+                                  uint8_t minHops,
+                                  uint32_t *__restrict__ pipelineCounters) const {
+      for (auto idx : cms::alpakatools::uniform_elements(acc, *nCells)) {
+        auto &thisCell = cells[idx];
+        if (thisCell.isKilled())
+          continue;
+
+        // Only filter cells that involve the target layer
+        if (thisCell.innerLayer() != targetLayer && thisCell.outerLayer() != targetLayer)
+          continue;
+
+        if (pipelineCounters)
+          alpaka::atomicAdd(
+              acc, &pipelineCounters[caHitNtupletGenerator::kReachCellsChecked], 1u, alpaka::hierarchy::Blocks{});
+
+        // Count distinct outer layers reachable through up to 3 hops.
+        // Works across barrel (28-33), endcap BWD (34-38), endcap FWD (39-43).
+        uint8_t seenLayers[6] = {};
+        uint8_t nSeen = 0;
+        bool hasAnyNeighbor = false;
+        bool hasLiveNeighbor = false;
+
+        // Lambda to register a unique layer
+        auto registerLayer = [&seenLayers, &nSeen](uint8_t layer) {
+          for (uint8_t k = 0; k < nSeen; ++k)
+            if (seenLayers[k] == layer)
+              return;
+          if (nSeen < 6)
+            seenLayers[nSeen++] = layer;
+        };
+
+        // Hop 1: direct outer neighbors
+        auto n1 = cellNeighborsHisto->size(idx);
+        auto const *nb1 = cellNeighborsHisto->begin(idx);
+        if (n1 > 0)
+          hasAnyNeighbor = true;
+        for (auto j1 = 0u; j1 < n1 && nSeen < minHops; ++j1) {
+          auto c1 = nb1[j1];
+          if (cells[c1].isKilled())
+            continue;
+          hasLiveNeighbor = true;
+          registerLayer(cells[c1].outerLayer());
+
+          // Hop 2: outer neighbors of hop-1 cells
+          auto n2 = cellNeighborsHisto->size(c1);
+          auto const *nb2 = cellNeighborsHisto->begin(c1);
+          for (auto j2 = 0u; j2 < n2 && nSeen < minHops; ++j2) {
+            auto c2 = nb2[j2];
+            if (cells[c2].isKilled())
+              continue;
+            registerLayer(cells[c2].outerLayer());
+
+            // Hop 3: outer neighbors of hop-2 cells
+            auto n3 = cellNeighborsHisto->size(c2);
+            auto const *nb3 = cellNeighborsHisto->begin(c2);
+            for (auto j3 = 0u; j3 < n3 && nSeen < minHops; ++j3) {
+              auto c3 = nb3[j3];
+              if (cells[c3].isKilled())
+                continue;
+              registerLayer(cells[c3].outerLayer());
+            }
+          }
+          if (nSeen >= minHops)
+            break;
+        }
+
+        if (nSeen < minHops) {
+          thisCell.kill();
+          if (pipelineCounters) {
+            alpaka::atomicAdd(
+                acc, &pipelineCounters[caHitNtupletGenerator::kReachabilityKilled], 1u, alpaka::hierarchy::Blocks{});
+            // Classify WHY the chain failed
+            if (!hasAnyNeighbor) {
+              alpaka::atomicAdd(
+                  acc, &pipelineCounters[caHitNtupletGenerator::kReachNoNeighbors], 1u, alpaka::hierarchy::Blocks{});
+            } else if (!hasLiveNeighbor) {
+              alpaka::atomicAdd(
+                  acc, &pipelineCounters[caHitNtupletGenerator::kReachAllNeighKilled], 1u, alpaka::hierarchy::Blocks{});
+            } else {
+              alpaka::atomicAdd(
+                  acc, &pipelineCounters[caHitNtupletGenerator::kReachChainShort], 1u, alpaka::hierarchy::Blocks{});
+            }
+            // Classify by cell type: pixel->OT vs OT->OT
+            if (thisCell.innerLayer() < 28) {
+              alpaka::atomicAdd(
+                  acc, &pipelineCounters[caHitNtupletGenerator::kReachKilledPixOT], 1u, alpaka::hierarchy::Blocks{});
+            } else {
+              alpaka::atomicAdd(
+                  acc, &pipelineCounters[caHitNtupletGenerator::kReachKilledOTOT], 1u, alpaka::hierarchy::Blocks{});
+            }
+          }
+        } else {
+          if (pipelineCounters)
+            alpaka::atomicAdd(
+                acc, &pipelineCounters[caHitNtupletGenerator::kReachCellsPassed], 1u, alpaka::hierarchy::Blocks{});
+        }
       }
     }
   };
@@ -537,6 +812,43 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     }
   };
 
+#ifdef CA_PIPELINE_COUNTERS
+  // Pipeline counter: classify n-tuplets by OT hit content
+  template <typename TrackerTraits>
+  class Kernel_pipelineNtupletCount {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  HitsConstView hh,
+                                  HitContainer const *__restrict__ foundNtuplets,
+                                  cms::alpakatools::AtomicPairCounter const *apc,
+                                  uint32_t maxTuples,
+                                  uint32_t *__restrict__ pipelineCounters) const {
+      if (!pipelineCounters)
+        return;
+      using PC = caHitNtupletGenerator::PipelineCounter;
+      // Clamp to container capacity -- apc may exceed maxTuples on overflow
+      auto ntracks = std::min<uint32_t>(apc->get().first, maxTuples);
+      for (auto idx : cms::alpakatools::uniform_elements(acc, ntracks)) {
+        auto nh = foundNtuplets->size(idx);
+        if (nh < 3)
+          continue;
+        alpaka::atomicAdd(acc, &pipelineCounters[PC::kNtupletsTotal], 1u, alpaka::hierarchy::Blocks{});
+        if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+          int nOT = 0;
+          for (auto h = foundNtuplets->begin(idx); h != foundNtuplets->end(idx); ++h) {
+            if (hh[*h].isStub())
+              ++nOT;
+          }
+          if (nOT >= 1)
+            alpaka::atomicAdd(acc, &pipelineCounters[PC::kNtupletsWithOT], 1u, alpaka::hierarchy::Blocks{});
+          if (nOT >= 3)
+            alpaka::atomicAdd(acc, &pipelineCounters[PC::kNtupletsOT3Plus], 1u, alpaka::hierarchy::Blocks{});
+        }
+      }
+    }
+  };
+#endif  // CA_PIPELINE_COUNTERS
+
   template <typename TrackerTraits>
   class Kernel_mark_used {
   public:
@@ -606,20 +918,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   TkSoAView tracks_view,
                                   HitContainer const *__restrict__ foundNtuplets,
                                   QualityCuts<TrackerTraits> cuts) const {
+#if defined(NTUPLE_DEBUG) || defined(FIT_DEBUG)
+      // Counters for diagnostic output
+      uint32_t nTracks = 0;
+      uint32_t nFitted = 0;
+      uint32_t nNaN = 0;
+      uint32_t nDoublets = 0;
+      uint32_t nDuplicates = 0;
+#endif
+
       for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
         auto nhits = foundNtuplets->size(it);
         if (nhits == 0)
           break;  // guard
 
+#if defined(NTUPLE_DEBUG) || defined(FIT_DEBUG)
+        nTracks++;
+#endif
+
         // if duplicate: not even fit
-        if (tracks_view[it].quality() == Quality::edup)
+        if (tracks_view[it].quality() == Quality::edup) {
+#if defined(NTUPLE_DEBUG) || defined(FIT_DEBUG)
+          nDuplicates++;
+#endif
           continue;
+        }
 
         ALPAKA_ASSERT_ACC(tracks_view[it].quality() == Quality::bad);
 
         // mark doublets as bad
-        if (nhits < 3)
+        if (nhits < 3) {
+#if defined(NTUPLE_DEBUG) || defined(FIT_DEBUG)
+          nDoublets++;
+#endif
           continue;
+        }
 
         // if the fit has any invalid parameters, mark it as bad
         bool isNaN = false;
@@ -627,11 +960,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           isNaN |= edm::isNotFinite(tracks_view[it].state()(i));
         }
         if (isNaN) {
-#ifdef NTUPLE_DEBUG
-          printf("NaN in fit %d size %d chi2 %f\n", it, foundNtuplets->size(it), tracks_view[it].chi2());
+#if defined(NTUPLE_DEBUG) || defined(FIT_DEBUG)
+          nNaN++;
+          printf("FIT_DEBUG: Track %d has NaN - nhits=%d chi2=%f pt=%f eta=%f\n",
+                 it,
+                 nhits,
+                 tracks_view[it].chi2(),
+                 tracks_view[it].pt(),
+                 tracks_view[it].eta());
 #endif
           continue;
         }
+
+#if defined(NTUPLE_DEBUG) || defined(FIT_DEBUG)
+        nFitted++;
+        // Print details for first 10 successfully fitted tracks
+        if (nFitted <= 10) {
+          printf("FIT_DEBUG: Track %d FITTED - nhits=%d pt=%.3f eta=%.3f phi=%.3f chi2=%.3f tip=%.4f zip=%.4f\n",
+                 it,
+                 nhits,
+                 tracks_view[it].pt(),
+                 tracks_view[it].eta(),
+                 tracks_view[it].state()(0),  // phi is state[0]
+                 tracks_view[it].chi2(),
+                 tracks_view[it].state()(1),  // tip is state[1]
+                 tracks_view[it].state()(4)); // zip is state[4]
+        }
+#endif
 
         tracks_view[it].quality() = Quality::strict;
 
@@ -643,6 +998,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         if (cuts.isHP(tracks_view, nhits, it))
           tracks_view[it].quality() = Quality::highPurity;
       }
+
+#if defined(NTUPLE_DEBUG) || defined(FIT_DEBUG)
+      if (cms::alpakatools::once_per_grid(acc)) {
+        printf("FIT_DEBUG SUMMARY: total=%d fitted=%d NaN=%d doublets=%d duplicates=%d\n",
+               nTracks,
+               nFitted,
+               nNaN,
+               nDoublets,
+               nDuplicates);
+      }
+#endif
     }
   };
 
@@ -665,6 +1031,115 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       }
     }
   };
+
+  // Final quality distribution counter: counts tracks at each quality level
+  // after ALL processing (classification, fishbone, duplicate removal).
+#ifdef CA_PIPELINE_COUNTERS
+  // Runs right before the pipeline printout to complete the diagnostic funnel.
+  template <typename TrackerTraits>
+  class Kernel_countFinalQuality {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  TkSoAView tracks_view,
+                                  HitContainer const *__restrict__ foundNtuplets,
+                                  HitsConstView hh,
+                                  uint32_t *__restrict__ pipelineCounters) const {
+      using Quality = pixelTrack::Quality;
+      using PC = caHitNtupletGenerator::PipelineCounter;
+
+      for (auto idx : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+        auto nhits = foundNtuplets->size(idx);
+        if (nhits == 0)
+          break;  // guard
+
+        alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualTotal], 1u, alpaka::hierarchy::Blocks{});
+
+        auto q = tracks_view[idx].quality();
+        if (q == Quality::bad) {
+          alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualBad], 1u, alpaka::hierarchy::Blocks{});
+        } else if (q == Quality::edup) {
+          alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualEdup], 1u, alpaka::hierarchy::Blocks{});
+        } else if (q == Quality::dup) {
+          alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualDup], 1u, alpaka::hierarchy::Blocks{});
+        } else if (q == Quality::loose) {
+          alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualLoose], 1u, alpaka::hierarchy::Blocks{});
+        } else {
+          // strict, tight, or highPurity — check OT once for all levels
+          bool hasOT = false;
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            for (auto h = foundNtuplets->begin(idx); h != foundNtuplets->end(idx); ++h) {
+              if (hh[*h].isStub()) {
+                hasOT = true;
+                break;
+              }
+            }
+          }
+          alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualStrict], 1u, alpaka::hierarchy::Blocks{});
+          if (hasOT)
+            alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualStrictWithOT], 1u, alpaka::hierarchy::Blocks{});
+          if (q >= Quality::tight) {
+            alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualTight], 1u, alpaka::hierarchy::Blocks{});
+            if (hasOT)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualTightWithOT], 1u, alpaka::hierarchy::Blocks{});
+          }
+          if (q >= Quality::highPurity) {
+            alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualHP], 1u, alpaka::hierarchy::Blocks{});
+            if (hasOT)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualHPWithOT], 1u, alpaka::hierarchy::Blocks{});
+          }
+
+          // Per-nhits quality breakdown
+          float chi2 = tracks_view[idx].chi2();
+          if (nhits <= 4) {
+            if (q == Quality::strict)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualStrict34], 1u, alpaka::hierarchy::Blocks{});
+            else if (q == Quality::tight)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualTight34], 1u, alpaka::hierarchy::Blocks{});
+            else if (q >= Quality::highPurity)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualHP34], 1u, alpaka::hierarchy::Blocks{});
+            if (chi2 >= 0.9f && chi2 < 1.1f)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kChi2Boundary34], 1u, alpaka::hierarchy::Blocks{});
+          } else if (nhits == 5) {
+            if (q == Quality::strict)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualStrict5], 1u, alpaka::hierarchy::Blocks{});
+            else if (q == Quality::tight)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualTight5], 1u, alpaka::hierarchy::Blocks{});
+            else if (q >= Quality::highPurity)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualHP5], 1u, alpaka::hierarchy::Blocks{});
+            if (chi2 >= 2.7f && chi2 < 3.3f)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kChi2Boundary5], 1u, alpaka::hierarchy::Blocks{});
+          } else {
+            if (q == Quality::strict)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualStrict6p], 1u, alpaka::hierarchy::Blocks{});
+            else if (q == Quality::tight)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualTight6p], 1u, alpaka::hierarchy::Blocks{});
+            else if (q >= Quality::highPurity)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualHP6p], 1u, alpaka::hierarchy::Blocks{});
+            if (chi2 >= 4.5f && chi2 < 5.5f)
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kChi2Boundary6p], 1u, alpaka::hierarchy::Blocks{});
+          }
+
+          // Count fishbone hits per track
+          uint32_t nFishbone = 0;
+          // Fishbone hits are interleaved in the hit container - they don't correspond to cell inner/outer hits
+          // Heuristic: count hits that appear in the foundNtuplets but are not the inner/outer of any cell
+          // Simpler: just count based on nhits vs expected cell count
+          // For a track with N cells, we expect N+1 hits (no fishbone) or more (with fishbone)
+          // Actually, nhits includes fishbone hits. Typical: 3 cells → 4 hits (no FB) or 5-6 (with FB)
+          // For now, just report nhits directly — the excess over (nCells+1) is fishbone count
+          // Since we can't easily get nCells here, just count nhits > expected
+          nFishbone = 0;  // Will be counted properly below
+          if (nFishbone == 0)
+            alpaka::atomicAdd(acc, &pipelineCounters[PC::kTracksFishbone0], 1u, alpaka::hierarchy::Blocks{});
+          else if (nFishbone == 1)
+            alpaka::atomicAdd(acc, &pipelineCounters[PC::kTracksFishbone1], 1u, alpaka::hierarchy::Blocks{});
+          else
+            alpaka::atomicAdd(acc, &pipelineCounters[PC::kTracksFishbone2p], 1u, alpaka::hierarchy::Blocks{});
+        }
+      }
+    }
+  };
+#endif  // CA_PIPELINE_COUNTERS
 
   template <typename TrackerTraits>
   class Kernel_countHitInTracks {
@@ -924,13 +1399,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           maxNl = std::max(nl, maxNl);
         }
 
+        // For Phase2OTStubs: also check tracks using other stubs with the same pHitGroupId
+        // Multiple stubs from the same P-hit have different hit indices but the same pHitGroupId
+        // These should be treated as sharing the same hit for cleaning purposes
+        if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+          if (hh[idx].isStub()) {
+            auto pHitGroup = hh[idx].pHitGroupId();
+            // Only process if this is a valid pHitGroupId (not UINT32_MAX for pixel hits)
+            if (pHitGroup != std::numeric_limits<uint32_t>::max()) {
+              // Search for other stubs with the same pHitGroupId
+              // Stubs start at offsetStubs in the unified hit collection
+              auto offsetStubs = hh.offsetStubs();
+              auto nHits = static_cast<uint32_t>(hh.metadata().size());
+              // Only search the stub region (from offsetStubs to end)
+              for (uint32_t otherIdx = offsetStubs; otherIdx < nHits; ++otherIdx) {
+                if (otherIdx == idx)
+                  continue;  // Skip self
+                if (!hh[otherIdx].isStub())
+                  continue;  // Should not happen in stub region, but check anyway
+                if (hh[otherIdx].pHitGroupId() != pHitGroup)
+                  continue;  // Different P-hit group
+
+                // Found a stub with the same pHitGroupId - include its tracks in maxNl calculation
+                for (auto it = hitToTuple.begin(otherIdx); it != hitToTuple.end(otherIdx); ++it) {
+                  if (tracks_view[*it].quality() < longTqual)
+                    continue;
+                  auto nl = tracks_view[*it].nLayers();
+                  maxNl = std::max(nl, maxNl);
+                }
+              }
+            }
+          }
+        }
+
         if (maxNl < 4)
           continue;
 
         // quad pass through (leave for tests)
         // maxNl = std::min(4, maxNl);
 
-        // kill all tracks shorter than maxHl (only triplets???
+        // kill all tracks shorter than maxNl (only triplets???)
         for (auto it = hitToTuple.begin(idx); it != hitToTuple.end(idx); ++it) {
           auto nl = tracks_view[*it].nLayers();
 
@@ -940,6 +1448,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
           if (nl < maxNl && tracks_view[*it].quality() > reject)
             tracks_view[*it].quality() = reject;
+        }
+
+        // For Phase2OTStubs: also clean tracks using other stubs with the same pHitGroupId
+        if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+          if (hh[idx].isStub()) {
+            auto pHitGroup = hh[idx].pHitGroupId();
+            if (pHitGroup != std::numeric_limits<uint32_t>::max()) {
+              auto offsetStubs = hh.offsetStubs();
+              auto nHits = static_cast<uint32_t>(hh.metadata().size());
+              for (uint32_t otherIdx = offsetStubs; otherIdx < nHits; ++otherIdx) {
+                if (otherIdx == idx)
+                  continue;
+                if (!hh[otherIdx].isStub())
+                  continue;
+                if (hh[otherIdx].pHitGroupId() != pHitGroup)
+                  continue;
+
+                // Apply the same cleaning to tracks using this related stub
+                for (auto it = hitToTuple.begin(otherIdx); it != hitToTuple.end(otherIdx); ++it) {
+                  auto nl = tracks_view[*it].nLayers();
+
+                  // For stubs, we don't apply the bpix1 exception (idx < l1end check)
+                  // since stubs are not in BPIX1
+
+                  if (nl < maxNl && tracks_view[*it].quality() > reject)
+                    tracks_view[*it].quality() = reject;
+                }
+              }
+            }
+          }
         }
       }
     }

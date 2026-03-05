@@ -11,3 +11,9 @@ hltPhase2PixelTracksCAExtension = cms.EDProducer("PixelTrackProducerFromSoAAlpak
     useOTExtension = cms.bool(True),
     requireQuadsFromConsecutiveLayers = cms.bool(True)
 )
+
+from Configuration.ProcessModifiers.phase2CAStubs_cff import phase2CAStubs
+from .hltPhase2PixelTracksWithStubs_cfi import hltPhase2PixelTracksWithStubs as _hltPhase2PixelTracksWithStubs
+phase2CAStubs.toReplaceWith(hltPhase2PixelTracksCAExtension,
+    _hltPhase2PixelTracksWithStubs.clone(minQuality='tight')
+)

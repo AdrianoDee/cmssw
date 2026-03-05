@@ -116,3 +116,38 @@ _HLTPhase2PixelTracksAndVerticesSequenceLegacyPatatrack = cms.Sequence(
     HLTPhase2PixelTracksAndVerticesSequence,
     _HLTPhase2PixelTracksAndVerticesSequenceLegacyPatatrack
 )
+
+
+
+# Stub-based tracking sequence with OT stubs
+from ..modules.hltPixelSeedingOTRecHitsSoA_cfi import hltPixelSeedingOTRecHitsSoA
+from ..modules.hltOTStubProducer_cfi import hltOTStubProducer
+from ..modules.hltPhase2PixelRecHitsStubsMerger_cfi import (
+    hltPhase2PixelRecHitsStubsMerger,
+)
+from ..modules.hltSiPixelClusters_cfi import hltSiPixelClusters
+from ..modules.hltSiPixelRecHits_cfi import hltSiPixelRecHits
+
+_HLTPhase2PixelTracksAndVerticesSequenceCAStubs = cms.Sequence(
+    HLTBeamSpotSequence
+    + hltPhase2PixelTracksAndHighPtStepTrackingRegions  # needed by highPtTripletStep iteration
+    + hltPhase2PixelFitterByHelixProjections  # needed by tracker muons
+    + hltPhase2PixelTrackFilterByKinematics  # needed by tracker muons
+    + hltSiPixelClusters  # Legacy pixel clusters for RecHits
+    + hltSiPixelRecHits  # Legacy pixel RecHits for legacy track converter
+    + hltPixelSeedingOTRecHitsSoA
+    + hltOTStubProducer  # VectorHitStyle via modifier
+    + hltPhase2PixelRecHitsStubsMerger
+    + hltPhase2PixelTracksSoA  # Stub CA via modifier (label preserved)
+    + hltPhase2PixelTracksCAExtension  # Stub converter (minQuality='tight')
+    + HLTPhase2PixelVertexingSequence  # Vertexing from CAExtension tracks
+    + hltPhase2PixelTracksCutClassifier  # Classifier using vertices
+    + hltPhase2PixelTracks  # highPurity filtered (TrackCollectionFilterCloner)
+)
+
+from Configuration.ProcessModifiers.phase2CAStubs_cff import phase2CAStubs
+
+phase2CAStubs.toReplaceWith(
+    HLTPhase2PixelTracksAndVerticesSequence,
+    _HLTPhase2PixelTracksAndVerticesSequenceCAStubs,
+)

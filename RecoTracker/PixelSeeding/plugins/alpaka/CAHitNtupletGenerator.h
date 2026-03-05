@@ -10,6 +10,10 @@
 #include "DataFormats/TrackSoA/interface/TracksDevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/OTRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/StubsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/StubsSoACollection.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -33,6 +37,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsConstView = ::reco::TrackingRecHitConstView;
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
+
+    using OTRecHitsOnDevice = reco::OTRecHitsSoACollection;
+    using StubsOnDevice = reco::StubsSoACollection;
 
     using TkSoADevice = reco::TracksSoACollection;
     using Quality = ::pixelTrack::Quality;
@@ -62,6 +69,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                 uint32_t maxDoublets,
                                 uint32_t maxTuples,
                                 Queue& queue) const;
+
+    // Overload for stub-based tracking with OT hits
+    TkSoADevice makeTuplesAsync(HitsOnDevice const& hits_d,
+                                CAGeometryOnDevice const& params_d,
+                                float bfield,
+                                uint32_t maxDoublets,
+                                uint32_t maxTuples,
+                                Queue& queue,
+                                OTRecHitsOnDevice const& otRecHits_d,
+                                StubsOnDevice const& stubs_d) const;
 
   private:
     Params m_params;

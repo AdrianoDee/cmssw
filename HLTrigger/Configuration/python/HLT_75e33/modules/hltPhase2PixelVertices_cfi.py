@@ -27,3 +27,4 @@ from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2
 hltPhase2LegacyTracking.toModify(hltPhase2PixelVertices,
     TrackCollection = "hltPhase2PixelTracks"
 )
+

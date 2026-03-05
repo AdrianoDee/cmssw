@@ -9,6 +9,52 @@
   <flags EDM_PLUGIN="1"/>
 </library>
 
+<library file="StackedModuleGeometryAnalyzer.cc" name="StackedModuleGeometryAnalyzer">
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="RecoTracker/Record"/>
+  <use name="RecoTracker/PixelSeeding"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+
+<library file="TrackComparisonAnalyzer.cc" name="TrackComparisonAnalyzer">
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ServiceRegistry"/>
+  <use name="CommonTools/UtilAlgos"/>
+  <use name="DataFormats/Math"/>
+  <use name="DataFormats/TrackReco"/>
+  <use name="DataFormats/SiPixelDetId"/>
+  <use name="root"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+
+<library file="TrueStubNtupleAnalyzer.cc" name="TrueStubNtupleAnalyzer">
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ServiceRegistry"/>
+  <use name="FWCore/Utilities"/>
+  <use name="CommonTools/UtilAlgos"/>
+  <use name="DataFormats/Common"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
+  <use name="DataFormats/TrackerRecHit2D"/>
+  <use name="DataFormats/TrackerCommon"/>
+  <use name="DataFormats/SiPixelCluster"/>
+  <use name="DataFormats/SiStripDetId"/>
+  <use name="Geometry/Records"/>
+  <use name="Geometry/TrackerGeometryBuilder"/>
+  <use name="Geometry/CommonDetUnit"/>
+  <use name="RecoTracker/PixelSeeding"/>
+  <use name="RecoTracker/Record"/>
+  <use name="SimDataFormats/TrackingAnalysis"/>
+  <use name="SimTracker/TrackerHitAssociation"/>
+  <use name="root"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+
 <bin file="PixelTriplets_InvPrbl_t.cpp">
   <use name="RecoTracker/PixelSeeding"/>
 </bin>

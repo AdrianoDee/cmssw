@@ -12,6 +12,7 @@
 #include "DataFormats/Math/interface/approx_atan2.h"
 #include "DataFormats/SiPixelClusterSoA/interface/ClusteringConstants.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/StubsSoA.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -19,12 +20,12 @@
 #include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
 
 #include "CACell.h"
+#include "CAPipelineCounters.h"
 #include "CAStructures.h"
-#include "CAHitNtupletGeneratorKernels.h"
 
 // #define GPU_DEBUG
-// #define DOUBLETS_DEBUG
-// #define CA_WARNINGS
+// #define DOUBLETS_DEBUG  // Very verbose - enable only for detailed debugging
+#define CA_WARNINGS
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   using namespace cms::alpakatools;
@@ -64,6 +65,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
   template <>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool moduleIsOuterLadder<pixelTopology::Phase2OT>(int const moduleId) {
+    return moduleIsOuterLadderPhase2(moduleId);
+  }
+
+  template <>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool moduleIsOuterLadder<pixelTopology::Phase2OTStubs>(int const moduleId) {
     return moduleIsOuterLadderPhase2(moduleId);
   }
 
@@ -169,7 +175,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                                         uint32_t const* __restrict__ offsets,
                                                         PhiBinner<TrackerTraits> const* phiBinner,
                                                         HitToCell* outerHitHisto,
-                                                        AlgoParams const& params) {
+                                                        AlgoParams const& params,
+                                                        uint32_t* __restrict__ pipelineCounters) {
     const bool doClusterCut = params.minYsizeB1_ > 0 or params.minYsizeB2_ > 0;
     const bool doZSizeCut = params.maxDYsize12_ > 0 or params.maxDYsize_ > 0 or params.maxDYPred_ > 0;
 
@@ -179,7 +186,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
     auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };
 
-    // nPairs for the OT-extended CA is 73.
+    // nPairs for the OT-extended CA is 98.
     // If it should become much bigger than 64, consider using a block-wide parallel prefix scan,
     // e.g. see  https://nvlabs.github.io/cub/classcub_1_1_warp_scan.html
     auto& innerLayerCumulativeSize = alpaka::declareSharedVar<uint32_t[TrackerTraits::nPairs], __COUNTER__>(acc);
@@ -188,16 +195,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #ifdef DOUBLETS_DEBUG
     if (cms::alpakatools::once_per_grid(acc))
       printf(
-          "maxNumDoublets = %d  cc.metadata().size() = %d ll.metadata().size() = %d cellZ0Cut_ = %.2f cellPtCut_ = "
+          "maxNumDoublets = %d  cc.metadata().size() = %d ll.metadata().size() = %d cellZ0Cut_ = %.2f ptmin_ = "
           "%.2f doClusterCut = %d doZ0Cut = %d  doPtCut = %d doZSizeCut = %d\n",
           maxNumOfDoublets,
           cc.metadata().size(),
           ll.metadata().size(),
           params.cellZ0Cut_,
-          params.cellPtCut_,
+          params.ptmin_,
           doClusterCut,
           params.cellZ0Cut_ > 0,
-          params.cellPtCut_ > 0,
+          params.ptmin_ > 0,
           doZSizeCut);
 #endif
 
@@ -228,6 +235,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       uint8_t outer = cc.graph()[pairLayerId][1];
       ALPAKA_ASSERT_ACC(outer > inner);
 
+#ifdef CA_PIPELINE_COUNTERS
+      // Helper to count per-cut doublet rejections for 3 groups:
+      // Total (all pairs), OTEarly (inner L28-29), OTLate (inner L30-32)
+      // perPair=true: called inside the X-loop (each X-thread has a unique pair → count from all)
+      // perPair=false: called before the X-loop (per inner hit → count only from first X-thread
+      //   to avoid stride-x overcounting)
+      auto countRej = [&](int cut, bool perPair = true) {
+        if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+          if (pipelineCounters) {
+            // For per-inner-hit rejections (before X-loop), only count from first X-thread
+            if (!perPair && alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[1] != 0)
+              return;
+            using namespace caHitNtupletGenerator;
+            alpaka::atomicAdd(
+                acc, &pipelineCounters[kDblRejBase + kGroupTotal * kNCuts + cut], 1u, alpaka::hierarchy::Blocks{});
+            if (inner == 28 || inner == 29)
+              alpaka::atomicAdd(
+                  acc, &pipelineCounters[kDblRejBase + kGroupOTEarly * kNCuts + cut], 1u, alpaka::hierarchy::Blocks{});
+            else if (inner >= 30 && inner <= 32)
+              alpaka::atomicAdd(
+                  acc, &pipelineCounters[kDblRejBase + kGroupOTLate * kNCuts + cut], 1u, alpaka::hierarchy::Blocks{});
+          }
+        }
+      };
+#endif
+
       auto hoff = PhiHisto::histOff(outer);
       auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
       i += offsets[inner];
@@ -247,6 +280,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       if (hh[i].detectorIndex() > ll.layerStarts()[ll.metadata().size() - 1]) {  //TODO use cc
 #ifdef DOUBLETS_DEBUG
         printf("Killed here 1\n");
+#endif
+#ifdef CA_PIPELINE_COUNTERS
+        countRej(caHitNtupletGenerator::kCutInvalidHit, false);  // per-inner-hit, not per-pair
 #endif
         continue;  // invalid
       }
@@ -270,6 +306,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                cc.minInner()[pairLayerId],
                cc.maxInner()[pairLayerId]);
 #endif
+#ifdef CA_PIPELINE_COUNTERS
+        countRej(caHitNtupletGenerator::kCutInnerCoord, false);  // per-inner-hit, not per-pair
+#endif
         continue;
       }
 
@@ -283,10 +322,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #ifdef DOUBLETS_DEBUG
         printf("Killed here 4\n");
 #endif
+#ifdef CA_PIPELINE_COUNTERS
+        countRej(caHitNtupletGenerator::kCutClusterCut, false);  // per-inner-hit, not per-pair
+#endif
         continue;
       }
 
       auto mep = hh[i].iphi();
+
+#ifdef DOUBLETS_DEBUG
+      if (inner >= 28) {  // Only print for OT layers
+        printf("Inner hit: idx=%d layer=%d iphi=%d detIndex=%d zi=%.2f ri=%.2f\n",
+               i,
+               inner,
+               mep,
+               hh[i].detectorIndex(),
+               zi,
+               ri);
+      }
+#endif
 
       // all cuts: true if fails
       auto ptcut = [&](int j, int16_t idphi) {
@@ -307,6 +361,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                std::abs((zi * ro - ri * zo)),
                (std::abs((zi * ro - ri * zo)) > params.cellZ0Cut_ * dr));
 #endif
+        // Skip z0 cut for SS stubs (poor z resolution from strip sensors on both sides)
+        // PS stubs keep the cut since they have good z from the pixel (inner) sensor
+        if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+          if (hh[j].isStub() && hh[j].stubType() == ::reco::StubType::SS) {
+            // For SS stubs, only check dr range, skip z0 alignment
+            return dr > cc.maxDR()[pairLayerId] || dr < 0;
+          }
+        }
         return dr > cc.maxDR()[pairLayerId] || dr < 0 || std::abs((zi * ro - ri * zo)) > params.cellZ0Cut_ * dr;
       };
 
@@ -317,12 +379,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       auto incr = [](auto& k) { return k = (k + 1) % PhiHisto::nbins(); };
 
 #ifdef GPU_DEBUG
-      printf("pairLayerId %d %d %.2f %.2f %.2f \n",
-             pairLayerId,
-             cc.phiCuts()[pairLayerId],
-             cc.maxDR()[pairLayerId],
-             cc.maxInnerZ()[pairLayerId],
-             cc.minInnerZ()[pairLayerId]);
+      // Only print for first few pairs to avoid flooding
+      if (pairLayerId < 5 && i == 0) {
+        auto innerLayer = cc.graph()[pairLayerId][0];
+        auto outerLayer = cc.graph()[pairLayerId][1];
+        printf(
+            "[CAPixelDoublets] Pair %d: layers (%d->%d) | phiCut=%d | minIn=%.1f maxIn=%.1f | minOut=%.1f maxOut=%.1f "
+            "| maxDR=%.1f | minDZ=%.1f maxDZ=%.1f\n",
+            pairLayerId,
+            innerLayer,
+            outerLayer,
+            cc.phiCuts()[pairLayerId],
+            cc.minInner()[pairLayerId],
+            cc.maxInner()[pairLayerId],
+            cc.minOuter()[pairLayerId],
+            cc.maxOuter()[pairLayerId],
+            cc.maxDR()[pairLayerId],
+            cc.minDZ()[pairLayerId],
+            cc.maxDZ()[pairLayerId]);
+      }
 #endif
 
       auto khh = kh;
@@ -337,6 +412,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         auto const* __restrict__ e = phiBinner->end(kk + hoff);
         auto const maxpIndex = e - p;
 
+#ifdef DOUBLETS_DEBUG
+        if (outer >= 28) {  // Only print for OT layers
+          printf("PhiBinner search: inner=%d outer=%d kk=%d hoff=%d phiBin=%d maxpIndex=%d\n",
+                 inner,
+                 outer,
+                 kk,
+                 hoff,
+                 kk + hoff,
+                 int(maxpIndex));
+        }
+#endif
+
         // innermost parallel loop, using the block elements along the faster dimension (X or 1 in a 2D grid)
         for (uint32_t pIndex : cms::alpakatools::independent_group_elements_x(acc, maxpIndex)) {
           // FIXME implement alpaka::ldg and use it here? or is it const* __restrict__ enough?
@@ -348,10 +435,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #endif
           auto mo = hh[oi].detectorIndex();
 
-          // invalid
-          if (mo > pixelClustering::maxNumModules) {  //FIXME use cc?
+          // invalid - use TrackerTraits::numberOfModules for correct limit per tracker configuration
+          if (mo >= TrackerTraits::numberOfModules) {
 #ifdef DOUBLETS_DEBUG
-            printf("Killed here 4\n");
+            printf("Killed here 4 --> mo: %d >= numberOfModules: %d\n", mo, TrackerTraits::numberOfModules);
+#endif
+#ifdef CA_PIPELINE_COUNTERS
+            countRej(caHitNtupletGenerator::kCutInvalidModule);
 #endif
             continue;
           }
@@ -369,6 +459,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                    cc.minOuter()[pairLayerId],
                    cc.maxOuter()[pairLayerId]);
 #endif
+#ifdef CA_PIPELINE_COUNTERS
+            countRej(caHitNtupletGenerator::kCutOuterCoord);
+#endif
             continue;
           }
 
@@ -383,12 +476,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                    cc.minDZ()[pairLayerId],
                    cc.maxDZ()[pairLayerId]);
 #endif
+#ifdef CA_PIPELINE_COUNTERS
+            countRej(caHitNtupletGenerator::kCutDzRange);
+#endif
             continue;
           }
 
           if (params.cellZ0Cut_ > 0. && z0cutoff(oi)) {
 #ifdef DOUBLETS_DEBUG
             printf("Killed here 5\n");
+#endif
+#ifdef CA_PIPELINE_COUNTERS
+            countRej(caHitNtupletGenerator::kCutZ0);
 #endif
             continue;
           }
@@ -398,7 +497,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
           if (idphi > iphicut) {
 #ifdef DOUBLETS_DEBUG
-            printf("Killed here 6\n");
+            printf("Killed here 6 --> idphi: %d, iphicut: %d\n", idphi, iphicut);
+#endif
+#ifdef CA_PIPELINE_COUNTERS
+            countRej(caHitNtupletGenerator::kCutPhi);
 #endif
             continue;
           }
@@ -409,6 +511,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #ifdef DOUBLETS_DEBUG
             printf("Killed here 7\n");
 #endif
+#ifdef CA_PIPELINE_COUNTERS
+            countRej(caHitNtupletGenerator::kCutZSize);
+#endif
             continue;
           }
 
@@ -416,7 +521,106 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #ifdef DOUBLETS_DEBUG
             printf("Killed here 8\n");
 #endif
+#ifdef CA_PIPELINE_COUNTERS
+            countRej(caHitNtupletGenerator::kCutPt);
+#endif
             continue;
+          }
+
+          // Stub-stub pairwise compatibility cut using unified kappa (half-curvature) comparison.
+          //
+          // The stub formation kernel computes dPhiDr = dphi / dr_effective for all module types,
+          // where dr_effective = separation / (cosTilt + sinTilt * z/r) projects the sensor gap
+          // onto the radial direction. This makes dPhiDr a curvature proxy for all module types:
+          //   - Flat barrel: dPhiDr = dphi/dr ~= kappa
+          //   - Tilted barrel: parallax correction + dr_effective account for tilt -> dPhiDr ~= kappa
+          //   - Endcap: dr_effective = separation * r/z cancels the dip angle -> dPhiDr ~= kappa
+          //
+          // The kappa transformation kappa = dPhiDr / sqrt(1 + r^2 * dPhiDr^2) extracts the
+          // radius-independent half-curvature. For barrel stubs this removes the r-dependence;
+          // for endcap stubs it is a near-identity transformation (since r^2 * dPhiDr^2 << 1).
+          //
+          // All stub-stub transitions are handled uniformly: flat-flat, flat-tilted, tilted-tilted,
+          // disk-disk, flat-disk, tilted-disk.
+          //
+          // Pairs involving pixel hits or PHitOnly stubs are skipped.
+          // Controlled by per-pair stubSigmaCut (negative = disabled).
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            auto stubSigmaCut = cc.stubSigmaCut()[pairLayerId];
+            if (stubSigmaCut > 0.f && hh[i].isStub() && hh[oi].isStub() &&
+                hh[i].stubType() != ::reco::StubType::PHitOnly && hh[oi].stubType() != ::reco::StubType::PHitOnly) {
+              // Unified kappa-corrected significance for all stub-stub pairs
+              float d_i = hh[i].dPhiDr(), s_i = hh[i].dPhiDrError();
+              float den_i = 1.f + ri * ri * d_i * d_i;
+              float sqrt_den_i = std::sqrt(den_i);
+              float k_i = d_i / sqrt_den_i;
+              float sk_i = s_i / (den_i * sqrt_den_i);
+
+              float d_o = hh[oi].dPhiDr(), s_o = hh[oi].dPhiDrError();
+              float den_o = 1.f + ro * ro * d_o * d_o;
+              float sqrt_den_o = std::sqrt(den_o);
+              float k_o = d_o / sqrt_den_o;
+              float sk_o = s_o / (den_o * sqrt_den_o);
+
+              float combined_err2 = sk_i * sk_i + sk_o * sk_o;
+              float significance = std::abs(k_i - k_o) / std::sqrt(combined_err2);
+
+              if (significance > stubSigmaCut) {
+#ifdef DOUBLETS_DEBUG
+                auto flags_i = hh[i].stubFlags();
+                auto flags_o = hh[oi].stubFlags();
+                printf("Killed here 10: stub sigma cut (sig=%.2f > cut=%.2f, barrel_i=%d barrel_o=%d)\n",
+                       significance,
+                       stubSigmaCut,
+                       (int)::reco::StubFlags::isBarrel(flags_i),
+                       (int)::reco::StubFlags::isBarrel(flags_o));
+#endif
+#ifdef CA_PIPELINE_COUNTERS
+                countRej(caHitNtupletGenerator::kCutStubSigma);
+#endif
+                continue;
+              }
+            }
+          }
+
+          // Pixel-to-stub direction consistency check using kappa comparison.
+          // When only the outer hit is a stub, compute the doublet's kappa from the
+          // pixel-stub geometry and compare with the stub's own kappa measurement.
+          // This reuses stubSigmaCut as the significance threshold.
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            auto stubSigmaCut = cc.stubSigmaCut()[pairLayerId];
+            if (stubSigmaCut > 0.f && !hh[i].isStub() && hh[oi].isStub() &&
+                hh[oi].stubType() != ::reco::StubType::PHitOnly) {
+              auto signed_dphi = short2phi(int16_t(mop - mep));
+              auto dr = ro - ri;
+              if (dr > 0.f) {
+                float dphidr_doublet = signed_dphi / dr;
+                float den_d = 1.f + ro * ro * dphidr_doublet * dphidr_doublet;
+                float sqrt_den_d = std::sqrt(den_d);
+                float k_doublet = dphidr_doublet / sqrt_den_d;
+
+                float d_o = hh[oi].dPhiDr(), s_o = hh[oi].dPhiDrError();
+                float den_o = 1.f + ro * ro * d_o * d_o;
+                float sqrt_den_o = std::sqrt(den_o);
+                float k_stub = d_o / sqrt_den_o;
+                float sk_stub = s_o / (den_o * sqrt_den_o);
+
+                if (sk_stub > 0.f) {
+                  float significance = std::abs(k_doublet - k_stub) / sk_stub;
+                  if (significance > stubSigmaCut) {
+#ifdef DOUBLETS_DEBUG
+                    printf("Killed here 11: pixel-stub kappa cut (sig=%.2f > cut=%.2f)\n",
+                           significance,
+                           stubSigmaCut);
+#endif
+#ifdef CA_PIPELINE_COUNTERS
+                    countRej(caHitNtupletGenerator::kCutPixStub);
+#endif
+                    continue;
+                  }
+                }
+              }
+            }
           }
 
           auto ind = alpaka::atomicAdd(acc, nCells, 1u, alpaka::hierarchy::Blocks{});
@@ -435,6 +639,71 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #ifdef DOUBLETS_DEBUG
           printf("doublet: %d layerPair: %d inner: %d outer: %d i: %d oi: %d\n", ind, pairLayerId, inner, outer, i, oi);
 #endif
+          // Pipeline stage counters: classify doublet by hit type and layer pair
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            if (pipelineCounters) {
+              using PC = caHitNtupletGenerator::PipelineCounter;
+              alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsTotal], 1u, alpaka::hierarchy::Blocks{});
+              bool innerIsStub = hh[i].isStub();
+              bool outerIsStub = hh[oi].isStub();
+              if (!innerIsStub && !outerIsStub)
+                alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsPixPix], 1u, alpaka::hierarchy::Blocks{});
+              else if (!innerIsStub && outerIsStub)
+                alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsPixOT], 1u, alpaka::hierarchy::Blocks{});
+              else {
+                alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsOTOT], 1u, alpaka::hierarchy::Blocks{});
+                // Per-layer-pair breakdown for OT-OT doublets
+                int key = int(inner) * 100 + int(outer);
+                // Flat/tilted classification helper for barrel-barrel pairs
+                auto classifyFlatTilted = [&](PC pairCounter, PC ffCounter, PC ftCounter, PC ttCounter) {
+                  alpaka::atomicAdd(acc, &pipelineCounters[pairCounter], 1u, alpaka::hierarchy::Blocks{});
+                  bool iFlat = (hh[i].stubFlags() & 0x02) != 0;
+                  bool oFlat = (hh[oi].stubFlags() & 0x02) != 0;
+                  if (iFlat && oFlat)
+                    alpaka::atomicAdd(acc, &pipelineCounters[ffCounter], 1u, alpaka::hierarchy::Blocks{});
+                  else if (!iFlat && !oFlat)
+                    alpaka::atomicAdd(acc, &pipelineCounters[ttCounter], 1u, alpaka::hierarchy::Blocks{});
+                  else
+                    alpaka::atomicAdd(acc, &pipelineCounters[ftCounter], 1u, alpaka::hierarchy::Blocks{});
+                };
+                switch (key) {
+                  // OT barrel consecutive (5 pairs) with flat/tilted breakdown
+                  case 2829: classifyFlatTilted(PC::kDoubletsL28L29, PC::kDoubletsL28L29_FF, PC::kDoubletsL28L29_FT, PC::kDoubletsL28L29_TT); break;
+                  case 2930: classifyFlatTilted(PC::kDoubletsL29L30, PC::kDoubletsL29L30_FF, PC::kDoubletsL29L30_FT, PC::kDoubletsL29L30_TT); break;
+                  case 3031: classifyFlatTilted(PC::kDoubletsL30L31, PC::kDoubletsL30L31_FF, PC::kDoubletsL30L31_FT, PC::kDoubletsL30L31_TT); break;
+                  case 3132: classifyFlatTilted(PC::kDoubletsL31L32, PC::kDoubletsL31L32_FF, PC::kDoubletsL31L32_FT, PC::kDoubletsL31L32_TT); break;
+                  case 3233: classifyFlatTilted(PC::kDoubletsL32L33, PC::kDoubletsL32L33_FF, PC::kDoubletsL32L33_FT, PC::kDoubletsL32L33_TT); break;
+                  // OT barrel to backward disk 1 (6 pairs)
+                  case 2834: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL28D1B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 2934: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL29D1B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3034: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL30D1B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3134: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL31D1B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3234: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL32D1B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3334: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL33D1B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3335: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL33D2B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  // OT barrel to forward disk 1 (6 pairs)
+                  case 2839: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL28D1F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 2939: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL29D1F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3039: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL30D1F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3139: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL31D1F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3239: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL32D1F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3339: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL33D1F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3340: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsL33D2F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  // Backward disk chain (4 pairs)
+                  case 3435: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsD1BD2B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3536: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsD2BD3B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3637: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsD3BD4B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 3738: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsD4BD5B], 1u, alpaka::hierarchy::Blocks{}); break;
+                  // Forward disk chain (4 pairs)
+                  case 3940: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsD1FD2F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 4041: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsD2FD3F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 4142: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsD3FD4F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  case 4243: alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsD4FD5F], 1u, alpaka::hierarchy::Blocks{}); break;
+                  default:   alpaka::atomicAdd(acc, &pipelineCounters[PC::kDoubletsOTOther], 1u, alpaka::hierarchy::Blocks{}); break;
+                }
+              }
+            }
+          }
         }
       }
     }  // loop in block...

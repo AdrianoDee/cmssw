@@ -78,6 +78,13 @@ _phase2_hltassociation += hltTiclSimTrackstersSeq
 # Apply the modification
 phase2_common.toReplaceWith(hltassociation, _phase2_hltassociation)
 
+# Add VectorHitStyle stub validation when phase2CAStubs modifier is active
+from Configuration.ProcessModifiers.phase2CAStubs_cff import phase2CAStubs
+from Validation.SiTrackerPhase2V.phase2OTValidateVectorHitStyleStub_cfi import phase2OTValidateVectorHitStyleStub as hltVHStubValidator
+_phase2_hltassociation_stubs = _phase2_hltassociation.copy()
+_phase2_hltassociation_stubs += hltVHStubValidator
+(phase2_common & phase2CAStubs).toReplaceWith(hltassociation, _phase2_hltassociation_stubs)
+
 # hcal
 from DQMOffline.Trigger.HCALMonitoring_cff import *
 

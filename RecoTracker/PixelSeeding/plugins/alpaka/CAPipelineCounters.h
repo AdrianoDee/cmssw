@@ -1,0 +1,133 @@
+#ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAPipelineCounters_h
+#define RecoTracker_PixelSeeding_plugins_alpaka_CAPipelineCounters_h
+
+#include <cstdint>
+
+// Pipeline stage counters for CA tracking diagnostic funnel.
+// Defined outside ALPAKA_ACCELERATOR_NAMESPACE so the enum values
+// are usable from any translation unit without namespace issues.
+namespace caHitNtupletGenerator {
+
+  enum PipelineCounter : int {
+    kDoubletsTotal = 0,
+    kDoubletsPixPix,
+    kDoubletsPixOT,
+    kDoubletsOTOT,
+    // Per-layer-pair doublet counts: OT barrel consecutive (5)
+    kDoubletsL28L29,
+    kDoubletsL29L30,
+    kDoubletsL30L31,
+    kDoubletsL31L32,
+    kDoubletsL32L33,
+    // Flat/tilted module type breakdown for barrel-barrel doublets (15)
+    kDoubletsL28L29_FF, kDoubletsL28L29_FT, kDoubletsL28L29_TT,
+    kDoubletsL29L30_FF, kDoubletsL29L30_FT, kDoubletsL29L30_TT,
+    kDoubletsL30L31_FF, kDoubletsL30L31_FT, kDoubletsL30L31_TT,
+    kDoubletsL31L32_FF, kDoubletsL31L32_FT, kDoubletsL31L32_TT,
+    kDoubletsL32L33_FF, kDoubletsL32L33_FT, kDoubletsL32L33_TT,
+    // OT barrel to backward disk (7)
+    kDoubletsL28D1B, kDoubletsL29D1B, kDoubletsL30D1B,
+    kDoubletsL31D1B, kDoubletsL32D1B, kDoubletsL33D1B,
+    kDoubletsL33D2B,
+    // OT barrel to forward disk (7)
+    kDoubletsL28D1F, kDoubletsL29D1F, kDoubletsL30D1F,
+    kDoubletsL31D1F, kDoubletsL32D1F, kDoubletsL33D1F,
+    kDoubletsL33D2F,
+    // Backward disk chain (4)
+    kDoubletsD1BD2B, kDoubletsD2BD3B, kDoubletsD3BD4B, kDoubletsD4BD5B,
+    // Forward disk chain (4)
+    kDoubletsD1FD2F, kDoubletsD2FD3F, kDoubletsD3FD4F, kDoubletsD4FD5F,
+    kDoubletsOTOther,  // fallback for unexpected OT-OT pairs
+    kTripletsTotal,
+    kTripletsPixPixPix,
+    kTripletsPixPixOT,
+    kTripletsPixOTOT,
+    kTripletsOTOTOT,
+    // OOO triplet region breakdown (6)
+    kTripletsOOO_barrel,     // all 3 layers in OT barrel (28-33)
+    kTripletsOOO_brlToBwd,   // starts barrel, ends backward endcap
+    kTripletsOOO_brlToFwd,   // starts barrel, ends forward endcap
+    kTripletsOOO_bwd,        // all 3 layers in backward endcap (34-38)
+    kTripletsOOO_fwd,        // all 3 layers in forward endcap (39-43)
+    kTripletsOOO_other,      // any other OOO combination
+    kReachabilityKilled,
+    kReachNoNeighbors,     // killed: cell has 0 outer neighbors in cellNeighborsHisto
+    kReachAllNeighKilled,  // killed: cell has neighbors but ALL are isKilled()
+    kReachChainShort,      // killed: cell has live neighbors but chain < minReachLayer
+    kReachCellsChecked,    // total cells that entered the reachability filter
+    kReachCellsPassed,     // cells that passed the reachability filter
+    kReachKilledPixOT,     // killed cells where one end is pixel (pixel->OT bridge)
+    kReachKilledOTOT,      // killed cells where both ends are OT
+    kFishboneKilled,
+    kNtupletsTotal,
+    kNtupletsWithOT,
+    kNtupletsOT3Plus,
+    // Final track quality distribution (after all dup removal and classification)
+    kQualTotal,      // total tracks with hits > 0
+    kQualBad,        // quality = bad (NaN fit, doublets, or unclassified)
+    kQualEdup,       // quality = edup (early duplicate removed)
+    kQualDup,        // quality = dup (fast duplicate removed)
+    kQualLoose,      // quality = loose
+    kQualStrict,       // quality >= strict
+    kQualStrictWithOT, // quality >= strict AND has OT hits
+    kQualTight,        // quality >= tight
+    kQualTightWithOT,  // quality >= tight AND has OT hits
+    kQualHP,           // quality = highPurity
+    kQualHPWithOT,     // highPurity tracks with at least 1 OT hit
+    // Per-nhits quality breakdown (to diagnose CPU vs GPU quality shifts)
+    // Tracks with 3-4 hits (triplets/quadruplets)
+    kQualStrict34,     // strict with 3-4 hits
+    kQualTight34,      // tight with 3-4 hits
+    kQualHP34,         // HP with 3-4 hits
+    // Tracks with 5 hits (quintuplets)
+    kQualStrict5,      // strict with 5 hits
+    kQualTight5,       // tight with 5 hits
+    kQualHP5,          // HP with 5 hits
+    // Tracks with 6+ hits
+    kQualStrict6p,     // strict with 6+ hits
+    kQualTight6p,      // tight with 6+ hits
+    kQualHP6p,         // HP with 6+ hits
+    // Chi2 boundary tracks (within 10% of threshold, at risk of quality flip)
+    kChi2Boundary34,   // 3-4 hits with 0.9 <= chi2 < 1.1 (threshold=1.0)
+    kChi2Boundary5,    // 5 hits with 2.7 <= chi2 < 3.3 (threshold=3.0)
+    kChi2Boundary6p,   // 6+ hits with 4.5 <= chi2 < 5.5 (threshold=5.0)
+    // Fishbone hits on tracks
+    kTracksFishbone0,  // tracks with 0 fishbone hits
+    kTracksFishbone1,  // tracks with 1 fishbone hit
+    kTracksFishbone2p, // tracks with 2+ fishbone hits
+    // Per-cut doublet rejection counters: 3 groups × 12 cuts
+    // Groups: Total (all pairs), OTEarly (inner L28-29), OTLate (inner L30-32)
+    // Cut indices: 0=invalidHit, 1=innerCoord, 2=clusterCut, 3=invalidModule,
+    //              4=outerCoord, 5=dzRange, 6=z0Cut, 7=phiCut,
+    //              8=zSizeCut, 9=ptCut, 10=stubSigma, 11=pixStub
+    kDblRejBase,       // base for computed-offset access: counter = kDblRejBase + group*12 + cut
+    kDblRejEnd = kDblRejBase + 36,  // 3 groups × 12 cuts
+    kNCounters = kDblRejEnd
+  };
+
+  // Doublet rejection cut indices (for kDblRejBase offset access)
+  enum DblRejCut : int {
+    kCutInvalidHit = 0,
+    kCutInnerCoord = 1,
+    kCutClusterCut = 2,
+    kCutInvalidModule = 3,
+    kCutOuterCoord = 4,
+    kCutDzRange = 5,
+    kCutZ0 = 6,
+    kCutPhi = 7,
+    kCutZSize = 8,
+    kCutPt = 9,
+    kCutStubSigma = 10,
+    kCutPixStub = 11,
+    kNCuts = 12
+  };
+  // Group offsets: group index × kNCuts added to kDblRejBase
+  enum DblRejGroup : int {
+    kGroupTotal = 0,    // all pairs
+    kGroupOTEarly = 1,  // inner layer 28 or 29
+    kGroupOTLate = 2    // inner layer 30, 31, or 32
+  };
+
+}  // namespace caHitNtupletGenerator
+
+#endif  // RecoTracker_PixelSeeding_plugins_alpaka_CAPipelineCounters_h

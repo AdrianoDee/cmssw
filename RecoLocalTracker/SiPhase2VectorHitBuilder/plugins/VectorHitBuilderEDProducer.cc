@@ -48,7 +48,7 @@ VectorHitBuilderEDProducer::VectorHitBuilderEDProducer(edm::ParameterSet const& 
 }
 
 void VectorHitBuilderEDProducer::produce(edm::Event& event, const edm::EventSetup& es) {
-  LogDebug("VectorHitBuilderEDProducer") << "VectorHitBuilderEDProducer::produce() begin";
+  edm::LogPrint("VectorHitBuilderEDProducer") << "VectorHitBuilderEDProducer::produce() begin";
 
   // get input clusters data
   auto clustersHandle = event.getHandle(clusterProducer_);
@@ -59,24 +59,24 @@ void VectorHitBuilderEDProducer::produce(edm::Event& event, const edm::EventSetu
   std::unique_ptr<VectorHitCollection> outputVHRejected(new VectorHitCollection());
 
   stubsBuilder_ = &es.getData(stubsBuilderToken_);
-#ifdef EDM_ML_DEBUG
+  //#ifdef EDM_ML_DEBUG
   // check on the input clusters
   stubsBuilder_->printClusters(*clustersHandle);
-#endif  //EDM_ML_DEBUG
+  //#endif  //EDM_ML_DEBUG
 
   // running the stub building algorithm
   //ERICA::output should be moved in the different algo classes?
   run(clustersHandle, *outputClustersAccepted, *outputClustersRejected, *outputVHAccepted, *outputVHRejected);
-#ifdef EDM_ML_DEBUG
+  //#ifdef EDM_ML_DEBUG
   unsigned int numberOfVectorHits = 0;
   for (const auto& dSViter : *outputVHAccepted) {
     for (const auto& vh : dSViter) {
       numberOfVectorHits++;
-      LogDebug("VectorHitBuilderEDProducer") << "\t vectorhit in output " << vh;
+      edm::LogPrint("VectorHitBuilderEDProducer") << "\t vectorhit in output " << vh;
     }
   }
-  LogDebug("VectorHitBuilderEDProducer") << "found\n" << numberOfVectorHits << " .\n";
-#endif  //EDM_ML_DEBUG
+  edm::LogPrint("VectorHitBuilderEDProducer") << "found\n" << numberOfVectorHits << " .\n";
+  //#endif  //EDM_ML_DEBUG
   // write output to file
   event.put(std::move(outputClustersAccepted), "accepted");
   event.put(std::move(outputClustersRejected), "rejected");

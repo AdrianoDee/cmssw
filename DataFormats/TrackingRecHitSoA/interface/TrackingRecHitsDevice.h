@@ -63,18 +63,25 @@ namespace reco {
     uint32_t nModules() const { return static_cast<uint32_t>(this->view().hitModules().metadata().size() - 1); }
 
     int32_t offsetBPIX2() const { return offsetBPIX2_; }
+    uint32_t offsetStubs() const { return offsetStubs_; }
 
     // asynchronously update the information cached within the class itself from the information on the device
     template <typename TQueue>
     void updateFromDevice(TQueue queue) {
-      auto off_h = cms::alpakatools::make_host_view(offsetBPIX2_);
-      auto off_d = cms::alpakatools::make_device_view(queue, this->view().trackingHits().offsetBPIX2());
-      alpaka::memcpy(queue, off_h, off_d);
+      auto offBPIX2_h = cms::alpakatools::make_host_view(offsetBPIX2_);
+      auto offBPIX2_d = cms::alpakatools::make_device_view(queue, this->view().trackingHits().offsetBPIX2());
+      alpaka::memcpy(queue, offBPIX2_h, offBPIX2_d);
+
+      auto offStubs_h = cms::alpakatools::make_host_view(offsetStubs_);
+      auto offStubs_d = cms::alpakatools::make_device_view(queue, this->view().trackingHits().offsetStubs());
+      alpaka::memcpy(queue, offStubs_h, offStubs_d);
     }
 
   private:
     // offsetBPIX2 is used on host functions so is useful to have it also stored in the class and not only in the layout
     int32_t offsetBPIX2_ = 0;
+    // offsetStubs marks the start of stub-derived hits in the merged collection
+    uint32_t offsetStubs_ = 0;
   };
 }  // namespace reco
 

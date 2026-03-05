@@ -1,5 +1,9 @@
 #include <alpaka/alpaka.hpp>
 
+#include <algorithm>
+#include <iomanip>
+#include <map>
+
 #include <TFormula.h>
 #include "CommonTools/Utils/interface/FormulaEvaluator.h"
 
@@ -26,8 +30,10 @@
 #include "RecoTracker/TkMSParametrization/interface/PixelRecoUtilities.h"
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
+#include "RecoTracker/Record/interface/StackedModuleGeometryRecord.h"
 #include "RecoTracker/PixelSeeding/interface/alpaka/CAGeometrySoACollection.h"
 #include "RecoTracker/PixelSeeding/interface/CAGeometryHost.h"
+#include "RecoTracker/PixelSeeding/interface/StackedModuleGeometryHost.h"
 #include "CAHitNtupletGenerator.h"
 
 #include "HeterogeneousCore/AlpakaCore/interface/MoveToDeviceCache.h"
@@ -38,7 +44,7 @@
 #include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
 #include "DataFormats/SiStripDetId/interface/StripSubdetector.h"
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 
 namespace reco {
   struct CAGeometryParams {
@@ -56,7 +62,10 @@ namespace reco {
           maxOuter_(iConfig.getParameter<std::vector<double>>("maxOuter")),
           maxDZ_(iConfig.getParameter<std::vector<double>>("maxDZ")),
           minDZ_(iConfig.getParameter<std::vector<double>>("minDZ")),
-          maxDR_(iConfig.getParameter<std::vector<double>>("maxDR")) {
+          maxDR_(iConfig.getParameter<std::vector<double>>("maxDR")),
+          stubSigmaCuts_(iConfig.existsAs<std::vector<double>>("stubSigmaCuts")
+                             ? iConfig.getParameter<std::vector<double>>("stubSigmaCuts")
+                             : std::vector<double>{}) {
       startNoBPix1_ = false;
       for (const unsigned int& i : startingPairs_) {
         if (pairGraph_[2 * i] > 0) {
@@ -64,6 +73,21 @@ namespace reco {
           break;
         }
       }
+#ifdef GPU_DEBUG
+      std::cout << "\n========== CAGeometryParams CONSTRUCTOR ==========" << std::endl;
+      std::cout << "Reading geometry from Python ParameterSet..." << std::endl;
+      std::cout << "  caThetaCuts size: " << caThetaCuts_.size() << std::endl;
+      std::cout << "  caDCACuts size: " << caDCACuts_.size() << std::endl;
+      std::cout << "  pairGraph size: " << pairGraph_.size() << " (= " << pairGraph_.size() / 2 << " pairs)" << std::endl;
+      std::cout << "  startingPairs size: " << startingPairs_.size() << std::endl;
+      std::cout << "  phiCuts size: " << phiCuts_.size() << std::endl;
+      std::cout << "  First 5 phiCuts values: ";
+      for (size_t i = 0; i < std::min(size_t(5), phiCuts_.size()); ++i) {
+        std::cout << phiCuts_[i] << " ";
+      }
+      std::cout << std::endl;
+      std::cout << "==================================================\n" << std::endl;
+#endif
     }
 
     // Layers params
@@ -83,11 +107,13 @@ namespace reco {
     const std::vector<double> maxDZ_;
     const std::vector<double> minDZ_;
     const std::vector<double> maxDR_;
+    const std::vector<double> stubSigmaCuts_;  // Stub-stub pairwise sigma cut (empty = disabled)
 
     bool startNoBPix1_;
 
     mutable edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> tokenGeometry_;
     mutable edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> tokenTopology_;
+    mutable edm::ESGetToken<::reco::StackedModuleGeometryHost, StackedModuleGeometryRecord> tokenStackedGeometry_;
   };
 
 }  // namespace reco
@@ -154,6 +180,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto const& trackerGeometry = iSetup.getData(iCache->tokenGeometry_);
       auto const& trackerTopology = iSetup.getData(iCache->tokenTopology_);
       auto const& dets = trackerGeometry.dets();
+
+      // Get stacked module geometry for Phase-2 OT with stubs
+      ::reco::StackedModuleGeometryHost const* stackedGeometry = nullptr;
+      if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+        stackedGeometry = &iSetup.getData(iCache->tokenStackedGeometry_);
+      }
 
 #ifdef GPU_DEBUG
       auto subSystem = 0;
@@ -253,6 +285,74 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         counter++;
       }
 
+      // Process OT stacked modules for Phase-2 with stubs
+      // CA layers follow inside-out ordering:
+      // - CA layers 28-33: Barrel (layers 1-6)
+      // - CA layers 34-38: Backward disks (layers 1-5)
+      // - CA layers 39-43: Forward disks (layers 1-5)
+      //
+      // IMPORTANT: StackedModuleGeometry is ALREADY sorted in CA order by StackedModuleGeometryESProducer
+      // (barrel by layer -> backward by layer -> forward by layer) using stable_sort.
+      // We iterate through it in index order WITHOUT re-sorting to ensure the frame array
+      // index matches the detectorIndex assigned to hits/stubs (detectorIndex = nPixelModules + geomIndex).
+      if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+        if (stackedGeometry != nullptr) {
+          auto stackedView = stackedGeometry->view();
+          const uint32_t nStackedModules = static_cast<uint32_t>(stackedView.metadata().size());
+
+          bool firstModule = true;
+          uint8_t prevLayer = 0;
+          bool prevBarrel = false;
+          int prevCategory = -1;  // 0=barrel, 1=backward, 2=forward
+
+          // Iterate through StackedModuleGeometry in index order (already sorted in CA order)
+          for (uint32_t i = 0; i < nStackedModules; ++i) {
+            bool isBarrel = stackedView.isBarrel()[i];
+            bool isFwdEndcap = stackedView.isFwdEndcap()[i];
+            uint8_t otLayer = stackedView.layer()[i];
+            DetId stackedDetId(stackedView.stackedDetId()[i]);
+
+            // Determine category: 0=barrel, 1=backward, 2=forward
+            int category = isBarrel ? 0 : (isFwdEndcap ? 2 : 1);
+
+            // Check if we've transitioned to a new CA layer
+            // A new layer starts when category changes OR layer number changes within same category
+            if (firstModule || category != prevCategory || otLayer != prevLayer) {
+              // Start new CA layer
+              if (layerCount < layerStarts.size()) {
+                layerIsBarrel[layerCount] = isBarrel;
+                layerStarts[layerCount++] = n_modules;
+
+#ifdef GPU_DEBUG
+                const char* categoryName = isBarrel ? "barrel" : (isFwdEndcap ? "forward" : "backward");
+                std::cout << "OT LayerStart: CA layer " << (layerCount - 1) << " starts at module " << n_modules
+                          << " (" << categoryName << " layer " << int(otLayer) << ")" << std::endl;
+#endif
+              }
+              prevCategory = category;
+              prevLayer = otLayer;
+              prevBarrel = isBarrel;
+              firstModule = false;
+            }
+
+            // Find this module in TrackerGeometry dets list
+            bool found = false;
+            for (int detIdx = 0; detIdx < static_cast<int>(dets.size()); ++detIdx) {
+              if (dets[detIdx]->geographicalId() == stackedDetId) {
+                moduleToindexInDets.push_back(detIdx);
+                n_modules++;
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              edm::LogWarning("CAHitNtuplet")
+                  << "Could not find stacked module " << stackedDetId.rawId() << " in TrackerGeometry";
+            }
+          }
+        }
+      }
+
 #ifdef GPU_DEBUG
       std::cout << "Full CA LayerStart: " << n_layers << " layers with " << n_modules << " modules in total."
                 << std::endl;
@@ -314,11 +414,54 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         cellSoA.maxDZ()[i] = iCache->maxDZ_[i];
         cellSoA.minDZ()[i] = iCache->minDZ_[i];
         cellSoA.maxDR()[i] = iCache->maxDR_[i];
+        // Stub-stub pairwise sigma cut: use from config if available, otherwise -1.0 (disabled)
+        cellSoA.stubSigmaCut()[i] =
+            (!iCache->stubSigmaCuts_.empty()) ? static_cast<float>(iCache->stubSigmaCuts_[i]) : -1.0f;
         cellSoA.startingPair()[i] = false;
       }
 
       for (const unsigned int& i : iCache->startingPairs_)
         cellSoA.startingPair()[i] = true;
+
+#ifdef GPU_DEBUG
+      // Debug output: Print geometry values from Python config
+      std::cout << "\n========== CA GEOMETRY FROM PYTHON CONFIG ==========" << std::endl;
+      std::cout << "Number of layers: " << n_layers << std::endl;
+      std::cout << "Number of layer pairs: " << n_pairs << std::endl;
+      std::cout << "Number of starting pairs: " << iCache->startingPairs_.size() << std::endl;
+
+      std::cout << "\n--- Layer Pair Geometry (first 20 pairs) ---" << std::endl;
+      std::cout << "Pair | Inner | Outer | phiCut | minIn | maxIn | minOut | maxOut | maxDR | minDZ | maxDZ | start" << std::endl;
+      std::cout << "-----|-------|-------|--------|-------|-------|--------|--------|-------|-------|-------|------" << std::endl;
+      for (int i = 0; i < std::min(20, n_pairs); ++i) {
+        std::cout << std::setw(4) << i << " | "
+                  << std::setw(5) << iCache->pairGraph_[2 * i] << " | "
+                  << std::setw(5) << iCache->pairGraph_[2 * i + 1] << " | "
+                  << std::setw(6) << iCache->phiCuts_[i] << " | "
+                  << std::setw(5) << iCache->minInner_[i] << " | "
+                  << std::setw(5) << iCache->maxInner_[i] << " | "
+                  << std::setw(6) << iCache->minOuter_[i] << " | "
+                  << std::setw(6) << iCache->maxOuter_[i] << " | "
+                  << std::setw(5) << iCache->maxDR_[i] << " | "
+                  << std::setw(5) << iCache->minDZ_[i] << " | "
+                  << std::setw(5) << iCache->maxDZ_[i] << " | "
+                  << (cellSoA.startingPair()[i] ? "Y" : "N") << std::endl;
+      }
+      if (n_pairs > 20) {
+        std::cout << "... (" << (n_pairs - 20) << " more pairs not shown)" << std::endl;
+      }
+
+      std::cout << "\n--- Layer Cuts (all layers) ---" << std::endl;
+      std::cout << "Layer | isBarrel | caThetaCut | caDCACut" << std::endl;
+      std::cout << "------|----------|------------|----------" << std::endl;
+      for (int i = 0; i < n_layers; ++i) {
+        std::cout << std::setw(5) << i << " | "
+                  << std::setw(8) << (layerIsBarrel[i] ? "Y" : "N") << " | "
+                  << std::setw(10) << iCache->caThetaCuts_[i] << " | "
+                  << std::setw(10) << iCache->caDCACuts_[i] << std::endl;
+      }
+      std::cout << "====================================================\n" << std::endl;
+#endif
 
       return std::make_shared<CAGeometryCache>(std::move(product));
     }
@@ -331,6 +474,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> tokenField_;
     const device::EDGetToken<HitsOnDevice> tokenHit_;
     const device::EDPutToken<TkSoADevice> tokenTrack_;
+
+    // Conditional tokens for OT stubs (only for Phase2OTStubs)
+    [[no_unique_address]] std::conditional_t<std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>,
+                                             device::EDGetToken<reco::OTRecHitsSoACollection>,
+                                             std::monostate> tokenOTRecHits_;
+    [[no_unique_address]] std::conditional_t<std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>,
+                                             device::EDGetToken<reco::StubsSoACollection>,
+                                             std::monostate> tokenStubs_;
 
     const ::reco::FormulaEvaluator maxNumberOfDoublets_;
     const ::reco::FormulaEvaluator maxNumberOfTuples_;
@@ -350,6 +501,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         deviceAlgo_(iConfig) {
     iCache->tokenGeometry_ = esConsumes<edm::Transition::BeginRun>();
     iCache->tokenTopology_ = esConsumes<edm::Transition::BeginRun>();
+    if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+      iCache->tokenStackedGeometry_ = esConsumes<edm::Transition::BeginRun>();
+      // Initialize OT tokens for stub-based tracking
+      tokenOTRecHits_ = consumes(iConfig.getParameter<edm::InputTag>("otRecHitsSrc"));
+      tokenStubs_ = consumes(iConfig.getParameter<edm::InputTag>("stubsSrc"));
+    }
   }
 
   template <typename TrackerTraits>
@@ -357,6 +514,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::ParameterSetDescription desc;
 
     desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingAlpaka"));
+
+    // Add OT input tags for Phase2OTStubs configuration
+    if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+      desc.add<edm::InputTag>("otRecHitsSrc", edm::InputTag("phase2OTRecHits"));
+      desc.add<edm::InputTag>("stubsSrc", edm::InputTag("otStubProducer"));
+    }
 
     Algo::fillPSetDescription(desc);
     descriptions.addWithDefaultLabel(desc);
@@ -381,8 +544,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       uint32_t const maxTuples = maxNumberOfTuples_.evaluate(nHitsV, emptyV);
       uint32_t const maxDoublets = maxNumberOfDoublets_.evaluate(nHitsV, emptyV);
 
-      iEvent.emplace(tokenTrack_,
-                     deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue()));
+#ifdef CA_PIPELINE_COUNTERS
+      printf("[CA Pipeline] Event: run=%u lumi=%u event=%llu nHits=%u\n",
+             iEvent.id().run(),
+             iEvent.id().luminosityBlock(),
+             (unsigned long long)iEvent.id().event(),
+             hits.nHits());
+#endif
+
+      // Conditionally pass OT collections for stub-based tracking
+      if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+        auto const& otRecHits = iEvent.get(tokenOTRecHits_);
+        auto const& stubs = iEvent.get(tokenStubs_);
+        iEvent.emplace(tokenTrack_,
+                       deviceAlgo_.makeTuplesAsync(
+                           hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue(), otRecHits, stubs));
+      } else {
+        iEvent.emplace(tokenTrack_,
+                       deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue()));
+      }
 
     } else {
       edm::LogWarning("CAHitNtupletAlpaka") << "No hit on BPix1 (" << hits.offsetBPIX2()
@@ -400,6 +580,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   using CAHitNtupletAlpakaHIonPhase1 = CAHitNtupletAlpaka<pixelTopology::HIonPhase1>;
   using CAHitNtupletAlpakaPhase2 = CAHitNtupletAlpaka<pixelTopology::Phase2>;
   using CAHitNtupletAlpakaPhase2OT = CAHitNtupletAlpaka<pixelTopology::Phase2OT>;
+  using CAHitNtupletAlpakaPhase2OTStubs = CAHitNtupletAlpaka<pixelTopology::Phase2OTStubs>;
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
@@ -408,3 +589,4 @@ DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaPhase1);
 DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaHIonPhase1);
 DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaPhase2);
 DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaPhase2OT);
+DEFINE_FWK_ALPAKA_MODULE(CAHitNtupletAlpakaPhase2OTStubs);

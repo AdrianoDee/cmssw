@@ -10,11 +10,11 @@ void VectorHitBuilderAlgorithm::run(edm::Handle<edmNew::DetSetVector<Phase2Track
                                     VectorHitCollection& vhRej,
                                     edmNew::DetSetVector<Phase2TrackerCluster1D>& clustersAcc,
                                     edmNew::DetSetVector<Phase2TrackerCluster1D>& clustersRej) const {
-  LogDebug("VectorHitBuilderAlgorithm") << "Run VectorHitBuilderAlgorithm ... \n";
+  edm::LogPrint("VectorHitBuilderAlgorithm") << "Run VectorHitBuilderAlgorithm ... \n";
   const auto* clustersPhase2Collection = clusters.product();
 
   //loop over the DetSetVector
-  LogDebug("VectorHitBuilderAlgorithm") << "with #clusters : " << clustersPhase2Collection->size() << std::endl;
+  edm::LogPrint("VectorHitBuilderAlgorithm") << "with #clusters : " << clustersPhase2Collection->size() << std::endl;
   for (auto dSViter : *clustersPhase2Collection) {
     unsigned int rawDetId1(dSViter.detId());
     DetId detId1(rawDetId1);
@@ -28,9 +28,10 @@ void VectorHitBuilderAlgorithm::run(edm::Handle<edmNew::DetSetVector<Phase2Track
     DetId detIdStack = tkTopo_->stack(detId1);
 
     //debug
-    LogDebug("VectorHitBuilderAlgorithm") << "  DetId stack : " << detIdStack.rawId() << std::endl;
-    LogDebug("VectorHitBuilderAlgorithm") << "  DetId lower set of clusters  : " << lowerDetId.rawId();
-    LogDebug("VectorHitBuilderAlgorithm") << "  DetId upper set of clusters  : " << upperDetId.rawId() << std::endl;
+    edm::LogPrint("VectorHitBuilderAlgorithm") << "  DetId stack : " << detIdStack.rawId() << std::endl;
+    edm::LogPrint("VectorHitBuilderAlgorithm") << "  DetId lower set of clusters  : " << lowerDetId.rawId();
+    edm::LogPrint("VectorHitBuilderAlgorithm")
+        << "  DetId upper set of clusters  : " << upperDetId.rawId() << std::endl;
 
     const GeomDet* gd;
     const StackGeomDet* stackDet;
@@ -43,7 +44,7 @@ void VectorHitBuilderAlgorithm::run(edm::Handle<edmNew::DetSetVector<Phase2Track
       buildVectorHits(vhAcc, vhRej, detIdStack, stackDet, clusters, it_detLower, *it_detUpper);
     }
   }
-  LogDebug("VectorHitBuilderAlgorithm") << "End run VectorHitBuilderAlgorithm ... \n";
+  edm::LogPrint("VectorHitBuilderAlgorithm") << "End run VectorHitBuilderAlgorithm ... \n";
 }
 
 bool VectorHitBuilderAlgorithm::checkClustersCompatibilityBeforeBuilding(
@@ -57,9 +58,9 @@ bool VectorHitBuilderAlgorithm::checkClustersCompatibilityBeforeBuilding(
   std::vector<Phase2TrackerCluster1D> lowerClusters;
   lowerClusters.reserve(theLowerDetSet.size());
   if (theLowerDetSet.size() > 1)
-    LogDebug("VectorHitBuilderAlgorithm") << " more than 1 lower cluster! " << std::endl;
+    edm::LogPrint("VectorHitBuilderAlgorithm") << " more than 1 lower cluster! " << std::endl;
   if (theUpperDetSet.size() > 1)
-    LogDebug("VectorHitBuilderAlgorithm") << " more than 1 upper cluster! " << std::endl;
+    edm::LogPrint("VectorHitBuilderAlgorithm") << " more than 1 upper cluster! " << std::endl;
   for (const_iterator cil = theLowerDetSet.begin(); cil != theLowerDetSet.end(); ++cil) {
     Phase2TrackerCluster1DRef clusterLower = edmNew::makeRefTo(clusters, cil);
     lowerClusters.push_back(*clusterLower);
@@ -85,7 +86,7 @@ void VectorHitBuilderAlgorithm::buildVectorHits(VectorHitCollection& vhAcc,
                                                 const Detset& theUpperDetSet,
                                                 const std::vector<bool>& phase2OTClustersToSkip) const {
   if (checkClustersCompatibilityBeforeBuilding(clusters, theLowerDetSet, theUpperDetSet)) {
-    LogDebug("VectorHitBuilderAlgorithm") << "  compatible -> continue ... " << std::endl;
+    edm::LogPrint("VectorHitBuilderAlgorithm") << "  compatible -> continue ... " << std::endl;
   } else {
     LogTrace("VectorHitBuilderAlgorithm") << "  not compatible, going to the next cluster";
   }
@@ -95,17 +96,17 @@ void VectorHitBuilderAlgorithm::buildVectorHits(VectorHitCollection& vhAcc,
 
   unsigned int layerStack = tkTopo_->layer(stack->geographicalId());
   if (stack->subDetector() == GeomDetEnumerators::SubDetector::P2OTB)
-    LogDebug("VectorHitBuilderAlgorithm") << " \t is barrel.    " << std::endl;
+    edm::LogPrint("VectorHitBuilderAlgorithm") << " \t is barrel.    " << std::endl;
   if (stack->subDetector() == GeomDetEnumerators::SubDetector::P2OTEC)
-    LogDebug("VectorHitBuilderAlgorithm") << " \t is endcap.    " << std::endl;
-  LogDebug("VectorHitBuilderAlgorithm") << " \t layer is : " << layerStack << std::endl;
+    edm::LogPrint("VectorHitBuilderAlgorithm") << " \t is endcap.    " << std::endl;
+  edm::LogPrint("VectorHitBuilderAlgorithm") << " \t layer is : " << layerStack << std::endl;
 
   float cut = 0.0;
   if (stack->subDetector() == GeomDetEnumerators::SubDetector::P2OTB)
     cut = barrelCut_.at(layerStack);
   if (stack->subDetector() == GeomDetEnumerators::SubDetector::P2OTEC)
     cut = endcapCut_.at(layerStack);
-  LogDebug("VectorHitBuilderAlgorithm") << " \t the cut is:" << cut << std::endl;
+  edm::LogPrint("VectorHitBuilderAlgorithm") << " \t the cut is:" << cut << std::endl;
 
   //only cache local parameters for upper cluster as we loop over lower clusters only once anyway
   std::vector<std::pair<LocalPoint, LocalError>> localParamsUpper;
@@ -119,7 +120,7 @@ void VectorHitBuilderAlgorithm::buildVectorHits(VectorHitCollection& vhAcc,
   int upperIterator = 0;
   const PixelGeomDetUnit* gduLow = dynamic_cast<const PixelGeomDetUnit*>(stack->lowerDet());
   for (const_iterator cil = theLowerDetSet.begin(); cil != theLowerDetSet.end(); ++cil) {
-    LogDebug("VectorHitBuilderAlgorithm") << " lower clusters " << std::endl;
+    edm::LogPrint("VectorHitBuilderAlgorithm") << " lower clusters " << std::endl;
     Phase2TrackerCluster1DRef cluL = edmNew::makeRefTo(clusters, cil);
 #ifdef EDM_ML_DEBUG
     printCluster(stack->lowerDet(), &*cluL);
@@ -127,7 +128,7 @@ void VectorHitBuilderAlgorithm::buildVectorHits(VectorHitCollection& vhAcc,
     auto&& lparamsLow = cpe_->localParameters(*cluL, *gduLow);
     upperIterator = 0;
     for (const_iterator ciu = theUpperDetSet.begin(); ciu != theUpperDetSet.end(); ++ciu) {
-      LogDebug("VectorHitBuilderAlgorithm") << "\t upper clusters " << std::endl;
+      edm::LogPrint("VectorHitBuilderAlgorithm") << "\t upper clusters " << std::endl;
       Phase2TrackerCluster1DRef cluU = edmNew::makeRefTo(clusters, ciu);
 #ifdef EDM_ML_DEBUG
       printCluster(stack->upperDet(), &*cluU);
@@ -135,7 +136,7 @@ void VectorHitBuilderAlgorithm::buildVectorHits(VectorHitCollection& vhAcc,
       //applying the parallax correction
       double pC = computeParallaxCorrection(
           gduLow, lparamsLow.first, localGDUUpper[upperIterator], localParamsUpper[upperIterator].first);
-      LogDebug("VectorHitBuilderAlgorithm") << " \t parallax correction:" << pC << std::endl;
+      edm::LogPrint("VectorHitBuilderAlgorithm") << " \t parallax correction:" << pC << std::endl;
       double lpos_upp_corr = 0.0;
       double lpos_low_corr = 0.0;
       auto const localUpperX = localParamsUpper[upperIterator].first.x();
@@ -165,21 +166,21 @@ void VectorHitBuilderAlgorithm::buildVectorHits(VectorHitCollection& vhAcc,
         }
       }
 
-      LogDebug("VectorHitBuilderAlgorithm") << " \t local pos upper corrected (x):" << lpos_upp_corr << std::endl;
-      LogDebug("VectorHitBuilderAlgorithm") << " \t local pos lower corrected (x):" << lpos_low_corr << std::endl;
+      edm::LogPrint("VectorHitBuilderAlgorithm") << " \t local pos upper corrected (x):" << lpos_upp_corr << std::endl;
+      edm::LogPrint("VectorHitBuilderAlgorithm") << " \t local pos lower corrected (x):" << lpos_low_corr << std::endl;
 
       double width = lpos_low_corr - lpos_upp_corr;
-      LogDebug("VectorHitBuilderAlgorithm") << " \t width: " << width << std::endl;
+      edm::LogPrint("VectorHitBuilderAlgorithm") << " \t width: " << width << std::endl;
 
       //old cut: indipendent from layer
       //building my tolerance : 10*sigma
       //double delta = 10.0 * sqrt(lparamsLow.second.xx() + localParamsUpper[upperIterator].second.xx());
-      //LogDebug("VectorHitBuilderAlgorithm") << " \t delta: " << delta << std::endl;
+      //edm::LogPrint("VectorHitBuilderAlgorithm") << " \t delta: " << delta << std::endl;
       //if( (lpos_upp_corr < lpos_low_corr + delta) &&
       //    (lpos_upp_corr > lpos_low_corr - delta) ){
       //new cut: dependent on layers
       if (std::abs(width) < cut) {
-        LogDebug("VectorHitBuilderAlgorithm") << " accepting VH! " << std::endl;
+        edm::LogPrint("VectorHitBuilderAlgorithm") << " accepting VH! " << std::endl;
         VectorHit vh = buildVectorHit(stack, cluL, cluU);
         //protection: the VH can also be empty!!
         if (vh.isValid()) {
@@ -187,7 +188,7 @@ void VectorHitBuilderAlgorithm::buildVectorHits(VectorHitCollection& vhAcc,
         }
 
       } else {
-        LogDebug("VectorHitBuilderAlgorithm") << " rejecting VH: " << std::endl;
+        edm::LogPrint("VectorHitBuilderAlgorithm") << " rejecting VH: " << std::endl;
         //storing vh rejected for combinatiorial studies
         VectorHit vh = buildVectorHit(stack, cluL, cluU);
         if (vh.isValid()) {

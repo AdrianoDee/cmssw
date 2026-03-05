@@ -59,6 +59,27 @@ HLTLSTSequence = cms.Sequence(
     + hltLST
 )
 
+# Stub-based tracking sequence
+from ..modules.hltPixelSeedingOTRecHitsSoA_cfi import hltPixelSeedingOTRecHitsSoA
+from ..modules.hltOTStubProducer_cfi import hltOTStubProducer
+from ..modules.hltPhase2PixelRecHitsStubsMerger_cfi import hltPhase2PixelRecHitsStubsMerger
+from ..modules.hltPhase2PixelTracksSoAWithStubs_cfi import hltPhase2PixelTracksSoAWithStubs
+
+_HLTHeterogeneousStubTrackSequence = cms.Sequence(hltPhase2SiPixelClustersSoA
+                                                   + hltPhase2SiPixelRecHitsSoA
+                                                   + hltSiPhase2Clusters
+                                                   + hltSiPhase2RecHits
+                                                   + hltPixelSeedingOTRecHitsSoA
+                                                   + hltOTStubProducer
+                                                   + hltPhase2PixelRecHitsStubsMerger
+                                                   + hltPhase2PixelTracksSoAWithStubs
+                                                   #+ hltPhase2PixelVerticesSoA # not yet ready
+                                                   )
+
+# Enable stub-based tracking with phase2CAStubs modifier
+from Configuration.ProcessModifiers.phase2CAStubs_cff import phase2CAStubs
+phase2CAStubs.toReplaceWith(HLTHeterogeneousTrackSequence, _HLTHeterogeneousStubTrackSequence)
+
 HLTHeterogeneousHGCalRecoSequence = cms.Sequence(
     hltHgcalDigis
     + hltHGCalUncalibRecHit

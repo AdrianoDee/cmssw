@@ -1,4 +1,5 @@
 // C++ headers
+#include <cstdio>
 #ifdef DUMP_GPU_TK_TUPLES
 #include <mutex>
 #endif
@@ -173,6 +174,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     deviceTriplets_ = CAPairSoACollection(queue, std::lrint(maxDoublets * algoParams.avgCellsPerCell_));
     deviceTracksCells_ = CAPairSoACollection(queue, nCellsToTracks);
 
+#ifdef CA_PIPELINE_COUNTERS
+    // Pipeline stage counters for diagnostic funnel
+    device_pipelineCounters_ =
+        cms::alpakatools::make_device_buffer<uint32_t[]>(queue, caHitNtupletGenerator::kNCounters);
+    alpaka::memset(queue, *device_pipelineCounters_, 0);
+#endif
+
     //TODO: if doStats?
     alpaka::memset(queue, *counters_, 0);
 
@@ -265,7 +273,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_nTriplets_->data(),
                         this->device_hitToCell_->data(),
                         this->device_cellToNeighbors_->data(),
-                        this->m_params.algoParams_);
+                        this->m_params.algoParams_,
+                        this->pipelineCountersPtr());
 
     CellToCell::template launchFinalize<Acc1D>(this->device_cellToNeighborsView_, queue);
 
@@ -286,10 +295,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_nTriplets_->data(),
                         this->device_cellToNeighbors_->data());
 
+    // Sort neighbors within each cell's bin for deterministic DFS in find_ntuplets
+    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_sortHistoBins{}, this->device_cellToNeighbors_->data());
+
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "cellToNeighbors -> Filled!" << std::endl;
 #endif
+
+    // Deep reachability filter: require OT barrel L1 cells to have chains reaching L4+.
+    // This enforces that L1 stubs are confirmed by multiple pure outer OT layers
+    // before fishbone and n-tuplet building.
+    // Only active for Phase2OTStubs topology; transparent for all other topologies.
+    if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+      auto reachBlocks = cms::alpakatools::divide_up_by(maxDoublets, 256u);
+      auto reachWorkDiv = cms::alpakatools::make_workdiv<Acc1D>(reachBlocks, 256u);
+      alpaka::exec<Acc1D>(queue,
+                          reachWorkDiv,
+                          Kernel_reachabilityFilter<TrackerTraits>{},
+                          this->device_simpleCells_->data(),
+                          this->device_nCells_->data(),
+                          this->device_cellToNeighbors_->data(),
+                          this->m_params.algoParams_.reachTargetLayer_,
+                          this->m_params.algoParams_.reachMinHops_,
+                          this->pipelineCountersPtr());
+#ifdef GPU_DEBUG
+      alpaka::wait(queue);
+      std::cout << "Reachability filter -> Done!" << std::endl;
+#endif
+    }
 
     // do not run the fishbone if there are hits only in BPIX1
     if (this->m_params.algoParams_.earlyFishbone_ and nhits > offsetBPIX2) {
@@ -309,7 +343,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           this->device_hitToCell_->data(),
                           this->device_cellToTracks_->data(),
                           nhits - offsetBPIX2,
-                          false);
+                          false,
+                          this->pipelineCountersPtr());
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
       std::cout << "Early fishbone -> Done!" << std::endl;
@@ -352,6 +387,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_nCellTracks_->data(),
                         this->device_cellToTracks_->data());
 
+    // Sort tracks within each cell's bin for deterministic duplicate removal
+    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_sortHistoBins{}, this->device_cellToTracks_->data());
+
     if (this->m_params.algoParams_.doStats_)
       alpaka::exec<Acc1D>(queue,
                           workDiv1D,
@@ -376,6 +414,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
+#endif
+
+#ifdef CA_PIPELINE_COUNTERS
+    // Pipeline counter: classify n-tuplets by OT hit content.
+    // Must run AFTER finalizeBulk so that foundNtuplets offsets are valid
+    // for size()/begin()/end() iteration.
+    {
+      auto ntupBlocks = cms::alpakatools::divide_up_by(3 * maxTuples / 4, 128u);
+      auto ntupWorkDiv = cms::alpakatools::make_workdiv<Acc1D>(ntupBlocks, 128u);
+      alpaka::exec<Acc1D>(queue,
+                          ntupWorkDiv,
+                          Kernel_pipelineNtupletCount<TrackerTraits>{},
+                          hh,
+                          this->device_hitContainer_->data(),
+                          this->device_hitTuple_apc_,
+                          maxTuples,
+                          this->pipelineCountersPtr());
+    }
 #endif
 
     alpaka::exec<Acc1D>(queue,
@@ -467,7 +523,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           this->device_hitToCell_->data(),
                           this->device_cellToTracks_->data(),
                           nhits - offsetBPIX2,
-                          true);
+                          true,
+                          this->pipelineCountersPtr());
     }
 
 #ifdef GPU_DEBUG
@@ -521,7 +578,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_layerStarts_->data(),
                         this->device_hitPhiHist_->data(),
                         this->device_hitToCell_->data(),
-                        this->m_params.algoParams_);
+                        this->m_params.algoParams_,
+                        this->pipelineCountersPtr());
 
     HitToCell::template launchFinalize<Acc1D>(this->device_hitToCellView_, queue);
 
@@ -628,6 +686,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           tracks_view,
                           this->device_hitContainer_->data(),
                           this->device_hitToTuple_->data());
+
+      // Sort tracks within each hit's bin for deterministic shared-hit duplicate removal
+      alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_sortHistoBins{}, this->device_hitToTuple_->data());
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
       std::cout << "Kernel_countHitInTracks   -> done!" << std::endl;
@@ -730,6 +791,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_nCellTracks_->data());
 
     alpaka::wait(queue);
+    std::cout << "========== CA Tracking Summary ==========" << std::endl;
 #endif
     if (this->m_params.algoParams_.doStats_) {
       // counters (add flag???)
@@ -755,6 +817,133 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(1, 1);
       alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_printCounters{}, this->counters_->data());
     }
+#ifdef CA_PIPELINE_COUNTERS
+    // Pipeline stage counters: count final quality distribution, copy to host, and print funnel
+    {
+      // Count final track quality distribution after all processing
+      auto numberOfBlocksQ = cms::alpakatools::divide_up_by(3 * maxTuples / 4, blockSize);
+      auto workDivQ = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocksQ, blockSize);
+      alpaka::exec<Acc1D>(queue,
+                          workDivQ,
+                          Kernel_countFinalQuality<TrackerTraits>{},
+                          tracks_view,
+                          this->device_hitContainer_->data(),
+                          hh,
+                          device_pipelineCounters_->data());
+      alpaka::wait(queue);
+      auto host_counters = cms::alpakatools::make_host_buffer<uint32_t[]>(caHitNtupletGenerator::kNCounters);
+      alpaka::memcpy(queue, host_counters, *device_pipelineCounters_);
+      alpaka::wait(queue);
+      auto const *c = host_counters.data();
+      using PC = caHitNtupletGenerator::PipelineCounter;
+      printf("[CA Pipeline] Doublets: total=%u pix-pix=%u pix-OT=%u OT-OT=%u\n",
+             c[PC::kDoubletsTotal],
+             c[PC::kDoubletsPixPix],
+             c[PC::kDoubletsPixOT],
+             c[PC::kDoubletsOTOT]);
+      printf("[CA Pipeline]   OT barrel: L28-29=%u(FF=%u FT=%u TT=%u) L29-30=%u(FF=%u FT=%u TT=%u)\n",
+             c[PC::kDoubletsL28L29], c[PC::kDoubletsL28L29_FF], c[PC::kDoubletsL28L29_FT], c[PC::kDoubletsL28L29_TT],
+             c[PC::kDoubletsL29L30], c[PC::kDoubletsL29L30_FF], c[PC::kDoubletsL29L30_FT], c[PC::kDoubletsL29L30_TT]);
+      printf("[CA Pipeline]            L30-31=%u(FF=%u FT=%u TT=%u) L31-32=%u(FF=%u FT=%u TT=%u) L32-33=%u(FF=%u FT=%u TT=%u)\n",
+             c[PC::kDoubletsL30L31], c[PC::kDoubletsL30L31_FF], c[PC::kDoubletsL30L31_FT], c[PC::kDoubletsL30L31_TT],
+             c[PC::kDoubletsL31L32], c[PC::kDoubletsL31L32_FF], c[PC::kDoubletsL31L32_FT], c[PC::kDoubletsL31L32_TT],
+             c[PC::kDoubletsL32L33], c[PC::kDoubletsL32L33_FF], c[PC::kDoubletsL32L33_FT], c[PC::kDoubletsL32L33_TT]);
+      printf("[CA Pipeline]   OT brl->BWD: L28-D1=%u L29-D1=%u L30-D1=%u L31-D1=%u L32-D1=%u L33-D1=%u L33-D2=%u\n",
+             c[PC::kDoubletsL28D1B], c[PC::kDoubletsL29D1B], c[PC::kDoubletsL30D1B],
+             c[PC::kDoubletsL31D1B], c[PC::kDoubletsL32D1B], c[PC::kDoubletsL33D1B], c[PC::kDoubletsL33D2B]);
+      printf("[CA Pipeline]   OT brl->FWD: L28-D1=%u L29-D1=%u L30-D1=%u L31-D1=%u L32-D1=%u L33-D1=%u L33-D2=%u\n",
+             c[PC::kDoubletsL28D1F], c[PC::kDoubletsL29D1F], c[PC::kDoubletsL30D1F],
+             c[PC::kDoubletsL31D1F], c[PC::kDoubletsL32D1F], c[PC::kDoubletsL33D1F], c[PC::kDoubletsL33D2F]);
+      printf("[CA Pipeline]   OT BWD: D1-D2=%u D2-D3=%u D3-D4=%u D4-D5=%u\n",
+             c[PC::kDoubletsD1BD2B], c[PC::kDoubletsD2BD3B], c[PC::kDoubletsD3BD4B], c[PC::kDoubletsD4BD5B]);
+      printf("[CA Pipeline]   OT FWD: D1-D2=%u D2-D3=%u D3-D4=%u D4-D5=%u other=%u\n",
+             c[PC::kDoubletsD1FD2F], c[PC::kDoubletsD2FD3F], c[PC::kDoubletsD3FD4F], c[PC::kDoubletsD4FD5F],
+             c[PC::kDoubletsOTOther]);
+      // Per-cut doublet rejection counters: Total, OTEarly (L28-29), OTLate (L30-32)
+      {
+        using namespace caHitNtupletGenerator;
+        static const char* groupNames[] = {"Total", "OTEarly(L28-29)", "OTLate(L30-32)"};
+        for (int g = 0; g < 3; ++g) {
+          int base = PC::kDblRejBase + g * kNCuts;
+          printf("[CA Pipeline] DoubletCuts %s: invalidHit=%u innerCoord=%u clusterCut=%u invalidMod=%u "
+                 "outerCoord=%u dzRange=%u z0=%u phi=%u zSize=%u pt=%u stubSigma=%u pixStub=%u\n",
+                 groupNames[g],
+                 c[base + kCutInvalidHit],
+                 c[base + kCutInnerCoord],
+                 c[base + kCutClusterCut],
+                 c[base + kCutInvalidModule],
+                 c[base + kCutOuterCoord],
+                 c[base + kCutDzRange],
+                 c[base + kCutZ0],
+                 c[base + kCutPhi],
+                 c[base + kCutZSize],
+                 c[base + kCutPt],
+                 c[base + kCutStubSigma],
+                 c[base + kCutPixStub]);
+        }
+      }
+      printf("[CA Pipeline] Triplets: total=%u ppp=%u ppO=%u pOO=%u OOO=%u\n",
+             c[PC::kTripletsTotal],
+             c[PC::kTripletsPixPixPix],
+             c[PC::kTripletsPixPixOT],
+             c[PC::kTripletsPixOTOT],
+             c[PC::kTripletsOTOTOT]);
+      printf("[CA Pipeline]   OOO: barrel=%u brl->BWD=%u brl->FWD=%u BWD=%u FWD=%u other=%u\n",
+             c[PC::kTripletsOOO_barrel], c[PC::kTripletsOOO_brlToBwd], c[PC::kTripletsOOO_brlToFwd],
+             c[PC::kTripletsOOO_bwd], c[PC::kTripletsOOO_fwd], c[PC::kTripletsOOO_other]);
+      printf("[CA Pipeline] Reachability: checked=%u passed=%u killed=%u\n",
+             c[PC::kReachCellsChecked],
+             c[PC::kReachCellsPassed],
+             c[PC::kReachabilityKilled]);
+      printf("[CA Pipeline]   kill reason: no_neighbors=%u all_neigh_killed=%u chain_short=%u\n",
+             c[PC::kReachNoNeighbors],
+             c[PC::kReachAllNeighKilled],
+             c[PC::kReachChainShort]);
+      printf("[CA Pipeline]   kill type: pix-OT=%u OT-OT=%u\n",
+             c[PC::kReachKilledPixOT],
+             c[PC::kReachKilledOTOT]);
+      printf("[CA Pipeline] Fishbone killed: %u\n", c[PC::kFishboneKilled]);
+      printf("[CA Pipeline] N-tuplets: total=%u with_OT=%u with_3+OT=%u\n",
+             c[PC::kNtupletsTotal],
+             c[PC::kNtupletsWithOT],
+             c[PC::kNtupletsOT3Plus]);
+      printf("[CA Pipeline] Quality: total=%u bad=%u edup=%u dup=%u loose=%u strict=%u tight=%u HP=%u\n",
+             c[PC::kQualTotal],
+             c[PC::kQualBad],
+             c[PC::kQualEdup],
+             c[PC::kQualDup],
+             c[PC::kQualLoose],
+             c[PC::kQualStrict],
+             c[PC::kQualTight],
+             c[PC::kQualHP]);
+      printf("[CA Pipeline]   with OT: strict_OT=%u tight_OT=%u HP_OT=%u\n",
+             c[PC::kQualStrictWithOT],
+             c[PC::kQualTightWithOT],
+             c[PC::kQualHPWithOT]);
+      printf("[CA Pipeline]   nhits3-4: strict=%u tight=%u HP=%u chi2_boundary=%u\n",
+             c[PC::kQualStrict34],
+             c[PC::kQualTight34],
+             c[PC::kQualHP34],
+             c[PC::kChi2Boundary34]);
+      printf("[CA Pipeline]   nhits5: strict=%u tight=%u HP=%u chi2_boundary=%u\n",
+             c[PC::kQualStrict5],
+             c[PC::kQualTight5],
+             c[PC::kQualHP5],
+             c[PC::kChi2Boundary5]);
+      printf("[CA Pipeline]   nhits6+: strict=%u tight=%u HP=%u chi2_boundary=%u\n",
+             c[PC::kQualStrict6p],
+             c[PC::kQualTight6p],
+             c[PC::kQualHP6p],
+             c[PC::kChi2Boundary6p]);
+      printf("[CA Pipeline]   fishbone: 0fb=%u 1fb=%u 2+fb=%u\n",
+             c[PC::kTracksFishbone0],
+             c[PC::kTracksFishbone1],
+             c[PC::kTracksFishbone2p]);
+      // Reset counters for next event
+      alpaka::memset(queue, *device_pipelineCounters_, 0);
+    }
+#endif  // CA_PIPELINE_COUNTERS
+
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
 #endif
@@ -806,6 +995,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template class CAHitNtupletGeneratorKernels<pixelTopology::Phase1>;
   template class CAHitNtupletGeneratorKernels<pixelTopology::Phase2>;
   template class CAHitNtupletGeneratorKernels<pixelTopology::Phase2OT>;
+  template class CAHitNtupletGeneratorKernels<pixelTopology::Phase2OTStubs>;
   template class CAHitNtupletGeneratorKernels<pixelTopology::HIonPhase1>;
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

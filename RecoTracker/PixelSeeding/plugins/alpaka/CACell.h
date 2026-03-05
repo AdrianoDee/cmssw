@@ -3,7 +3,7 @@
 
 // #define GPU_DEBUG
 // #define CA_DEBUG
-// #define CA_WARNINGS
+#define CA_WARNINGS
 
 #include <cmath>
 #include <limits>
@@ -134,7 +134,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                             // radius_diff later
 
       float tan_12_13_half_mul_distance_13_squared = fabs(z1 * (ri - ro) + zi * (ro - r1) + zo * (r1 - ri));
-      return tan_12_13_half_mul_distance_13_squared * pMin <= thetaCut * distance_13_squared * radius_diff;
+      bool aligned = tan_12_13_half_mul_distance_13_squared * pMin <= thetaCut * distance_13_squared * radius_diff;
+
+#ifdef CA_DEBUG
+      float lhs = tan_12_13_half_mul_distance_13_squared * pMin;
+      float rhs = thetaCut * distance_13_squared * radius_diff;
+      printf("ThetaCheck;%.4f;%.4f;%.4f;%.4f;%.4f;%.4f;%.6f;%.6f;%.6f;%.6f;%d\n",
+             r1, z1, ri, zi, ro, zo,           // hit positions (r,z for 3 hits)
+             lhs,                               // alignment value (LHS of check)
+             rhs,                               // threshold (RHS of check)
+             thetaCut,                          // raw thetaCut parameter
+             ptmin,                             // ptmin parameter
+             aligned ? 1 : 0);                  // pass/fail
+#endif
+
+      return aligned;
     }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool dcaCut(const HitsConstView& hh,
@@ -152,10 +166,30 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       CircleEq<float> eq(x1, y1, x2, y2, x3, y3);
 
-      if (std::abs(eq.curvature()) > maxCurv)
+      float curvature = std::abs(eq.curvature());
+      float dca = std::abs(eq.dca0());
+      float dcaThreshold = region_origin_radius_plus_tolerance * curvature;
+
+      bool curvPassed = curvature <= maxCurv;
+      bool dcaPassed = dca < dcaThreshold;
+
+#ifdef CA_DEBUG
+      printf("DCACheck;%.4f;%.4f;%.4f;%.4f;%.4f;%.4f;%.6f;%.6f;%.6f;%.6f;%.6f;%d;%d;%d\n",
+             x1, y1, x2, y2, x3, y3,            // hit positions (x,y for 3 hits)
+             curvature,                          // computed curvature
+             maxCurv,                            // max curvature cut
+             dca,                                // computed DCA
+             dcaThreshold,                       // DCA threshold
+             region_origin_radius_plus_tolerance,  // raw DCA cut parameter
+             curvPassed ? 1 : 0,                 // curvature check passed
+             dcaPassed ? 1 : 0,                  // DCA check passed
+             (curvPassed && dcaPassed) ? 1 : 0); // overall passed
+#endif
+
+      if (!curvPassed)
         return false;
 
-      return std::abs(eq.dca0()) < region_origin_radius_plus_tolerance * std::abs(eq.curvature());
+      return dcaPassed;
     }
 
     // trying to free the track building process from hardcoded layers, leaving

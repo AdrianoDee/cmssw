@@ -65,6 +65,13 @@ _phase2_hltpostvalidation += hltGenValidationClient
 from Configuration.Eras.Modifier_phase2_common_cff import phase2_common
 phase2_common.toReplaceWith(hltpostvalidation, _phase2_hltpostvalidation)
 
+# Add VectorHitStyle stub harvesting when phase2CAStubs modifier is active
+from Configuration.ProcessModifiers.phase2CAStubs_cff import phase2CAStubs
+from Validation.SiTrackerPhase2V.Phase2OTHarvestVectorHitStyleStub_cfi import *
+_phase2_hltpostvalidation_stubs = _phase2_hltpostvalidation.copy()
+_phase2_hltpostvalidation_stubs += postProcessorHLTVHStubsSequence
+(phase2_common & phase2CAStubs).toReplaceWith(hltpostvalidation, _phase2_hltpostvalidation_stubs)
+
 _phase2_hltpostvalidation_WithBarrel = _phase2_hltpostvalidation.copy()
 _phase2_hltpostvalidation_WithBarrel += barrelValidatorPostProcessor
 from Configuration.ProcessModifiers.ticl_barrel_cff import ticl_barrel

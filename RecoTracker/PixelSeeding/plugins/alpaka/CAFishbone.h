@@ -15,6 +15,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
 #include "CACell.h"
+#include "CAPipelineCounters.h"
 #include "CAStructures.h"
 
 //#define GPU_DEBUG
@@ -34,12 +35,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                   HitToCell const* __restrict__ outerHitHisto,
                                   CellToTracks const* __restrict__ cellTracksHisto,
                                   uint32_t outerHits,
-                                  bool checkTrack) const {
+                                  bool checkTrack,
+                                  uint32_t* __restrict__ pipelineCounters = nullptr) const {
       // outermost parallel loop, using all grid elements along the slower dimension (Y or 0 in a 2D grid)
       for (uint32_t idy : cms::alpakatools::uniform_elements_y(acc, outerHits)) {
         uint32_t size = outerHitHisto->size(idy);
 #ifdef GPU_DEBUG
-        printf("fishbone ---> outersize %d - ", idy, size);
+        printf("fishbone ---> idy %d outersize %d - ", idy, size);
 #endif
         if (size < 2)
           continue;
@@ -57,7 +59,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #ifdef GPU_DEBUG
         for (auto idx = 0u; idx < size; idx++) {
           unsigned int otherCell = bin[idx];
-          printf("vc[0] %d idx %d vc[idx] %d otherCell %d \n", vc[0], idx, vc[idx], otherCell);
+          printf("bin[0] %d idx %d bin[idx] %d otherCell %d \n", bin[0], idx, bin[idx], otherCell);
         }
 #endif
         for (uint32_t ic : cms::alpakatools::independent_group_elements_x(acc, size)) {
@@ -95,8 +97,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                    cj.inner_z(hh));
 #endif
 
-            if (ci.inner_detIndex(hh) == cj.inner_detIndex(hh))
-              continue;
+            // Same detector module check with special handling for stubs
+            if (ci.inner_detIndex(hh) == cj.inner_detIndex(hh)) {
+              // For Phase2OTStubs: handle the case where multiple stubs share the same P-hit
+              // If two stubs have the same pHitGroupId, they come from the same P-hit
+              // and one should be killed (duplicate). If different pHitGroupId, they are
+              // from different P-hits on the same module - skip (not duplicates).
+              if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+                auto innerHitI = ci.inner_hit_id();
+                auto innerHitJ = cj.inner_hit_id();
+                // Check if both inner hits are stubs
+                if (hh[innerHitI].isStub() && hh[innerHitJ].isStub()) {
+                  auto pHitGroupI = hh[innerHitI].pHitGroupId();
+                  auto pHitGroupJ = hh[innerHitJ].pHitGroupId();
+                  // If different P-hit groups (different P-hits on same module), skip
+                  // These are not duplicates - they represent different physical P-hits
+                  if (pHitGroupI != pHitGroupJ) {
+                    continue;
+                  }
+                  // Same P-hit group: these are duplicate stubs from the same P-hit
+                  // Fall through to kill one of them based on alignment
+                } else {
+                  // Not both stubs (at least one is a pixel hit), use original behavior
+                  continue;
+                }
+              } else {
+                // Not Phase2OTStubs, use original behavior (skip same detector)
+                continue;
+              }
+            }
 
             float x2 = (cj.inner_x(hh) - xo);
             float y2 = (cj.inner_y(hh) - yo);
@@ -112,6 +141,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
               if (n1 > n2) {
                 if (sameLayer) {
                   cj.kill();  // closest
+                  if (pipelineCounters)
+                    alpaka::atomicAdd(acc, &pipelineCounters[caHitNtupletGenerator::kFishboneKilled], 1u, alpaka::hierarchy::Blocks{});
                   ci.setFishbone(acc, cj.inner_hit_id(), cj.inner_z(hh), hh);
 #ifdef GPU_DEBUG
                   printf(
@@ -129,6 +160,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #endif
                 } else {
                   ci.kill();  // farthest
+                  if (pipelineCounters)
+                    alpaka::atomicAdd(acc, &pipelineCounters[caHitNtupletGenerator::kFishboneKilled], 1u, alpaka::hierarchy::Blocks{});
 #ifdef GPU_DEBUG
                   printf(
                       "n1>n2 lic = %d ljc = %d dic = %.2f djc = %.2f cell %d kill %d cos = %.7f n1 = %.3f n2 = %.3f "
@@ -148,6 +181,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
               } else {
                 if (!sameLayer) {
                   cj.kill();  // farthest
+                  if (pipelineCounters)
+                    alpaka::atomicAdd(acc, &pipelineCounters[caHitNtupletGenerator::kFishboneKilled], 1u, alpaka::hierarchy::Blocks{});
 #ifdef GPU_DEBUG
                   printf(
                       "n2>n1 lic = %d ljc = %d dic = %.2f djc = %.2f cell %d kill %d cos = %.7f n1 = %.3f n2 = %.3f "
@@ -164,6 +199,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #endif
                 } else {
                   ci.kill();  // closest
+                  if (pipelineCounters)
+                    alpaka::atomicAdd(acc, &pipelineCounters[caHitNtupletGenerator::kFishboneKilled], 1u, alpaka::hierarchy::Blocks{});
                   cj.setFishbone(acc, ci.inner_hit_id(), ci.inner_z(hh), hh);
 #ifdef GPU_DEBUG
                   printf(

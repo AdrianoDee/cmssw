@@ -7,6 +7,8 @@
 
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/StubsSoA.h"
 #include "RecoTracker/PixelTrackFitting/interface/FitResult.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -75,6 +77,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                  uint32_t nhits,
                                  uint32_t maxNumberOfTuples,
                                  Queue &queue);
+
+    // Overloads for stub-based tracking with OT hits
+    // offsetStubs must be passed from the device container (has cached host-side value)
+    // Do NOT call view.offsetStubs() from host - that would dereference device memory!
+    void launchRiemannKernels(const HitConstView &hv,
+                              const ::reco::CAModulesConstView &fr,
+                              uint32_t nhits,
+                              uint32_t maxNumberOfTuples,
+                              Queue &queue,
+                              const ::reco::OTRecHitsConstView &otRecHits,
+                              const ::reco::StubsConstView &stubs,
+                              int32_t offsetStubs);
+    void launchBrokenLineKernels(const HitConstView &hv,
+                                 const ::reco::CAModulesConstView &fr,
+                                 uint32_t nhits,
+                                 uint32_t maxNumberOfTuples,
+                                 Queue &queue,
+                                 const ::reco::OTRecHitsConstView &otRecHits,
+                                 const ::reco::StubsConstView &stubs,
+                                 int32_t offsetStubs);
 
     void allocate(TupleMultiplicity const *tupleMultiplicity,
                   OutputSoAView &helix_fit_results,

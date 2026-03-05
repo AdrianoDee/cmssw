@@ -64,6 +64,7 @@ namespace reco {
     uint32_t nModules() const { return this->view().hitModules().metadata().size() - 1; }
 
     int32_t offsetBPIX2() const { return this->view().trackingHits().offsetBPIX2(); }
+    uint32_t offsetStubs() const { return this->view().trackingHits().offsetStubs(); }
 
     // do nothing for a host collection
     template <typename TQueue>

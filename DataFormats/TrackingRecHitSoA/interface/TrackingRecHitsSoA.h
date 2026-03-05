@@ -25,7 +25,26 @@ namespace reco {
                       SOA_COLUMN(int16_t, clusterSizeX),
                       SOA_COLUMN(int16_t, clusterSizeY),
                       SOA_COLUMN(uint16_t, detectorIndex),
-                      SOA_SCALAR(int32_t, offsetBPIX2));
+                      // Stub-specific fields for CA integration
+                      // When isStub=true, this hit comes from an OT stub with direction info
+                      SOA_COLUMN(bool, isStub),           // True if this is from a stub (not a regular pixel hit)
+                      SOA_COLUMN(uint8_t, stubType),      // 0=PS (good z), 1=SS (poor z), ignored if isStub=false
+                      SOA_COLUMN(float, dPhiDr),          // Stub direction (local track angle), 0 if isStub=false
+                      SOA_COLUMN(float, dPhiDrError),     // Error on stub direction, 0 if isStub=false
+                      SOA_COLUMN(float, ptEst),           // pT estimate from stub bend (GeV), 0 if isStub=false
+                      // P-hit group ID: For stub hits, identifies which P-hit (lower sensor hit)
+                      // was used to form this stub. Stubs sharing the same P-hit have the same ID.
+                      // Used by CAFishbone to correctly handle duplicate stubs from the same P-hit.
+                      // Value UINT32_MAX indicates unset/invalid (for regular pixel hits).
+                      SOA_COLUMN(uint32_t, pHitGroupId),
+                      // Packed stub flags from StubsSoA: isBarrel(bit0), isFlat(bit1), isValid(bit2), layer(bits3-5)
+                      // Used by stub-stub pairwise compatibility cut in CA doublet formation.
+                      // Zero for regular pixel hits. Decode with reco::StubFlags helpers.
+                      SOA_COLUMN(uint8_t, stubFlags),
+                      SOA_SCALAR(int32_t, offsetBPIX2),
+                      SOA_SCALAR(uint32_t, offsetStubs)); // Offset where stub-derived hits start
+                                                          // For stub hits: stubIndex = hitIndex - offsetStubs
+                                                          // Stubs must be added in same order as StubsSoACollection
 
   GENERATE_SOA_LAYOUT(HitModulesLayout, SOA_COLUMN(uint32_t, moduleStart));
 

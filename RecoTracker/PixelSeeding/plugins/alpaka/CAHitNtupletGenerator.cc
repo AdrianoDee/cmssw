@@ -128,6 +128,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "maxDZ",
               std::vector<double>(TrackerTraits::maxDZ, TrackerTraits::maxDZ + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts in maximum dz between hits for cells");
+      geometryParams.addOptional<std::vector<double>>("stubSigmaCuts")
+          ->setComment(
+              "Stub-stub pairwise sigma cut per layer pair. Negative = disabled.\n"
+              "Barrel flat-flat: kappa-corrected significance. Forward: dPhiDr significance.");
 
       desc.add<edm::ParameterSetDescription>("geometry", geometryParams)
           ->setComment("Layer-dependent cuts and settings of the CA");
@@ -182,6 +186,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
       desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
       desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+
+      // Reachability filter (Phase2OTStubs only)
+      desc.add<unsigned int>("reachTargetLayer", 28)
+          ->setComment("CA layer to apply reachability filter (28 = OT barrel L1). Only active for Phase2OTStubs.");
+      desc.add<unsigned int>("reachMinHops", 2)
+          ->setComment("Min distinct outer layers the chain must reach from target. "
+                       "Works across barrel/endcap regions. Only active for Phase2OTStubs.");
     }
 
     AlgoParams makeCommonParams(edm::ParameterSet const& cfg) {
@@ -216,7 +227,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           cfg.getParameter<bool>("fillStatistics"),
           cfg.getParameter<bool>("doSharedHitCut"),
           cfg.getParameter<bool>("dupPassThrough"),
-          cfg.getParameter<bool>("useSimpleTripletCleaner")});
+          cfg.getParameter<bool>("useSimpleTripletCleaner"),
+
+          // Reachability filter
+          (uint8_t)cfg.getParameter<unsigned int>("reachTargetLayer"),
+          (uint8_t)cfg.getParameter<unsigned int>("reachMinHops")});
     }
 
     //This is needed to have the partial specialization for isPhase1Topology/isPhase2Topology
@@ -381,6 +396,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             "Zip).");
   }
 
+  template <>
+  void CAHitNtupletGenerator<pixelTopology::Phase2OTStubs>::fillPSetDescription(edm::ParameterSetDescription& desc) {
+    fillDescriptionsCommon<pixelTopology::Phase2OTStubs>(desc);
+
+    edm::ParameterSetDescription trackQualityCuts;
+    trackQualityCuts.add<double>("maxChi2", 5.)->setComment("Max normalized chi2 for tracks with 6 or more hits");
+    trackQualityCuts.add<double>("maxChi2TripletsOrQuadruplets", 1.)
+        ->setComment("Max normalized chi2 for tracks with 4 or less hits");
+    trackQualityCuts.add<double>("maxChi2Quintuplets", 3.)->setComment("Max normalized chi2 for tracks with 5 hits");
+    trackQualityCuts.add<double>("minPt", 0.9)->setComment("Min pT in GeV");
+    trackQualityCuts.add<double>("maxTip", 0.3)->setComment("Max |Tip| in cm");
+    trackQualityCuts.add<double>("maxZip", 12.)->setComment("Max |Zip|, in cm");
+    desc.add<edm::ParameterSetDescription>("trackQualityCuts", trackQualityCuts)
+        ->setComment(
+            "Quality cuts based on the results of the track fit:\n  - apply cuts based on the fit results (pT, Tip, "
+            "Zip).");
+  }
+
   template <typename TrackerTraits>
   reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(HitsOnDevice const& hits_d,
                                                                                   CAGeometryOnDevice const& geometry_d,
@@ -439,8 +472,87 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     return trackCollection;
   }
 
+  // Overloaded version for stub-based tracking with OT hits
+  template <typename TrackerTraits>
+  reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
+      HitsOnDevice const& hits_d,
+      CAGeometryOnDevice const& geometry_d,
+      float bfield,
+      uint32_t nDoublets,
+      uint32_t nTracks,
+      Queue& queue,
+      OTRecHitsOnDevice const& otRecHits_d,
+      StubsOnDevice const& stubs_d) const {
+    using HelixFit = HelixFit<TrackerTraits>;
+    using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
+    using TrackHitSoA = ::reco::TrackHitSoA;
+    using HitContainer = caStructures::HitContainerT<TrackerTraits>;
+
+    const int32_t H = m_params.algoParams_.avgHitsPerTrack_;
+
+    reco::TracksSoACollection tracks(queue, int(nTracks), int(nTracks * H));
+
+    auto tracksView = tracks.view().tracks();
+
+    auto trackingHits = hits_d.view().trackingHits();
+    auto hitModules = hits_d.view().hitModules();
+
+    auto layers = geometry_d.view().layers();
+    auto graph = geometry_d.view().graph();
+    auto modules = geometry_d.view().modules();
+
+    // Don't bother if less than 2 hits
+    if (trackingHits.metadata().size() < 2) {
+      const auto device = alpaka::getDev(queue);
+      auto ntracks_d = cms::alpakatools::make_device_view(device, tracksView.nTracks());
+      alpaka::memset(queue, ntracks_d, 0);
+      return tracks;
+    }
+    GPUKernels kernels(
+        m_params, hits_d.nHits(), hits_d.offsetBPIX2(), nDoublets, nTracks, layers.metadata().size(), queue);
+
+    kernels.prepareHits(trackingHits, hitModules, layers, queue);
+    kernels.buildDoublets(trackingHits, graph, layers, hits_d.offsetBPIX2(), queue);
+    kernels.launchKernels(
+        trackingHits, hits_d.offsetBPIX2(), layers.metadata().size(), tracks.view(), layers, graph, queue);
+
+    // Pass OT collections to fitter for stub hit expansion
+    // IMPORTANT: Pass offsetStubs from the device container (has cached host-side value)
+    // Do NOT call view.offsetStubs() from host - that would dereference device memory!
+    HelixFit fitter(bfield, m_params.algoParams_.fitNas4_);
+    fitter.allocate(kernels.tupleMultiplicity(), tracksView, kernels.hitContainer());
+    if (m_params.algoParams_.useRiemannFit_) {
+      fitter.launchRiemannKernels(trackingHits,
+                                  modules,
+                                  trackingHits.metadata().size(),
+                                  TrackerTraits::maxNumberOfQuadruplets,
+                                  queue,
+                                  otRecHits_d.view().otRecHits(),
+                                  stubs_d.view().stubs(),
+                                  hits_d.offsetStubs());
+    } else {
+      fitter.launchBrokenLineKernels(trackingHits,
+                                     modules,
+                                     trackingHits.metadata().size(),
+                                     TrackerTraits::maxNumberOfQuadruplets,
+                                     queue,
+                                     otRecHits_d.view().otRecHits(),
+                                     stubs_d.view().stubs(),
+                                     hits_d.offsetStubs());
+    }
+    kernels.classifyTuples(trackingHits, tracksView, queue);
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
+    std::cout << "finished building pixel tracks on GPU" << std::endl;
+#endif
+
+    return tracks;
+  }
+
   template class CAHitNtupletGenerator<pixelTopology::Phase1>;
   template class CAHitNtupletGenerator<pixelTopology::Phase2>;
   template class CAHitNtupletGenerator<pixelTopology::Phase2OT>;
+  template class CAHitNtupletGenerator<pixelTopology::Phase2OTStubs>;
   template class CAHitNtupletGenerator<pixelTopology::HIonPhase1>;
+
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
