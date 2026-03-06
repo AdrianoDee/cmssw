@@ -1413,11 +1413,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   HitsConstView hh,
                                   cms::alpakatools::AtomicPairCounter *apc) const {
       // clamp the number of tracks to the capacity of the SoA
+      auto ntracks = std::min<int>(apc->get().first, tracks_view.metadata().size() - 1);
       if (cms::alpakatools::once_per_grid(acc))
-        tracks_view.nTracks() = std::min<int>(apc->get().first, tracks_view.metadata().size() - 1);
+        tracks_view.nTracks() = ntracks;
 
       // copy offsets
-      for (auto idx : cms::alpakatools::uniform_elements(acc, tracks_view.nTracks())) {
+      for (auto idx : cms::alpakatools::uniform_elements(acc, ntracks)) {
         tracks_view[idx].hitOffsets() = foundNtuplets->off[idx + 1];  // offset for track 0 is always 0
       }
       // fill hit indices
