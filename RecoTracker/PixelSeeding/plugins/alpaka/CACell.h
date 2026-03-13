@@ -281,6 +281,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
               if (it != cms::alpakatools::kOverflow) {
                 for (auto c : tmpNtuplet) {
+
 #ifdef CA_DEBUG
                   printf("%d - ", c);
 #endif
@@ -303,6 +304,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
                 quality[it] = bad;  // initialize to bad
               }
+#ifdef CA_WARNINGS
+              else {
+                printf("Warning!!!! Too many tuples (nOnes = %d)!\n",
+                       static_cast<int>(foundNtuplets.nOnes()));
+              }
+#endif
             }
           }
         }

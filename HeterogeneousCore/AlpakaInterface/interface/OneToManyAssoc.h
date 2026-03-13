@@ -176,6 +176,13 @@ namespace cms::alpakatools {
       auto c = apc.inc_add(acc, n);
       if (c.first >= this->nOnes())  // overflow!
         return kOverflow;
+      if (c.second + n > this->capacity()) {  // content buffer overflow!
+        printf("Warning!!!! bulkFill content overflow (offset %d + n %d > capacity %d)!\n",
+               static_cast<int>(c.second),
+               static_cast<int>(n),
+               static_cast<int>(this->capacity()));
+        return kOverflow;
+      }
       this->off[c.first] = c.second;
       for (size_type j = 0; j < n; ++j)
         this->content[c.second + j] = v[j];
