@@ -350,6 +350,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::cout << "Early fishbone -> Done!" << std::endl;
 #endif
     }
+
+#ifdef CA_PIPELINE_COUNTERS
+    // Count cell status after all kill phases (reachability + fishbone)
+    {
+      auto cellBlocks = cms::alpakatools::divide_up_by(maxDoublets, 256u);
+      auto cellWorkDiv = cms::alpakatools::make_workdiv<Acc1D>(cellBlocks, 256u);
+      alpaka::exec<Acc1D>(queue,
+                          cellWorkDiv,
+                          Kernel_pipelineCellStatus<TrackerTraits>{},
+                          this->device_simpleCells_->data(),
+                          this->device_nCells_->data(),
+                          this->pipelineCountersPtr());
+    }
+#endif
+
     blockSize = 64;
     numberOfBlocks = cms::alpakatools::divide_up_by(3 * maxDoublets / 4, blockSize);
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
@@ -372,6 +387,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Kernel_find_ntuplets -> Done!" << std::endl;
+#endif
+
+#ifdef CA_PIPELINE_COUNTERS
+    // Copy *nCellTracks into the pipeline counter array
+    {
+      auto workDiv1x1 = cms::alpakatools::make_workdiv<Acc1D>(1u, 1u);
+      alpaka::exec<Acc1D>(queue,
+                          workDiv1x1,
+                          Kernel_pipelineCopyCellTrackCount{},
+                          this->device_nCellTracks_->data(),
+                          this->pipelineCountersPtr());
+    }
 #endif
 
     CellToTracks::template launchFinalize<Acc1D>(this->device_cellToTracksView_, queue);
@@ -903,6 +930,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
              c[PC::kReachKilledPixOT],
              c[PC::kReachKilledOTOT]);
       printf("[CA Pipeline] Fishbone killed: %u\n", c[PC::kFishboneKilled]);
+      printf("[CA Pipeline] Cell status: used_in_triplet=%u killed_total=%u alive=%u\n",
+             c[PC::kCellsUsedInTriplet],
+             c[PC::kCellsKilledTotal],
+             c[PC::kCellsAlive]);
+      printf("[CA Pipeline] Cell-track pairs: %u (avgTracksPerCell=%.3f)\n",
+             c[PC::kCellTrackPairs],
+             c[PC::kDoubletsTotal] > 0 ? float(c[PC::kCellTrackPairs]) / float(c[PC::kDoubletsTotal]) : 0.f);
       printf("[CA Pipeline] N-tuplets: total=%u with_OT=%u with_3+OT=%u\n",
              c[PC::kNtupletsTotal],
              c[PC::kNtupletsWithOT],

@@ -95,6 +95,12 @@ namespace caHitNtupletGenerator {
     kTracksFishbone0,  // tracks with 0 fishbone hits
     kTracksFishbone1,  // tracks with 1 fishbone hit
     kTracksFishbone2p, // tracks with 2+ fishbone hits
+    // Cell status after all kill phases (fishbone + reachability)
+    kCellsUsedInTriplet,   // cells with kUsed status bit set (participated in >=1 triplet)
+    kCellsKilledTotal,     // cells with isKilled() after fishbone + reachability
+    kCellsAlive,           // cells NOT killed (alive at find_ntuplets entry)
+    // Cell-track associations from find_ntuplets
+    kCellTrackPairs,       // total cell->track associations (= *nCellTracks, sizes deviceTracksCells_)
     // Per-cut doublet rejection counters: 3 groups × 12 cuts
     // Groups: Total (all pairs), OTEarly (inner L28-29), OTLate (inner L30-32)
     // Cut indices: 0=invalidHit, 1=innerCoord, 2=clusterCut, 3=invalidModule,

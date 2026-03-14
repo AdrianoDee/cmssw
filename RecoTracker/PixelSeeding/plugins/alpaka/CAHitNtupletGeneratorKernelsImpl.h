@@ -847,6 +847,42 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       }
     }
   };
+
+  // Count cell status after all kill phases (reachability + fishbone)
+  template <typename TrackerTraits>
+  class Kernel_pipelineCellStatus {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  CACell<TrackerTraits> const *__restrict__ cells,
+                                  uint32_t const *nCells,
+                                  uint32_t *__restrict__ pipelineCounters) const {
+      if (!pipelineCounters)
+        return;
+      using PC = ::caHitNtupletGenerator::PipelineCounter;
+      for (auto idx : cms::alpakatools::uniform_elements(acc, *nCells)) {
+        auto const &cell = cells[idx];
+        if (!cell.unused())  // kUsed bit is set
+          alpaka::atomicAdd(acc, &pipelineCounters[PC::kCellsUsedInTriplet], 1u, alpaka::hierarchy::Blocks{});
+        if (cell.isKilled())
+          alpaka::atomicAdd(acc, &pipelineCounters[PC::kCellsKilledTotal], 1u, alpaka::hierarchy::Blocks{});
+        else
+          alpaka::atomicAdd(acc, &pipelineCounters[PC::kCellsAlive], 1u, alpaka::hierarchy::Blocks{});
+      }
+    }
+  };
+
+  // Copy *nCellTracks into the pipeline counter array
+  class Kernel_pipelineCopyCellTrackCount {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  uint32_t const *nCellTracks,
+                                  uint32_t *__restrict__ pipelineCounters) const {
+      if (!pipelineCounters)
+        return;
+      if (cms::alpakatools::once_per_grid(acc))
+        pipelineCounters[::caHitNtupletGenerator::kCellTrackPairs] = *nCellTracks;
+    }
+  };
 #endif  // CA_PIPELINE_COUNTERS
 
   template <typename TrackerTraits>
