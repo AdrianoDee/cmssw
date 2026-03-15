@@ -45,6 +45,10 @@ namespace caStructures {
     // Reachability filter (Phase2OTStubs only)
     uint8_t reachTargetLayer_;  // CA layer to filter (default 28 = OT barrel L1)
     uint8_t reachMinHops_;      // Min distinct outer layers chain must reach (default 2)
+
+    // Orphan chain recovery (Phase2OTStubs only)
+    bool doOrphanRecovery_;          // Enable/disable orphan chain recovery
+    uint16_t minHitsOrphanNtuplet_;  // Minimum hits for orphan chains
   };
 
   // Hits data formats

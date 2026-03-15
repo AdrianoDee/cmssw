@@ -522,6 +522,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             cn[t_ind].inner() = otherCell;
             cn[t_ind].outer() = cellIndex;
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
+            thisCell.setStatusBits(Cell::StatusBit::kHasInner);  // thisCell (outer) has an inner neighbor
             oc.setStatusBits(Cell::StatusBit::kUsed);
 
             // Pipeline stage counters: classify triplet by hit types
@@ -808,6 +809,69 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                     params.minHitsPerNtuplet_);
           ALPAKA_ASSERT_ACC(stack.empty());
         }
+      }
+    }
+  };
+
+  // Orphan chain recovery: find n-tuplets from cells with outer neighbors but no inner connection.
+  // Recovers OT-only tracks from displaced vertices, tracks outside pixel acceptance, etc.
+  template <typename TrackerTraits>
+  class Kernel_find_orphan_ntuplets {
+    using Cell = CACell<TrackerTraits>;
+    using CellToCell = caStructures::GenericContainer;
+    using CellToTrack = caStructures::GenericContainer;
+    using HitContainer = caStructures::SequentialContainer;
+
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  const ::reco::CAGraphSoAConstView &cc,
+                                  TkSoAView tracks_view,
+                                  HitContainer *foundNtuplets,
+                                  CellToCell const *__restrict__ cellNeighborsHisto,
+                                  CellToTrack *cellTracksHisto,
+                                  caStructures::CAPairSoAView ct,
+                                  CACell<TrackerTraits> *__restrict__ cells,
+                                  uint32_t *nCellTracks,
+                                  uint32_t const *nCells,
+                                  cms::alpakatools::AtomicPairCounter *apc,
+                                  AlgoParams const &params) const {
+      using Cell = CACell<TrackerTraits>;
+
+      for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
+        auto const &thisCell = cells[idx];
+
+        if (thisCell.isKilled())
+          continue;
+
+        // Must have outer neighbors (otherwise it's a leaf)
+        if (cellNeighborsHisto->size(idx) == 0)
+          continue;
+
+        // ORPHAN: has outer neighbors but NO inner connection from any other cell
+        if (thisCell.hasInnerNeighbor())
+          continue;
+
+        // Skip cells on starting pairs — already handled by Kernel_find_ntuplets
+        auto pid = thisCell.layerPairId();
+        if (cc[pid].startingPair())
+          continue;
+
+        constexpr uint32_t maxDepth = TrackerTraits::maxDepth;
+        typename Cell::TmpTuple stack;
+        stack.reset();
+        thisCell.template find_ntuplets<maxDepth>(acc,
+                                                  cc,
+                                                  cells,
+                                                  *foundNtuplets,
+                                                  cellNeighborsHisto,
+                                                  cellTracksHisto,
+                                                  nCellTracks,
+                                                  ct,
+                                                  *apc,
+                                                  tracks_view.quality().data(),
+                                                  stack,
+                                                  params.minHitsOrphanNtuplet_);
+        ALPAKA_ASSERT_ACC(stack.empty());
       }
     }
   };

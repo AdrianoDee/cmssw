@@ -389,6 +389,31 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::cout << "Kernel_find_ntuplets -> Done!" << std::endl;
 #endif
 
+    // Orphan chain recovery: find n-tuplets from cells with no inner connection (Phase2OTStubs only)
+    if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+      if (this->m_params.algoParams_.doOrphanRecovery_) {
+        alpaka::exec<Acc1D>(queue,
+                            workDiv1D,
+                            Kernel_find_orphan_ntuplets<TrackerTraits>{},
+                            cc,
+                            tracks_view,
+                            this->device_hitContainer_->data(),
+                            this->device_cellToNeighbors_->data(),
+                            this->device_cellToTracks_->data(),
+                            this->deviceTracksCells_->view(),
+                            this->device_simpleCells_->data(),
+                            this->device_nCellTracks_->data(),
+                            this->device_nCells_->data(),
+                            this->device_hitTuple_apc_,
+                            this->m_params.algoParams_);
+
+#ifdef GPU_DEBUG
+        alpaka::wait(queue);
+        std::cout << "Kernel_find_orphan_ntuplets -> Done!" << std::endl;
+#endif
+      }
+    }
+
 #ifdef CA_PIPELINE_COUNTERS
     // Copy *nCellTracks into the pipeline counter array
     {

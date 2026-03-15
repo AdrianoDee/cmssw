@@ -63,7 +63,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using Quality = ::pixelTrack::Quality;
     static constexpr auto bad = ::pixelTrack::Quality::bad;
 
-    enum class StatusBit : uint16_t { kUsed = 1, kInTrack = 2, kKilled = 1 << 15 };
+    enum class StatusBit : uint16_t { kUsed = 1, kInTrack = 2, kHasInner = 4, kKilled = 1 << 15 };
 
     CACell() = default;
 
@@ -78,6 +78,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t outerLayer() const { return theOuterLayer_; }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool unused() const { return 0 == (uint16_t(StatusBit::kUsed) & theStatus_); }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool hasInnerNeighbor() const {
+      return theStatus_ & uint16_t(StatusBit::kHasInner);
+    }
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void setStatusBits(StatusBit mask) { theStatus_ |= uint16_t(mask); }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE float inner_x(const HitsConstView& hh) const { return hh[theInnerHitId_].xGlobal(); }

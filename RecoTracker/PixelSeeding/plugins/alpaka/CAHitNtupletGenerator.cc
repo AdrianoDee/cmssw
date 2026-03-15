@@ -193,6 +193,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<unsigned int>("reachMinHops", 2)
           ->setComment("Min distinct outer layers the chain must reach from target. "
                        "Works across barrel/endcap regions. Only active for Phase2OTStubs.");
+
+      // Orphan chain recovery (Phase2OTStubs only)
+      desc.add<bool>("doOrphanRecovery", false)
+          ->setComment(
+              "Enable orphan chain recovery for tracks without pixel seeds. "
+              "Phase2OTStubs only.");
+      desc.add<unsigned int>("minHitsOrphanNtuplet", 5)
+          ->setComment(
+              "Minimum number of hits for orphan chains "
+              "(higher than minHitsPerNtuplet to suppress fakes).");
     }
 
     AlgoParams makeCommonParams(edm::ParameterSet const& cfg) {
@@ -231,7 +241,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
           // Reachability filter
           (uint8_t)cfg.getParameter<unsigned int>("reachTargetLayer"),
-          (uint8_t)cfg.getParameter<unsigned int>("reachMinHops")});
+          (uint8_t)cfg.getParameter<unsigned int>("reachMinHops"),
+
+          // Orphan chain recovery
+          cfg.getParameter<bool>("doOrphanRecovery"),
+          (uint16_t)cfg.getParameter<unsigned int>("minHitsOrphanNtuplet")});
     }
 
     //This is needed to have the partial specialization for isPhase1Topology/isPhase2Topology

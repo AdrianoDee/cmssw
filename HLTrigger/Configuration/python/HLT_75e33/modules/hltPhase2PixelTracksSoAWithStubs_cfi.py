@@ -246,6 +246,10 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     reachTargetLayer = cms.uint32(28),  # OT barrel L1
     reachMinHops = cms.uint32(0),       # must reach 2 distinct outer layers
 
+    # Orphan chain recovery (disabled by default)
+    doOrphanRecovery = cms.bool(False),
+    minHitsOrphanNtuplet = cms.uint32(5),  # require 5+ hits to suppress fakes
+
     # Track quality cuts (Phase2-specific)
     trackQualityCuts = cms.PSet(
         maxChi2 = cms.double(15.0),
