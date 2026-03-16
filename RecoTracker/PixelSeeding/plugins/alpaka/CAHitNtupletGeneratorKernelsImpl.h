@@ -402,24 +402,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto z1 = oc.inner_z(hh);
           auto dcaCut = ll[oc.innerLayer()].caDCACut();
 
-          // Check for SS stubs in the triplet - they have poor z resolution
-          // Skip theta check if any hit in the triplet is an SS stub
-          // Note: PHitOnly stubs are NOT treated like SS stubs here - they have good z resolution
-          // from the pixel sensor and should use the theta check
+          // Check for SS stubs and count real stubs early -- needed for both
+          // the relaxed theta cut and the later kappa/DCA logic.
           bool hasSSStub = false;
+          int nStubs = 0;
+          bool s1 = false, s2 = false, s3 = false;
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            auto hit1 = oc.inner_hit_id();        // First hit (innermost)
-            auto hit2 = thisCell.inner_hit_id();  // Second hit (middle)
-            auto hit3 = thisCell.outer_hit_id();  // Third hit (outermost)
+            auto hit1 = oc.inner_hit_id();
+            auto hit2 = thisCell.inner_hit_id();
+            auto hit3 = thisCell.outer_hit_id();
 
-            // Only check for StubType::SS, not PHitOnly - PHitOnly has good z from pixel sensor
-            hasSSStub = (hh[hit1].isStub() && hh[hit1].stubType() == ::reco::StubType::SS) ||
-                        (hh[hit2].isStub() && hh[hit2].stubType() == ::reco::StubType::SS) ||
-                        (hh[hit3].isStub() && hh[hit3].stubType() == ::reco::StubType::SS);
+            auto isSSStub = [&](uint32_t hitId) {
+              return hh[hitId].isStub() && hh[hitId].stubType() == ::reco::StubType::SS;
+            };
+            auto isRealStub = [&](uint32_t hitId) {
+              return hh[hitId].isStub() && hh[hitId].stubType() != ::reco::StubType::PHitOnly;
+            };
+
+            hasSSStub = isSSStub(hit1) || isSSStub(hit2) || isSSStub(hit3);
+            s1 = isRealStub(hit1);
+            s2 = isRealStub(hit2);
+            s3 = isRealStub(hit3);
+            nStubs = int(s1) + int(s2) + int(s3);
           }
 
-          // Skip theta check for SS stubs (poor z resolution), always consider aligned
-          bool aligned = hasSSStub || Cell::areAlignedRZ(r1, z1, ri, zi, ro, zo, params.ptmin_, thetaCut);
+          // SS stubs have ~1-2 cm z uncertainty. Rather than skipping the r-z check
+          // entirely (which causes combinatorial explosion), apply it with a relaxed
+          // threshold that accommodates the poor z resolution.
+          float effectiveThetaCut = thetaCut;
+          if (hasSSStub) {
+            constexpr float ssRelaxSingleStub = 2.0f;   // 1 stub + 2 pixels
+            constexpr float ssRelaxMultiStub = 3.0f;    // 2+ stubs
+            effectiveThetaCut = thetaCut * ((nStubs >= 2) ? ssRelaxMultiStub : ssRelaxSingleStub);
+          }
+
+          bool aligned = Cell::areAlignedRZ(r1, z1, ri, zi, ro, zo, params.ptmin_, effectiveThetaCut);
           bool dcaPassed;
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
             if (hasSSStub) {
@@ -446,13 +463,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                 float sqrt_den = std::sqrt(den);
                 return std::make_pair(d / sqrt_den, s / (den * sqrt_den));
               };
-
-              auto isRealStub = [&](uint32_t hitId) {
-                return hh[hitId].isStub() && hh[hitId].stubType() != ::reco::StubType::PHitOnly;
-              };
-
-              bool s1 = isRealStub(hit1), s2 = isRealStub(hit2), s3 = isRealStub(hit3);
-              int nStubs = int(s1) + int(s2) + int(s3);
 
               if (nStubs >= 2) {
                 // Pairwise kappa significance -- same formula as doublet level
@@ -489,7 +499,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           float pMin = params.ptmin_ * std::sqrt(distance_13_squared);
           float tan_val = std::abs(z1 * (ri - ro) + zi * (ro - r1) + zo * (r1 - ri));
           float thetaAlignVal = tan_val * pMin;
-          float thetaThreshold = thetaCut * distance_13_squared * radius_diff;
+          float thetaThreshold = effectiveThetaCut * distance_13_squared * radius_diff;
 
           // Compute DCA value for debug output
           auto x1d = oc.inner_x(hh);
