@@ -353,6 +353,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   cms::alpakatools::AtomicPairCounter *apc,  // just to zero them
                                   HitsConstView hh,
                                   reco::CALayersSoAConstView ll,
+                                  reco::CAGraphSoAConstView cc,
                                   caStructures::CAPairSoAView cn,
                                   CACell<TrackerTraits> *cells,
                                   uint32_t const *nCells,
@@ -407,9 +408,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           // from the pixel sensor and should use the theta check
           bool hasSSStub = false;
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            auto hit1 = oc.inner_hit_id();      // First hit (innermost)
-            auto hit2 = thisCell.inner_hit_id(); // Second hit (middle)
-            auto hit3 = thisCell.outer_hit_id(); // Third hit (outermost)
+            auto hit1 = oc.inner_hit_id();        // First hit (innermost)
+            auto hit2 = thisCell.inner_hit_id();  // Second hit (middle)
+            auto hit3 = thisCell.outer_hit_id();  // Third hit (outermost)
 
             // Only check for StubType::SS, not PHitOnly - PHitOnly has good z from pixel sensor
             hasSSStub = (hh[hit1].isStub() && hh[hit1].stubType() == ::reco::StubType::SS) ||
@@ -419,7 +420,67 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
           // Skip theta check for SS stubs (poor z resolution), always consider aligned
           bool aligned = hasSSStub || Cell::areAlignedRZ(r1, z1, ri, zi, ro, zo, params.ptmin_, thetaCut);
-          bool dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+          bool dcaPassed;
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            if (hasSSStub) {
+              // SS stubs have cm-scale (x,y) errors from coarse strip-length
+              // measurement -- the 3-point circle fit is unreliable.
+              // Instead, check kappa consistency among stub hits.
+              auto hit1 = oc.inner_hit_id();
+              auto hit2 = thisCell.inner_hit_id();
+              auto hit3 = thisCell.outer_hit_id();
+
+              // Use the tighter of the two layer-pair stubSigmaCuts
+              float sigCut1 = cc[oc.layerPairId()].stubSigmaCut();
+              float sigCut2 = cc[thisCell.layerPairId()].stubSigmaCut();
+              float sigCut = (sigCut1 > 0.f && sigCut2 > 0.f) ? std::min(sigCut1, sigCut2)
+                           : (sigCut1 > 0.f)                   ? sigCut1
+                           : (sigCut2 > 0.f)                   ? sigCut2
+                                                               : 5.0f;  // fallback
+
+              // Collect kappa + error for each stub hit (skip pixels and PHitOnly)
+              auto computeKappa = [&](uint32_t hitId, float r) {
+                float d = hh[hitId].dPhiDr();
+                float s = hh[hitId].dPhiDrError();
+                float den = 1.f + r * r * d * d;
+                float sqrt_den = std::sqrt(den);
+                return std::make_pair(d / sqrt_den, s / (den * sqrt_den));
+              };
+
+              auto isRealStub = [&](uint32_t hitId) {
+                return hh[hitId].isStub() && hh[hitId].stubType() != ::reco::StubType::PHitOnly;
+              };
+
+              bool s1 = isRealStub(hit1), s2 = isRealStub(hit2), s3 = isRealStub(hit3);
+              int nStubs = int(s1) + int(s2) + int(s3);
+
+              if (nStubs >= 2) {
+                // Pairwise kappa significance -- same formula as doublet level
+                dcaPassed = true;
+                float k1, sk1, k2, sk2, k3, sk3;
+                if (s1) { auto [k, sk] = computeKappa(hit1, r1); k1 = k; sk1 = sk; }
+                if (s2) { auto [k, sk] = computeKappa(hit2, ri); k2 = k; sk2 = sk; }
+                if (s3) { auto [k, sk] = computeKappa(hit3, ro); k3 = k; sk3 = sk; }
+
+                auto kappaOK = [&](float ka, float ska, float kb, float skb) {
+                  float err2 = ska * ska + skb * skb;
+                  return (ka - kb) * (ka - kb) < sigCut * sigCut * err2;
+                };
+
+                if (s1 && s2) dcaPassed &= kappaOK(k1, sk1, k2, sk2);
+                if (s2 && s3) dcaPassed &= kappaOK(k2, sk2, k3, sk3);
+                if (s1 && s3) dcaPassed &= kappaOK(k1, sk1, k3, sk3);
+              } else {
+                // Only 1 stub + 2 pixel hits -- the DCA circle fit is anchored
+                // by the 2 precise pixel positions, so standard DCA works here
+                dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+              }
+            } else {
+              dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+            }
+          } else {
+            dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+          }
 
 #ifdef CA_DEBUG
           // Compute theta alignment value for debug output
@@ -443,9 +504,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           float dcaThreshold = dcaCut * curvature;
 
           // Determine stub types for all three hits
-          const char* stubType1 = "pixel";
-          const char* stubType2 = "pixel";
-          const char* stubType3 = "pixel";
+          const char *stubType1 = "pixel";
+          const char *stubType2 = "pixel";
+          const char *stubType3 = "pixel";
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
             auto hit1 = oc.inner_hit_id();
             auto hit2 = thisCell.inner_hit_id();
@@ -461,30 +522,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             }
           }
 
-          printf(
-              "TripletCheck;%d;%d;%d;%d;%d;%d;%d;%d;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%d;%d;%s;%s;%s;%d\n",
-              cellIndex,                    // outer cell index
-              otherCell,                    // inner cell index
-              thisCell.layerPairId(),       // outer layer pair
-              oc.layerPairId(),             // inner layer pair
-              oc.innerLayer(),              // innermost layer
-              thisCell.innerLayer(),        // middle layer
-              thisCell.outerLayer(),        // outermost layer
-              hasSSStub ? 1 : 0,            // has SS stub (theta skipped)
-              thetaAlignVal,                // theta alignment value
-              thetaThreshold,               // theta threshold
-              thetaCut,                     // raw thetaCut parameter
-              curvature,                    // curvature
-              dcaVal,                       // DCA value
-              dcaThreshold,                 // DCA threshold
-              dcaCut,                       // raw dcaCut parameter
-              params.hardCurvCut_,          // hard curvature cut
-              aligned ? 1 : 0,              // theta passed
-              dcaPassed ? 1 : 0,            // DCA passed
-              stubType1,                    // hit1 stub type
-              stubType2,                    // hit2 stub type
-              stubType3,                    // hit3 stub type
-              (aligned && dcaPassed) ? 1 : 0  // overall passed
+          printf("TripletCheck;%d;%d;%d;%d;%d;%d;%d;%d;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%d;%d;%s;%s;%s;%d\n",
+                 cellIndex,                      // outer cell index
+                 otherCell,                      // inner cell index
+                 thisCell.layerPairId(),         // outer layer pair
+                 oc.layerPairId(),               // inner layer pair
+                 oc.innerLayer(),                // innermost layer
+                 thisCell.innerLayer(),          // middle layer
+                 thisCell.outerLayer(),          // outermost layer
+                 hasSSStub ? 1 : 0,              // has SS stub (theta skipped)
+                 thetaAlignVal,                  // theta alignment value
+                 thetaThreshold,                 // theta threshold
+                 thetaCut,                       // raw thetaCut parameter
+                 curvature,                      // curvature
+                 dcaVal,                         // DCA value
+                 dcaThreshold,                   // DCA threshold
+                 dcaCut,                         // raw dcaCut parameter
+                 params.hardCurvCut_,            // hard curvature cut
+                 aligned ? 1 : 0,                // theta passed
+                 dcaPassed ? 1 : 0,              // DCA passed
+                 stubType1,                      // hit1 stub type
+                 stubType2,                      // hit2 stub type
+                 stubType3,                      // hit3 stub type
+                 (aligned && dcaPassed) ? 1 : 0  // overall passed
           );
 #endif
 
@@ -543,9 +603,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                 else {
                   alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOTOTOT], 1u, alpaka::hierarchy::Blocks{});
                   // OOO triplet region breakdown
-                  auto layer1 = oc.innerLayer();          // innermost
-                  auto layer2 = thisCell.innerLayer();     // middle
-                  auto layer3 = thisCell.outerLayer();     // outermost
+                  auto layer1 = oc.innerLayer();        // innermost
+                  auto layer2 = thisCell.innerLayer();  // middle
+                  auto layer3 = thisCell.outerLayer();  // outermost
                   bool l1Brl = (layer1 >= 28 && layer1 <= 33);
                   bool l2Brl = (layer2 >= 28 && layer2 <= 33);
                   bool l3Brl = (layer3 >= 28 && layer3 <= 33);
@@ -562,9 +622,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                   else if (l1Fwd && l2Fwd && l3Fwd)
                     alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_fwd], 1u, alpaka::hierarchy::Blocks{});
                   else if ((l1Brl || l2Brl) && (l2Bwd || l3Bwd))
-                    alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_brlToBwd], 1u, alpaka::hierarchy::Blocks{});
+                    alpaka::atomicAdd(
+                        acc, &pipelineCounters[PC::kTripletsOOO_brlToBwd], 1u, alpaka::hierarchy::Blocks{});
                   else if ((l1Brl || l2Brl) && (l2Fwd || l3Fwd))
-                    alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_brlToFwd], 1u, alpaka::hierarchy::Blocks{});
+                    alpaka::atomicAdd(
+                        acc, &pipelineCounters[PC::kTripletsOOO_brlToFwd], 1u, alpaka::hierarchy::Blocks{});
                   else
                     alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_other], 1u, alpaka::hierarchy::Blocks{});
                 }
@@ -851,7 +913,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         if (thisCell.hasInnerNeighbor())
           continue;
 
-        // Skip cells on starting pairs — already handled by Kernel_find_ntuplets
+        // Skip cells on starting pairs - already handled by Kernel_find_ntuplets
         auto pid = thisCell.layerPairId();
         if (cc[pid].startingPair())
           continue;
@@ -1083,8 +1145,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                  tracks_view[it].eta(),
                  tracks_view[it].state()(0),  // phi is state[0]
                  tracks_view[it].chi2(),
-                 tracks_view[it].state()(1),  // tip is state[1]
-                 tracks_view[it].state()(4)); // zip is state[4]
+                 tracks_view[it].state()(1),   // tip is state[1]
+                 tracks_view[it].state()(4));  // zip is state[4]
         }
 #endif
 
@@ -1164,7 +1226,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         } else if (q == Quality::loose) {
           alpaka::atomicAdd(acc, &pipelineCounters[PC::kQualLoose], 1u, alpaka::hierarchy::Blocks{});
         } else {
-          // strict, tight, or highPurity — check OT once for all levels
+          // strict, tight, or highPurity -- check OT once for all levels
           bool hasOT = false;
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
             for (auto h = foundNtuplets->begin(idx); h != foundNtuplets->end(idx); ++h) {
@@ -1225,8 +1287,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           // Heuristic: count hits that appear in the foundNtuplets but are not the inner/outer of any cell
           // Simpler: just count based on nhits vs expected cell count
           // For a track with N cells, we expect N+1 hits (no fishbone) or more (with fishbone)
-          // Actually, nhits includes fishbone hits. Typical: 3 cells → 4 hits (no FB) or 5-6 (with FB)
-          // For now, just report nhits directly — the excess over (nCells+1) is fishbone count
+          // Actually, nhits includes fishbone hits. Typical: 3 cells -> 4 hits (no FB) or 5-6 (with FB)
+          // For now, just report nhits directly -- the excess over (nCells+1) is fishbone count
           // Since we can't easily get nCells here, just count nhits > expected
           nFishbone = 0;  // Will be counted properly below
           if (nFishbone == 0)
