@@ -1,0 +1,4 @@
+import FWCore.ParameterSet.Config as cms
+from Validation.SiTrackerPhase2V.phase2OTValidateCATripletCuts_cfi import phase2OTValidateCATripletCuts
+
+caTripletCutsValid = phase2OTValidateCATripletCuts.clone()
