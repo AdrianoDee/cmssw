@@ -12,63 +12,65 @@ layersToExclude = []
 # Layers 34-38: OT endcap backward disks 1-5
 # Layers 39-43: OT endcap forward disks 1-5
 layers = [
-    #     0,        1,     2,       3,         4
-    # index, isBarrel, caDCA, caTheta, geomKappa
+    #     0,        1,     2,       3,         4,           5
+    # index, isBarrel, caDCA, caTheta, geomKappa, caPhiMiddle
     # Pixel barrel layers
-    [     0,     True,  0.15,   0.002,      -1.0],
-    [     1,     True,  0.25,   0.002,      -1.0],
-    [     2,     True,  0.20,   0.002,      -1.0],
-    [     3,     True,  0.20,   0.002,      -1.0],
+    [     0,     True,  0.15,   0.002,      -1.0,       -1.0],
+    [     1,     True,  0.25,   0.002,      -1.0,       -1.0],
+    [     2,     True,  0.20,   0.002,      -1.0,       -1.0],
+    [     3,     True,  0.20,   0.002,      -1.0,       -1.0],
     # Pixel endcap layers (forward)
-    [     4,    False,  0.25,   0.003,      -1.0],
-    [     5,    False,  0.25,   0.003,      -1.0],
-    [     6,    False,  0.25,   0.003,      -1.0],
-    [     7,    False,  0.25,   0.003,      -1.0],
-    [     8,    False,  0.25,   0.003,      -1.0],
-    [     9,    False,  0.25,   0.003,      -1.0],
-    [    10,    False,  0.25,   0.003,      -1.0],
-    [    11,    False,  0.25,   0.003,      -1.0],
-    [    12,    False,  0.25,   0.003,      -1.0],
-    [    13,    False,  0.25,   0.003,      -1.0],
-    [    14,    False,  0.25,   0.003,      -1.0],
-    [    15,    False,  0.25,   0.003,      -1.0],
+    [     4,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [     5,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [     6,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [     7,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [     8,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [     9,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    10,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    11,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    12,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    13,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    14,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    15,    False,  0.25,   0.003,      -1.0,       -1.0],
     # Pixel endcap layers (backward)
-    [    16,    False,  0.25,   0.003,      -1.0],
-    [    17,    False,  0.25,   0.003,      -1.0],
-    [    18,    False,  0.25,   0.003,      -1.0],
-    [    19,    False,  0.25,   0.003,      -1.0],
-    [    20,    False,  0.25,   0.003,      -1.0],
-    [    21,    False,  0.25,   0.003,      -1.0],
-    [    22,    False,  0.25,   0.003,      -1.0],
-    [    23,    False,  0.25,   0.003,      -1.0],
-    [    24,    False,  0.25,   0.003,      -1.0],
-    [    25,    False,  0.25,   0.003,      -1.0],
-    [    26,    False,  0.25,   0.003,      -1.0],
-    [    27,    False,  0.25,   0.003,      -1.0],
+    [    16,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    17,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    18,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    19,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    20,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    21,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    22,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    23,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    24,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    25,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    26,    False,  0.25,   0.003,      -1.0,       -1.0],
+    [    27,    False,  0.25,   0.003,      -1.0,       -1.0],
     # OT barrel layers 1-6 (stubs)
     # dcaCut increased for layers 28-32 to handle barrel-to-endcap triplet transitions
     # (the fitted circle DCA is larger when transitioning from barrel to endcap geometry)
     # geomKappaSigmaCut: geometric-vs-stub kappa significance (placeholder 5.0)
-    [    28,     True,  0.30,   0.003,       5.0],
-    [    29,     True,  0.30,   0.003,       5.0],
-    [    30,     True,  0.30,   0.003,       5.0],
-    [    31,     True,  0.30,   0.007,       5.0],
-    [    32,     True,  0.30,   0.007,       5.0],
-    [    33,     True,  0.30,   0.007,       5.0],
+    [    28,     True,  0.30,   0.003,       5.0,       -1.0],
+    [    29,     True,  0.30,   0.003,       5.0,       -1.0],
+    [    30,     True,  0.30,   0.003,       5.0,       -1.0],
+    [    31,     True,  0.30,   0.007,       5.0,       -1.0],
+    [    32,     True,  0.30,   0.007,       5.0,       -1.0],
+    [    33,     True,  0.30,   0.007,       5.0,       -1.0],
     # OT endcap backward disks 1-5 (stubs)
     # dcaCut increased to 0.15 to handle endcap triplet geometries
-    [    34,    False,  0.30,   0.007,       5.0],
-    [    35,    False,  0.30,   0.008,       5.0],
-    [    36,    False,  0.30,   0.007,       5.0],
-    [    37,    False,  0.30,   0.007,       5.0],
-    [    38,    False,  0.30,   0.007,       5.0],
+    # caPhiMiddle: phi residual at middle hit [rad] (0.1 = initial value, to be tuned)
+    [    34,    False,  0.30,   0.007,       5.0,        0.1],
+    [    35,    False,  0.30,   0.008,       5.0,        0.1],
+    [    36,    False,  0.30,   0.007,       5.0,        0.1],
+    [    37,    False,  0.30,   0.007,       5.0,        0.1],
+    [    38,    False,  0.30,   0.007,       5.0,        0.1],
     # OT endcap forward disks 1-5 (stubs)
     # dcaCut increased to 0.15 to handle endcap triplet geometries
-    [    39,    False,  0.30,   0.007,       5.0],
-    [    40,    False,  0.30,   0.008,       5.0],
-    [    41,    False,  0.30,   0.007,       5.0],
-    [    42,    False,  0.30,   0.007,       5.0],
-    [    43,    False,  0.30,   0.007,       5.0],
+    # caPhiMiddle: phi residual at middle hit [rad] (0.1 = initial value, to be tuned)
+    [    39,    False,  0.30,   0.007,       5.0,        0.1],
+    [    40,    False,  0.30,   0.008,       5.0,        0.1],
+    [    41,    False,  0.30,   0.007,       5.0,        0.1],
+    [    42,    False,  0.30,   0.007,       5.0,        0.1],
+    [    43,    False,  0.30,   0.007,       5.0,        0.1],
 ]
 
 # layerPairs for doublet building including pair-specific cut values
@@ -286,6 +288,7 @@ caHitNtupletAlpakaPhase2OTStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStub
         caDCACuts   = cms.vdouble([l[2] for l in layers]),
         caThetaCuts = cms.vdouble([l[3] for l in layers]),
         geomKappaSigmaCuts = cms.vdouble([l[4] for l in layers]),
+        caPhiMiddleCuts = cms.vdouble([l[5] for l in layers]),
         startingPairs = cms.vuint32(startingPairsStubs),
         pairGraph = cms.vuint32(sum([[lp[0], lp[1]] for lp in layerPairsStubs], [])),
         phiCuts   = cms.vint32( [lp[ 3] for lp in layerPairsStubs]),

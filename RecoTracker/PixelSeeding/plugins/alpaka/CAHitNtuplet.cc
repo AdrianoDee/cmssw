@@ -68,7 +68,10 @@ namespace reco {
                              : std::vector<double>{}),
           geomKappaSigmaCuts_(iConfig.existsAs<std::vector<double>>("geomKappaSigmaCuts")
                                   ? iConfig.getParameter<std::vector<double>>("geomKappaSigmaCuts")
-                                  : std::vector<double>{}) {
+                                  : std::vector<double>{}),
+          caPhiMiddleCuts_(iConfig.existsAs<std::vector<double>>("caPhiMiddleCuts")
+                               ? iConfig.getParameter<std::vector<double>>("caPhiMiddleCuts")
+                               : std::vector<double>{}) {
       startNoBPix1_ = false;
       for (const unsigned int& i : startingPairs_) {
         if (pairGraph_[2 * i] > 0) {
@@ -112,6 +115,7 @@ namespace reco {
     const std::vector<double> maxDR_;
     const std::vector<double> stubSigmaCuts_;  // Stub-stub pairwise sigma cut (empty = disabled)
     const std::vector<double> geomKappaSigmaCuts_;  // Geometric-vs-stub kappa significance cut (empty = disabled)
+    const std::vector<double> caPhiMiddleCuts_;  // Phi residual at middle hit cut [rad] (empty = disabled)
 
     bool startNoBPix1_;
 
@@ -400,6 +404,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         layerSoA.isBarrel()[i] = layerIsBarrel[i];
         layerSoA.geomKappaSigmaCut()[i] =
             (!iCache->geomKappaSigmaCuts_.empty()) ? static_cast<float>(iCache->geomKappaSigmaCuts_[i]) : -1.0f;
+        layerSoA.caPhiMiddleCut()[i] =
+            (!iCache->caPhiMiddleCuts_.empty()) ? static_cast<float>(iCache->caPhiMiddleCuts_[i]) : -1.0f;
       }
 
       layerSoA.layerStarts()[n_layers] = layerStarts[n_layers];

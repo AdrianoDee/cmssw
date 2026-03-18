@@ -136,6 +136,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment(
               "Geometric-vs-stub kappa significance cut. One per layer, using the middle layer for a triplet.\n"
               "Negative = disabled (no stubs on that layer).");
+      geometryParams.addOptional<std::vector<double>>("caPhiMiddleCuts")
+          ->setComment(
+              "Phi residual at middle hit cut [rad]. One per layer, using the inner layer for a triplet.\n"
+              "Negative = disabled. Requires nStubs >= 2 for reliable stub kappa prediction.");
 
       desc.add<edm::ParameterSetDescription>("geometry", geometryParams)
           ->setComment("Layer-dependent cuts and settings of the CA");

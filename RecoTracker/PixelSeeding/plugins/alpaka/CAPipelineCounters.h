@@ -50,6 +50,7 @@ namespace caHitNtupletGenerator {
     kTripletsOOO_bwd,        // all 3 layers in backward endcap (34-38)
     kTripletsOOO_fwd,        // all 3 layers in forward endcap (39-43)
     kTripletsOOO_other,      // any other OOO combination
+    kTripletPhiMiddleRej,    // triplets rejected by phi residual at middle hit
     kReachabilityKilled,
     kReachNoNeighbors,     // killed: cell has 0 outer neighbors in cellNeighborsHisto
     kReachAllNeighKilled,  // killed: cell has neighbors but ALL are isKilled()

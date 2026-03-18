@@ -944,6 +944,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       printf("[CA Pipeline]   OOO: barrel=%u brl->BWD=%u brl->FWD=%u BWD=%u FWD=%u other=%u\n",
              c[PC::kTripletsOOO_barrel], c[PC::kTripletsOOO_brlToBwd], c[PC::kTripletsOOO_brlToFwd],
              c[PC::kTripletsOOO_bwd], c[PC::kTripletsOOO_fwd], c[PC::kTripletsOOO_other]);
+      printf("[CA Pipeline]   phiMiddle rejected: %u\n", c[PC::kTripletPhiMiddleRej]);
       printf("[CA Pipeline] Reachability: checked=%u passed=%u killed=%u\n",
              c[PC::kReachCellsChecked],
              c[PC::kReachCellsPassed],

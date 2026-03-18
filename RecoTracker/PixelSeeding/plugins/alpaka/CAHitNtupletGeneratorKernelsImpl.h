@@ -494,6 +494,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                 float combined_err2 = sk_geom * sk_geom + sigma_stub_avg2;
                 float dk = kappa_geom - kappa_stub_avg;
                 dcaPassed = (dk * dk < geomSigCut * geomSigCut * combined_err2);
+
+                // Phi residual at middle hit: check that the actual phi of the middle hit
+                // matches the phi predicted from inner hit + weighted-average stub kappa.
+                // Provides orthogonal fake rejection, especially for endcap disk-to-disk triplets.
+                if (dcaPassed) {
+                  auto phiMiddleCut = ll[thisCell.innerLayer()].caPhiMiddleCut();
+                  if (phiMiddleCut >= 0.f && nStubs >= 2) {
+                    float phi2 = std::atan2(hh[hit2].yGlobal(), hh[hit2].xGlobal());
+                    float phi_predicted = phi1 + kappa_stub_avg * (ri - r1);
+                    float dphi_mid = phi2 - phi_predicted;
+                    if (dphi_mid > float(M_PI))
+                      dphi_mid -= 2.f * float(M_PI);
+                    if (dphi_mid < -float(M_PI))
+                      dphi_mid += 2.f * float(M_PI);
+                    dcaPassed = (std::abs(dphi_mid) < phiMiddleCut);
+                    if (!dcaPassed && pipelineCounters) {
+                      using PC = caHitNtupletGenerator::PipelineCounter;
+                      alpaka::atomicAdd(
+                          acc, &pipelineCounters[PC::kTripletPhiMiddleRej], 1u, alpaka::hierarchy::Blocks{});
+                    }
+                  }
+                }
               } else {
                 dcaPassed = true;  // no stubs or cut disabled
               }
