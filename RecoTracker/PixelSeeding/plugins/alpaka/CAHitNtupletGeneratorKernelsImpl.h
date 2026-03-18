@@ -442,48 +442,60 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             if (hasSSStub) {
               // SS stubs have cm-scale (x,y) errors from coarse strip-length
               // measurement -- the 3-point circle fit is unreliable.
-              // Instead, check kappa consistency among stub hits.
-              auto hit1 = oc.inner_hit_id();
-              auto hit2 = thisCell.inner_hit_id();
-              auto hit3 = thisCell.outer_hit_id();
+              // Instead, compare geometric kappa (from hit positions) vs stub-measured kappa.
+              auto geomSigCut = ll[thisCell.innerLayer()].geomKappaSigmaCut();
 
-              // Use the tighter of the two layer-pair stubSigmaCuts
-              float sigCut1 = cc[oc.layerPairId()].stubSigmaCut();
-              float sigCut2 = cc[thisCell.layerPairId()].stubSigmaCut();
-              float sigCut = (sigCut1 > 0.f && sigCut2 > 0.f) ? std::min(sigCut1, sigCut2)
-                           : (sigCut1 > 0.f)                   ? sigCut1
-                           : (sigCut2 > 0.f)                   ? sigCut2
-                                                               : 5.0f;  // fallback
+              if (nStubs >= 1 && geomSigCut > 0.f) {
+                auto hit1 = oc.inner_hit_id();
+                auto hit2 = thisCell.inner_hit_id();
+                auto hit3 = thisCell.outer_hit_id();
 
-              // Collect kappa + error for each stub hit (skip pixels and PHitOnly)
-              auto computeKappa = [&](uint32_t hitId, float r) {
-                float d = hh[hitId].dPhiDr();
-                float s = hh[hitId].dPhiDrError();
-                float den = 1.f + r * r * d * d;
-                float sqrt_den = std::sqrt(den);
-                return std::make_pair(d / sqrt_den, s / (den * sqrt_den));
-              };
-
-              if (nStubs >= 2) {
-                // Pairwise kappa significance -- same formula as doublet level
-                dcaPassed = true;
-                float k1, sk1, k2, sk2, k3, sk3;
-                if (s1) { auto [k, sk] = computeKappa(hit1, r1); k1 = k; sk1 = sk; }
-                if (s2) { auto [k, sk] = computeKappa(hit2, ri); k2 = k; sk2 = sk; }
-                if (s3) { auto [k, sk] = computeKappa(hit3, ro); k3 = k; sk3 = sk; }
-
-                auto kappaOK = [&](float ka, float ska, float kb, float skb) {
-                  float err2 = ska * ska + skb * skb;
-                  return (ka - kb) * (ka - kb) < sigCut * sigCut * err2;
+                // Compute kappa + error for each stub hit
+                auto computeKappa = [&](uint32_t hitId, float r) {
+                  float d = hh[hitId].dPhiDr();
+                  float s = hh[hitId].dPhiDrError();
+                  float den = 1.f + r * r * d * d;
+                  float sqrt_den = std::sqrt(den);
+                  return std::make_pair(d / sqrt_den, s / (den * sqrt_den));
                 };
 
-                if (s1 && s2) dcaPassed &= kappaOK(k1, sk1, k2, sk2);
-                if (s2 && s3) dcaPassed &= kappaOK(k2, sk2, k3, sk3);
-                if (s1 && s3) dcaPassed &= kappaOK(k1, sk1, k3, sk3);
+                // Weighted average of stub kappas
+                float w_sum = 0.f, wk_sum = 0.f;
+                if (s1) { auto [k, sk] = computeKappa(hit1, r1); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
+                if (s2) { auto [k, sk] = computeKappa(hit2, ri); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
+                if (s3) { auto [k, sk] = computeKappa(hit3, ro); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
+
+                float kappa_stub_avg = wk_sum / w_sum;
+                float sigma_stub_avg2 = 1.f / w_sum;
+
+                // Geometric kappa from inner-outer hit positions
+                float x1g = hh[hit1].xGlobal();
+                float y1g = hh[hit1].yGlobal();
+                float x3g = hh[hit3].xGlobal();
+                float y3g = hh[hit3].yGlobal();
+                float phi1 = std::atan2(y1g, x1g);
+                float phi3 = std::atan2(y3g, x3g);
+                float dphi_13 = phi3 - phi1;
+                // Wrap to [-pi, pi]
+                if (dphi_13 > float(M_PI)) dphi_13 -= 2.f * float(M_PI);
+                if (dphi_13 < -float(M_PI)) dphi_13 += 2.f * float(M_PI);
+                float dr_13 = ro - r1;
+                float dphidr_geom = dphi_13 / dr_13;
+                float r_mid = 0.5f * (r1 + ro);
+                float den_g = 1.f + r_mid * r_mid * dphidr_geom * dphidr_geom;
+                float sqrt_den_g = std::sqrt(den_g);
+                float kappa_geom = dphidr_geom / sqrt_den_g;
+
+                // Geometric kappa error (~500 murad phi resolution)
+                constexpr float sigma_phi = 5e-4f;
+                float sk_geom = sigma_phi / (std::abs(dr_13) * den_g * sqrt_den_g);
+
+                // Significance test (squared form, no sqrt needed)
+                float combined_err2 = sk_geom * sk_geom + sigma_stub_avg2;
+                float dk = kappa_geom - kappa_stub_avg;
+                dcaPassed = (dk * dk < geomSigCut * geomSigCut * combined_err2);
               } else {
-                // Only 1 stub + 2 pixel hits -- the DCA circle fit is anchored
-                // by the 2 precise pixel positions, so standard DCA works here
-                dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+                dcaPassed = true;  // no stubs or cut disabled
               }
             } else {
               dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);

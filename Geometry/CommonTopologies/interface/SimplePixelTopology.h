@@ -811,6 +811,19 @@ namespace phase2PixelTopology {
       false, false, false, false, false      // OT forward disks 39-43
   };
 
+  // Geometric-vs-stub kappa significance cut for Phase2OTStubs layers
+  // Negative = disabled (pixel layers have no stubs). Per-layer, using the middle layer for a triplet.
+  HOST_DEVICE_CONSTANT float geomKappaSigmaCutsPhase2OTStubs[nLayersPhase2OTStubs] = {
+      // 28 pixel layers: -1.0 (disabled, no stubs)
+      -1.0, -1.0, -1.0, -1.0,                                                              // BPix layers 0-3
+      -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,            // Forward pixel (4-15)
+      -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,            // Backward pixel (16-27)
+      // 6 OT barrel layers: 5.0 (placeholder)
+      5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
+      // 10 OT endcap disks: 5.0 (placeholder)
+      5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0
+  };
+
   // -------------------------------------------------------------------------------------------------------
   // Deprecated arrays only used in the CUDA version (values have no meaning in alpaka or anywhere else):
 
@@ -1051,6 +1064,7 @@ namespace pixelTopology {
     static constexpr float const *minDZ = phase2PixelTopology::minDZPhase2OTStubs;
     static constexpr float const *maxDZ = phase2PixelTopology::maxDZPhase2OTStubs;
     static constexpr float const *ptCuts = phase2PixelTopology::ptCutsPhase2OTStubs;
+    static constexpr float const *geomKappaSigmaCuts = phase2PixelTopology::geomKappaSigmaCutsPhase2OTStubs;
 
     // Increased capacities for extended tracking (sized from 1k ttbar PU200 peak occupancy)
     static constexpr uint32_t maxNumberOfDoublets = 8 * 1024 * 1024;   // ~13% margin over 7.4M peak

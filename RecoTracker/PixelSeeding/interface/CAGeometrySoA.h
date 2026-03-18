@@ -34,7 +34,8 @@ namespace reco {
                       SOA_COLUMN(uint32_t, layerStarts),
                       SOA_COLUMN(float, caThetaCut),
                       SOA_COLUMN(float, caDCACut),
-                      SOA_COLUMN(bool, isBarrel))
+                      SOA_COLUMN(bool, isBarrel),
+                      SOA_COLUMN(float, geomKappaSigmaCut))  // Geometric-vs-stub kappa significance cut (negative = disabled)
 
   GENERATE_SOA_LAYOUT(CAGraphLayout,
                       SOA_COLUMN(GraphNode, graph),

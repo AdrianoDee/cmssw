@@ -132,6 +132,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment(
               "Stub-stub pairwise sigma cut per layer pair. Negative = disabled.\n"
               "Barrel flat-flat: kappa-corrected significance. Forward: dPhiDr significance.");
+      geometryParams.addOptional<std::vector<double>>("geomKappaSigmaCuts")
+          ->setComment(
+              "Geometric-vs-stub kappa significance cut. One per layer, using the middle layer for a triplet.\n"
+              "Negative = disabled (no stubs on that layer).");
 
       desc.add<edm::ParameterSetDescription>("geometry", geometryParams)
           ->setComment("Layer-dependent cuts and settings of the CA");
