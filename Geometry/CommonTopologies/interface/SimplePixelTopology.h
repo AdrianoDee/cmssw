@@ -574,8 +574,8 @@ namespace phase2PixelTopology {
       -1200, -1200, -1200,           // OT barrel chain
       -1200, -1200, -1200, -1200, -1200,  // barrel to forward disks
       -1200, -1200, -1200, -1200, -1200,  // barrel to backward disks
-      -10000, -10000, -10000, -10000,     // forward disk chain (r-based)
-      -10000, -10000, -10000, -10000,    // backward disk chain (r-based)
+      20,     20,     20,     20,          // forward disk chain (r-based, OT disk inner ~23cm)
+      20,     20,     20,     20,         // backward disk chain (r-based, OT disk inner ~23cm)
       // Pixel-to-OT-disk pairs (r-based, relaxed)
       0,      0,      0,      0,         // fwd pixel D5/D6 to OT fwd D1/D2
       0,      0,      0,      0          // bwd pixel D5/D6 to OT bwd D1/D2
@@ -601,8 +601,8 @@ namespace phase2PixelTopology {
       1200,  1200,  1200,                 // OT barrel chain
       1200,  1200,  1200,  1200,  1200,   // barrel to forward disks
       1200,  1200,  1200,  1200,  1200,   // barrel to backward disks
-      10000, 10000, 10000, 10000,         // forward disk chain
-      10000, 10000, 10000, 10000,        // backward disk chain
+      115,   115,   115,   115,            // forward disk chain (r-based, OT disk outer ~110cm)
+      115,   115,   115,   115,           // backward disk chain (r-based, OT disk outer ~110cm)
       // Pixel-to-OT-disk pairs (r-based, relaxed)
       10000, 10000, 10000, 10000,        // fwd pixel D5/D6 to OT fwd D1/D2
       10000, 10000, 10000, 10000         // bwd pixel D5/D6 to OT bwd D1/D2
@@ -682,8 +682,8 @@ namespace phase2PixelTopology {
       10000.0, 10000.0, 10000.0,                 // OT barrel chain
       10000.0, 10000.0, 10000.0, 10000.0, 10000.0,  // barrel to forward disks
       10000.0, 10000.0, 10000.0, 10000.0, 10000.0,  // barrel to backward disks
-      10000.0, 10000.0, 10000.0, 10000.0,           // forward disk chain
-      10000.0, 10000.0, 10000.0, 10000.0,          // backward disk chain
+      60.0,    60.0,    60.0,    60.0,              // forward disk chain (full disk r-extent with margin)
+      60.0,    60.0,    60.0,    60.0,             // backward disk chain (full disk r-extent with margin)
       // Pixel-to-OT-disk pairs (relaxed)
       10000.0, 10000.0, 10000.0, 10000.0,          // fwd pixel D5/D6 to OT fwd D1/D2
       10000.0, 10000.0, 10000.0, 10000.0           // bwd pixel D5/D6 to OT bwd D1/D2
@@ -709,8 +709,8 @@ namespace phase2PixelTopology {
       -50.0,  -50.0,  -50.0,                  // OT barrel chain
       0.0,    0.0,    0.0,    0.0,    0.0,    // barrel to forward disks (z > 0)
       -10000, -10000, -10000, -10000, -10000, // barrel to backward disks (z < 0)
-      0.0,    0.0,    0.0,    0.0,            // forward disk chain
-      -10000, -10000, -10000, -10000,        // backward disk chain
+      10.0,   20.0,   20.0,   25.0,           // forward disk chain (per-pair dz, D1D2/D2D3/D3D4/D4D5)
+      -35.0,  -55.0,  -55.0,  -70.0,        // backward disk chain (per-pair dz, D1D2/D2D3/D3D4/D4D5)
       // Pixel-to-OT-disk pairs (relaxed)
       -10000, -10000, -10000, -10000,        // fwd pixel D5/D6 to OT fwd D1/D2
       -10000, -10000, -10000, -10000         // bwd pixel D5/D6 to OT bwd D1/D2
@@ -736,8 +736,8 @@ namespace phase2PixelTopology {
       50.0,  50.0,  50.0,                 // OT barrel chain
       10000, 10000, 10000, 10000, 10000,  // barrel to forward disks
       0.0,   0.0,   0.0,   0.0,   0.0,    // barrel to backward disks (z < 0)
-      10000, 10000, 10000, 10000,         // forward disk chain
-      0.0,   0.0,   0.0,   0.0,          // backward disk chain
+      35.0,  55.0,  55.0,  70.0,           // forward disk chain (per-pair dz, D1D2/D2D3/D3D4/D4D5)
+      -10.0, -20.0, -20.0, -25.0,        // backward disk chain (per-pair dz, D1D2/D2D3/D3D4/D4D5)
       // Pixel-to-OT-disk pairs (relaxed)
       10000, 10000, 10000, 10000,        // fwd pixel D5/D6 to OT fwd D1/D2
       10000, 10000, 10000, 10000         // bwd pixel D5/D6 to OT bwd D1/D2

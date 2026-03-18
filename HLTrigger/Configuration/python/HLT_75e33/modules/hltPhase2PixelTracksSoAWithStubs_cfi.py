@@ -177,17 +177,20 @@ layerPairs = [
     [ 31, 39, False,   2000,     80,  10000,      60,     110, 10000,  -10000,  10000,  0.85,   5.0],
     [ 32, 39, False,   3300,     80,  10000,      80,     110, 10000,  -10000,  10000,  0.85,   5.0],
     # Backward disk to disk consecutive connections (layers 34-38)
-    # stubSigmaCut: dPhiDr pairwise significance (=dPhiDz for endcap), 10sigma for D1->D2
-    [ 34, 35, False,   1500, -10000,  10000,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   6.5],
-    [ 35, 36, False,   1500, -10000,  10000,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   5.6],
-    [ 36, 37, False,   1500, -10000,  10000,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   5.4],
-    [ 37, 38, False,   1500, -10000,  10000,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   6.0],
+    # For backward disks: dz < 0 (moving to more negative z)
+    # r-range: 20-115 cm (~15% margin over actual 23-110 cm disk extent)
+    # maxDR=60: covers full disk r-extent with margin
+    # Signed dz: enforces correct z-direction AND constrains to actual disk separations
+    [ 34, 35, False,   1500,     20,    115,      20,     115,  60.0,  -35.0,  -10.0,  0.85,   6.5],
+    [ 35, 36, False,   1500,     20,    115,      20,     115,  60.0,  -55.0,  -20.0,  0.85,   5.6],
+    [ 36, 37, False,   1500,     20,    115,      20,     115,  60.0,  -55.0,  -20.0,  0.85,   5.4],
+    [ 37, 38, False,   1500,     20,    115,      20,     115,  60.0,  -70.0,  -25.0,  0.85,   6.0],
     # Forward disk to disk consecutive connections (layers 39-43)
-    # stubSigmaCut: dPhiDr pairwise significance (=dPhiDz for endcap), 10sigma for D1->D2
-    [ 39, 40, False,   1500, -10000,  10000,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   6.5],
-    [ 40, 41, False,   1500, -10000,  10000,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   5.6],
-    [ 41, 42, False,   1500, -10000,  10000,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   5.4],
-    [ 42, 43, False,   1500, -10000,  10000,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   6.0],
+    # For forward disks: dz > 0 (moving to more positive z)
+    [ 39, 40, False,   1500,     20,    115,      20,     115,  60.0,   10.0,   35.0,  0.85,   6.5],
+    [ 40, 41, False,   1500,     20,    115,      20,     115,  60.0,   20.0,   55.0,  0.85,   5.6],
+    [ 41, 42, False,   1500,     20,    115,      20,     115,  60.0,   20.0,   55.0,  0.85,   5.4],
+    [ 42, 43, False,   1500,     20,    115,      20,     115,  60.0,   25.0,   70.0,  0.85,   6.0],
 ]
 
 # find the layerPairs that contain a layer that is excluded
