@@ -1,11 +1,30 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAStructures_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAStructures_h
 
+#include <cmath>
+#include <cstdint>
+
+#include <alpaka/alpaka.hpp>
+
 #include "HeterogeneousCore/AlpakaInterface/interface/SimpleVector.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 
 namespace caStructures {
+
+  // Kappa quantization: tracks >= 0.9 GeV/c in B=3.8T have |kappa| <= ~0.0063 cm^-1.
+  static constexpr float kappaFullScale = 0.007f;
+  static constexpr float kappaScale = 32767.f / kappaFullScale;
+  static constexpr int16_t kappaUnset = -32768;  // INT16_MIN: sentinel for "no kappa stored"
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t quantizeKappa(float kappa) {
+    float scaled = kappa * kappaScale;
+    scaled = std::max(-32767.f, std::min(32767.f, scaled));
+    return static_cast<int16_t>(scaled);
+  }
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float dequantizeKappa(int16_t q) {
+    return float(q) / kappaScale;
+  }
 
   using Quality = ::pixelTrack::Quality;
 
@@ -49,6 +68,9 @@ namespace caStructures {
     // Orphan chain recovery (Phase2OTStubs only)
     bool doOrphanRecovery_;          // Enable/disable orphan chain recovery
     uint16_t minHitsOrphanNtuplet_;  // Minimum hits for orphan chains
+
+    // Chain kappa consistency (Phase2OTStubs only)
+    float chainKappaCut_;  // Max |delta kappa| between adjacent connections [cm^-1]; negative = disabled
   };
 
   // Hits data formats

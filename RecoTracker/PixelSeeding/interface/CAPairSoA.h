@@ -9,7 +9,10 @@
 
 namespace caStructures {
 
-  GENERATE_SOA_LAYOUT(CAPairLayout, SOA_COLUMN(uint32_t, inner), SOA_COLUMN(uint32_t, outer))
+  GENERATE_SOA_LAYOUT(CAPairLayout,
+                      SOA_COLUMN(uint32_t, inner),
+                      SOA_COLUMN(uint32_t, outer),
+                      SOA_COLUMN(int16_t, kappa))  // quantized half-curvature for this triplet connection
 
   using CAPairSoA = CAPairLayout<>;
   using CAPairSoAView = CAPairSoA::View;

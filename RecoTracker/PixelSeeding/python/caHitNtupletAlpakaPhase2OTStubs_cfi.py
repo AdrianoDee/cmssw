@@ -273,6 +273,10 @@ caHitNtupletAlpakaPhase2OTStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStub
     doOrphanRecovery = cms.bool(False),
     minHitsOrphanNtuplet = cms.uint32(5),  # require 5+ hits to suppress fakes
 
+    # Chain kappa consistency: reject chain extensions where adjacent connection
+    # kappas differ by more than this threshold [cm^-1]. Negative = disabled.
+    chainKappaCut = cms.double(0.001),  # ~10x stub measurement resolution
+
     # Track quality cuts (Phase2-specific)
     trackQualityCuts = cms.PSet(
         maxChi2 = cms.double(5.0),

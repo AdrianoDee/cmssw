@@ -439,6 +439,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
           bool aligned = Cell::areAlignedRZ(r1, z1, ri, zi, ro, zo, params.ptmin_, effectiveThetaCut);
           bool dcaPassed;
+          float tripletKappa = 0.f;  // half-curvature for chain kappa consistency
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
             if (hasSSStub) {
               // SS stubs have cm-scale (x,y) errors from coarse strip-length
@@ -480,6 +481,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
                   float kappa_stub_avg = wk_sum / w_sum;
                   float sigma_stub_avg2 = 1.f / w_sum;
+                  tripletKappa = kappa_stub_avg;
 
                   // Geometric kappa from inner-outer phi difference (1 atan2 instead of 2)
                   float cross13 = x1g * y3g - y1g * x3g;
@@ -529,9 +531,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
               }
             } else {
               dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+              if (dcaPassed) {
+                // Compute kappa from 3-point circle for chain consistency
+                CircleEq<float> eq(oc.inner_x(hh), oc.inner_y(hh),
+                                   thisCell.inner_x(hh), thisCell.inner_y(hh),
+                                   thisCell.outer_x(hh), thisCell.outer_y(hh));
+                tripletKappa = eq.curvature() * 0.5f;
+              }
             }
           } else {
             dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+            if (dcaPassed) {
+              CircleEq<float> eq(oc.inner_x(hh), oc.inner_y(hh),
+                                 thisCell.inner_x(hh), thisCell.inner_y(hh),
+                                 thisCell.outer_x(hh), thisCell.outer_y(hh));
+              tripletKappa = eq.curvature() * 0.5f;
+            }
           }
 
 #ifdef CA_DEBUG
@@ -633,6 +648,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
             cn[t_ind].inner() = otherCell;
             cn[t_ind].outer() = cellIndex;
+            cn[t_ind].kappa() = caStructures::quantizeKappa(tripletKappa);
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             thisCell.setStatusBits(Cell::StatusBit::kHasInner);  // thisCell (outer) has an inner neighbor
             oc.setStatusBits(Cell::StatusBit::kUsed);
@@ -739,6 +755,56 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             --j;
           }
           bin[j + 1] = key;
+        }
+      }
+    }
+  };
+
+  // Like Kernel_fillGenericPair but also writes the kappa from the CAPairSoA into a parallel array.
+  // Used for the cellToNeighbors histogram so kappa travels alongside neighbor cell IDs.
+  class Kernel_fillGenericPairWithKappa {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  caStructures::CAPairSoAConstView cn,
+                                  uint32_t const *nElements,
+                                  GenericContainer *genericHisto,
+                                  int16_t *__restrict__ kappaStorage) const {
+      for (uint32_t index : cms::alpakatools::uniform_elements(acc, *nElements)) {
+        auto b = cn[index].inner();
+        ALPAKA_ASSERT_ACC(b < genericHisto->nOnes());
+        auto w = GenericContainer::atomicDecrement(acc, genericHisto->off[b]);
+        ALPAKA_ASSERT_ACC(w > 0);
+        genericHisto->content[w - 1] = cn[index].outer();
+        kappaStorage[w - 1] = cn[index].kappa();
+      }
+    }
+  };
+
+  // Sort each histogram bin by content value, co-sorting the parallel kappa array.
+  class Kernel_sortHistoBinsWithKappa {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  GenericContainer *histo,
+                                  int16_t *__restrict__ kappaStorage) const {
+      for (auto idx : cms::alpakatools::uniform_elements(acc, histo->nOnes())) {
+        auto size = histo->size(idx);
+        if (size <= 1)
+          continue;
+        auto offset = histo->off[idx];
+        auto *bin = histo->content.data() + offset;
+        auto *kbin = kappaStorage + offset;
+        // Insertion sort: co-sort kappa alongside content
+        for (uint32_t i = 1; i < size; ++i) {
+          auto key = bin[i];
+          auto kkey = kbin[i];
+          int j = i - 1;
+          while (j >= 0 && bin[j] > key) {
+            bin[j + 1] = bin[j];
+            kbin[j + 1] = kbin[j];
+            --j;
+          }
+          bin[j + 1] = key;
+          kbin[j + 1] = kkey;
         }
       }
     }
@@ -874,7 +940,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   uint32_t const *nTriplets,
                                   uint32_t const *nCells,
                                   cms::alpakatools::AtomicPairCounter *apc,
-                                  AlgoParams const &params) const {
+                                  AlgoParams const &params,
+                                  int16_t const *__restrict__ connectionKappa) const {
       using Cell = CACell<TrackerTraits>;
 
 #ifdef GPU_DEBUG
@@ -920,7 +987,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                     *apc,
                                                     tracks_view.quality().data(),
                                                     stack,
-                                                    params.minHitsPerNtuplet_);
+                                                    params.minHitsPerNtuplet_,
+                                                    connectionKappa,
+                                                    params.chainKappaCut_,
+                                                    caStructures::kappaUnset);
           ALPAKA_ASSERT_ACC(stack.empty());
         }
       }
@@ -948,7 +1018,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   uint32_t *nCellTracks,
                                   uint32_t const *nCells,
                                   cms::alpakatools::AtomicPairCounter *apc,
-                                  AlgoParams const &params) const {
+                                  AlgoParams const &params,
+                                  int16_t const *__restrict__ connectionKappa) const {
       using Cell = CACell<TrackerTraits>;
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
@@ -984,7 +1055,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                   *apc,
                                                   tracks_view.quality().data(),
                                                   stack,
-                                                  params.minHitsOrphanNtuplet_);
+                                                  params.minHitsOrphanNtuplet_,
+                                                  connectionKappa,
+                                                  params.chainKappaCut_,
+                                                  caStructures::kappaUnset);
         ALPAKA_ASSERT_ACC(stack.empty());
       }
     }

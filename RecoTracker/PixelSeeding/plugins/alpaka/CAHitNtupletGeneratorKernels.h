@@ -251,6 +251,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::optional<CAPairSoACollection> deviceTriplets_;
     std::optional<CAPairSoACollection> deviceTracksCells_;
 
+    // Parallel kappa array for cellToNeighbors histogram (chain kappa consistency)
+    std::optional<cms::alpakatools::device_buffer<Device, int16_t[]>> device_connectionKappa_;
+
 #ifdef CA_PIPELINE_COUNTERS
     // Pipeline stage counters for diagnostic funnel
     std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> device_pipelineCounters_;
