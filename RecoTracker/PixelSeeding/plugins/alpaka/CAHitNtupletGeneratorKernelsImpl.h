@@ -407,10 +407,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           bool hasSSStub = false;
           int nStubs = 0;
           bool s1 = false, s2 = false, s3 = false;
+          uint32_t hit1 = 0, hit2 = 0, hit3 = 0;
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            auto hit1 = oc.inner_hit_id();
-            auto hit2 = thisCell.inner_hit_id();
-            auto hit3 = thisCell.outer_hit_id();
+            hit1 = oc.inner_hit_id();
+            hit2 = thisCell.inner_hit_id();
+            hit3 = thisCell.outer_hit_id();
 
             auto isSSStub = [&](uint32_t hitId) {
               return hh[hitId].isStub() && hh[hitId].stubType() == ::reco::StubType::SS;
@@ -446,73 +447,80 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
               auto geomSigCut = ll[thisCell.innerLayer()].geomKappaSigmaCut();
 
               if (nStubs >= 1 && geomSigCut > 0.f) {
-                auto hit1 = oc.inner_hit_id();
-                auto hit2 = thisCell.inner_hit_id();
-                auto hit3 = thisCell.outer_hit_id();
-
-                // Compute kappa + error for each stub hit
-                auto computeKappa = [&](uint32_t hitId, float r) {
-                  float d = hh[hitId].dPhiDr();
-                  float s = hh[hitId].dPhiDrError();
-                  float den = 1.f + r * r * d * d;
-                  float sqrt_den = std::sqrt(den);
-                  return std::make_pair(d / sqrt_den, s / (den * sqrt_den));
-                };
-
-                // Weighted average of stub kappas
-                float w_sum = 0.f, wk_sum = 0.f;
-                if (s1) { auto [k, sk] = computeKappa(hit1, r1); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
-                if (s2) { auto [k, sk] = computeKappa(hit2, ri); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
-                if (s3) { auto [k, sk] = computeKappa(hit3, ro); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
-
-                float kappa_stub_avg = wk_sum / w_sum;
-                float sigma_stub_avg2 = 1.f / w_sum;
-
-                // Geometric kappa from inner-outer hit positions
+                // Load global coordinates once (shared between pre-filter and geomKappa)
                 float x1g = hh[hit1].xGlobal();
                 float y1g = hh[hit1].yGlobal();
+                float x2g = hh[hit2].xGlobal();
+                float y2g = hh[hit2].yGlobal();
                 float x3g = hh[hit3].xGlobal();
                 float y3g = hh[hit3].yGlobal();
-                float phi1 = std::atan2(y1g, x1g);
-                float phi3 = std::atan2(y3g, x3g);
-                float dphi_13 = phi3 - phi1;
-                // Wrap to [-pi, pi]
-                if (dphi_13 > float(M_PI)) dphi_13 -= 2.f * float(M_PI);
-                if (dphi_13 < -float(M_PI)) dphi_13 += 2.f * float(M_PI);
-                float dr_13 = ro - r1;
-                float dphidr_geom = dphi_13 / dr_13;
-                float r_mid = 0.5f * (r1 + ro);
-                float den_g = 1.f + r_mid * r_mid * dphidr_geom * dphidr_geom;
-                float sqrt_den_g = std::sqrt(den_g);
-                float kappa_geom = dphidr_geom / sqrt_den_g;
 
-                // Geometric kappa error (~500 murad phi resolution)
-                constexpr float sigma_phi = 5e-4f;
-                float sk_geom = sigma_phi / (std::abs(dr_13) * den_g * sqrt_den_g);
+                // Fast pre-reject: cross-product sign consistency.
+                // For a genuine track curving smoothly, cross(1->2) and cross(2->3) have the same sign.
+                // For random hit combinations, ~50% have opposite signs -> immediate rejection.
+                float cross12 = x1g * y2g - y1g * x2g;
+                float cross23 = x2g * y3g - y2g * x3g;
+                dcaPassed = (cross12 * cross23 >= 0.f);
 
-                // Significance test (squared form, no sqrt needed)
-                float combined_err2 = sk_geom * sk_geom + sigma_stub_avg2;
-                float dk = kappa_geom - kappa_stub_avg;
-                dcaPassed = (dk * dk < geomSigCut * geomSigCut * combined_err2);
-
-                // Phi residual at middle hit: check that the actual phi of the middle hit
-                // matches the phi predicted from inner hit + weighted-average stub kappa.
-                // Provides orthogonal fake rejection, especially for endcap disk-to-disk triplets.
                 if (dcaPassed) {
-                  auto phiMiddleCut = ll[thisCell.innerLayer()].caPhiMiddleCut();
-                  if (phiMiddleCut >= 0.f && nStubs >= 2) {
-                    float phi2 = std::atan2(hh[hit2].yGlobal(), hh[hit2].xGlobal());
-                    float phi_predicted = phi1 + kappa_stub_avg * (ri - r1);
-                    float dphi_mid = phi2 - phi_predicted;
-                    if (dphi_mid > float(M_PI))
-                      dphi_mid -= 2.f * float(M_PI);
-                    if (dphi_mid < -float(M_PI))
-                      dphi_mid += 2.f * float(M_PI);
-                    dcaPassed = (std::abs(dphi_mid) < phiMiddleCut);
-                    if (!dcaPassed && pipelineCounters) {
-                      using PC = caHitNtupletGenerator::PipelineCounter;
-                      alpaka::atomicAdd(
-                          acc, &pipelineCounters[PC::kTripletPhiMiddleRej], 1u, alpaka::hierarchy::Blocks{});
+                  // Compute kappa + error for each stub hit
+                  auto computeKappa = [&](uint32_t hitId, float r) {
+                    float d = hh[hitId].dPhiDr();
+                    float s = hh[hitId].dPhiDrError();
+                    float den = 1.f + r * r * d * d;
+                    float sqrt_den = std::sqrt(den);
+                    return std::make_pair(d / sqrt_den, s / (den * sqrt_den));
+                  };
+
+                  // Weighted average of stub kappas
+                  float w_sum = 0.f, wk_sum = 0.f;
+                  if (s1) { auto [k, sk] = computeKappa(hit1, r1); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
+                  if (s2) { auto [k, sk] = computeKappa(hit2, ri); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
+                  if (s3) { auto [k, sk] = computeKappa(hit3, ro); float w = 1.f / (sk * sk); w_sum += w; wk_sum += w * k; }
+
+                  float kappa_stub_avg = wk_sum / w_sum;
+                  float sigma_stub_avg2 = 1.f / w_sum;
+
+                  // Geometric kappa from inner-outer phi difference (1 atan2 instead of 2)
+                  float cross13 = x1g * y3g - y1g * x3g;
+                  float dot13 = x1g * x3g + y1g * y3g;
+                  float dphi_13 = std::atan2(cross13, dot13);
+                  float dr_13 = ro - r1;
+                  float dphidr_geom = dphi_13 / dr_13;
+                  float r_mid = 0.5f * (r1 + ro);
+                  float den_g = 1.f + r_mid * r_mid * dphidr_geom * dphidr_geom;
+                  float sqrt_den_g = std::sqrt(den_g);
+                  float kappa_geom = dphidr_geom / sqrt_den_g;
+
+                  // Geometric kappa error (~500 murad phi resolution)
+                  constexpr float sigma_phi = 5e-4f;
+                  float sk_geom = sigma_phi / (std::abs(dr_13) * den_g * sqrt_den_g);
+
+                  // Significance test (squared form, no sqrt needed)
+                  float combined_err2 = sk_geom * sk_geom + sigma_stub_avg2;
+                  float dk = kappa_geom - kappa_stub_avg;
+                  dcaPassed = (dk * dk < geomSigCut * geomSigCut * combined_err2);
+
+                  // Phi residual at middle hit: check that the actual phi of the middle hit
+                  // matches the phi predicted from inner hit + weighted-average stub kappa.
+                  // Provides orthogonal fake rejection, especially for endcap disk-to-disk triplets.
+                  if (dcaPassed) {
+                    auto phiMiddleCut = ll[thisCell.innerLayer()].caPhiMiddleCut();
+                    if (phiMiddleCut >= 0.f && nStubs >= 2) {
+                      // Reuse cross12 from pre-filter; compute dot12 for dphi_21
+                      float dot12 = x1g * x2g + y1g * y2g;
+                      float dphi_21 = std::atan2(cross12, dot12);
+                      float dphi_mid = dphi_21 - kappa_stub_avg * (ri - r1);
+                      if (dphi_mid > float(M_PI))
+                        dphi_mid -= 2.f * float(M_PI);
+                      if (dphi_mid < -float(M_PI))
+                        dphi_mid += 2.f * float(M_PI);
+                      dcaPassed = (std::abs(dphi_mid) < phiMiddleCut);
+                      if (!dcaPassed && pipelineCounters) {
+                        using PC = caHitNtupletGenerator::PipelineCounter;
+                        alpaka::atomicAdd(
+                            acc, &pipelineCounters[PC::kTripletPhiMiddleRej], 1u, alpaka::hierarchy::Blocks{});
+                      }
                     }
                   }
                 }
