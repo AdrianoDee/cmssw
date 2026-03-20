@@ -256,9 +256,9 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     doOrphanRecovery = cms.bool(False),
     minHitsOrphanNtuplet = cms.uint32(5),  # require 5+ hits to suppress fakes
 
-    # Chain kappa consistency: reject chain extensions where adjacent connection
-    # kappas differ by more than this threshold [cm^-1]. Negative = disabled.
-    chainKappaCut = cms.double(0.001),  # ~10x stub measurement resolution
+    # Chain phi residual consistency: reject chain extensions where the phi residual
+    # at the middle hit exceeds this threshold [rad]. Negative = disabled.
+    chainPhiResidCut = cms.double(0.01),  # ~6 mrad conservative starting point
 
     # Track quality cuts (Phase2-specific)
     trackQualityCuts = cms.PSet(

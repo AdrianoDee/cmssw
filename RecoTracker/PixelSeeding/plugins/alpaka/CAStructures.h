@@ -12,18 +12,19 @@
 
 namespace caStructures {
 
-  // Kappa quantization: tracks >= 0.9 GeV/c in B=3.8T have |kappa| <= ~0.0063 cm^-1.
-  static constexpr float kappaFullScale = 0.007f;
-  static constexpr float kappaScale = 32767.f / kappaFullScale;
-  static constexpr int16_t kappaUnset = -32768;  // INT16_MIN: sentinel for "no kappa stored"
+  // Phi residual quantization: genuine tracks produce residuals ~10^-5 rad, fakes up to ~0.2 rad.
+  // Use ±0.2 rad full scale → 16-bit gives ~6 µrad per LSB.
+  static constexpr float phiResidFullScale = 0.2f;   // rad
+  static constexpr float phiResidScale = 32767.f / phiResidFullScale;
+  static constexpr int16_t phiResidUnset = -32768;  // INT16_MIN: sentinel for "no phi residual stored"
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t quantizeKappa(float kappa) {
-    float scaled = kappa * kappaScale;
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t quantizePhiResid(float v) {
+    float scaled = v * phiResidScale;
     scaled = std::max(-32767.f, std::min(32767.f, scaled));
     return static_cast<int16_t>(scaled);
   }
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float dequantizeKappa(int16_t q) {
-    return float(q) / kappaScale;
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float dequantizePhiResid(int16_t q) {
+    return float(q) / phiResidScale;
   }
 
   using Quality = ::pixelTrack::Quality;
@@ -69,8 +70,8 @@ namespace caStructures {
     bool doOrphanRecovery_;          // Enable/disable orphan chain recovery
     uint16_t minHitsOrphanNtuplet_;  // Minimum hits for orphan chains
 
-    // Chain kappa consistency (Phase2OTStubs only)
-    float chainKappaCut_;  // Max |delta kappa| between adjacent connections [cm^-1]; negative = disabled
+    // Chain phi residual consistency (Phase2OTStubs only)
+    float chainPhiResidCut_;  // Max |phi residual| per connection [rad]; negative = disabled
   };
 
   // Hits data formats

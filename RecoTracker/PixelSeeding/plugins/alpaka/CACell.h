@@ -211,9 +211,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       Quality* __restrict__ quality,
                                                       TmpTuple& tmpNtuplet,
                                                       const unsigned int minHitsPerNtuplet,
-                                                      int16_t const* __restrict__ connectionKappa,
-                                                      float chainKappaCut,
-                                                      int16_t prevKappa) const {
+                                                      int16_t const* __restrict__ connectionPhiResid,
+                                                      float chainPhiResidCut) const {
       // the building process for a track ends if:
       // it has no right neighbor
       // it has no compatible neighbor
@@ -237,16 +236,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           if (cells[otherCell].isKilled())
             continue;
 
-          // Chain kappa consistency check (Phase2OTStubs only, compile-time gated)
-          int16_t thisKappa = ::caStructures::kappaUnset;
+          // Chain phi residual consistency check (Phase2OTStubs only, compile-time gated)
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            if (chainKappaCut >= 0.f) {
-              thisKappa = connectionKappa[cellNeighborsHisto->off[doubletId] + idx];
-              if (prevKappa != ::caStructures::kappaUnset && thisKappa != ::caStructures::kappaUnset) {
-                float dk = ::caStructures::dequantizeKappa(thisKappa) -
-                           ::caStructures::dequantizeKappa(prevKappa);
-                if (dk * dk > chainKappaCut * chainKappaCut)
-                  continue;  // curvature inconsistent -- skip extension
+            if (chainPhiResidCut >= 0.f) {
+              int16_t pr = connectionPhiResid[cellNeighborsHisto->off[doubletId] + idx];
+              if (pr != ::caStructures::phiResidUnset) {
+                float phiResid = ::caStructures::dequantizePhiResid(pr);
+                if (phiResid * phiResid > chainPhiResidCut * chainPhiResidCut)
+                  continue;  // middle hit inconsistent -- skip extension
               }
             }
           }
@@ -279,9 +276,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                              quality,
                                                              tmpNtuplet,
                                                              minHitsPerNtuplet,
-                                                             connectionKappa,
-                                                             chainKappaCut,
-                                                             thisKappa);
+                                                             connectionPhiResid,
+                                                             chainPhiResidCut);
         }
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {

@@ -174,8 +174,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     deviceTriplets_ = CAPairSoACollection(queue, std::lrint(maxDoublets * algoParams.avgCellsPerCell_));
     deviceTracksCells_ = CAPairSoACollection(queue, nCellsToTracks);
 
-    // Parallel kappa array mirroring cellToNeighbors content storage
-    device_connectionKappa_ = cms::alpakatools::make_device_buffer<int16_t[]>(queue, nCellsToCells);
+    // Parallel phi residual array mirroring cellToNeighbors content storage
+    device_connectionPhiResid_ = cms::alpakatools::make_device_buffer<int16_t[]>(queue, nCellsToCells);
 
 #ifdef CA_PIPELINE_COUNTERS
     // Pipeline stage counters for diagnostic funnel
@@ -294,19 +294,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
-                        Kernel_fillGenericPairWithKappa{},
+                        Kernel_fillGenericPairWithPhiResid{},
                         this->deviceTriplets_->view(),
                         this->device_nTriplets_->data(),
                         this->device_cellToNeighbors_->data(),
-                        this->device_connectionKappa_->data());
+                        this->device_connectionPhiResid_->data());
 
     // Sort neighbors within each cell's bin for deterministic DFS in find_ntuplets
-    // Co-sort the parallel kappa array to keep kappa aligned with neighbor cell IDs
+    // Co-sort the parallel phiResid array to keep phiResid aligned with neighbor cell IDs
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
-                        Kernel_sortHistoBinsWithKappa{},
+                        Kernel_sortHistoBinsWithPhiResid{},
                         this->device_cellToNeighbors_->data(),
-                        this->device_connectionKappa_->data());
+                        this->device_connectionPhiResid_->data());
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
@@ -393,7 +393,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_nCells_->data(),
                         this->device_hitTuple_apc_,
                         this->m_params.algoParams_,
-                        this->device_connectionKappa_->data());
+                        this->device_connectionPhiResid_->data());
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
@@ -417,7 +417,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             this->device_nCells_->data(),
                             this->device_hitTuple_apc_,
                             this->m_params.algoParams_,
-                            this->device_connectionKappa_->data());
+                            this->device_connectionPhiResid_->data());
 
 #ifdef GPU_DEBUG
         alpaka::wait(queue);

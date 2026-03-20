@@ -212,11 +212,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "Minimum number of hits for orphan chains "
               "(higher than minHitsPerNtuplet to suppress fakes).");
 
-      // Chain kappa consistency (Phase2OTStubs only)
-      desc.add<double>("chainKappaCut", -1.0)
+      // Chain phi residual consistency (Phase2OTStubs only)
+      desc.add<double>("chainPhiResidCut", -1.0)
           ->setComment(
-              "Max |delta kappa| between adjacent connections during chain extension [cm^-1]. "
-              "Negative = disabled. Typical value when enabled: 0.001.");
+              "Max |phi residual| per connection during chain extension [rad]. "
+              "Negative = disabled. Typical value when enabled: 0.01.");
     }
 
     AlgoParams makeCommonParams(edm::ParameterSet const& cfg) {
@@ -261,8 +261,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           cfg.getParameter<bool>("doOrphanRecovery"),
           (uint16_t)cfg.getParameter<unsigned int>("minHitsOrphanNtuplet"),
 
-          // Chain kappa consistency
-          (float)cfg.getParameter<double>("chainKappaCut")});
+          // Chain phi residual consistency
+          (float)cfg.getParameter<double>("chainPhiResidCut")});
     }
 
     //This is needed to have the partial specialization for isPhase1Topology/isPhase2Topology
