@@ -406,6 +406,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           // the relaxed theta cut and the later kappa/DCA logic.
           bool hasSSStub = false;
           int nStubs = 0;
+          int nSS = 0;
           bool s1 = false, s2 = false, s3 = false;
           uint32_t hit1 = 0, hit2 = 0, hit3 = 0;
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
@@ -420,21 +421,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
               return hh[hitId].isStub() && hh[hitId].stubType() != ::reco::StubType::PHitOnly;
             };
 
-            hasSSStub = isSSStub(hit1) || isSSStub(hit2) || isSSStub(hit3);
+            bool ss1 = isSSStub(hit1);
+            bool ss2 = isSSStub(hit2);
+            bool ss3 = isSSStub(hit3);
+            hasSSStub = ss1 || ss2 || ss3;
+            nSS = int(ss1) + int(ss2) + int(ss3);
             s1 = isRealStub(hit1);
             s2 = isRealStub(hit2);
             s3 = isRealStub(hit3);
             nStubs = int(s1) + int(s2) + int(s3);
           }
 
-          // SS stubs have ~1-2 cm z uncertainty. Rather than skipping the r-z check
-          // entirely (which causes combinatorial explosion), apply it with a relaxed
-          // threshold that accommodates the poor z resolution.
+          // SS stubs have ~1-2 cm z uncertainty. Select the per-layer theta cut
+          // based on the number of SS stubs. A negative SoA value means "fall back
+          // to the old hardcoded multiplier" for backward compatibility.
           float effectiveThetaCut = thetaCut;
-          if (hasSSStub) {
-            constexpr float ssRelaxSingleStub = 2.0f;   // 1 stub + 2 pixels
-            constexpr float ssRelaxMultiStub = 3.0f;    // 2+ stubs
-            effectiveThetaCut = thetaCut * ((nStubs >= 2) ? ssRelaxMultiStub : ssRelaxSingleStub);
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            if (nSS >= 2) {
+              auto cut2 = ll[thisCell.innerLayer()].caThetaCut2SS();
+              effectiveThetaCut = (cut2 >= 0.f) ? cut2 : thetaCut * 3.0f;
+            } else if (nSS >= 1) {
+              auto cut1 = ll[thisCell.innerLayer()].caThetaCut1SS();
+              effectiveThetaCut = (cut1 >= 0.f) ? cut1 : thetaCut * 2.0f;
+            }
           }
 
           bool aligned = Cell::areAlignedRZ(r1, z1, ri, zi, ro, zo, params.ptmin_, effectiveThetaCut);

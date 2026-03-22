@@ -140,6 +140,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment(
               "Phi residual at middle hit cut [rad]. One per layer, using the inner layer for a triplet.\n"
               "Negative = disabled. Requires nStubs >= 2 for reliable stub kappa prediction.");
+      geometryParams.addOptional<std::vector<double>>("caThetaCut1SSCuts")
+          ->setComment(
+              "Theta cut with exactly 1 SS stub. Per layer. Negative = 2x hardcoded fallback.");
+      geometryParams.addOptional<std::vector<double>>("caThetaCut2SSCuts")
+          ->setComment(
+              "Theta cut with 2+ SS stubs. Per layer. Negative = 3x hardcoded fallback.");
 
       desc.add<edm::ParameterSetDescription>("geometry", geometryParams)
           ->setComment("Layer-dependent cuts and settings of the CA");

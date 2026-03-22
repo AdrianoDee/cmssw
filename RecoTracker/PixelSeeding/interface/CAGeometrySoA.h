@@ -33,6 +33,8 @@ namespace reco {
   GENERATE_SOA_LAYOUT(CALayersLayout,
                       SOA_COLUMN(uint32_t, layerStarts),
                       SOA_COLUMN(float, caThetaCut),
+                      SOA_COLUMN(float, caThetaCut1SS),  // theta cut with 1 SS stub (negative = fallback 2x multiplier)
+                      SOA_COLUMN(float, caThetaCut2SS),  // theta cut with 2+ SS stubs (negative = fallback 3x multiplier)
                       SOA_COLUMN(float, caDCACut),
                       SOA_COLUMN(bool, isBarrel),
                       SOA_COLUMN(float, geomKappaSigmaCut),  // Geometric-vs-stub kappa significance cut (negative = disabled)
