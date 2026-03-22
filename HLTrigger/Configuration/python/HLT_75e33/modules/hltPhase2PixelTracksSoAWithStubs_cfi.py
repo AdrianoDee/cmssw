@@ -47,28 +47,28 @@ layers = [
     # dcaCut increased for layers 28-32 to handle barrel-to-endcap triplet transitions
     # (the fitted circle DCA is larger when transitioning from barrel to endcap geometry)
     # geomKappaSigmaCut: geometric-vs-stub kappa significance (placeholder 5.0)
-    [    28,     True,  0.30,   0.003,       5.0,       -1.0],
-    [    29,     True,  0.30,   0.003,       5.0,       -1.0],
-    [    30,     True,  0.30,   0.003,       5.0,       -1.0],
-    [    31,     True,  0.30,   0.007,       5.0,       -1.0],
-    [    32,     True,  0.30,   0.007,       5.0,       -1.0],
-    [    33,     True,  0.30,   0.007,       5.0,       -1.0],
+    [    28,     True,  0.30,   0.01,       5.0,       0.1],
+    [    29,     True,  0.30,   0.05,       5.0,       0.1],
+    [    30,     True,  0.30,   0.02,       5.0,       0.015],
+    [    31,     True,  0.30,   0.02,       5.0,       0.015],
+    [    32,     True,  0.30,   0.02,       5.0,       0.015],
+    [    33,     True,  0.30,   0.02,       5.0,       0.015],
     # OT endcap backward disks 1-5 (stubs)
     # dcaCut increased to 0.15 to handle endcap triplet geometries
     # caPhiMiddle: phi residual at middle hit [rad] (0.1 = initial value, to be tuned)
-    [    34,    False,  0.30,   0.007,       5.0,        0.1],
-    [    35,    False,  0.30,   0.008,       5.0,        0.1],
-    [    36,    False,  0.30,   0.007,       5.0,        0.1],
-    [    37,    False,  0.30,   0.007,       5.0,        0.1],
-    [    38,    False,  0.30,   0.007,       5.0,        0.1],
+    [    34,    False,  0.30,   0.02,       5.0,        0.05],
+    [    35,    False,  0.30,   0.02,       4.0,        0.05],
+    [    36,    False,  0.30,   0.02,       4.0,        0.05],
+    [    37,    False,  0.30,   0.02,       4.0,        0.05],
+    [    38,    False,  0.30,   0.02,       4.0,        0.05],
     # OT endcap forward disks 1-5 (stubs)
     # dcaCut increased to 0.15 to handle endcap triplet geometries
     # caPhiMiddle: phi residual at middle hit [rad] (0.1 = initial value, to be tuned)
-    [    39,    False,  0.30,   0.007,       5.0,        0.1],
-    [    40,    False,  0.30,   0.008,       5.0,        0.1],
-    [    41,    False,  0.30,   0.007,       5.0,        0.1],
-    [    42,    False,  0.30,   0.007,       5.0,        0.1],
-    [    43,    False,  0.30,   0.007,       5.0,        0.1],
+    [    39,    False,  0.30,   0.02,       5.0,        0.05],
+    [    40,    False,  0.30,   0.02,       4.0,        0.05],
+    [    41,    False,  0.30,   0.02,       4.0,        0.05],
+    [    42,    False,  0.30,   0.02,       4.0,        0.05],
+    [    43,    False,  0.30,   0.02,       4.0,        0.05],
 ]
 
 # layerPairs for doublet building including pair-specific cut values
@@ -223,7 +223,7 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     fillStatistics = cms.bool(True),  # Enabled to diagnose tuple overflow
     minHitsPerNtuplet = cms.uint32(4),  # Require at least 1 OT hit for barrel testing
     maxNumberOfDoublets = cms.string(str(8*1024*1024)),   # 8.4M (~13% margin over 7.4M peak from 1k ttbar PU200)
-    maxNumberOfTuples = cms.string(str(160*1024)),        # 164K (~12% margin over 146K peak from 1k ttbar PU200)
+    maxNumberOfTuples = cms.string(str(320*1024)),        # 164K (~12% margin over 146K peak from 1k ttbar PU200)
     cellZ0Cut = cms.double(15.0),  # Half the beam spot width - same as Phase2OT
 
     # Pixel cluster cuts
