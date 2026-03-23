@@ -302,11 +302,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // Sort neighbors within each cell's bin for deterministic DFS in find_ntuplets
     // Co-sort the parallel phiResid array to keep phiResid aligned with neighbor cell IDs
+#ifdef CA_SORT_CONTAINERS
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
                         Kernel_sortHistoBinsWithPhiResid{},
                         this->device_cellToNeighbors_->data(),
                         this->device_connectionPhiResid_->data());
+#endif
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
@@ -452,7 +454,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_cellToTracks_->data());
 
     // Sort tracks within each cell's bin for deterministic duplicate removal
+#ifdef CA_SORT_CONTAINERS
     alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_sortHistoBins{}, this->device_cellToTracks_->data());
+#endif
 
     if (this->m_params.algoParams_.doStats_)
       alpaka::exec<Acc1D>(queue,
@@ -752,7 +756,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           this->device_hitToTuple_->data());
 
       // Sort tracks within each hit's bin for deterministic shared-hit duplicate removal
+#ifdef CA_SORT_CONTAINERS
       alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_sortHistoBins{}, this->device_hitToTuple_->data());
+#endif
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
       std::cout << "Kernel_countHitInTracks   -> done!" << std::endl;
