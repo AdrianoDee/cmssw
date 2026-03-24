@@ -181,6 +181,7 @@ namespace cms::alpakatools {
                static_cast<int>(c.second),
                static_cast<int>(n),
                static_cast<int>(this->capacity()));
+        this->off[c.first] = c.second;  // plug hole: off[k] set so size(k-1) is correct
         return kOverflow;
       }
       this->off[c.first] = c.second;

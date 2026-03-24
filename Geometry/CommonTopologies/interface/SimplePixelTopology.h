@@ -1069,7 +1069,7 @@ namespace pixelTopology {
     // Increased capacities for extended tracking (sized from 1k ttbar PU200 peak occupancy)
     static constexpr uint32_t maxNumberOfDoublets = 8 * 1024 * 1024;   // ~13% margin over 7.4M peak
     static constexpr uint32_t maxNumOfActiveDoublets = maxNumberOfDoublets / 8;
-    static constexpr uint32_t maxNumberOfTuples = 160 * 1024;          // ~12% margin over 146K peak
+    static constexpr uint32_t maxNumberOfTuples = 512 * 1024;
     static constexpr uint32_t avgHitsPerTrack = 10;                    // pixel+OT tracks avg ~7 hits, max ~14
     static constexpr uint32_t maxHitsForContainers = avgHitsPerTrack * maxNumberOfTuples;
     static constexpr uint32_t maxNumberOfQuadruplets = maxNumberOfTuples;

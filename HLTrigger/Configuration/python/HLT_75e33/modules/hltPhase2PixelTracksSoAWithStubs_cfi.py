@@ -223,7 +223,7 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     fillStatistics = cms.bool(True),  # Enabled to diagnose tuple overflow
     minHitsPerNtuplet = cms.uint32(4),  # Require at least 1 OT hit for barrel testing
     maxNumberOfDoublets = cms.string(str(8*1024*1024)),   # 8.4M (~13% margin over 7.4M peak from 1k ttbar PU200)
-    maxNumberOfTuples = cms.string(str(320*1024)),        # 164K (~12% margin over 146K peak from 1k ttbar PU200)
+    maxNumberOfTuples = cms.string(str(512*1024)),
     cellZ0Cut = cms.double(15.0),  # Half the beam spot width - same as Phase2OT
 
     # Pixel cluster cuts
