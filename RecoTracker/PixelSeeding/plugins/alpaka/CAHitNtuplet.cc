@@ -454,10 +454,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::cout << "Number of layer pairs: " << n_pairs << std::endl;
       std::cout << "Number of starting pairs: " << iCache->startingPairs_.size() << std::endl;
 
-      std::cout << "\n--- Layer Pair Geometry (first 20 pairs) ---" << std::endl;
-      std::cout << "Pair | Inner | Outer | phiCut | minIn | maxIn | minOut | maxOut | maxDR | minDZ | maxDZ | start" << std::endl;
-      std::cout << "-----|-------|-------|--------|-------|-------|--------|--------|-------|-------|-------|------" << std::endl;
-      for (int i = 0; i < std::min(20, n_pairs); ++i) {
+      std::cout << "\n--- Layer Pair Geometry (all pairs) ---" << std::endl;
+      std::cout << "Pair | Inner | Outer | phiCut | minIn | maxIn | minOut | maxOut | maxDR | minDZ | maxDZ | ptCut | stubSigma | start" << std::endl;
+      std::cout << "-----|-------|-------|--------|-------|-------|--------|--------|-------|-------|-------|-------|-----------|------" << std::endl;
+      for (int i = 0; i < n_pairs; ++i) {
+        float stubSig = (!iCache->stubSigmaCuts_.empty()) ? iCache->stubSigmaCuts_[i] : -1.0;
         std::cout << std::setw(4) << i << " | "
                   << std::setw(5) << iCache->pairGraph_[2 * i] << " | "
                   << std::setw(5) << iCache->pairGraph_[2 * i + 1] << " | "
@@ -469,10 +470,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   << std::setw(5) << iCache->maxDR_[i] << " | "
                   << std::setw(5) << iCache->minDZ_[i] << " | "
                   << std::setw(5) << iCache->maxDZ_[i] << " | "
+                  << std::setw(5) << iCache->ptCuts_[i] << " | "
+                  << std::setw(9) << stubSig << " | "
                   << (cellSoA.startingPair()[i] ? "Y" : "N") << std::endl;
-      }
-      if (n_pairs > 20) {
-        std::cout << "... (" << (n_pairs - 20) << " more pairs not shown)" << std::endl;
       }
 
       std::cout << "\n--- Layer Cuts (all layers) ---" << std::endl;
