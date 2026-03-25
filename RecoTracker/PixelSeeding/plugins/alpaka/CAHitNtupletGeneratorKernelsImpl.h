@@ -1120,7 +1120,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto nHits = hh.metadata().size();
           int nOT = 0;
           for (auto h = foundNtuplets->begin(idx); h != foundNtuplets->end(idx); ++h) {
-            if (*h >= nHits)
+            if (*h >= static_cast<unsigned int>(nHits))
               break;  // content buffer corruption from overflow
             if (hh[*h].isStub())
               ++nOT;
@@ -1391,7 +1391,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
             auto nHits = hh.metadata().size();
             for (auto h = foundNtuplets->begin(idx); h != foundNtuplets->end(idx); ++h) {
-              if (*h >= nHits)
+              if (*h >= static_cast<unsigned int>(nHits))
                 break;  // content buffer corruption from overflow
               if (hh[*h].isStub()) {
                 hasOT = true;
