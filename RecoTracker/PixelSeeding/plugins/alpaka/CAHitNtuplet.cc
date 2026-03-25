@@ -476,13 +476,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
 
       std::cout << "\n--- Layer Cuts (all layers) ---" << std::endl;
-      std::cout << "Layer | isBarrel | caThetaCut | caDCACut" << std::endl;
-      std::cout << "------|----------|------------|----------" << std::endl;
+      std::cout << "Layer | isBarrel | caThetaCut | caDCACut | geomKappa | caPhiMiddle | caTheta1SS | caTheta2SS" << std::endl;
+      std::cout << "------|----------|------------|----------|-----------|-------------|------------|------------" << std::endl;
       for (int i = 0; i < n_layers; ++i) {
+        float geomK = (!iCache->geomKappaSigmaCuts_.empty()) ? iCache->geomKappaSigmaCuts_[i] : -1.0;
+        float phiMid = (!iCache->caPhiMiddleCuts_.empty()) ? iCache->caPhiMiddleCuts_[i] : -1.0;
+        float theta1SS = (!iCache->caThetaCut1SSCuts_.empty()) ? iCache->caThetaCut1SSCuts_[i] : -1.0;
+        float theta2SS = (!iCache->caThetaCut2SSCuts_.empty()) ? iCache->caThetaCut2SSCuts_[i] : -1.0;
         std::cout << std::setw(5) << i << " | "
                   << std::setw(8) << (layerIsBarrel[i] ? "Y" : "N") << " | "
                   << std::setw(10) << iCache->caThetaCuts_[i] << " | "
-                  << std::setw(10) << iCache->caDCACuts_[i] << std::endl;
+                  << std::setw(8) << iCache->caDCACuts_[i] << " | "
+                  << std::setw(9) << geomK << " | "
+                  << std::setw(11) << phiMid << " | "
+                  << std::setw(10) << theta1SS << " | "
+                  << std::setw(10) << theta2SS << std::endl;
       }
       std::cout << "====================================================\n" << std::endl;
 #endif
