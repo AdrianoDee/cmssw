@@ -73,6 +73,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     uint32_t nBarrelModules_;                         // OT barrel modules (for logging)
     uint32_t nBackwardModules_;                       // OT backward disk modules (for logging)
     uint32_t nForwardModules_;                        // OT forward disk modules (for logging)
+
+    bool psOnly_;  // If true, exclude hits from SS modules (only PS modules loaded)
   };
 
   PixelSeedingOTRecHitsSoAConverter::PixelSeedingOTRecHitsSoAConverter(const edm::ParameterSet& iConfig)
@@ -84,7 +86,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         trackerGeomToken_(esConsumes()),
         topoToken_(esConsumes()),
         otRecHitsToken_(produces()),
-        hmsToken_(produces()) {}
+        hmsToken_(produces()),
+        psOnly_(iConfig.getParameter<bool>("psOnly")) {}
 
   void PixelSeedingOTRecHitsSoAConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
@@ -92,6 +95,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ->setComment("Input Phase2TrackerRecHit1D collection");
     desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"))
         ->setComment("Beam spot for position correction");
+    desc.add<bool>("psOnly", false)
+        ->setComment("If true, only include hits from PS (Pixel-Strip) modules, excluding SS (Strip-Strip) modules");
     descriptions.addWithDefaultLabel(desc);
   }
 
@@ -159,7 +164,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // Get StackedModuleGeometry to map to CA module indices
     const auto& geomHost = iSetup.getData(geomTokenEvent_);
-    [[maybe_unused]] auto const& geomView = geomHost.const_view();
+    auto const& geomView = geomHost.const_view();
 
     // Structure to temporarily hold hits on host
     struct HitData {
@@ -200,6 +205,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
 
       uint32_t iGeom = geomIt->second;
+
+      // If psOnly mode, skip hits from SS modules
+      if (psOnly_ && !geomView[iGeom].isPS()) {
+        flatRecHitIdx += detSet.size();
+        continue;
+      }
+
       bool isLower = topo.isLower(detId);
       auto det = trackerGeom.idToDet(detId);
 
