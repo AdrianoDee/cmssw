@@ -47,28 +47,28 @@ layers = [
     # dcaCut increased for layers 28-32 to handle barrel-to-endcap triplet transitions
     # (the fitted circle DCA is larger when transitioning from barrel to endcap geometry)
     # geomKappaSigmaCut: geometric-vs-stub kappa significance (placeholder 5.0)
-    [    28,     True,  0.30,   0.01,       5.0,       0.1,         -1.0,       -1.0],
-    [    29,     True,  0.30,   0.05,       5.0,       0.1,         -1.0,       -1.0],
-    [    30,     True,  0.30,   0.02,       5.0,       0.015,       -1.0,       -1.0],
-    [    31,     True,  0.30,   0.02,       5.0,       0.015,       -1.0,       -1.0],
-    [    32,     True,  0.30,   0.02,       5.0,       0.015,       -1.0,       -1.0],
-    [    33,     True,  0.30,   0.02,       5.0,       0.015,       -1.0,       -1.0],
+    [    28,     True,  0.30,   0.003,      5.0,       0.2,         -1.0,       -1.0],
+    [    29,     True,  0.30,   0.003,      5.0,       0.2,         -1.0,       -1.0],
+    [    30,     True,  0.30,   0.003,      5.0,       0.015,       -1.0,       -1.0],
+    [    31,     True,  0.30,   0.01,       5.0,       0.015,       -1.0,       -1.0],
+    [    32,     True,  0.30,   0.01,       5.0,       0.015,       -1.0,       -1.0],
+    [    33,     True,  0.30,   0.01,       5.0,       0.015,       -1.0,       -1.0],
     # OT endcap backward disks 1-5 (stubs)
     # caTheta (col 3): PS-only cut (0.03). caTheta1SS (col 6): 1 SS stub cut.
     # caTheta2SS (col 7): 2+ SS stubs, nearly disabled (99.0 = rely on other cuts).
-    [    34,    False,  0.30,   0.030,       5.0,        0.05,       0.08,       99.0],
-    [    35,    False,  0.30,   0.030,       4.0,        0.05,       0.08,       99.0],
-    [    36,    False,  0.30,   0.030,       4.0,        0.05,       0.08,       99.0],
-    [    37,    False,  0.30,   0.030,       4.0,        0.05,       0.08,       99.0],
-    [    38,    False,  0.30,   0.030,       4.0,        0.05,       0.08,       99.0],
+    [    34,    False,  0.30,   0.01,       5.0,        0.05,       -1.0,       -1.0],
+    [    35,    False,  0.30,   0.01,       4.0,        0.05,       -1.0,       -1.0],
+    [    36,    False,  0.30,   0.01,       4.0,        0.05,       -1.0,       -1.0],
+    [    37,    False,  0.30,   0.01,       4.0,        0.05,       -1.0,       -1.0],
+    [    38,    False,  0.30,   0.01,       4.0,        0.05,       -1.0,       -1.0],
     # OT endcap forward disks 1-5 (stubs)
     # caTheta (col 3): PS-only cut (0.03). caTheta1SS (col 6): 1 SS stub cut.
     # caTheta2SS (col 7): 2+ SS stubs, nearly disabled (99.0 = rely on other cuts).
-    [    39,    False,  0.30,   0.030,       5.0,        0.05,       0.08,       99.0],
-    [    40,    False,  0.30,   0.030,       4.0,        0.05,       0.08,       99.0],
-    [    41,    False,  0.30,   0.030,       4.0,        0.05,       0.08,       99.0],
-    [    42,    False,  0.30,   0.030,       4.0,        0.05,       0.08,       99.0],
-    [    43,    False,  0.30,   0.030,       4.0,        0.05,       0.08,       99.0],
+    [    39,    False,  0.30,   0.01,       5.0,        0.05,       -1.0,       -1.0],
+    [    40,    False,  0.30,   0.01,       4.0,        0.05,       -1.0,       -1.0],
+    [    41,    False,  0.30,   0.01,       4.0,        0.05,       -1.0,       -1.0],
+    [    42,    False,  0.30,   0.01,       4.0,        0.05,       -1.0,       -1.0],
+    [    43,    False,  0.30,   0.01,       4.0,        0.05,       -1.0,       -1.0],
 ]
 
 # layerPairs for doublet building including pair-specific cut values
@@ -99,23 +99,23 @@ layerPairs = [
     [  2,  4, False,    400,   11.0,  10000,    11.7,   10000,   7.0,    0.0,   13.0,  0.85,  -1.0],
     [  2, 16, False,    400, -10000,  -11.0,    11.7,   10000,   7.0,  -13.0,    0.0,  0.85,  -1.0],
     # Pixel barrel L3 (CA 2) to OT barrel L1 (CA 28) - from HLT CA extension
-    [  2, 28, False,   1200,    -10,     10,   -30.0,    30.0,  16.0,  -15.0,   15.0,   2.0,   0.0],  # central
+    [  2, 28, False,   1200,    -10,     10,   -30.0,    30.0, 10000,  -15.0,   15.0,   2.0,   0.0],  # central
     [  2, 28, False,   1200,    -20,    -10,   -50.0,   -25.0, 10000,  -35.0,  -10.0,  0.85,   0.0],  # backward
     [  2, 28, False,   1200,     10,     20,    25.0,    50.0, 10000,   10.0,   35.0,  0.85,   0.0],  # forward
     # Pixel barrel L4 (CA 3) to OT barrel L1 (CA 28) - from HLT CA extension
-    [  3, 28, False,   2000,    -20,     20,   -45.0,    45.0, 10000,  -22.0,   22.0,  0.85,   0.0],
+    [  3, 28, False,   1000,    -20,     20,   -45.0,    45.0, 10000,  -22.0,   22.0,  0.85,   0.0],
     # Pixel forward endcap disks to OT barrel L1 (CA 28) - from HLT CA extension
-    [  4, 28, False,   2400,   11.6,  10000,    30.0,    57.5,  16.0,    5.0,  100.0,  0.85,   0.0],
-    [  5, 28, False,   2100,   11.6,  10000,    40.0,    80.0,  16.0,  -10.0,   90.0,  0.85,   0.0],
-    [  6, 28, False,   2000,   11.6,  10000,    55.0,    95.0,  16.0,    5.0,   80.0,  0.85,   0.0],
-    [  7, 28, False,   2000,   11.8,  10000,    70.0,   110.0,  16.0,   15.0,   70.0,  0.85,   0.0],
-    [  8, 28, False,   2000,      0,  10000,    80.0,   10000,  14.0,   25.0,   70.0,  0.85,   0.0],
+    [  4, 28, False,   1000,   11.6,  10000,    30.0,    57.5,  16.0,    5.0,   32.5,  0.85,   0.0],
+    [  5, 28, False,   1000,   11.6,  10000,    40.0,    70.0,  16.0,    5.0,   50.0,  0.85,   0.0],
+    [  6, 28, False,   1000,   11.6,  10000,    55.0,    95.0,  16.0,    5.0,   50.0,  0.85,   0.0],
+    [  7, 28, False,   1000,   11.8,  10000,    70.0,   110.0,  16.0,   15.0,   70.0,  0.85,   0.0],
+    [  8, 28, False,   1000,      0,  10000,    80.0,   10000,  14.0,   25.0,   70.0,  0.85,   0.0],
     # Pixel backward endcap disks to OT barrel L1 (CA 28) - from HLT CA extension
-    [ 16, 28, False,   2400,   11.6,  10000,   -57.5,   -30.0,  16.0, -100.0,   -5.0,  0.85,   0.0],
-    [ 17, 28, False,   2100,   11.6,  10000,   -70.0,   -40.0,  16.0,  -90.0,   10.0,  0.85,   0.0],
-    [ 18, 28, False,   2000,   11.6,  10000,   -95.0,   -55.0,  16.0,  -80.0,   -5.0,  0.85,   0.0],
-    [ 19, 28, False,   2000,   11.8,  10000,  -110.0,   -70.0,  16.0,  -70.0,  -15.0,  0.85,   0.0],
-    [ 20, 28, False,   2000,      0,  10000,  -10000,   -80.0,  14.0,  -70.0,  -25.0,  0.85,   0.0],
+    [ 16, 28, False,   1000,   11.6,  10000,   -57.5,   -30.0,  16.0,  -32.5,   -5.0,  0.85,   0.0],
+    [ 17, 28, False,   1000,   11.6,  10000,   -70.0,   -40.0,  16.0,  -50.0,   -5.0,  0.85,   0.0],
+    [ 18, 28, False,   1000,   11.6,  10000,   -95.0,   -55.0,  16.0,  -50.0,   -5.0,  0.85,   0.0],
+    [ 19, 28, False,   1000,   11.8,  10000,  -110.0,   -70.0,  16.0,  -70.0,  -15.0,  0.85,   0.0],
+    [ 20, 28, False,   1000,      0,  10000,  -10000,   -80.0,  14.0,  -70.0,  -25.0,  0.85,   0.0],
     [  4,  5,  True,    300,      0,   14.0,     3.5,   10000,   4.5, -10000,  10000,  0.85,  -1.0],
     [  4,  6, False,    522,      0,   14.0,     3.5,   10000,   9.0, -10000,  10000,  0.85,  -1.0],
     [  5,  6,  True,    300,      0,   13.0,     3.5,   10000,   4.5, -10000,  10000,  0.85,  -1.0],
@@ -161,8 +161,8 @@ layerPairs = [
     [ 26, 27, False,    250,      0,   22.5,     7.0,   10000,   3.5, -10000,  10000,  0.85,  -1.0],
     # OT barrel to barrel connections (layers 28-33) - from HLT CA extension for 28-29, 29-30
     # stubSigmaCut=5.0: kappa-corrected pairwise significance for flat-flat barrel stubs
-    [ 28, 29, False,   2300,  -1200,   1200,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   5.0],
-    [ 29, 30, False,   2300,  -1200,   1200,  -10000,   10000, 10000,  -40.0,   40.0,  0.85,   5.0],
+    [ 28, 29, False,   1100,  -1200,   1200,  -10000,   10000, 10000,  -50.0,   50.0,  0.85,   5.0],
+    [ 29, 30, False,   1250,  -1200,   1200,  -10000,   10000, 10000,  -40.0,   40.0,  0.85,   5.0],
     [ 30, 31, False,   1250, -10000,  10000,  -10000,   10000, 10000,  -30.0,   30.0,  0.85,   5.0],
     [ 31, 32, False,   2000, -10000,  10000,  -10000,   10000, 10000,  -30.0,   30.0,  0.85,   5.0],
     [ 32, 33, False,    850, -10000,  10000,  -10000,   10000, 10000,  -25.0,   25.0,  0.85,   5.0],
@@ -173,8 +173,8 @@ layerPairs = [
     [ 31, 34, False,   2000,  -1300,    -80,      60,     110, 10000,  -10000,  10000,  0.85,   5.0],
     [ 32, 34, False,   3300,  -1300,    -80,      80,     110, 10000,  -10000,  10000,  0.85,   5.0],
     # OT barrel layers to first forward disk (39) - kappa-corrected significance
-    [ 28, 39, False,   1600,     80,  10000,      20,      40, 10000,  -10000,  10000,  0.85,   5.0],
-    [ 29, 39, False,   1700,     80,  10000,      30,      60, 10000,  -10000,  10000,  0.85,   5.0],
+    [ 28, 39, False,   2500,     80,  10000,      20,      40, 10000,  -10000,  10000,  0.85,   5.0],
+    [ 29, 39, False,   2500,     80,  10000,      30,      60, 10000,  -10000,  10000,  0.85,   5.0],
     [ 30, 39, False,   2000,     80,  10000,      50,      80, 10000,  -10000,  10000,  0.85,   5.0],
     [ 31, 39, False,   2000,     80,  10000,      60,     110, 10000,  -10000,  10000,  0.85,   5.0],
     [ 32, 39, False,   3300,     80,  10000,      80,     110, 10000,  -10000,  10000,  0.85,   5.0],
@@ -183,16 +183,16 @@ layerPairs = [
     # r-range: 20-115 cm (~15% margin over actual 23-110 cm disk extent)
     # maxDR=60: covers full disk r-extent with margin
     # Signed dz: enforces correct z-direction AND constrains to actual disk separations
-    [ 34, 35, False,   1500,     20,    115,      20,     115,  60.0,  -35.0,  -10.0,  0.85,   6.5],
-    [ 35, 36, False,   1500,     20,    115,      20,     115,  60.0,  -55.0,  -20.0,  0.85,   5.6],
-    [ 36, 37, False,   1500,     20,    115,      20,     115,  60.0,  -55.0,  -20.0,  0.85,   5.4],
-    [ 37, 38, False,   1500,     20,    115,      20,     115,  60.0,  -70.0,  -25.0,  0.85,   6.0],
+    [ 34, 35, False,   2500,     20,    115,      20,     115,  60.0,  -35.0,  -10.0,  0.85,   6.5],
+    [ 35, 36, False,   2500,     20,    115,      20,     115,  60.0,  -55.0,  -20.0,  0.85,   5.6],
+    [ 36, 37, False,   2500,     20,    115,      20,     115,  60.0,  -55.0,  -20.0,  0.85,   5.4],
+    [ 37, 38, False,   2500,     20,    115,      20,     115,  60.0,  -70.0,  -25.0,  0.85,   6.0],
     # Forward disk to disk consecutive connections (layers 39-43)
     # For forward disks: dz > 0 (moving to more positive z)
-    [ 39, 40, False,   1500,     20,    115,      20,     115,  60.0,   10.0,   35.0,  0.85,   6.5],
-    [ 40, 41, False,   1500,     20,    115,      20,     115,  60.0,   20.0,   55.0,  0.85,   5.6],
-    [ 41, 42, False,   1500,     20,    115,      20,     115,  60.0,   20.0,   55.0,  0.85,   5.4],
-    [ 42, 43, False,   1500,     20,    115,      20,     115,  60.0,   25.0,   70.0,  0.85,   6.0],
+    [ 39, 40, False,   2500,     20,    115,      20,     115,  60.0,   10.0,   35.0,  0.85,   6.5],
+    [ 40, 41, False,   2500,     20,    115,      20,     115,  60.0,   20.0,   55.0,  0.85,   5.6],
+    [ 41, 42, False,   2500,     20,    115,      20,     115,  60.0,   20.0,   55.0,  0.85,   5.4],
+    [ 42, 43, False,   2500,     20,    115,      20,     115,  60.0,   25.0,   70.0,  0.85,   6.0],
 ]
 
 # find the layerPairs that contain a layer that is excluded
@@ -223,8 +223,8 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     fillStatistics = cms.bool(True),  # Enabled to diagnose tuple overflow
     minHitsPerNtuplet = cms.uint32(4),  # Require at least 1 OT hit for barrel testing
     maxNumberOfDoublets = cms.string(str(8*1024*1024)),   # 8.4M (~13% margin over 7.4M peak from 1k ttbar PU200)
-    maxNumberOfTuples = cms.string(str(512*1024)),
-    cellZ0Cut = cms.double(15.0),  # Half the beam spot width - same as Phase2OT
+    maxNumberOfTuples = cms.string(str(1024*1024)),
+    cellZ0Cut = cms.double(12.5),  # Half the beam spot width - same as Phase2OT
 
     # Pixel cluster cuts
     dzdrFact = cms.double(15.2),
@@ -238,7 +238,7 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     avgHitsPerTrack = cms.double(10.0),   # pixel+OT tracks avg ~7 hits, max ~14
     avgCellsPerHit = cms.double(23),     # ~12% margin over peak ratio 20.6 (from 1k ttbar PU200)
     avgCellsPerCell = cms.double(0.3),   # ~32% margin over peak ratio 0.23
-    avgTracksPerCell = cms.double(0.2),  # ~46% margin over peak ratio 0.14
+    avgTracksPerCell = cms.double(0.6),  # ~46% margin over peak ratio 0.14
     minHitsForSharingCut = cms.uint32(10),
 
     # Flags
@@ -258,7 +258,7 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
 
     # Chain phi residual consistency: reject chain extensions where the phi residual
     # at the middle hit exceeds this threshold [rad]. Negative = disabled.
-    chainPhiResidCut = cms.double(0.01),  # ~6 mrad conservative starting point
+    chainPhiResidCut = cms.double(0.01),
 
     # Track quality cuts (Phase2-specific)
     trackQualityCuts = cms.PSet(
@@ -267,7 +267,7 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
         maxChi2Quintuplets = cms.double(3.0),
         minPt = cms.double(0.9),
         maxTip = cms.double(0.3),
-        maxZip = cms.double(15.0),
+        maxZip = cms.double(12.0),
     ),
 
     # Geometry parameters extracted from layers and layerPairs tables
