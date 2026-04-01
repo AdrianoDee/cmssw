@@ -528,17 +528,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
     // remove duplicates (tracks that share a doublet)
-    numberOfBlocks = cms::alpakatools::divide_up_by(3 * maxDoublets / 4, blockSize);
-    workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
+    if (this->m_params.algoParams_.doEarlyDuplicateRemoval_) {
+      numberOfBlocks = cms::alpakatools::divide_up_by(3 * maxDoublets / 4, blockSize);
+      workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(numberOfBlocks, blockSize);
 
-    alpaka::exec<Acc1D>(queue,
-                        workDiv1D,
-                        Kernel_earlyDuplicateRemover<TrackerTraits>{},
-                        this->device_simpleCells_->data(),
-                        this->device_nCells_->data(),
-                        this->device_cellToTracks_->data(),
-                        tracks_view,
-                        this->m_params.algoParams_.dupPassThrough_);
+      alpaka::exec<Acc1D>(queue,
+                          workDiv1D,
+                          Kernel_earlyDuplicateRemover<TrackerTraits>{},
+                          this->device_simpleCells_->data(),
+                          this->device_nCells_->data(),
+                          this->device_cellToTracks_->data(),
+                          tracks_view,
+                          this->m_params.algoParams_.dupPassThrough_);
+    }
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Kernel_earlyDuplicateRemover   -> done!" << std::endl;

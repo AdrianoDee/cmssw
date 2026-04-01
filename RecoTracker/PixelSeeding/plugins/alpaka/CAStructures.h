@@ -61,6 +61,7 @@ namespace caStructures {
     bool doSharedHitCut_;
     bool dupPassThrough_;
     bool useSimpleTripletCleaner_;
+    bool doEarlyDuplicateRemoval_;
 
     // Reachability filter (Phase2OTStubs only)
     uint8_t reachTargetLayer_;  // CA layer to filter (default 28 = OT barrel L1)

@@ -264,6 +264,7 @@ caHitNtupletAlpakaPhase2OTStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStub
     doSharedHitCut = cms.bool(True),
     dupPassThrough = cms.bool(False),
     useSimpleTripletCleaner = cms.bool(True),
+    doEarlyDuplicateRemoval = cms.bool(True),
 
     # Reachability filter (kills L28 cells whose neighbor chains don't reach far enough)
     reachTargetLayer = cms.uint32(28),  # OT barrel L1

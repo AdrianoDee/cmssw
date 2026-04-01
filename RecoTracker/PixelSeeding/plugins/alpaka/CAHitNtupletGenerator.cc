@@ -200,6 +200,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
       desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
       desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+      desc.add<bool>("doEarlyDuplicateRemoval", true)
+          ->setComment("Remove shorter tracks sharing a cell before fitting");
 
       // Reachability filter (Phase2OTStubs only)
       desc.add<unsigned int>("reachTargetLayer", 28)
@@ -258,6 +260,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           cfg.getParameter<bool>("doSharedHitCut"),
           cfg.getParameter<bool>("dupPassThrough"),
           cfg.getParameter<bool>("useSimpleTripletCleaner"),
+          cfg.getParameter<bool>("doEarlyDuplicateRemoval"),
 
           // Reachability filter
           (uint8_t)cfg.getParameter<unsigned int>("reachTargetLayer"),
