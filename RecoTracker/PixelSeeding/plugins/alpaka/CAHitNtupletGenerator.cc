@@ -146,6 +146,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       geometryParams.addOptional<std::vector<double>>("caThetaCut2SSCuts")
           ->setComment(
               "Theta cut with 2+ SS stubs. Per layer. Negative = 3x hardcoded fallback.");
+      geometryParams.addOptional<std::vector<double>>("caDCAFloors")
+          ->setComment(
+              "Additive DCA floor for high-pT tracks. Per layer (indexed by inner cell's inner layer).\n"
+              "dcaThreshold = dcaCut * curvature + dcaFloor. Prevents threshold collapse at high pT.\n"
+              "Negative = disabled (no floor).");
 
       desc.add<edm::ParameterSetDescription>("geometry", geometryParams)
           ->setComment("Layer-dependent cuts and settings of the CA");

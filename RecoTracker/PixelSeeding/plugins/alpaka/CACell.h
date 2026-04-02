@@ -157,7 +157,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool dcaCut(const HitsConstView& hh,
                                                CACell const& otherCell,
                                                const float region_origin_radius_plus_tolerance,
-                                               const float maxCurv) const {
+                                               const float maxCurv,
+                                               const float dcaFloor = 0.f) const {
       auto x1 = otherCell.inner_x(hh);
       auto y1 = otherCell.inner_y(hh);
 
@@ -171,7 +172,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       float curvature = std::abs(eq.curvature());
       float dca = std::abs(eq.dca0());
-      float dcaThreshold = region_origin_radius_plus_tolerance * curvature;
+      float floor = (dcaFloor >= 0.f) ? dcaFloor : 0.f;
+      float dcaThreshold = region_origin_radius_plus_tolerance * curvature + floor;
 
       bool curvPassed = curvature <= maxCurv;
       bool dcaPassed = dca < dcaThreshold;
@@ -182,7 +184,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
              curvature,                          // computed curvature
              maxCurv,                            // max curvature cut
              dca,                                // computed DCA
-             dcaThreshold,                       // DCA threshold
+             dcaThreshold,                       // DCA threshold (includes floor)
              region_origin_radius_plus_tolerance,  // raw DCA cut parameter
              curvPassed ? 1 : 0,                 // curvature check passed
              dcaPassed ? 1 : 0,                  // DCA check passed

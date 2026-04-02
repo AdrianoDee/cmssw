@@ -401,6 +401,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           auto r1 = oc.inner_r(hh);
           auto z1 = oc.inner_z(hh);
           auto dcaCut = ll[oc.innerLayer()].caDCACut();
+          auto dcaFloor = ll[oc.innerLayer()].caDCAFloor();
 
           // Check for SS stubs and count real stubs early -- needed for both
           // the relaxed theta cut and the later kappa/DCA logic.
@@ -546,7 +547,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                 dcaPassed = true;  // no stubs or cut disabled
               }
             } else {
-              dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+              dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_, dcaFloor);
               if (dcaPassed) {
                 // Compute phi residual from hit global positions
                 float x1 = oc.inner_x(hh), y1 = oc.inner_y(hh);
@@ -564,7 +565,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
               }
             }
           } else {
-            dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_);
+            dcaPassed = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_, dcaFloor);
             if (dcaPassed) {
               // Compute phi residual from hit global positions
               float x1 = oc.inner_x(hh), y1 = oc.inner_y(hh);
