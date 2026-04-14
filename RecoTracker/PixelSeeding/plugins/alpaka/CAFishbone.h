@@ -136,10 +136,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
             if (checkSameLayerOnly && !(sameLayer))
               continue;
 
-            bool sameLayer = (cj.innerLayer() == l1);
-            if (checkSameLayerOnly && !(sameLayer))
-              continue;
-
             float x2 = (cj.inner_x(hh) - xo);
             float y2 = (cj.inner_y(hh) - yo);
             float z2 = (cj.inner_z(hh) - zo);

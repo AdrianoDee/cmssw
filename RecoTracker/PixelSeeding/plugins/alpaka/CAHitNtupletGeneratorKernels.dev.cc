@@ -20,7 +20,7 @@
 
 // #define GPU_DEBUG
 // #define NTUPLE_DEBUG
-// #define CA_STATS
+#define CA_STATS
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -112,7 +112,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device_cellToNeighborsView_ = {device_cellToNeighbors_->data(),
                                    device_cellToNeighborsOffsets_->data(),
                                    device_cellToNeighborsStorage_->data(),
-                                   int(2 * maxDoublets + 1),
+                                   2u * maxDoublets + 1u,
                                    nCellsToCells};
 
     CellToCell::template launchZero<Acc1D>(device_cellToNeighborsView_, queue);
@@ -126,7 +126,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device_cellToTracksView_ = {device_cellToTracks_->data(),
                                 device_cellToTracksOffsets_->data(),
                                 device_cellToTracksStorage_->data(),
-                                maxDoublets + 1,
+                                maxDoublets + 1u,
                                 nCellsToTracks};
 
     CellToTrack::template launchZero<Acc1D>(device_cellToTracksView_, queue);
@@ -142,7 +142,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device_hitContainerView_ = {device_hitContainer_->data(),
                                 device_hitContainerOffsets_->data(),
                                 device_hitContainerStorage_->data(),
-                                maxTuples + 1,
+                                maxTuples + 1u,
                                 nHitsToTracks};
 
     HitContainer::template launchZero<Acc1D>(device_hitContainerView_, queue);
@@ -159,8 +159,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         device_tupleMultiplicityStorage_->data(),
         // this has to be +2 instead of +1 because you want all values from 0 to maxHitsOnTrack to be valid keys
         // (N+1 values) + the extra +1 for the Container definition
-        int(TrackerTraits::maxHitsOnTrack + 2),
-        int(maxTuples)};
+        TrackerTraits::maxHitsOnTrack + 2u,
+        maxTuples};
     TupleMultiplicity::template launchZero<Acc1D>(device_tupleMultiplicityView_, queue);
 
     // Structures and Counters Storage
@@ -275,6 +275,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_hitTuple_apc_,  // needed only to be reset, ready for next kernel
                         hh,
                         ll,
+                        cc,
                         this->deviceTriplets_->view(),
                         this->device_simpleCells_->data(),
                         this->device_nCells_->data(),
@@ -415,6 +416,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         alpaka::exec<Acc1D>(queue,
                             workDiv1D,
                             Kernel_find_orphan_ntuplets<TrackerTraits>{},
+                            ll,
                             cc,
                             tracks_view,
                             this->device_hitContainer_->data(),
@@ -536,7 +538,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           this->device_cellToTracks_->data(),
                           tracks_view,
                           this->m_params.algoParams_.dupPassThrough_);
-    }
+
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
       std::cout << "Kernel_earlyDuplicateRemover   -> done!" << std::endl;
@@ -865,7 +867,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_nCellTracks_->data());
 
     alpaka::wait(queue);
-    std::cout << "========== CA Tracking Summary ==========" << std::endl;
+    // std::cout << "========== CA Tracking Summary ==========" << std::endl;
 #endif
     if (this->m_params.algoParams_.doStats_) {
       // counters (add flag???)
@@ -916,44 +918,78 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
              c[PC::kDoubletsPixOT],
              c[PC::kDoubletsOTOT]);
       printf("[CA Pipeline]   OT barrel: L28-29=%u(FF=%u FT=%u TT=%u) L29-30=%u(FF=%u FT=%u TT=%u)\n",
-             c[PC::kDoubletsL28L29], c[PC::kDoubletsL28L29_FF], c[PC::kDoubletsL28L29_FT], c[PC::kDoubletsL28L29_TT],
-             c[PC::kDoubletsL29L30], c[PC::kDoubletsL29L30_FF], c[PC::kDoubletsL29L30_FT], c[PC::kDoubletsL29L30_TT]);
-      printf("[CA Pipeline]            L30-31=%u(FF=%u FT=%u TT=%u) L31-32=%u(FF=%u FT=%u TT=%u) L32-33=%u(FF=%u FT=%u TT=%u)\n",
-             c[PC::kDoubletsL30L31], c[PC::kDoubletsL30L31_FF], c[PC::kDoubletsL30L31_FT], c[PC::kDoubletsL30L31_TT],
-             c[PC::kDoubletsL31L32], c[PC::kDoubletsL31L32_FF], c[PC::kDoubletsL31L32_FT], c[PC::kDoubletsL31L32_TT],
-             c[PC::kDoubletsL32L33], c[PC::kDoubletsL32L33_FF], c[PC::kDoubletsL32L33_FT], c[PC::kDoubletsL32L33_TT]);
+             c[PC::kDoubletsL28L29],
+             c[PC::kDoubletsL28L29_FF],
+             c[PC::kDoubletsL28L29_FT],
+             c[PC::kDoubletsL28L29_TT],
+             c[PC::kDoubletsL29L30],
+             c[PC::kDoubletsL29L30_FF],
+             c[PC::kDoubletsL29L30_FT],
+             c[PC::kDoubletsL29L30_TT]);
+      printf(
+          "[CA Pipeline]            L30-31=%u(FF=%u FT=%u TT=%u) L31-32=%u(FF=%u FT=%u TT=%u) L32-33=%u(FF=%u FT=%u "
+          "TT=%u)\n",
+          c[PC::kDoubletsL30L31],
+          c[PC::kDoubletsL30L31_FF],
+          c[PC::kDoubletsL30L31_FT],
+          c[PC::kDoubletsL30L31_TT],
+          c[PC::kDoubletsL31L32],
+          c[PC::kDoubletsL31L32_FF],
+          c[PC::kDoubletsL31L32_FT],
+          c[PC::kDoubletsL31L32_TT],
+          c[PC::kDoubletsL32L33],
+          c[PC::kDoubletsL32L33_FF],
+          c[PC::kDoubletsL32L33_FT],
+          c[PC::kDoubletsL32L33_TT]);
       printf("[CA Pipeline]   OT brl->BWD: L28-D1=%u L29-D1=%u L30-D1=%u L31-D1=%u L32-D1=%u L33-D1=%u L33-D2=%u\n",
-             c[PC::kDoubletsL28D1B], c[PC::kDoubletsL29D1B], c[PC::kDoubletsL30D1B],
-             c[PC::kDoubletsL31D1B], c[PC::kDoubletsL32D1B], c[PC::kDoubletsL33D1B], c[PC::kDoubletsL33D2B]);
+             c[PC::kDoubletsL28D1B],
+             c[PC::kDoubletsL29D1B],
+             c[PC::kDoubletsL30D1B],
+             c[PC::kDoubletsL31D1B],
+             c[PC::kDoubletsL32D1B],
+             c[PC::kDoubletsL33D1B],
+             c[PC::kDoubletsL33D2B]);
       printf("[CA Pipeline]   OT brl->FWD: L28-D1=%u L29-D1=%u L30-D1=%u L31-D1=%u L32-D1=%u L33-D1=%u L33-D2=%u\n",
-             c[PC::kDoubletsL28D1F], c[PC::kDoubletsL29D1F], c[PC::kDoubletsL30D1F],
-             c[PC::kDoubletsL31D1F], c[PC::kDoubletsL32D1F], c[PC::kDoubletsL33D1F], c[PC::kDoubletsL33D2F]);
+             c[PC::kDoubletsL28D1F],
+             c[PC::kDoubletsL29D1F],
+             c[PC::kDoubletsL30D1F],
+             c[PC::kDoubletsL31D1F],
+             c[PC::kDoubletsL32D1F],
+             c[PC::kDoubletsL33D1F],
+             c[PC::kDoubletsL33D2F]);
       printf("[CA Pipeline]   OT BWD: D1-D2=%u D2-D3=%u D3-D4=%u D4-D5=%u\n",
-             c[PC::kDoubletsD1BD2B], c[PC::kDoubletsD2BD3B], c[PC::kDoubletsD3BD4B], c[PC::kDoubletsD4BD5B]);
+             c[PC::kDoubletsD1BD2B],
+             c[PC::kDoubletsD2BD3B],
+             c[PC::kDoubletsD3BD4B],
+             c[PC::kDoubletsD4BD5B]);
       printf("[CA Pipeline]   OT FWD: D1-D2=%u D2-D3=%u D3-D4=%u D4-D5=%u other=%u\n",
-             c[PC::kDoubletsD1FD2F], c[PC::kDoubletsD2FD3F], c[PC::kDoubletsD3FD4F], c[PC::kDoubletsD4FD5F],
+             c[PC::kDoubletsD1FD2F],
+             c[PC::kDoubletsD2FD3F],
+             c[PC::kDoubletsD3FD4F],
+             c[PC::kDoubletsD4FD5F],
              c[PC::kDoubletsOTOther]);
       // Per-cut doublet rejection counters: Total, OTEarly (L28-29), OTLate (L30-32)
       {
         using namespace caHitNtupletGenerator;
-        static const char* groupNames[] = {"Total", "OTEarly(L28-29)", "OTLate(L30-32)"};
+        static const char *groupNames[] = {"Total", "OTEarly(L28-29)", "OTLate(L30-32)"};
         for (int g = 0; g < 3; ++g) {
           int base = PC::kDblRejBase + g * kNCuts;
-          printf("[CA Pipeline] DoubletCuts %s: invalidHit=%u innerCoord=%u clusterCut=%u invalidMod=%u "
-                 "outerCoord=%u dzRange=%u z0=%u phi=%u zSize=%u pt=%u stubSigma=%u pixStub=%u\n",
-                 groupNames[g],
-                 c[base + kCutInvalidHit],
-                 c[base + kCutInnerCoord],
-                 c[base + kCutClusterCut],
-                 c[base + kCutInvalidModule],
-                 c[base + kCutOuterCoord],
-                 c[base + kCutDzRange],
-                 c[base + kCutZ0],
-                 c[base + kCutPhi],
-                 c[base + kCutZSize],
-                 c[base + kCutPt],
-                 c[base + kCutStubSigma],
-                 c[base + kCutPixStub]);
+          printf(
+              "[CA Pipeline] DoubletCuts %s: invalidHit=%u innerCoord=%u clusterCut=%u invalidMod=%u "
+              "outerCoord=%u dzRange=%u z0=%u phi=%u zSize=%u pt=%u stubSigma=%u pixStub=%u\n",
+              groupNames[g],
+              c[base + kCutInvalidHit],
+              c[base + kCutInnerCoord],
+              c[base + kCutClusterCut],
+              c[base + kCutInvalidModule],
+              c[base + kCutOuterCoord],
+              c[base + kCutDzRange],
+              c[base + kCutZ0],
+              c[base + kCutPhi],
+              c[base + kCutZSize],
+              c[base + kCutPt],
+              c[base + kCutStubSigma],
+              c[base + kCutPixStub]);
         }
       }
       printf("[CA Pipeline] Triplets: total=%u ppp=%u ppO=%u pOO=%u OOO=%u\n",
@@ -963,8 +999,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
              c[PC::kTripletsPixOTOT],
              c[PC::kTripletsOTOTOT]);
       printf("[CA Pipeline]   OOO: barrel=%u brl->BWD=%u brl->FWD=%u BWD=%u FWD=%u other=%u\n",
-             c[PC::kTripletsOOO_barrel], c[PC::kTripletsOOO_brlToBwd], c[PC::kTripletsOOO_brlToFwd],
-             c[PC::kTripletsOOO_bwd], c[PC::kTripletsOOO_fwd], c[PC::kTripletsOOO_other]);
+             c[PC::kTripletsOOO_barrel],
+             c[PC::kTripletsOOO_brlToBwd],
+             c[PC::kTripletsOOO_brlToFwd],
+             c[PC::kTripletsOOO_bwd],
+             c[PC::kTripletsOOO_fwd],
+             c[PC::kTripletsOOO_other]);
       printf("[CA Pipeline]   phiMiddle rejected: %u\n", c[PC::kTripletPhiMiddleRej]);
       printf("[CA Pipeline] Reachability: checked=%u passed=%u killed=%u\n",
              c[PC::kReachCellsChecked],
@@ -974,9 +1014,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
              c[PC::kReachNoNeighbors],
              c[PC::kReachAllNeighKilled],
              c[PC::kReachChainShort]);
-      printf("[CA Pipeline]   kill type: pix-OT=%u OT-OT=%u\n",
-             c[PC::kReachKilledPixOT],
-             c[PC::kReachKilledOTOT]);
+      printf("[CA Pipeline]   kill type: pix-OT=%u OT-OT=%u\n", c[PC::kReachKilledPixOT], c[PC::kReachKilledOTOT]);
       printf("[CA Pipeline] Fishbone killed: %u\n", c[PC::kFishboneKilled]);
       printf("[CA Pipeline] Cell status: used_in_triplet=%u killed_total=%u alive=%u\n",
              c[PC::kCellsUsedInTriplet],

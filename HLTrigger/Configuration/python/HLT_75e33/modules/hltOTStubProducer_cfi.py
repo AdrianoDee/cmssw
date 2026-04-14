@@ -3,8 +3,8 @@ import FWCore.ParameterSet.Config as cms
 hltOTStubProducer = cms.EDProducer(
     "OTStubProducerVectorHitStyle@alpaka",
     otRecHitsSoA=cms.InputTag("hltPixelSeedingOTRecHitsSoA"),
-    barrelFlatCut=cms.vdouble(0.0, 0.15, 0.1, 0.1, 0.09, 0.12, 0.2),
-    barrelTiltedCut=cms.vdouble(0.0, 0.15, 0.1, 0.1, 0.09, 0.12, 0.2),
+    barrelFlatCut=cms.vdouble(0.0, 0.05, 0.06, 0.08, 0.09, 0.12, 0.2),
+    barrelTiltedCut=cms.vdouble(0.0, 0.05, 0.06, 0.08, 0.09, 0.12, 0.2),
     endcapCut=cms.vdouble(0.0, 0.1, 0.1, 0.1, 0.1, 0.1),
     # Per-layer cluster size cuts (999 = disabled)
     #                                     index:  0    1    2    3    4    5    6

@@ -25,7 +25,7 @@
 
 // #define GPU_DEBUG
 // #define DOUBLETS_DEBUG  // Very verbose - enable only for detailed debugging
-#define CA_WARNINGS
+// #define CA_WARNINGS
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
   using namespace cms::alpakatools;

@@ -281,18 +281,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           moduleHash ^= (uint64_t(i) * 2654435761u) ^ (uint64_t(count) * 40503u);
         }
       }
-      edm::LogPrint("OTStubDebug") << "EVENT STUBS: modulesWithStubs=" << nModulesWithStubs
-                                    << " moduleHash=0x" << std::hex << moduleHash << std::dec;
+      // edm::LogPrint("OTStubDebug") << "EVENT STUBS: modulesWithStubs=" << nModulesWithStubs
+      //                               << " moduleHash=0x" << std::hex << moduleHash << std::dec;
 
       // Print first 20 modules with stubs for detailed comparison
-      uint32_t printed = 0;
-      for (uint32_t i = 0; i < nModules_ && printed < 20; ++i) {
-        uint32_t count = offsets[i + 1] - offsets[i];
-        if (count > 0) {
-          edm::LogPrint("OTStubDebug") << "  module=" << i << " stubs=" << count;
-          printed++;
-        }
-      }
+      // uint32_t printed = 0;
+      // for (uint32_t i = 0; i < nModules_ && printed < 20; ++i) {
+      //   uint32_t count = offsets[i + 1] - offsets[i];
+      //   if (count > 0) {
+      //     edm::LogPrint("OTStubDebug") << "  module=" << i << " stubs=" << count;
+      //     printed++;
+      //   }
+      // }
     }
 
 #ifdef OTSTUB_DEBUG_VERBOSE

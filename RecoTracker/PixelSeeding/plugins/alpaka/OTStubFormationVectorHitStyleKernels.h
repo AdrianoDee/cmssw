@@ -582,11 +582,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        cut,
                        (alpaka::math::abs(acc, width) < cut) ? 1 : 0);
                 printf("  [Module %u] ==========================================\n\n", iModule);
-              }
+              
 
               // Borderline stub diagnostic: detect stubs near the width cut boundary
               // These are the stubs most susceptible to FP precision differences between CPU and GPU
-              {
+              
                 float absWidth = alpaka::math::abs(acc, width);
                 float margin = cut - absWidth;
                 if (margin > 0.0f && margin < 1e-4f) {

@@ -3,7 +3,7 @@
 
 // #define GPU_DEBUG
 // #define CA_DEBUG
-#define CA_WARNINGS
+// #define CA_WARNINGS
 
 #include <cmath>
 #include <limits>
@@ -202,9 +202,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
       if (!curvPassed)
-        return result{false, curvature};
+        return std::tuple<bool, float>{false, curvature};
 
-      return result{dcaPassed, curvature};
+      return std::tuple<bool, float>{dcaPassed, curvature};
     }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE auto quadrupletCut(const float innerCurvature,

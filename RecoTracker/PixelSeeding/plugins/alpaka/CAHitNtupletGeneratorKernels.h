@@ -3,7 +3,7 @@
 
 // #define GPU_DEBUG
 // #define DUMP_GPU_TK_TUPLES
-#define CA_PIPELINE_COUNTERS
+// #define CA_PIPELINE_COUNTERS
 
 #include <cstdint>
 
@@ -127,7 +127,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using CellToTrack = caStructures::GenericContainer;
 
     using NeighborCellContainer = caStructures::NeighborCellContainer;
-    using NeighborCellContainerStorage = typename NeighborCellContainer::index_type;
+    using NeighborCellContainerStorage = typename NeighborCellContainer::value_type;
     using NeighborCellContainerView = typename NeighborCellContainer::View;
     using DeviceNeighborCellContainerBuffer =
         std::optional<cms::alpakatools::device_buffer<Device, NeighborCellContainer>>;
