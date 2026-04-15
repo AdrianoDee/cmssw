@@ -265,7 +265,7 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
 
     # Chain phi residual consistency: reject chain extensions where the phi residual
     # at the middle hit exceeds this threshold [rad]. Negative = disabled.
-    chainPhiResidCut = cms.double(-0.004),
+    chainPhiResidCut = cms.double(0.004),
 
     # Track quality cuts (Phase2-specific)
     trackQualityCuts = cms.PSet(

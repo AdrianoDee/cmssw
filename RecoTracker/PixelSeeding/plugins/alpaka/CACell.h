@@ -280,10 +280,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           if (cells[otherCell].isKilled())
             continue;
 
+            // FIXME: If this cut is meant to be final as is, it doesn't make any sense to apply the cut only 
+            // at this point since it does not depend on more than the single triplet information. Just apply 
+            // it when building the triplets and avoid the building in the first place...
           // Chain phi residual consistency check (Phase2OTStubs only, compile-time gated)
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
             if (chainPhiResidCut >= 0.f) {
-              int16_t pr = connectionPhiResid[cellNeighborsHisto->off[doubletId] + idx];
+              int16_t pr = connectionPhiResid[cellNeighborsHisto->off[2 * doubletId] + idx];
               if (pr != ::caStructures::phiResidUnset) {
                 float phiResid = ::caStructures::dequantizePhiResid(pr);
                 if (phiResid * phiResid > chainPhiResidCut * chainPhiResidCut)
