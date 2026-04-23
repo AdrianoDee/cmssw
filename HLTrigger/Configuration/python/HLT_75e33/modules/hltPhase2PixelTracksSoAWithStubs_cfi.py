@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
 # list of layers to exclude from the CA (empty list doesn't exclude)
-layersToExclude = [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43]
+layersToExclude = [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53]
 
 # layers for Phase2 with OT stubs
 # CA layers: 28 pixel + 6 OT barrel + 10 OT disks = 44 total
@@ -66,14 +66,24 @@ layers = [
     [    36,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
     [    37,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
     [    38,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
-    # OT endcap forward disks 1-5 (stubs)
-    # caTheta (col 3): PS-only cut (0.03). caTheta1SS (col 6): 1 SS stub cut.
-    # caTheta2SS (col 7): 2+ SS stubs, nearly disabled (99.0 = rely on other cuts).
     [    39,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
     [    40,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
     [    41,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
     [    42,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
     [    43,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    # OT endcap forward disks 1-5 (stubs)
+    # caTheta (col 3): PS-only cut (0.03). caTheta1SS (col 6): 1 SS stub cut.
+    # caTheta2SS (col 7): 2+ SS stubs, nearly disabled (99.0 = rely on other cuts).
+    [    44,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    45,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    46,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    47,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    48,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    49,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    50,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    51,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    52,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
+    [    53,    False,  0.30,   0.030,   99.0,       5.0,        0.1,       0.08,       99.0,       0.005,     99.0,      99.0, 0.99999],
 ]
 
 # layerPairs for doublet building including pair-specific cut values
@@ -223,10 +233,6 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     # Tracking parameters
     ptmin = cms.double(0.9),
     hardCurvCut = cms.double(0.01425),
-    earlyFishbone = cms.bool(True),
-    lateFishbone = cms.bool(False),
-    onlySameLayersFishbone = cms.bool(False),
-    fillStatistics = cms.bool(False),  # Enabled to diagnose tuple overflow
     minHitsPerNtuplet = cms.uint32(4),  # Require at least 1 OT hit for barrel testing
     maxNumberOfDoublets = cms.string(str(8*1024*1024)),   # 8.4M (~13% margin over 7.4M peak from 1k ttbar PU200)
     maxNumberOfTuples = cms.string(str(1024*1024)),
@@ -250,10 +256,17 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     # Flags
     fitNas4 = cms.bool(False),
     useRiemannFit = cms.bool(False),
-    doSharedHitCut = cms.bool(True),
-    dupPassThrough = cms.bool(False),
     useSimpleTripletCleaner = cms.bool(True),
+    onlySameLayersFishbone = cms.bool(False),
+    fillStatistics = cms.bool(False),  # Enabled to diagnose tuple overflow
+    # Flags for duplicate removals
+    dupPassThrough = cms.bool(False),
+    earlyFishbone = cms.bool(True),
     doEarlyDuplicateRemoval = cms.bool(True),
+    lateFishbone = cms.bool(False),
+    disableFastDuplicateRemover = cms.bool(False),
+    doSharedHitCut = cms.bool(True),
+    disableTripletCleaner = cms.bool(False),
 
     # Reachability filter (kills L28 cells whose neighbor chains don't reach far enough)
     reachTargetLayer = cms.uint32(28),  # OT barrel L1

@@ -98,7 +98,8 @@ namespace reco {
       std::cout << "Reading geometry from Python ParameterSet..." << std::endl;
       std::cout << "  caThetaCuts size: " << caThetaCuts_.size() << std::endl;
       std::cout << "  caDCACuts size: " << caDCACuts_.size() << std::endl;
-      std::cout << "  pairGraph size: " << pairGraph_.size() << " (= " << pairGraph_.size() / 2 << " pairs)" << std::endl;
+      std::cout << "  pairGraph size: " << pairGraph_.size() << " (= " << pairGraph_.size() / 2 << " pairs)"
+                << std::endl;
       std::cout << "  startingPairs size: " << startingPairs_.size() << std::endl;
       std::cout << "  phiCuts size: " << phiCuts_.size() << std::endl;
       std::cout << "  First 5 phiCuts values: ";
@@ -132,12 +133,12 @@ namespace reco {
     const std::vector<double> maxDZ_;
     const std::vector<double> minDZ_;
     const std::vector<double> maxDR_;
-    const std::vector<double> stubSigmaCuts_;  // Stub-stub pairwise sigma cut (empty = disabled)
+    const std::vector<double> stubSigmaCuts_;       // Stub-stub pairwise sigma cut (empty = disabled)
     const std::vector<double> geomKappaSigmaCuts_;  // Geometric-vs-stub kappa significance cut (empty = disabled)
-    const std::vector<double> caPhiMiddleCuts_;  // Phi residual at middle hit cut [rad] (empty = disabled)
-    const std::vector<double> caThetaCut1SSCuts_;  // Theta cut with 1 SS stub (empty = fallback)
-    const std::vector<double> caThetaCut2SSCuts_;  // Theta cut with 2+ SS stubs (empty = fallback)
-    const std::vector<double> caDCAFloors_;  // Additive DCA floor for high-pT tracks (empty = disabled)
+    const std::vector<double> caPhiMiddleCuts_;     // Phi residual at middle hit cut [rad] (empty = disabled)
+    const std::vector<double> caThetaCut1SSCuts_;   // Theta cut with 1 SS stub (empty = fallback)
+    const std::vector<double> caThetaCut2SSCuts_;   // Theta cut with 2+ SS stubs (empty = fallback)
+    const std::vector<double> caDCAFloors_;         // Additive DCA floor for high-pT tracks (empty = disabled)
 
     bool startNoBPix1_;
 
@@ -323,8 +324,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // Process OT stacked modules for Phase-2 with stubs
       // CA layers follow inside-out ordering:
       // - CA layers 28-33: Barrel (layers 1-6)
-      // - CA layers 34-38: Backward disks (layers 1-5)
-      // - CA layers 39-43: Forward disks (layers 1-5)
+      // - CA layers 34-43: Backward disks (layers 1-5) split in two groups:
+      //                    34-38 with PS modules first, then SS; 39-43 with no PS/SS split
+      // - CA layers 44-53: Forward disks (layers 1-5) split in two groups:
+      //                    44-48 with PS modules first, then SS; 49-53 with no PS/SS split
       //
       // IMPORTANT: StackedModuleGeometry is ALREADY sorted in CA order by StackedModuleGeometryESProducer
       // (barrel by layer -> backward by layer -> forward by layer) using stable_sort.
@@ -338,12 +341,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           bool firstModule = true;
           uint8_t prevLayer = 0;
           bool prevBarrel = false;
+          bool prevIsPS = false;
           int prevCategory = -1;  // 0=barrel, 1=backward, 2=forward
 
           // Iterate through StackedModuleGeometry in index order (already sorted in CA order)
           for (uint32_t i = 0; i < nStackedModules; ++i) {
             bool isBarrel = stackedView.isBarrel()[i];
             bool isFwdEndcap = stackedView.isFwdEndcap()[i];
+            bool isPS = stackedView.isPS()[i];
             uint8_t otLayer = stackedView.layer()[i];
             DetId stackedDetId(stackedView.stackedDetId()[i]);
 
@@ -352,7 +357,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
             // Check if we've transitioned to a new CA layer
             // A new layer starts when category changes OR layer number changes within same category
-            if (firstModule || category != prevCategory || otLayer != prevLayer) {
+            if (firstModule || category != prevCategory || otLayer != prevLayer || isPS != prevIsPS) {
               // Start new CA layer
               if (layerCount < layerStarts.size()) {
                 layerIsBarrel[layerCount] = isBarrel;
@@ -360,13 +365,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef GPU_DEBUG
                 const char* categoryName = isBarrel ? "barrel" : (isFwdEndcap ? "forward" : "backward");
-                std::cout << "OT LayerStart: CA layer " << (layerCount - 1) << " starts at module " << n_modules
-                          << " (" << categoryName << " layer " << int(otLayer) << ")" << std::endl;
+                std::cout << "OT LayerStart: CA layer " << (layerCount - 1) << " starts at module " << n_modules << " ("
+                          << categoryName << " layer " << int(otLayer) << ")" << std::endl;
 #endif
               }
               prevCategory = category;
               prevLayer = otLayer;
               prevBarrel = isBarrel;
+              prevIsPS = isPS;
               firstModule = false;
             }
 
@@ -481,42 +487,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::cout << "Number of starting pairs: " << iCache->startingPairs_.size() << std::endl;
 
       std::cout << "\n--- Layer Pair Geometry (all pairs) ---" << std::endl;
-      std::cout << "Pair | Inner | Outer | phiCut | minIn | maxIn | minOut | maxOut | maxDR | minDZ | maxDZ | ptCut | stubSigma | start" << std::endl;
-      std::cout << "-----|-------|-------|--------|-------|-------|--------|--------|-------|-------|-------|-------|-----------|------" << std::endl;
+      std::cout << "Pair | Inner | Outer | phiCut | minIn | maxIn | minOut | maxOut | maxDR | minDZ | maxDZ | ptCut | "
+                   "stubSigma | start"
+                << std::endl;
+      std::cout << "-----|-------|-------|--------|-------|-------|--------|--------|-------|-------|-------|-------|--"
+                   "---------|------"
+                << std::endl;
       for (int i = 0; i < n_pairs; ++i) {
         float stubSig = (!iCache->stubSigmaCuts_.empty()) ? iCache->stubSigmaCuts_[i] : -1.0;
-        std::cout << std::setw(4) << i << " | "
-                  << std::setw(5) << iCache->pairGraph_[2 * i] << " | "
-                  << std::setw(5) << iCache->pairGraph_[2 * i + 1] << " | "
-                  << std::setw(6) << iCache->phiCuts_[i] << " | "
-                  << std::setw(5) << iCache->minInner_[i] << " | "
-                  << std::setw(5) << iCache->maxInner_[i] << " | "
-                  << std::setw(6) << iCache->minOuter_[i] << " | "
-                  << std::setw(6) << iCache->maxOuter_[i] << " | "
-                  << std::setw(5) << iCache->maxDR_[i] << " | "
-                  << std::setw(5) << iCache->minDZ_[i] << " | "
-                  << std::setw(5) << iCache->maxDZ_[i] << " | "
-                  << std::setw(5) << iCache->ptCuts_[i] << " | "
-                  << std::setw(9) << stubSig << " | "
-                  << (cellSoA.startingPair()[i] ? "Y" : "N") << std::endl;
+        std::cout << std::setw(4) << i << " | " << std::setw(5) << iCache->pairGraph_[2 * i] << " | " << std::setw(5)
+                  << iCache->pairGraph_[2 * i + 1] << " | " << std::setw(6) << iCache->phiCuts_[i] << " | "
+                  << std::setw(5) << iCache->minInner_[i] << " | " << std::setw(5) << iCache->maxInner_[i] << " | "
+                  << std::setw(6) << iCache->minOuter_[i] << " | " << std::setw(6) << iCache->maxOuter_[i] << " | "
+                  << std::setw(5) << iCache->maxDR_[i] << " | " << std::setw(5) << iCache->minDZ_[i] << " | "
+                  << std::setw(5) << iCache->maxDZ_[i] << " | " << std::setw(5) << iCache->ptCuts_[i] << " | "
+                  << std::setw(9) << stubSig << " | " << (cellSoA.startingPair()[i] ? "Y" : "N") << std::endl;
       }
 
       std::cout << "\n--- Layer Cuts (all layers) ---" << std::endl;
-      std::cout << "Layer | isBarrel | caThetaCut | caDCACut | geomKappa | caPhiMiddle | caTheta1SS | caTheta2SS" << std::endl;
-      std::cout << "------|----------|------------|----------|-----------|-------------|------------|------------" << std::endl;
+      std::cout << "Layer | isBarrel | caThetaCut | caDCACut | geomKappa | caPhiMiddle | caTheta1SS | caTheta2SS"
+                << std::endl;
+      std::cout << "------|----------|------------|----------|-----------|-------------|------------|------------"
+                << std::endl;
       for (int i = 0; i < n_layers; ++i) {
         float geomK = (!iCache->geomKappaSigmaCuts_.empty()) ? iCache->geomKappaSigmaCuts_[i] : -1.0;
         float phiMid = (!iCache->caPhiMiddleCuts_.empty()) ? iCache->caPhiMiddleCuts_[i] : -1.0;
         float theta1SS = (!iCache->caThetaCut1SSCuts_.empty()) ? iCache->caThetaCut1SSCuts_[i] : -1.0;
         float theta2SS = (!iCache->caThetaCut2SSCuts_.empty()) ? iCache->caThetaCut2SSCuts_[i] : -1.0;
-        std::cout << std::setw(5) << i << " | "
-                  << std::setw(8) << (layerIsBarrel[i] ? "Y" : "N") << " | "
-                  << std::setw(10) << iCache->caThetaCuts_[i] << " | "
-                  << std::setw(8) << iCache->caDCACuts_[i] << " | "
-                  << std::setw(9) << geomK << " | "
-                  << std::setw(11) << phiMid << " | "
-                  << std::setw(10) << theta1SS << " | "
-                  << std::setw(10) << theta2SS << std::endl;
+        std::cout << std::setw(5) << i << " | " << std::setw(8) << (layerIsBarrel[i] ? "Y" : "N") << " | "
+                  << std::setw(10) << iCache->caThetaCuts_[i] << " | " << std::setw(8) << iCache->caDCACuts_[i] << " | "
+                  << std::setw(9) << geomK << " | " << std::setw(11) << phiMid << " | " << std::setw(10) << theta1SS
+                  << " | " << std::setw(10) << theta2SS << std::endl;
       }
       std::cout << "====================================================\n" << std::endl;
 #endif
@@ -614,9 +615,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
         auto const& otRecHits = iEvent.get(tokenOTRecHits_);
         auto const& stubs = iEvent.get(tokenStubs_);
-        iEvent.emplace(tokenTrack_,
-                       deviceAlgo_.makeTuplesAsync(
-                           hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue(), otRecHits, stubs));
+        iEvent.emplace(
+            tokenTrack_,
+            deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue(), otRecHits, stubs));
       } else {
         iEvent.emplace(tokenTrack_,
                        deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue()));

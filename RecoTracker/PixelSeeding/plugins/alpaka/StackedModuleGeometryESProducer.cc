@@ -57,6 +57,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         uint8_t layer;
         bool isBarrel;
         bool isFwdEndcap;  // z > 0
+        bool isPS;
         uint8_t category;  // 0 = barrel, 1 = backward (z<0), 2 = forward (z>0)
       };
 
@@ -81,6 +82,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         auto const& lowerPos = detUnit->position();
         bool isBarrel = (detId.subdetId() == StripSubdetector::TOB);
         bool isFwdEndcap = (lowerPos.z() > 0);
+        bool isPS = (geom.getDetectorType(detId) == TrackerGeometry::ModuleType::Ph2PSP) ||
+                    (geom.getDetectorType(detId) == TrackerGeometry::ModuleType::Ph2PSS);
         uint8_t layer = topo.layer(detId);
 
         // Determine category for sorting: barrel first, then backward, then forward
@@ -94,7 +97,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         }
 
         modules.push_back(
-            {detUnit, partnerDetUnit, detId, partnerDetId, stackedDetId, layer, isBarrel, isFwdEndcap, category});
+            {detUnit, partnerDetUnit, detId, partnerDetId, stackedDetId, layer, isBarrel, isFwdEndcap, isPS, category});
       }
 
       // Sort modules by category (barrel, backward, forward), then by layer
@@ -106,8 +109,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // (sensors belonging to the same stacked module should remain consecutive)
       std::stable_sort(modules.begin(), modules.end(), [](const ModuleInfo& a, const ModuleInfo& b) {
         if (a.category != b.category)
-          return a.category < b.category;
-        return a.layer < b.layer;
+          return a.category < b.category;  // sort to barrel, forward, backward
+        if (a.layer != b.layer)
+          return a.layer < b.layer;  // sort by layer within category
+        return a.isPS > b.isPS;      // PS modules before SS within same layer
       });
 
       uint32_t nModules = modules.size();
@@ -137,7 +142,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         // Module classification
         bool isBarrel = mod.isBarrel;
-        bool isPS = !(geom.getDetectorType(detId) == TrackerGeometry::ModuleType::Ph2SS);
+        bool isPS = mod.isPS;
         bool isPSP = (geom.getDetectorType(detId) == TrackerGeometry::ModuleType::Ph2PSP);
         bool isPSS = (geom.getDetectorType(detId) == TrackerGeometry::ModuleType::Ph2PSS);
         bool isFwdEndcap = mod.isFwdEndcap;
@@ -214,26 +219,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
           float dotX = localXInGlobal.x() * localXUpper.x() + localXInGlobal.y() * localXUpper.y() +
                        localXInGlobal.z() * localXUpper.z();
-          float dotY = localYLower.x() * localYUpper.x() + localYLower.y() * localYUpper.y() +
-                       localYLower.z() * localYUpper.z();
-          float dotZ = localZLower.x() * localZUpper.x() + localZLower.y() * localZUpper.y() +
-                       localZLower.z() * localZUpper.z();
+          float dotY =
+              localYLower.x() * localYUpper.x() + localYLower.y() * localYUpper.y() + localYLower.z() * localYUpper.z();
+          float dotZ =
+              localZLower.x() * localZUpper.x() + localZLower.y() * localZUpper.y() + localZLower.z() * localZUpper.z();
 
           if (dotX < 0.9f || dotY < 0.9f) {
             edm::LogPrint("StackedModuleGeometry")
-                << "LOCAL FRAME MISMATCH module " << iModule << " detId=" << detId.rawId()
-                << " isBarrel=" << isBarrel << " isFlipped=" << isFlipped << " layer=" << (int)mod.layer
-                << " dotX=" << dotX << " dotY=" << dotY << " dotZ=" << dotZ
-                << " lower=(" << lowerPos.x() << "," << lowerPos.y() << "," << lowerPos.z() << ")"
+                << "LOCAL FRAME MISMATCH module " << iModule << " detId=" << detId.rawId() << " isBarrel=" << isBarrel
+                << " isFlipped=" << isFlipped << " layer=" << (int)mod.layer << " dotX=" << dotX << " dotY=" << dotY
+                << " dotZ=" << dotZ << " lower=(" << lowerPos.x() << "," << lowerPos.y() << "," << lowerPos.z() << ")"
                 << " upper=(" << upperPos.x() << "," << upperPos.y() << "," << upperPos.z() << ")"
-                << " localX_lower=(" << localXInGlobal.x() << "," << localXInGlobal.y() << ","
-                << localXInGlobal.z() << ")"
-                << " localX_upper=(" << localXUpper.x() << "," << localXUpper.y() << "," << localXUpper.z()
+                << " localX_lower=(" << localXInGlobal.x() << "," << localXInGlobal.y() << "," << localXInGlobal.z()
                 << ")"
-                << " localY_lower=(" << localYLower.x() << "," << localYLower.y() << "," << localYLower.z()
-                << ")"
-                << " localY_upper=(" << localYUpper.x() << "," << localYUpper.y() << "," << localYUpper.z()
-                << ")";
+                << " localX_upper=(" << localXUpper.x() << "," << localXUpper.y() << "," << localXUpper.z() << ")"
+                << " localY_lower=(" << localYLower.x() << "," << localYLower.y() << "," << localYLower.z() << ")"
+                << " localY_upper=(" << localYUpper.x() << "," << localYUpper.y() << "," << localYUpper.z() << ")";
           }
         }
 
