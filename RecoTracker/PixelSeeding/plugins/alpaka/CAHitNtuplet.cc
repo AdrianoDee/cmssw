@@ -61,6 +61,7 @@ namespace reco {
           startingPairs_(iConfig.getParameter<std::vector<unsigned int>>("startingPairs")),
           phiCuts_(iConfig.getParameter<std::vector<int>>("phiCuts")),
           ptCuts_(iConfig.getParameter<std::vector<double>>("ptCuts")),
+          z0Cuts_(iConfig.getParameter<std::vector<double>>("z0Cuts")),
           minInner_(iConfig.getParameter<std::vector<double>>("minInner")),
           maxInner_(iConfig.getParameter<std::vector<double>>("maxInner")),
           minOuter_(iConfig.getParameter<std::vector<double>>("minOuter")),
@@ -126,6 +127,7 @@ namespace reco {
     const std::vector<unsigned int> startingPairs_;
     const std::vector<int> phiCuts_;
     const std::vector<double> ptCuts_;
+    const std::vector<double> z0Cuts_;
     const std::vector<double> minInner_;
     const std::vector<double> maxInner_;
     const std::vector<double> minOuter_;
@@ -192,6 +194,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       assert(iCache->maxDR_.size() == iCache->minDZ_.size());
       assert(iCache->maxDR_.size() == iCache->phiCuts_.size());
       assert(iCache->maxDR_.size() == iCache->ptCuts_.size());
+      assert(iCache->maxDR_.size() == iCache->z0Cuts_.size());
       assert(iCache->maxDR_.size() == iCache->skipsLayers_.size());
 
       assert(iCache->caThetaCuts_.size() == iCache->caDCurvCuts_.size());
@@ -463,6 +466,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // Use minRadius^2/4 in the CA to avoid sqrt
         const float minRadius2T4 = 4.f * minRadius * minRadius;
         cellSoA.ptCuts()[i] = minRadius2T4;
+        cellSoA.z0Cuts()[i] = iCache->z0Cuts_[i];
         cellSoA.minInner()[i] = iCache->minInner_[i];
         cellSoA.maxInner()[i] = iCache->maxInner_[i];
         cellSoA.minOuter()[i] = iCache->minOuter_[i];

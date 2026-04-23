@@ -60,6 +60,7 @@ namespace reco {
                       SOA_COLUMN(float, minDZ),
                       SOA_COLUMN(float, maxDR),
                       SOA_COLUMN(float, ptCuts),
+                      SOA_COLUMN(float, z0Cuts),
                       SOA_COLUMN(float, stubSigmaCut))  // Stub-stub pairwise sigma cut (negative = disabled)
 
   GENERATE_SOA_BLOCKS(CALayoutTemplate,

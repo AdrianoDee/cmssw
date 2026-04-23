@@ -195,15 +195,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 #ifdef DOUBLETS_DEBUG
     if (cms::alpakatools::once_per_grid(acc))
       printf(
-          "maxNumDoublets = %d  cc.metadata().size() = %d ll.metadata().size() = %d cellZ0Cut_ = %.2f ptmin_ = "
-          "%.2f doClusterCut = %d doZ0Cut = %d  doPtCut = %d doZSizeCut = %d\n",
+          "maxNumDoublets = %d  cc.metadata().size() = %d ll.metadata().size() = %d ptmin_ = "
+          "%.2f doClusterCut = %d  doPtCut = %d doZSizeCut = %d\n",
           maxNumOfDoublets,
           cc.metadata().size(),
           ll.metadata().size(),
-          params.cellZ0Cut_,
           params.ptmin_,
           doClusterCut,
-          params.cellZ0Cut_ > 0,
           params.ptmin_ > 0,
           doZSizeCut);
 #endif
@@ -359,17 +357,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                zi,
                zo,
                std::abs((zi * ro - ri * zo)),
-               (std::abs((zi * ro - ri * zo)) > params.cellZ0Cut_ * dr));
+               (std::abs((zi * ro - ri * zo)) > cc.z0Cuts()[pairLayerId] * dr));
 #endif
-        // Skip z0 cut for SS stubs (poor z resolution from strip sensors on both sides)
-        // PS stubs keep the cut since they have good z from the pixel (inner) sensor
-        if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-          if (hh[j].isStub() && hh[j].stubType() == ::reco::StubType::SS) {
-            // For SS stubs, only check dr range, skip z0 alignment
-            return dr > cc.maxDR()[pairLayerId] || dr < 0;
-          }
-        }
-        return dr > cc.maxDR()[pairLayerId] || dr < 0 || std::abs((zi * ro - ri * zo)) > params.cellZ0Cut_ * dr;
+        return dr > cc.maxDR()[pairLayerId] || dr < 0 || std::abs((zi * ro - ri * zo)) > cc.z0Cuts()[pairLayerId] * dr;
       };
 
       auto iphicut = cc.phiCuts()[pairLayerId];
@@ -482,7 +472,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
             continue;
           }
 
-          if (params.cellZ0Cut_ > 0. && z0cutoff(oi)) {
+          if (z0cutoff(oi)) {
 #ifdef DOUBLETS_DEBUG
             printf("Killed here 5\n");
 #endif

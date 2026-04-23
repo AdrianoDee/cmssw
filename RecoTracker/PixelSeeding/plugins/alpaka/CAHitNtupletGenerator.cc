@@ -38,8 +38,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // Common Params
     template <typename TrackerTraits>
     void fillDescriptionsCommon(edm::ParameterSetDescription& desc) {
-      desc.add<double>("cellZ0Cut", TrackerTraits::cellZ0Cut)->setComment("Z0 cut for cells");
-
       //// Pixel Cluster Cuts (@cell level)
       desc.add<double>("dzdrFact", TrackerTraits::dzdrFact);
       desc.add<int>("minYsizeB1", TrackerTraits::minYsizeB1)
@@ -117,6 +115,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "ptCuts",
               std::vector<double>(TrackerTraits::ptCuts, TrackerTraits::ptCuts + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts in pt for cells");
+      geometryParams
+          .add<std::vector<double>>(
+              "z0Cuts",
+              std::vector<double>(TrackerTraits::z0Cuts, TrackerTraits::z0Cuts + TrackerTraits::nPairsForQuadruplets))
+          ->setComment("Cuts in z0 for cells");
       geometryParams
           .add<std::vector<double>>("minInner",
                                     std::vector<double>(TrackerTraits::minInner,
@@ -275,7 +278,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           (uint16_t)cfg.getParameter<unsigned int>("minHitsForSharingCut"),
           (float)cfg.getParameter<double>("ptmin"),
           (float)cfg.getParameter<double>("hardCurvCut"),
-          (float)cfg.getParameter<double>("cellZ0Cut"),
 
           // Pixel Cluster Cut Params
           (float)cfg.getParameter<double>("dzdrFact"),

@@ -196,6 +196,8 @@ namespace phase1PixelTopology {
       100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
   HOST_DEVICE_CONSTANT float ptCuts[nPairs] = {
       0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+  HOST_DEVICE_CONSTANT float z0Cuts[nPairs] = {
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5};
   HOST_DEVICE_CONSTANT float maxDR[nPairs] = {
       20., 9., 9., 20., 7., 7., 5., 5., 20., 6., 6., 5., 5., 20., 20., 9., 9., 9., 9.};
 
@@ -435,6 +437,23 @@ namespace phase2PixelTopology {
       0.85, 0.85, 0.85, 0.85, 0.85,  // forward endcap to OT
       0.85, 0.85, 0.85, 0.85, 0.85,  // backward endcap to OT
       0.85, 0.85                     // OT to OT
+  };
+
+    HOST_DEVICE_CONSTANT float z0Cuts[nPairsTot] = {
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5,        // BPIX1
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5,        // BPIX2
+      12.5, 12.5, 12.5,                          // BPIX3
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // forward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // forward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // forward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // backward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // backward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // backward endcap
+
+      12.5, 12.5, 12.5, 12.5,        // barrel to OT
+      12.5, 12.5, 12.5, 12.5, 12.5,  // forward endcap to OT
+      12.5, 12.5, 12.5, 12.5, 12.5,  // backward endcap to OT
+      12.5, 12.5                     // OT to OT
   };
 
   HOST_DEVICE_CONSTANT float dcaCuts[nLayersTot] = {

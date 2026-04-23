@@ -28,7 +28,6 @@ namespace caStructures {
     uint16_t minHitsForSharingCut_;
     float ptmin_;
     float hardCurvCut_;
-    float cellZ0Cut_;
 
     // Pixel Cluster Cut Params
     float dzdrFact_;  // from dz/dr to "DY"
