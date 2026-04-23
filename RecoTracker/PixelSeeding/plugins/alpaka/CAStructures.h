@@ -13,21 +13,6 @@
 
 namespace caStructures {
 
-  // Phi residual quantization: genuine tracks produce residuals ~10^-5 rad, fakes up to ~0.2 rad.
-  // Use ±0.2 rad full scale → 16-bit gives ~6 µrad per LSB.
-  static constexpr float phiResidFullScale = 0.2f;   // rad
-  static constexpr float phiResidScale = 32767.f / phiResidFullScale;
-  static constexpr int16_t phiResidUnset = -32768;  // INT16_MIN: sentinel for "no phi residual stored"
-
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t quantizePhiResid(float v) {
-    float scaled = v * phiResidScale;
-    scaled = std::max(-32767.f, std::min(32767.f, scaled));
-    return static_cast<int16_t>(scaled);
-  }
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float dequantizePhiResid(int16_t q) {
-    return float(q) / phiResidScale;
-  }
-
   using Quality = ::pixelTrack::Quality;
 
   //Configuration params common to all topologies, for the algorithms
@@ -94,7 +79,8 @@ namespace caStructures {
   using tindex_type = uint32_t;
   using cindex_type = uint32_t;
 
-  using NeighborCellContainer = cms::alpakatools::OneToManyAssocRandomAccess<NeighborCell, cms::alpakatools::kDynamicSize, cms::alpakatools::kDynamicSize>;
+  using NeighborCellContainer = cms::alpakatools::
+      OneToManyAssocRandomAccess<NeighborCell, cms::alpakatools::kDynamicSize, cms::alpakatools::kDynamicSize>;
   using NeighborCellContainerStorage = typename NeighborCellContainer::value_type;
   using NeighborCellContainerOffsets = typename NeighborCellContainer::Counter;
   using NeighborCellContainerView = typename NeighborCellContainer::View;

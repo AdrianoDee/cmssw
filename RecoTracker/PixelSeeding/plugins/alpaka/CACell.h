@@ -79,9 +79,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC ALPAKA_FN_INLINE int16_t outerLayer() const { return theOuterLayer_; }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool unused() const { return 0 == (uint16_t(StatusBit::kUsed) & theStatus_); }
-    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool hasInnerNeighbor() const {
-      return theStatus_ & uint16_t(StatusBit::kHasInner);
-    }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool hasInnerNeighbor() const { return theStatus_ & uint16_t(StatusBit::kHasInner); }
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void setStatusBits(StatusBit mask) { theStatus_ |= uint16_t(mask); }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE float inner_x(const HitsConstView& hh) const { return hh[theInnerHitId_].xGlobal(); }
@@ -146,12 +144,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       float lhs = tan_12_13_half_mul_distance_13_squared * pMin;
       float rhs = thetaCut * distance_13_squared * radius_diff;
       printf("ThetaCheck;%.4f;%.4f;%.4f;%.4f;%.4f;%.4f;%.6f;%.6f;%.6f;%.6f;%d\n",
-             r1, z1, ri, zi, ro, zo,           // hit positions (r,z for 3 hits)
-             lhs,                               // alignment value (LHS of check)
-             rhs,                               // threshold (RHS of check)
-             thetaCut,                          // raw thetaCut parameter
-             ptmin,                             // ptmin parameter
-             aligned ? 1 : 0);                  // pass/fail
+             r1,
+             z1,
+             ri,
+             zi,
+             ro,
+             zo,                // hit positions (r,z for 3 hits)
+             lhs,               // alignment value (LHS of check)
+             rhs,               // threshold (RHS of check)
+             thetaCut,          // raw thetaCut parameter
+             ptmin,             // ptmin parameter
+             aligned ? 1 : 0);  // pass/fail
 #endif
 
       return aligned;
@@ -190,15 +193,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef CA_DEBUG
       printf("DCACheck;%.4f;%.4f;%.4f;%.4f;%.4f;%.4f;%.6f;%.6f;%.6f;%.6f;%.6f;%d;%d;%d\n",
-             x1, y1, x2, y2, x3, y3,            // hit positions (x,y for 3 hits)
-             curvature,                          // computed curvature
-             maxCurv,                            // max curvature cut
-             dca,                                // computed DCA
-             dcaThreshold,                       // DCA threshold (includes floor)
+             x1,
+             y1,
+             x2,
+             y2,
+             x3,
+             y3,                                   // hit positions (x,y for 3 hits)
+             curvature,                            // computed curvature
+             maxCurv,                              // max curvature cut
+             dca,                                  // computed DCA
+             dcaThreshold,                         // DCA threshold (includes floor)
              region_origin_radius_plus_tolerance,  // raw DCA cut parameter
-             curvPassed ? 1 : 0,                 // curvature check passed
-             dcaPassed ? 1 : 0,                  // DCA check passed
-             (curvPassed && dcaPassed) ? 1 : 0); // overall passed
+             curvPassed ? 1 : 0,                   // curvature check passed
+             dcaPassed ? 1 : 0,                    // DCA check passed
+             (curvPassed && dcaPassed) ? 1 : 0);   // overall passed
 #endif
 
       if (!curvPassed)
@@ -247,8 +255,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       float* __restrict__ pt,
                                                       TmpTuple& tmpNtuplet,
                                                       const unsigned int minHitsPerNtuplet,
-                                                      int16_t const* __restrict__ connectionPhiResid,
-                                                      float chainPhiResidCut,
                                                       const float preCurvature = 0.) const {
       // the building process for a track ends if:
       // it has no right neighbor
@@ -279,22 +285,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           auto [otherCell, thisCurvature] = neighborCells[idx];
           if (cells[otherCell].isKilled())
             continue;
-
-            // FIXME: If this cut is meant to be final as is, it doesn't make any sense to apply the cut only 
-            // at this point since it does not depend on more than the single triplet information. Just apply 
-            // it when building the triplets and avoid the building in the first place...
-          // Chain phi residual consistency check (Phase2OTStubs only, compile-time gated)
-          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            if (chainPhiResidCut >= 0.f) {
-              int16_t pr = connectionPhiResid[cellNeighborsHisto->off[2 * doubletId] + idx];
-              if (pr != ::caStructures::phiResidUnset) {
-                float phiResid = ::caStructures::dequantizePhiResid(pr);
-                if (phiResid * phiResid > chainPhiResidCut * chainPhiResidCut)
-                  continue;  // middle hit inconsistent -- skip extension
-              }
-            }
-          }
-
 
           // check compatiblity of triplets
           if (tripletOrMore && cells[otherCell].quadrupletCut(preCurvature, thisCurvature, ll))
@@ -329,8 +319,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                              pt,
                                                              tmpNtuplet,
                                                              minHitsPerNtuplet,
-                                                             connectionPhiResid,
-                                                             chainPhiResidCut,
                                                              thisCurvature);
         }
 
@@ -358,7 +346,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
               if (it != cms::alpakatools::kOverflow) {
                 for (auto c : tmpNtuplet) {
-
 #ifdef CA_DEBUG
                   printf("%d - ", c);
 #endif
@@ -379,15 +366,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef CA_DEBUG
                 printf("\n");
 #endif
-                // set number of layers in the TrackSoA (if not done here, one would need to recalculate it from the hits later)
-                nLayers[it] = int8_t(nl);
-                quality[it] = bad;      // initialize to bad
-                pt[it] = preCurvature;  // fill the curvature as an early (pre-fit) reference for pt comparisons in duplicate removers
+
+                nLayers[it] = int8_t(nl);  // set number of layers in the TrackSoA (if not done here,
+                                           // one would need to recalculate it from the hits later)
+                quality[it] = bad;         // initialize to bad
+                pt[it] = preCurvature;     // fill the curvature as an early (pre-fit)
+                                           // reference for pt comparisons in duplicate removers
               }
 #ifdef CA_WARNINGS
               else {
-                printf("Warning!!!! Too many tuples (nOnes = %d)!\n",
-                       static_cast<int>(foundNtuplets.nOnes()));
+                printf("Warning!!!! Too many tuples (nOnes = %d)!\n", static_cast<int>(foundNtuplets.nOnes()));
               }
 #endif
             }

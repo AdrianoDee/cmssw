@@ -333,7 +333,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             if ((qj < qi) || (qj == qi && score(it) < score(jt)))
               tracks_view[jt].quality() = reject;
             // explicitly check since they might be identical when using multiple stubs per p-hit!
-            else if ((qj > qi) || (qj == qi && score(it) > score(jt))) { 
+            else if ((qj > qi) || (qj == qi && score(it) > score(jt))) {
               tracks_view[it].quality() = reject;
               break;
             }
@@ -693,7 +693,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           );
 #endif
 
-          if (aligned && dcaPassed) {
+          // Apply chainPhiResidCut at connection time (early) rather than during
+          // find_ntuplets DFS (late). Connections that fail are never registered in
+          // cellNeighbors, physically shrinking the DFS graph and reducing container
+          // pressure on maxNumberOfTuples / maxCellTracks.
+          bool chainPhiResidPassed = true;
+          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
+            if (params.chainPhiResidCut_ >= 0.f && dcaPassed) {
+              chainPhiResidPassed =
+                  (tripletPhiResid * tripletPhiResid <= params.chainPhiResidCut_ * params.chainPhiResidCut_);
+#ifdef CA_PIPELINE_COUNTERS
+              if (!chainPhiResidPassed) {
+                using PC = caHitNtupletGenerator::PipelineCounter;
+                alpaka::atomicAdd(
+                    acc, &pipelineCounters[PC::kTripletChainPhiResidRej], 1u, alpaka::hierarchy::Blocks{});
+              }
+#endif
+            }
+          }
+
+          if (aligned && dcaPassed && chainPhiResidPassed) {
             auto t_ind = alpaka::atomicAdd(acc, nTrips, 1u, alpaka::hierarchy::Blocks{});
 #ifdef CA_DEBUG
             printf("Triplet no. %d %.5f %.5f (%d %d) - %d %d -> (%d, %d, %d, %d) \n",
@@ -729,7 +748,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
             cn[t_ind].inner() = bin;
             cn[t_ind].outer() = {cellIndex, curvature};
-            cn[t_ind].phiResid() = caStructures::quantizePhiResid(tripletPhiResid);
             thisCell.setStatusBits(Cell::StatusBit::kUsed);
             thisCell.setStatusBits(Cell::StatusBit::kHasInner);  // thisCell (outer) has an inner neighbor
             oc.setStatusBits(Cell::StatusBit::kUsed);
@@ -836,56 +854,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             --j;
           }
           bin[j + 1] = key;
-        }
-      }
-    }
-  };
-
-  // Like Kernel_fillGenericPair but also writes the phiResid from the CAPairSoA into a parallel array.
-  // Used for the cellToNeighbors histogram so phiResid travels alongside neighbor cell IDs.
-  class Kernel_fillGenericPairWithPhiResid {
-  public:
-    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
-                                  caStructures::CACellPairSoAConstView cn,
-                                  uint32_t const *nElements,
-                                  NeighborCellContainer *genericHisto,
-                                  int16_t *__restrict__ phiResidStorage) const {
-      for (uint32_t index : cms::alpakatools::uniform_elements(acc, *nElements)) {
-        auto b = cn[index].inner();
-        ALPAKA_ASSERT_ACC(b < genericHisto->nOnes());
-        auto w = GenericContainer::atomicDecrement(acc, genericHisto->off[b]);
-        ALPAKA_ASSERT_ACC(w > 0);
-        genericHisto->content[w - 1] = cn[index].outer();
-        phiResidStorage[w - 1] = cn[index].phiResid();
-      }
-    }
-  };
-
-  // Sort each histogram bin by content value, co-sorting the parallel phiResid array.
-  class Kernel_sortHistoBinsWithPhiResid {
-  public:
-    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
-                                  GenericContainer *histo,
-                                  int16_t *__restrict__ phiResidStorage) const {
-      for (auto idx : cms::alpakatools::uniform_elements(acc, histo->nOnes())) {
-        auto size = histo->size(idx);
-        if (size <= 1)
-          continue;
-        auto offset = histo->off[idx];
-        auto *bin = histo->content.data() + offset;
-        auto *kbin = phiResidStorage + offset;
-        // Insertion sort: co-sort phiResid alongside content
-        for (uint32_t i = 1; i < size; ++i) {
-          auto key = bin[i];
-          auto kkey = kbin[i];
-          int j = i - 1;
-          while (j >= 0 && bin[j] > key) {
-            bin[j + 1] = bin[j];
-            kbin[j + 1] = kbin[j];
-            --j;
-          }
-          bin[j + 1] = key;
-          kbin[j + 1] = kkey;
         }
       }
     }
@@ -1022,8 +990,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   uint32_t const *nTriplets,
                                   uint32_t const *nCells,
                                   cms::alpakatools::AtomicPairCounter *apc,
-                                  AlgoParams const &params,
-                                  int16_t const *__restrict__ connectionPhiResid) const {
+                                  AlgoParams const &params) const {
       using Cell = CACell<TrackerTraits>;
 
 #ifdef GPU_DEBUG
@@ -1084,9 +1051,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                     tracks_view.nLayers().data(),
                                                     tracks_view.pt().data(),
                                                     stack,
-                                                    params.minHitsPerNtuplet_,
-                                                    connectionPhiResid,
-                                                    params.chainPhiResidCut_);
+                                                    params.minHitsPerNtuplet_);
           ALPAKA_ASSERT_ACC(stack.empty());
         }
       }
@@ -1114,8 +1079,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                   uint32_t *nCellTracks,
                                   uint32_t const *nCells,
                                   cms::alpakatools::AtomicPairCounter *apc,
-                                  AlgoParams const &params,
-                                  int16_t const *__restrict__ connectionPhiResid) const {
+                                  AlgoParams const &params) const {
       using Cell = CACell<TrackerTraits>;
 
       for (auto idx : cms::alpakatools::uniform_elements(acc, (*nCells))) {
@@ -1153,9 +1117,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                   tracks_view.nLayers().data(),
                                                   tracks_view.pt().data(),
                                                   stack,
-                                                  params.minHitsOrphanNtuplet_,
-                                                  connectionPhiResid,
-                                                  params.chainPhiResidCut_);
+                                                  params.minHitsOrphanNtuplet_);
         ALPAKA_ASSERT_ACC(stack.empty());
       }
     }
@@ -1767,11 +1729,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             if (nlj < nli || (nlj == nli && (qj < qi || (qj == qi && score(it, nli) < score(jt, nlj)))))
               tracks_view[jt].quality() = reject;
             // explicitly check since we can have actual duplicated tracks with identical parameters
-            else if (nli < nlj || (nli == nlj && (qi < qj || (qi == qj && score(jt, nlj) < score(it, nli))))){
+            else if (nli < nlj || (nli == nlj && (qi < qj || (qi == qj && score(jt, nlj) < score(it, nli))))) {
               tracks_view[it].quality() = reject;
               break;
             }
-            // if we have two tracks with the same length, parameters and quality, we keep the one with the lower index 
+            // if we have two tracks with the same length, parameters and quality, we keep the one with the lower index
             // (arbitrary but deterministic) and reject the other to avoid double counting
             else if (it < jt)
               tracks_view[jt].quality() = reject;

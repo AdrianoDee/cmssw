@@ -261,9 +261,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::optional<CACellPairSoACollection> deviceTriplets_;
     std::optional<CAPairSoACollection> deviceTracksCells_;
 
-    // Parallel phi residual array for cellToNeighbors histogram (chain phi residual consistency)
-    std::optional<cms::alpakatools::device_buffer<Device, int16_t[]>> device_connectionPhiResid_;
-
 #ifdef CA_PIPELINE_COUNTERS
     // Pipeline stage counters for diagnostic funnel
     std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> device_pipelineCounters_;
