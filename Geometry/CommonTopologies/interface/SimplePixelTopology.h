@@ -788,6 +788,33 @@ namespace phase2PixelTopology {
       0.85, 0.85, 0.85, 0.85        // bwd pixel D5/D6 to OT bwd D1/D2
   };
 
+  // z0 cuts for Phase2OTStubs layer pairs
+  HOST_DEVICE_CONSTANT float z0CutsPhase2OTStubs[nPairsPhase2OTStubs] = {
+      // Existing 73 pairs
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5,        // BPIX1
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5,        // BPIX2
+      12.5, 12.5, 12.5,                          // BPIX3
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // forward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // forward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // forward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // backward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // backward endcap
+      12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5,  // backward endcap
+      12.5, 12.5, 12.5, 12.5,        // barrel to OT
+      12.5, 12.5, 12.5, 12.5, 12.5,  // forward endcap to OT
+      12.5, 12.5, 12.5, 12.5, 12.5,  // backward endcap to OT
+      12.5, 12.5,                    // OT to OT (existing)
+      // New pairs - stubs already have pT filtering from bend
+      12.5,  12.5,  12.5,               // OT barrel chain
+      12.5,  12.5,  12.5,  12.5,  12.5,   // barrel to forward disks
+      12.5,  12.5,  12.5,  12.5,  12.5,   // barrel to backward disks
+      12.5,  12.5,  12.5,  12.5,         // forward disk chain
+      12.5,  12.5,  12.5,  12.5,        // backward disk chain
+      // Pixel-to-OT-disk pairs
+      12.5, 12.5, 12.5, 12.5,       // fwd pixel D5/D6 to OT fwd D1/D2
+      12.5, 12.5, 12.5, 12.5        // bwd pixel D5/D6 to OT bwd D1/D2
+  };
+
   // Stub-stub pairwise sigma cuts for Phase2OTStubs layer pairs
   // Negative value = cut disabled for this pair
   // Barrel-barrel (flat-flat): kappa-corrected significance cut
@@ -1023,6 +1050,7 @@ namespace pixelTopology {
     static constexpr float const *maxDZ = phase2PixelTopology::maxDZ;
     static constexpr int16_t const *phicuts = phase2PixelTopology::phicuts;
     static constexpr float const *ptCuts = phase2PixelTopology::ptCuts;
+    static constexpr float const *z0Cuts = phase2PixelTopology::z0Cuts;
     // scalar parameters (doublet linking)
     // p [GeV/c] = B [T] * R [m] * 0.3 (factor from conversion from J to GeV and q = e = 1.6 * 10e-19 C)
     // 87 cm/GeV = 1/(3.8T * 0.3)
@@ -1083,6 +1111,7 @@ namespace pixelTopology {
     static constexpr float const *minDZ = phase2PixelTopology::minDZPhase2OTStubs;
     static constexpr float const *maxDZ = phase2PixelTopology::maxDZPhase2OTStubs;
     static constexpr float const *ptCuts = phase2PixelTopology::ptCutsPhase2OTStubs;
+    static constexpr float const *z0Cuts = phase2PixelTopology::z0CutsPhase2OTStubs;
     static constexpr float const *geomKappaSigmaCuts = phase2PixelTopology::geomKappaSigmaCutsPhase2OTStubs;
 
     // Increased capacities for extended tracking (sized from 1k ttbar PU200 peak occupancy)
@@ -1247,6 +1276,7 @@ namespace pixelTopology {
     static constexpr float const *maxDZ = phase1PixelTopology::maxDZ;
     static constexpr int16_t const *phicuts = phase1PixelTopology::phicuts;
     static constexpr float const *ptCuts = phase1PixelTopology::ptCuts;
+    static constexpr float const *z0Cuts = phase1PixelTopology::z0Cuts;
     // scalar parameters (doublet linking)
     // p [GeV/c] = B [T] * R [m] * 0.3 (factor from conversion from J to GeV and q = e = 1.6 * 10e-19 C)
     // 87 cm/GeV = 1/(3.8T * 0.3)
