@@ -62,12 +62,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           .add<std::vector<double>>(
               "caDCACuts",
               std::vector<double>(TrackerTraits::dcaCuts, TrackerTraits::dcaCuts + TrackerTraits::numberOfLayers))
-          ->setComment("Cut on RZ alignement. One per layer, the layer being the middle one for a triplet.");
+          ->setComment("Cut on RZ alignement. One per layer, the layer being the innermost one for a triplet.");
       geometryParams
           .add<std::vector<double>>(
               "caThetaCuts",
               std::vector<double>(TrackerTraits::thetaCuts, TrackerTraits::thetaCuts + TrackerTraits::numberOfLayers))
-          ->setComment("Cut on origin radius. One per layer, the layer being the innermost one for a triplet.");
+          ->setComment("Cut on origin radius. One per layer-pair, the layers being the outer ones for a triplet.");
       geometryParams
           .add<std::vector<unsigned int>>(
               "startingPairs",
@@ -167,12 +167,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment(
               "Phi residual at middle hit cut [rad]. One per layer, using the inner layer for a triplet.\n"
               "Negative = disabled. Requires nStubs >= 2 for reliable stub kappa prediction.");
-      geometryParams.addOptional<std::vector<double>>("caThetaCut1SSCuts")
-          ->setComment(
-              "Theta cut with exactly 1 SS stub. Per layer. Negative = 2x hardcoded fallback.");
-      geometryParams.addOptional<std::vector<double>>("caThetaCut2SSCuts")
-          ->setComment(
-              "Theta cut with 2+ SS stubs. Per layer. Negative = 3x hardcoded fallback.");
       geometryParams.addOptional<std::vector<double>>("caDCAFloors")
           ->setComment(
               "Additive DCA floor for high-pT tracks. Per layer (indexed by inner cell's inner layer).\n"
@@ -244,8 +238,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<unsigned int>("reachTargetLayer", 28)
           ->setComment("CA layer to apply reachability filter (28 = OT barrel L1). Only active for Phase2OTStubs.");
       desc.add<unsigned int>("reachMinHops", 2)
-          ->setComment("Min distinct outer layers the chain must reach from target. "
-                       "Works across barrel/endcap regions. Only active for Phase2OTStubs.");
+          ->setComment(
+              "Min distinct outer layers the chain must reach from target. "
+              "Works across barrel/endcap regions. Only active for Phase2OTStubs.");
 
       // Orphan chain recovery (Phase2OTStubs only)
       desc.add<bool>("doOrphanRecovery", false)
@@ -553,15 +548,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   // Overloaded version for stub-based tracking with OT hits
   template <typename TrackerTraits>
-  reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
-      HitsOnDevice const& hits_d,
-      CAGeometryOnDevice const& geometry_d,
-      float bfield,
-      uint32_t nDoublets,
-      uint32_t nTracks,
-      Queue& queue,
-      OTRecHitsOnDevice const& otRecHits_d,
-      StubsOnDevice const& stubs_d) const {
+  reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(HitsOnDevice const& hits_d,
+                                                                                  CAGeometryOnDevice const& geometry_d,
+                                                                                  float bfield,
+                                                                                  uint32_t nDoublets,
+                                                                                  uint32_t nTracks,
+                                                                                  Queue& queue,
+                                                                                  OTRecHitsOnDevice const& otRecHits_d,
+                                                                                  StubsOnDevice const& stubs_d) const {
     using HelixFit = HelixFit<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
     using TrackHitSoA = ::reco::TrackHitSoA;

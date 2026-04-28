@@ -8,6 +8,44 @@
 // are usable from any translation unit without namespace issues.
 namespace caHitNtupletGenerator {
 
+  // Doublet rejection cut indices (for kDblRejBase offset access)
+  enum DblRejCut : int {
+    kCutInvalidHit = 0,
+    kCutInnerCoord = 1,
+    kCutClusterCut = 2,
+    kCutInvalidModule = 3,
+    kCutOuterCoord = 4,
+    kCutDzRange = 5,
+    kCutZ0 = 6,
+    kCutPhi = 7,
+    kCutZSize = 8,
+    kCutPt = 9,
+    kCutStubSigma = 10,
+    kCutPixStub = 11,
+    kNDblCuts = 12
+  };
+
+  // Group offsets: group index × kNCuts added to kDblRejBase
+  enum DblRejGroup : int {
+    kGroupTotal = 0,    // all pairs
+    kGroupOTEarly = 1,  // inner layer 28 or 29
+    kGroupOTLate = 2,    // inner layer 30, 31, or 32
+    kNGroups = 3
+  };
+
+  // Triplet rejection cut indices (for kTrpRejBase offset access)
+  enum TrpRejCut : int {
+    kAlignedRZ = 0,
+    kAlignedXY,
+    kBeamspotCompatibleXY,
+    kPhiCompatible,
+    kSameSignDPhi,
+    kStubsCurvCompatibleWithTriplet,
+    kStubsCompatibleWithInnerDoublet,
+    kNTrpCuts
+  };
+
+  // main counters enum
   enum PipelineCounter : int {
     kDoubletsTotal = 0,
     kDoubletsPixPix,
@@ -133,31 +171,11 @@ namespace caHitNtupletGenerator {
     //              4=outerCoord, 5=dzRange, 6=z0Cut, 7=phiCut,
     //              8=zSizeCut, 9=ptCut, 10=stubSigma, 11=pixStub
     kDblRejBase,                    // base for computed-offset access: counter = kDblRejBase + group*12 + cut
-    kDblRejEnd = kDblRejBase + 36,  // 3 groups × 12 cuts
-    kNCounters = kDblRejEnd
-  };
-
-  // Doublet rejection cut indices (for kDblRejBase offset access)
-  enum DblRejCut : int {
-    kCutInvalidHit = 0,
-    kCutInnerCoord = 1,
-    kCutClusterCut = 2,
-    kCutInvalidModule = 3,
-    kCutOuterCoord = 4,
-    kCutDzRange = 5,
-    kCutZ0 = 6,
-    kCutPhi = 7,
-    kCutZSize = 8,
-    kCutPt = 9,
-    kCutStubSigma = 10,
-    kCutPixStub = 11,
-    kNCuts = 12
-  };
-  // Group offsets: group index × kNCuts added to kDblRejBase
-  enum DblRejGroup : int {
-    kGroupTotal = 0,    // all pairs
-    kGroupOTEarly = 1,  // inner layer 28 or 29
-    kGroupOTLate = 2    // inner layer 30, 31, or 32
+    kDblRejEnd = kDblRejBase + int(DblRejCut::kNDblCuts) * int(DblRejGroup::kNGroups),  // 3 groups × 12 cuts
+    kNCounters,
+    kTrpRejBase,                    // base for computed-offset access: counter = kTrpRejBase + cut
+    kTrpRejEnd = kTrpRejBase + int(TrpRejCut::kNTrpCuts),  // 7 cuts
+    kTotalCounters
   };
 
 }  // namespace caHitNtupletGenerator

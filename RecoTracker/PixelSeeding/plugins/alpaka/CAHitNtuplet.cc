@@ -50,9 +50,7 @@ namespace reco {
   struct CAGeometryParams {
     //Constructor from ParameterSet
     CAGeometryParams(edm::ParameterSet const& iConfig)
-        : caThetaCuts_(iConfig.getParameter<std::vector<double>>("caThetaCuts")),
-          caDCACuts_(iConfig.getParameter<std::vector<double>>("caDCACuts")),
-          caDCurvCuts_(iConfig.getParameter<std::vector<double>>("caDCurvCuts")),
+        : caDCurvCuts_(iConfig.getParameter<std::vector<double>>("caDCurvCuts")),
           caDCurv0_(iConfig.getParameter<std::vector<double>>("caDCurv0")),
           startMaxInnerR_(iConfig.getParameter<std::vector<double>>("startMaxInnerR")),
           fishboneCuts_(iConfig.getParameter<std::vector<double>>("fishboneCuts")),
@@ -78,12 +76,8 @@ namespace reco {
           caPhiMiddleCuts_(iConfig.existsAs<std::vector<double>>("caPhiMiddleCuts")
                                ? iConfig.getParameter<std::vector<double>>("caPhiMiddleCuts")
                                : std::vector<double>{}),
-          caThetaCut1SSCuts_(iConfig.existsAs<std::vector<double>>("caThetaCut1SSCuts")
-                                 ? iConfig.getParameter<std::vector<double>>("caThetaCut1SSCuts")
-                                 : std::vector<double>{}),
-          caThetaCut2SSCuts_(iConfig.existsAs<std::vector<double>>("caThetaCut2SSCuts")
-                                 ? iConfig.getParameter<std::vector<double>>("caThetaCut2SSCuts")
-                                 : std::vector<double>{}),
+          caThetaCuts_(iConfig.getParameter<std::vector<double>>("caThetaCuts")),
+          caDCACuts_(iConfig.getParameter<std::vector<double>>("caDCACuts")),
           caDCAFloors_(iConfig.existsAs<std::vector<double>>("caDCAFloors")
                            ? iConfig.getParameter<std::vector<double>>("caDCAFloors")
                            : std::vector<double>{}) {
@@ -113,8 +107,6 @@ namespace reco {
     }
 
     // Layers params
-    const std::vector<double> caThetaCuts_;
-    const std::vector<double> caDCACuts_;
     const std::vector<double> caDCurvCuts_;
     const std::vector<double> caDCurv0_;
     const std::vector<double> startMaxInnerR_;
@@ -138,8 +130,8 @@ namespace reco {
     const std::vector<double> stubSigmaCuts_;       // Stub-stub pairwise sigma cut (empty = disabled)
     const std::vector<double> geomKappaSigmaCuts_;  // Geometric-vs-stub kappa significance cut (empty = disabled)
     const std::vector<double> caPhiMiddleCuts_;     // Phi residual at middle hit cut [rad] (empty = disabled)
-    const std::vector<double> caThetaCut1SSCuts_;   // Theta cut with 1 SS stub (empty = fallback)
-    const std::vector<double> caThetaCut2SSCuts_;   // Theta cut with 2+ SS stubs (empty = fallback)
+    const std::vector<double> caThetaCuts_;
+    const std::vector<double> caDCACuts_;
     const std::vector<double> caDCAFloors_;         // Additive DCA floor for high-pT tracks (empty = disabled)
 
     bool startNoBPix1_;
@@ -196,14 +188,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       assert(iCache->maxDR_.size() == iCache->ptCuts_.size());
       assert(iCache->maxDR_.size() == iCache->z0Cuts_.size());
       assert(iCache->maxDR_.size() == iCache->skipsLayers_.size());
+      assert(iCache->maxDR_.size() == iCache->caThetaCuts_.size());
+      assert(iCache->maxDR_.size() == iCache->caDCACuts_.size());
+      assert(iCache->maxDR_.size() == iCache->caDCAFloors_.size());
 
-      assert(iCache->caThetaCuts_.size() == iCache->caDCurvCuts_.size());
-      assert(iCache->caThetaCuts_.size() == iCache->caDCurv0_.size());
-      assert(iCache->caThetaCuts_.size() == iCache->caDCACuts_.size());
-      assert(iCache->caThetaCuts_.size() == iCache->startMaxInnerR_.size());
-      assert(iCache->caThetaCuts_.size() == iCache->fishboneCuts_.size());
+      assert(iCache->fishboneCuts_.size() == iCache->caDCurvCuts_.size());
+      assert(iCache->fishboneCuts_.size() == iCache->caDCurv0_.size());
+      assert(iCache->fishboneCuts_.size() == iCache->startMaxInnerR_.size());
 
-      int n_layers = iCache->caThetaCuts_.size();
+      int n_layers = iCache->fishboneCuts_.size();
       int n_pairs = iCache->pairGraph_.size() / 2;
       int n_modules = 0;
 
@@ -238,6 +231,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto layerCount = 0u;
 
       std::vector<bool> layerIsBarrel(n_layers);
+      std::vector<bool> layerIsOT(n_layers);
+      std::vector<bool> layerIsSS(n_layers);
       std::vector<int> layerStarts(n_layers + 1);
       //^ why n_layers + 1? This is a cumulative sum of the number
       // of modules each layer has. And we need the  extra spot
@@ -287,6 +282,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                       << std::endl;
 #endif
             layerIsBarrel[layerCount] = isBarrel(detid);
+            layerIsOT[layerCount] = false;  // we are in the loop over pixel dets, so these are not OT layers
+            layerIsSS[layerCount] = false;  // we are in the loop over pixel dets, so these are not SS layers
             layerStarts[layerCount++] = n_modules;
             if (layerCount >= layerStarts.size())
               break;
@@ -311,6 +308,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           << (isBarrel(detid) ? "barrel" : "not barrel") << std::endl;
 #endif
                 layerIsBarrel[layerCount] = isBarrel(detid);
+                layerIsOT[layerCount] = true;  // we are in the loop over PS modules, so these are all OT layers
+                layerIsSS[layerCount] = false;  // we are in the loop over PS modules, so these are not SS layers
                 layerStarts[layerCount++] = n_modules;
                 if (layerCount >= layerStarts.size())
                   break;
@@ -358,12 +357,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             // Determine category: 0=barrel, 1=backward, 2=forward
             int category = isBarrel ? 0 : (isFwdEndcap ? 2 : 1);
 
+
             // Check if we've transitioned to a new CA layer
             // A new layer starts when category changes OR layer number changes within same category
             if (firstModule || category != prevCategory || otLayer != prevLayer || isPS != prevIsPS) {
               // Start new CA layer
               if (layerCount < layerStarts.size()) {
                 layerIsBarrel[layerCount] = isBarrel;
+                layerIsOT[layerCount] = true;  // we are in the loop over StackedModuleGeometry, so these are all OT layers
+                layerIsSS[layerCount] = !isPS;
                 layerStarts[layerCount++] = n_modules;
 
 #ifdef GPU_DEBUG
@@ -436,22 +438,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       for (int i = 0; i < n_layers; ++i) {
         layerSoA.layerStarts()[i] = layerStarts[i];
         layerSoA.startMaxInnerR()[i] = iCache->startMaxInnerR_[i];
-        layerSoA.caThetaCut()[i] = iCache->caThetaCuts_[i];
-        layerSoA.caDCACut()[i] = iCache->caDCACuts_[i];
         layerSoA.caDCurvCut()[i] = iCache->caDCurvCuts_[i];
         layerSoA.caDCurv0()[i] = iCache->caDCurv0_[i];
         layerSoA.fishboneCut()[i] = iCache->fishboneCuts_[i];
         layerSoA.isBarrel()[i] = layerIsBarrel[i];
-        layerSoA.geomKappaSigmaCut()[i] =
-            (!iCache->geomKappaSigmaCuts_.empty()) ? static_cast<float>(iCache->geomKappaSigmaCuts_[i]) : -1.0f;
-        layerSoA.caPhiMiddleCut()[i] =
-            (!iCache->caPhiMiddleCuts_.empty()) ? static_cast<float>(iCache->caPhiMiddleCuts_[i]) : -1.0f;
-        layerSoA.caThetaCut1SS()[i] =
-            (!iCache->caThetaCut1SSCuts_.empty()) ? static_cast<float>(iCache->caThetaCut1SSCuts_[i]) : -1.0f;
-        layerSoA.caThetaCut2SS()[i] =
-            (!iCache->caThetaCut2SSCuts_.empty()) ? static_cast<float>(iCache->caThetaCut2SSCuts_[i]) : -1.0f;
-        layerSoA.caDCAFloor()[i] =
-            (!iCache->caDCAFloors_.empty()) ? static_cast<float>(iCache->caDCAFloors_[i]) : -1.0f;
+        layerSoA.isOT()[i] = layerIsOT[i];
+        layerSoA.isSS()[i] = layerIsSS[i];
       }
 
       layerSoA.layerStarts()[n_layers] = layerStarts[n_layers];
@@ -478,6 +470,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         cellSoA.stubSigmaCut()[i] =
             (!iCache->stubSigmaCuts_.empty()) ? static_cast<float>(iCache->stubSigmaCuts_[i]) : -1.0f;
         cellSoA.startingPair()[i] = false;
+        cellSoA.caThetaCut()[i] = iCache->caThetaCuts_[i];
+        cellSoA.caDCACut()[i] = iCache->caDCACuts_[i];
+        cellSoA.geomKappaSigmaCut()[i] =
+            (!iCache->geomKappaSigmaCuts_.empty()) ? static_cast<float>(iCache->geomKappaSigmaCuts_[i]) : -1.0f;
+        cellSoA.caPhiMiddleCut()[i] =
+            (!iCache->caPhiMiddleCuts_.empty()) ? static_cast<float>(iCache->caPhiMiddleCuts_[i]) : -1.0f;
+        cellSoA.caDCAFloor()[i] =
+            (!iCache->caDCAFloors_.empty()) ? static_cast<float>(iCache->caDCAFloors_[i]) : -1.0f;
       }
 
       for (const unsigned int& i : iCache->startingPairs_)
@@ -509,19 +509,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
 
       std::cout << "\n--- Layer Cuts (all layers) ---" << std::endl;
-      std::cout << "Layer | isBarrel | caThetaCut | caDCACut | geomKappa | caPhiMiddle | caTheta1SS | caTheta2SS"
+      std::cout << "Layer | isBarrel | caThetaCut | caDCACut | geomKappa | caPhiMiddle"
                 << std::endl;
       std::cout << "------|----------|------------|----------|-----------|-------------|------------|------------"
                 << std::endl;
       for (int i = 0; i < n_layers; ++i) {
         float geomK = (!iCache->geomKappaSigmaCuts_.empty()) ? iCache->geomKappaSigmaCuts_[i] : -1.0;
         float phiMid = (!iCache->caPhiMiddleCuts_.empty()) ? iCache->caPhiMiddleCuts_[i] : -1.0;
-        float theta1SS = (!iCache->caThetaCut1SSCuts_.empty()) ? iCache->caThetaCut1SSCuts_[i] : -1.0;
-        float theta2SS = (!iCache->caThetaCut2SSCuts_.empty()) ? iCache->caThetaCut2SSCuts_[i] : -1.0;
         std::cout << std::setw(5) << i << " | " << std::setw(8) << (layerIsBarrel[i] ? "Y" : "N") << " | "
                   << std::setw(10) << iCache->caThetaCuts_[i] << " | " << std::setw(8) << iCache->caDCACuts_[i] << " | "
-                  << std::setw(9) << geomK << " | " << std::setw(11) << phiMid << " | " << std::setw(10) << theta1SS
-                  << " | " << std::setw(10) << theta2SS << std::endl;
+                  << std::setw(9) << geomK << " | " << std::setw(11) << phiMid << " | " << std::endl;
       }
       std::cout << "====================================================\n" << std::endl;
 #endif

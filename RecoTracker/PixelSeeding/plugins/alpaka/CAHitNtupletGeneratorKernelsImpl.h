@@ -32,6 +32,7 @@
 #include "CACell.h"
 #include "CAHitNtupletGeneratorKernels.h"
 #include "CAStructures.h"
+#include "CATripletCuts.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
@@ -397,340 +398,53 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
       }  // ready for next kernel
 
       // loop on outer cells
-      for (uint32_t cellIndex : cms::alpakatools::uniform_elements_y(acc, *nCells)) {
-        auto &thisCell = cells[cellIndex];
-        auto innerHitId = thisCell.inner_hit_id() - hh.offsetBPIX2();
+      for (uint32_t oCellIndex : cms::alpakatools::uniform_elements_y(acc, *nCells)) {
+        auto &outerCell = cells[oCellIndex];
+        auto middleHitId = outerCell.inner_hit_id() - hh.offsetBPIX2();
 
-        if (int(innerHitId) < 0)
+        if (int(middleHitId) < 0)
           continue;
 
-        auto const *__restrict__ outerHitCells = outerHitHisto->begin(innerHitId);
-        auto const numberOfPossibleNeighbors = outerHitHisto->size(innerHitId);
+        auto const *__restrict__ outerHitCells = outerHitHisto->begin(middleHitId);
+        auto const numberOfPossibleNeighbors = outerHitHisto->size(middleHitId);
+
+        auto ccLayerPairParams = cc[outerCell.layerPairId()];
+        auto skips = ccLayerPairParams.skipsLayers();
 
 #ifdef CA_DEBUG
         printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d\n",
                *nCells,
-               innerHitId,
-               cellIndex,
-               thisCell.innerLayer(),
+               middleHitId,
+               oCellIndex,
+               outerCell.innerLayer(),
                numberOfPossibleNeighbors);
 #endif
-        auto ri = thisCell.inner_r(hh);
-        auto zi = thisCell.inner_z(hh);
-        auto ro = thisCell.outer_r(hh);
-        auto zo = thisCell.outer_z(hh);
-        auto thetaCut = ll[thisCell.innerLayer()].caThetaCut();
-        auto skips = cc[thisCell.layerPairId()].skipsLayers();
 
         // loop on inner cells
         for (uint32_t j : cms::alpakatools::independent_group_elements_x(acc, numberOfPossibleNeighbors)) {
-          auto otherCell = outerHitCells[j];
-          auto &oc = cells[otherCell];
-          auto r1 = oc.inner_r(hh);
-          auto z1 = oc.inner_z(hh);
-          auto dcaCut = ll[oc.innerLayer()].caDCACut();
-          auto dcaFloor = ll[oc.innerLayer()].caDCAFloor();
-
-          // Check for SS stubs and count real stubs early -- needed for both
-          // the relaxed theta cut and the later kappa/DCA logic.
-          bool hasSSStub = false;
-          int nStubs = 0;
-          int nSS = 0;
-          bool s1 = false, s2 = false, s3 = false;
-          uint32_t hit1 = 0, hit2 = 0, hit3 = 0;
-          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            hit1 = oc.inner_hit_id();
-            hit2 = thisCell.inner_hit_id();
-            hit3 = thisCell.outer_hit_id();
-
-            auto isSSStub = [&](uint32_t hitId) {
-              return hh[hitId].isStub() && hh[hitId].stubType() == ::reco::StubType::SS;
-            };
-            auto isRealStub = [&](uint32_t hitId) {
-              return hh[hitId].isStub() && hh[hitId].stubType() != ::reco::StubType::PHitOnly;
-            };
-
-            bool ss1 = isSSStub(hit1);
-            bool ss2 = isSSStub(hit2);
-            bool ss3 = isSSStub(hit3);
-            hasSSStub = ss1 || ss2 || ss3;
-            nSS = int(ss1) + int(ss2) + int(ss3);
-            s1 = isRealStub(hit1);
-            s2 = isRealStub(hit2);
-            s3 = isRealStub(hit3);
-            nStubs = int(s1) + int(s2) + int(s3);
-          }
-
-          // SS stubs have ~1-2 cm z uncertainty. Select the per-layer theta cut
-          // based on the number of SS stubs. A negative SoA value means "fall back
-          // to the old hardcoded multiplier" for backward compatibility.
-          float effectiveThetaCut = thetaCut;
-          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            if (nSS >= 2) {
-              auto cut2 = ll[thisCell.innerLayer()].caThetaCut2SS();
-              effectiveThetaCut = (cut2 >= 0.f) ? cut2 : thetaCut * 3.0f;
-            } else if (nSS >= 1) {
-              auto cut1 = ll[thisCell.innerLayer()].caThetaCut1SS();
-              effectiveThetaCut = (cut1 >= 0.f) ? cut1 : thetaCut * 2.0f;
-            }
-          }
-
-          bool aligned = Cell::areAlignedRZ(r1, z1, ri, zi, ro, zo, params.ptmin_, effectiveThetaCut);
-          bool dcaPassed;
+          auto iCellIndex = outerHitCells[j];
+          auto &innerCell = cells[iCellIndex];
           float curvature = 0.f;
-          float tripletPhiResid = 0.f;  // geometric phi residual at middle hit [rad]
-          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            if (hasSSStub) {
-              // SS stubs have cm-scale (x,y) errors from coarse strip-length
-              // measurement -- the 3-point circle fit is unreliable.
-              // Instead, compare geometric kappa (from hit positions) vs stub-measured kappa.
-              auto geomSigCut = ll[thisCell.innerLayer()].geomKappaSigmaCut();
 
-              if (nStubs >= 1 && geomSigCut > 0.f) {
-                // Load global coordinates once (shared between pre-filter and geomKappa)
-                float x1g = hh[hit1].xGlobal();
-                float y1g = hh[hit1].yGlobal();
-                float x2g = hh[hit2].xGlobal();
-                float y2g = hh[hit2].yGlobal();
-                float x3g = hh[hit3].xGlobal();
-                float y3g = hh[hit3].yGlobal();
-
-                // Fast pre-reject: cross-product sign consistency.
-                // For a genuine track curving smoothly, cross(1->2) and cross(2->3) have the same sign.
-                // For random hit combinations, ~50% have opposite signs -> immediate rejection.
-                float cross12 = x1g * y2g - y1g * x2g;
-                float cross23 = x2g * y3g - y2g * x3g;
-                dcaPassed = (cross12 * cross23 >= 0.f);
-
-                if (dcaPassed) {
-                  // Compute kappa + error for each stub hit
-                  auto computeKappa = [&](uint32_t hitId, float r) {
-                    float d = hh[hitId].dPhiDr();
-                    float s = hh[hitId].dPhiDrError();
-                    float den = 1.f + r * r * d * d;
-                    float sqrt_den = std::sqrt(den);
-                    return std::make_pair(d / sqrt_den, s / (den * sqrt_den));
-                  };
-
-                  // Weighted average of stub kappas
-                  float w_sum = 0.f, wk_sum = 0.f;
-                  if (s1) {
-                    auto [k, sk] = computeKappa(hit1, r1);
-                    float w = 1.f / (sk * sk);
-                    w_sum += w;
-                    wk_sum += w * k;
-                  }
-                  if (s2) {
-                    auto [k, sk] = computeKappa(hit2, ri);
-                    float w = 1.f / (sk * sk);
-                    w_sum += w;
-                    wk_sum += w * k;
-                  }
-                  if (s3) {
-                    auto [k, sk] = computeKappa(hit3, ro);
-                    float w = 1.f / (sk * sk);
-                    w_sum += w;
-                    wk_sum += w * k;
-                  }
-
-                  float kappa_stub_avg = wk_sum / w_sum;
-                  float sigma_stub_avg2 = 1.f / w_sum;
-
-                  // Geometric kappa from inner-outer phi difference (1 atan2 instead of 2)
-                  float cross13 = x1g * y3g - y1g * x3g;
-                  float dot13 = x1g * x3g + y1g * y3g;
-                  float dphi_13 = std::atan2(cross13, dot13);
-                  float dr_13 = ro - r1;
-                  float dphidr_geom = dphi_13 / dr_13;
-                  float r_mid = 0.5f * (r1 + ro);
-                  float den_g = 1.f + r_mid * r_mid * dphidr_geom * dphidr_geom;
-                  float sqrt_den_g = std::sqrt(den_g);
-                  float kappa_geom = dphidr_geom / sqrt_den_g;
-
-                  // Geometric kappa error (~500 murad phi resolution)
-                  constexpr float sigma_phi = 5e-4f;
-                  float sk_geom = sigma_phi / (std::abs(dr_13) * den_g * sqrt_den_g);
-
-                  // Significance test (squared form, no sqrt needed)
-                  float combined_err2 = sk_geom * sk_geom + sigma_stub_avg2;
-                  float dk = kappa_geom - kappa_stub_avg;
-                  dcaPassed = (dk * dk < geomSigCut * geomSigCut * combined_err2);
-
-                  // Phi residual at middle hit: check that the actual phi of the middle hit
-                  // matches the phi predicted from inner hit + weighted-average stub kappa.
-                  // Provides orthogonal fake rejection, especially for endcap disk-to-disk triplets.
-                  if (dcaPassed) {
-                    auto phiMiddleCut = ll[thisCell.innerLayer()].caPhiMiddleCut();
-                    if (phiMiddleCut >= 0.f && nStubs >= 2) {
-                      // Reuse cross12 from pre-filter; compute dot12 for dphi_21
-                      float dot12 = x1g * x2g + y1g * y2g;
-                      float dphi_21 = std::atan2(cross12, dot12);
-                      float dphi_mid = dphi_21 - kappa_stub_avg * (ri - r1);
-                      if (dphi_mid > float(M_PI))
-                        dphi_mid -= 2.f * float(M_PI);
-                      if (dphi_mid < -float(M_PI))
-                        dphi_mid += 2.f * float(M_PI);
-                      dcaPassed = (std::abs(dphi_mid) < phiMiddleCut);
-                      if (!dcaPassed && pipelineCounters) {
-                        using PC = caHitNtupletGenerator::PipelineCounter;
-                        alpaka::atomicAdd(
-                            acc, &pipelineCounters[PC::kTripletPhiMiddleRej], 1u, alpaka::hierarchy::Blocks{});
-                      }
-                    }
-                  }
-
-                  // Compute geometric phi residual for chain consistency
-                  if (dcaPassed) {
-                    float dot12 = x1g * x2g + y1g * y2g;
-                    float dphi_12 = std::atan2(cross12, dot12);
-                    float dr_12 = ri - r1;  // r_middle - r_inner
-                    tripletPhiResid = dphi_12 - dphi_13 * (dr_12 / dr_13);
-                  }
-                }
-              } else {
-                dcaPassed = true;  // no stubs or cut disabled
-              }
-            } else {
-              std::tie(dcaPassed, curvature) = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_, dcaFloor);
-              if (dcaPassed) {
-                // Compute phi residual from hit global positions
-                float x1 = oc.inner_x(hh), y1 = oc.inner_y(hh);
-                float x2 = thisCell.inner_x(hh), y2 = thisCell.inner_y(hh);
-                float x3 = thisCell.outer_x(hh), y3 = thisCell.outer_y(hh);
-                float cross12 = x1 * y2 - y1 * x2;
-                float dot12 = x1 * x2 + y1 * y2;
-                float dphi_12 = std::atan2(cross12, dot12);
-                float cross13 = x1 * y3 - y1 * x3;
-                float dot13 = x1 * x3 + y1 * y3;
-                float dphi_13 = std::atan2(cross13, dot13);
-                float dr_12 = thisCell.inner_r(hh) - oc.inner_r(hh);
-                float dr_13 = thisCell.outer_r(hh) - oc.inner_r(hh);
-                tripletPhiResid = dphi_12 - dphi_13 * (dr_12 / dr_13);
-              }
-            }
-          } else {
-            std::tie(dcaPassed, curvature) = thisCell.dcaCut(hh, oc, dcaCut, params.hardCurvCut_, dcaFloor);
-            if (dcaPassed) {
-              // Compute phi residual from hit global positions
-              float x1 = oc.inner_x(hh), y1 = oc.inner_y(hh);
-              float x2 = thisCell.inner_x(hh), y2 = thisCell.inner_y(hh);
-              float x3 = thisCell.outer_x(hh), y3 = thisCell.outer_y(hh);
-              float cross12 = x1 * y2 - y1 * x2;
-              float dot12 = x1 * x2 + y1 * y2;
-              float dphi_12 = std::atan2(cross12, dot12);
-              float cross13 = x1 * y3 - y1 * x3;
-              float dot13 = x1 * x3 + y1 * y3;
-              float dphi_13 = std::atan2(cross13, dot13);
-              float dr_12 = thisCell.inner_r(hh) - oc.inner_r(hh);
-              float dr_13 = thisCell.outer_r(hh) - oc.inner_r(hh);
-              tripletPhiResid = dphi_12 - dphi_13 * (dr_12 / dr_13);
-            }
-          }
-
-#ifdef CA_DEBUG
-          // Compute theta alignment value for debug output
-          float radius_diff = std::abs(r1 - ro);
-          float distance_13_squared = radius_diff * radius_diff + (z1 - zo) * (z1 - zo);
-          float pMin = params.ptmin_ * std::sqrt(distance_13_squared);
-          float tan_val = std::abs(z1 * (ri - ro) + zi * (ro - r1) + zo * (r1 - ri));
-          float thetaAlignVal = tan_val * pMin;
-          float thetaThreshold = effectiveThetaCut * distance_13_squared * radius_diff;
-
-          // Compute DCA value for debug output
-          auto x1d = oc.inner_x(hh);
-          auto y1d = oc.inner_y(hh);
-          auto x2d = thisCell.inner_x(hh);
-          auto y2d = thisCell.inner_y(hh);
-          auto x3d = thisCell.outer_x(hh);
-          auto y3d = thisCell.outer_y(hh);
-          CircleEq<float> eq(x1d, y1d, x2d, y2d, x3d, y3d);
-          float curvature = std::abs(eq.curvature());
-          float dcaVal = std::abs(eq.dca0());
-          float dcaThreshold = dcaCut * curvature;
-
-          // Determine stub types for all three hits
-          const char *stubType1 = "pixel";
-          const char *stubType2 = "pixel";
-          const char *stubType3 = "pixel";
-          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            auto hit1 = oc.inner_hit_id();
-            auto hit2 = thisCell.inner_hit_id();
-            auto hit3 = thisCell.outer_hit_id();
-            if (hh[hit1].isStub()) {
-              stubType1 = (hh[hit1].stubType() == ::reco::StubType::SS) ? "SS" : "PS";
-            }
-            if (hh[hit2].isStub()) {
-              stubType2 = (hh[hit2].stubType() == ::reco::StubType::SS) ? "SS" : "PS";
-            }
-            if (hh[hit3].isStub()) {
-              stubType3 = (hh[hit3].stubType() == ::reco::StubType::SS) ? "SS" : "PS";
-            }
-          }
-
-          printf("TripletCheck;%d;%d;%d;%d;%d;%d;%d;%d;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%.6f;%d;%d;%s;%s;%s;%d\n",
-                 cellIndex,                      // outer cell index
-                 otherCell,                      // inner cell index
-                 thisCell.layerPairId(),         // outer layer pair
-                 oc.layerPairId(),               // inner layer pair
-                 oc.innerLayer(),                // innermost layer
-                 thisCell.innerLayer(),          // middle layer
-                 thisCell.outerLayer(),          // outermost layer
-                 hasSSStub ? 1 : 0,              // has SS stub (theta skipped)
-                 thetaAlignVal,                  // theta alignment value
-                 thetaThreshold,                 // theta threshold
-                 thetaCut,                       // raw thetaCut parameter
-                 curvature,                      // curvature
-                 dcaVal,                         // DCA value
-                 dcaThreshold,                   // DCA threshold
-                 dcaCut,                         // raw dcaCut parameter
-                 params.hardCurvCut_,            // hard curvature cut
-                 aligned ? 1 : 0,                // theta passed
-                 dcaPassed ? 1 : 0,              // DCA passed
-                 stubType1,                      // hit1 stub type
-                 stubType2,                      // hit2 stub type
-                 stubType3,                      // hit3 stub type
-                 (aligned && dcaPassed) ? 1 : 0  // overall passed
-          );
-#endif
-
-          // Apply chainPhiResidCut at connection time (early) rather than during
-          // find_ntuplets DFS (late). Connections that fail are never registered in
-          // cellNeighbors, physically shrinking the DFS graph and reducing container
-          // pressure on maxNumberOfTuples / maxCellTracks.
-          bool chainPhiResidPassed = true;
-          if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
-            if (params.chainPhiResidCut_ >= 0.f && dcaPassed) {
-              chainPhiResidPassed =
-                  (tripletPhiResid * tripletPhiResid <= params.chainPhiResidCut_ * params.chainPhiResidCut_);
-#ifdef CA_PIPELINE_COUNTERS
-              if (!chainPhiResidPassed) {
-                using PC = caHitNtupletGenerator::PipelineCounter;
-                alpaka::atomicAdd(
-                    acc, &pipelineCounters[PC::kTripletChainPhiResidRej], 1u, alpaka::hierarchy::Blocks{});
-              }
-#endif
-            }
-          }
-
-          if (aligned && dcaPassed && chainPhiResidPassed) {
+          // apply compatibility cuts for this triplet (innerCell, outerCell)
+          if (TripletCuts<TrackerTraits>::accept(
+                  innerCell, outerCell, curvature, hh, ccLayerPairParams, params, pipelineCounters)) {
             auto t_ind = alpaka::atomicAdd(acc, nTrips, 1u, alpaka::hierarchy::Blocks{});
+
 #ifdef CA_DEBUG
             printf("Triplet no. %d %.5f %.5f (%d %d) - %d %d -> (%d, %d, %d, %d) \n",
                    t_ind,
                    thetaCut,
                    dcaCut,
-                   thisCell.layerPairId(),
-                   oc.layerPairId(),
-                   otherCell,
-                   cellIndex,
-                   thisCell.inner_hit_id(),
-                   thisCell.outer_hit_id(),
-                   oc.inner_hit_id(),
-                   oc.outer_hit_id());
-#endif
-
-#ifdef CA_DEBUG
-            printf("filling cell no. %d %d: %d -> %d\n", t_ind, cellNeighborsHisto->size(), otherCell, cellIndex);
+                   outerCell.layerPairId(),
+                   innerCell.layerPairId(),
+                   iCellIndex,
+                   oCellIndex,
+                   outerCell.inner_hit_id(),
+                   outerCell.outer_hit_id(),
+                   innerCell.inner_hit_id(),
+                   innerCell.outer_hit_id());
+            printf("filling cell no. %d %d: %d -> %d\n", t_ind, cellNeighborsHisto->size(), iCellIndex, oCellIndex);
 #endif
 
             if (t_ind >= maxTriplets) {
@@ -743,23 +457,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
             // bin = 2*iCell     (== non-layer-skipping neighbors)
             // bin = 2*iCell + 1 (== layer-skipping neighbors)
-            auto bin = 2 * otherCell + skips;
+            auto bin = 2 * iCellIndex + skips;
             cellNeighborsHisto->count(acc, bin);
 
             cn[t_ind].inner() = bin;
-            cn[t_ind].outer() = {cellIndex, curvature};
-            thisCell.setStatusBits(Cell::StatusBit::kUsed);
-            thisCell.setStatusBits(Cell::StatusBit::kHasInner);  // thisCell (outer) has an inner neighbor
-            oc.setStatusBits(Cell::StatusBit::kUsed);
+            cn[t_ind].outer() = {oCellIndex, curvature};
+            outerCell.setStatusBits(Cell::StatusBit::kUsed);
+            outerCell.setStatusBits(Cell::StatusBit::kHasInner);  // outerCell has an inner neighbor
+            innerCell.setStatusBits(Cell::StatusBit::kUsed);
 
             // Pipeline stage counters: classify triplet by hit types
             if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
               if (pipelineCounters) {
                 using PC = caHitNtupletGenerator::PipelineCounter;
                 alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsTotal], 1u, alpaka::hierarchy::Blocks{});
-                auto hit1 = oc.inner_hit_id();
-                auto hit2 = thisCell.inner_hit_id();
-                auto hit3 = thisCell.outer_hit_id();
+                auto hit1 = innerCell.inner_hit_id();
+                auto hit2 = outerCell.inner_hit_id();
+                auto hit3 = outerCell.outer_hit_id();
                 int nStubs = (hh[hit1].isStub() ? 1 : 0) + (hh[hit2].isStub() ? 1 : 0) + (hh[hit3].isStub() ? 1 : 0);
                 if (nStubs == 0)
                   alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsPixPixPix], 1u, alpaka::hierarchy::Blocks{});
@@ -770,18 +484,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                 else {
                   alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOTOTOT], 1u, alpaka::hierarchy::Blocks{});
                   // OOO triplet region breakdown
-                  auto layer1 = oc.innerLayer();        // innermost
-                  auto layer2 = thisCell.innerLayer();  // middle
-                  auto layer3 = thisCell.outerLayer();  // outermost
+                  auto layer1 = innerCell.innerLayer();        // innermost
+                  auto layer2 = outerCell.innerLayer();  // middle
+                  auto layer3 = outerCell.outerLayer();  // outermost
                   bool l1Brl = (layer1 >= 28 && layer1 <= 33);
                   bool l2Brl = (layer2 >= 28 && layer2 <= 33);
                   bool l3Brl = (layer3 >= 28 && layer3 <= 33);
-                  bool l1Bwd = (layer1 >= 34 && layer1 <= 38);
-                  bool l2Bwd = (layer2 >= 34 && layer2 <= 38);
-                  bool l3Bwd = (layer3 >= 34 && layer3 <= 38);
-                  bool l1Fwd = (layer1 >= 39 && layer1 <= 43);
-                  bool l2Fwd = (layer2 >= 39 && layer2 <= 43);
-                  bool l3Fwd = (layer3 >= 39 && layer3 <= 43);
+                  bool l1Bwd = (layer1 >= 34 && layer1 <= 43);
+                  bool l2Bwd = (layer2 >= 34 && layer2 <= 43);
+                  bool l3Bwd = (layer3 >= 34 && layer3 <= 43);
+                  bool l1Fwd = (layer1 >= 44 && layer1 <= 53);
+                  bool l2Fwd = (layer2 >= 44 && layer2 <= 53);
+                  bool l3Fwd = (layer3 >= 44 && layer3 <= 53);
                   if (l1Brl && l2Brl && l3Brl)
                     alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOOO_barrel], 1u, alpaka::hierarchy::Blocks{});
                   else if (l1Bwd && l2Bwd && l3Bwd)

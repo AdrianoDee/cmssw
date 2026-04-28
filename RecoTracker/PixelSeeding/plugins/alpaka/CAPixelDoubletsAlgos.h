@@ -537,8 +537,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           // Controlled by per-pair stubSigmaCut (negative = disabled).
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
             auto stubSigmaCut = cc.stubSigmaCut()[pairLayerId];
-            if (stubSigmaCut > 0.f && hh[i].isStub() && hh[oi].isStub() &&
-                hh[i].stubType() != ::reco::StubType::PHitOnly && hh[oi].stubType() != ::reco::StubType::PHitOnly) {
+            if (stubSigmaCut > 0.f && ll.isOT()[inner] && hh[oi].dPhiDrError() > 0.f && hh[i].dPhiDrError() > 0.f) {
               // Unified kappa-corrected significance for all stub-stub pairs
               float d_i = hh[i].dPhiDr(), s_i = hh[i].dPhiDrError();
               float den_i = 1.f + ri * ri * d_i * d_i;
@@ -577,10 +576,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
           // When only the outer hit is a stub, compute the doublet's kappa from the
           // pixel-stub geometry and compare with the stub's own kappa measurement.
           // This reuses stubSigmaCut as the significance threshold.
+          // FIXME: think about removing this one.
           if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
             auto stubSigmaCut = cc.stubSigmaCut()[pairLayerId];
-            if (stubSigmaCut > 0.f && !hh[i].isStub() && hh[oi].isStub() &&
-                hh[oi].stubType() != ::reco::StubType::PHitOnly) {
+            if (stubSigmaCut > 0.f && !ll.isOT()[inner] && hh[oi].dPhiDrError() > 0.f) {
               auto signed_dphi = short2phi(int16_t(mop - mep));
               auto dr = ro - ri;
               if (dr > 0.f) {

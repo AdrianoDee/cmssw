@@ -96,6 +96,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC ALPAKA_FN_INLINE auto inner_iphi(const HitsConstView& hh) const { return hh[theInnerHitId_].iphi(); }
     ALPAKA_FN_ACC ALPAKA_FN_INLINE auto outer_iphi(const HitsConstView& hh) const { return hh[theOuterHitId_].iphi(); }
 
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE auto inner_dPhiDr(const HitsConstView& hh) const { return hh[theInnerHitId_].dPhiDr(); }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE auto outer_dPhiDr(const HitsConstView& hh) const { return hh[theOuterHitId_].dPhiDr(); } 
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE auto inner_dPhiDrError(const HitsConstView& hh) const { return hh[theInnerHitId_].dPhiDrError(); }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE auto outer_dPhiDrError(const HitsConstView& hh) const { return hh[theOuterHitId_].dPhiDrError(); }
+
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE auto inner_isStub(const HitsConstView& hh) const { return inner_dPhiDrError(hh) >= 0.f; }
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE auto outer_isStub(const HitsConstView& hh) const { return outer_dPhiDrError(hh) >= 0.f; }
+
     ALPAKA_FN_ACC ALPAKA_FN_INLINE float inner_detIndex(const HitsConstView& hh) const {
       return hh[theInnerHitId_].detectorIndex();
     }
@@ -129,91 +137,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         old = theFishboneId_;
     }
 
-    ALPAKA_FN_ACC ALPAKA_FN_INLINE static bool areAlignedRZ(
-        float r1, float z1, float ri, float zi, float ro, float zo, const float ptmin, const float thetaCut) {
-      float radius_diff = std::abs(r1 - ro);
-      float distance_13_squared = radius_diff * radius_diff + (z1 - zo) * (z1 - zo);
-
-      float pMin = ptmin * std::sqrt(distance_13_squared);  // this needs to be divided by
-                                                            // radius_diff later
-
-      float tan_12_13_half_mul_distance_13_squared = fabs(z1 * (ri - ro) + zi * (ro - r1) + zo * (r1 - ri));
-      bool aligned = tan_12_13_half_mul_distance_13_squared * pMin <= thetaCut * distance_13_squared * radius_diff;
-
-#ifdef CA_DEBUG
-      float lhs = tan_12_13_half_mul_distance_13_squared * pMin;
-      float rhs = thetaCut * distance_13_squared * radius_diff;
-      printf("ThetaCheck;%.4f;%.4f;%.4f;%.4f;%.4f;%.4f;%.6f;%.6f;%.6f;%.6f;%d\n",
-             r1,
-             z1,
-             ri,
-             zi,
-             ro,
-             zo,                // hit positions (r,z for 3 hits)
-             lhs,               // alignment value (LHS of check)
-             rhs,               // threshold (RHS of check)
-             thetaCut,          // raw thetaCut parameter
-             ptmin,             // ptmin parameter
-             aligned ? 1 : 0);  // pass/fail
-#endif
-
-      return aligned;
-    }
-
-    ALPAKA_FN_ACC ALPAKA_FN_INLINE auto dcaCut(const HitsConstView& hh,
-                                               CACell const& otherCell,
-                                               const float region_origin_radius_plus_tolerance,
-                                               const float maxCurv,
-                                               const float dcaFloor = 0.f) const {
-      auto x1 = otherCell.inner_x(hh);
-      auto y1 = otherCell.inner_y(hh);
-
-      auto x2 = inner_x(hh);
-      auto y2 = inner_y(hh);
-
-      auto x3 = outer_x(hh);
-      auto y3 = outer_y(hh);
-
-      CircleEq<float> eq(x1, y1, x2, y2, x3, y3);
-
-      auto curvature = eq.curvature();
-
-      struct result {
-        bool passes;
-        float curvature;
-      };
-
-      float absCurvature = std::abs(curvature);
-      float dca = std::abs(eq.dca0());
-      float floor = (dcaFloor >= 0.f) ? dcaFloor : 0.f;
-      float dcaThreshold = region_origin_radius_plus_tolerance * absCurvature + floor;
-
-      bool curvPassed = absCurvature <= maxCurv;
-      bool dcaPassed = dca < dcaThreshold;
-
-#ifdef CA_DEBUG
-      printf("DCACheck;%.4f;%.4f;%.4f;%.4f;%.4f;%.4f;%.6f;%.6f;%.6f;%.6f;%.6f;%d;%d;%d\n",
-             x1,
-             y1,
-             x2,
-             y2,
-             x3,
-             y3,                                   // hit positions (x,y for 3 hits)
-             curvature,                            // computed curvature
-             maxCurv,                              // max curvature cut
-             dca,                                  // computed DCA
-             dcaThreshold,                         // DCA threshold (includes floor)
-             region_origin_radius_plus_tolerance,  // raw DCA cut parameter
-             curvPassed ? 1 : 0,                   // curvature check passed
-             dcaPassed ? 1 : 0,                    // DCA check passed
-             (curvPassed && dcaPassed) ? 1 : 0);   // overall passed
-#endif
-
-      if (!curvPassed)
-        return std::tuple<bool, float>{false, curvature};
-
-      return std::tuple<bool, float>{dcaPassed, curvature};
-    }
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE auto quadrupletCut(const float innerCurvature,
                                                       const float outerCurvature,

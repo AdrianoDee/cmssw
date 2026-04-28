@@ -83,7 +83,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           hitsView.isStub()[hitIdx] = false;
           hitsView.stubType()[hitIdx] = 0;
           hitsView.dPhiDr()[hitIdx] = 0.0f;
-          hitsView.dPhiDrError()[hitIdx] = 0.0f;
+          hitsView.dPhiDrError()[hitIdx] = -1.0f;
           hitsView.ptEst()[hitIdx] = 0.0f;
           // Set pHitGroupId to max value (invalid) for pixel hits
           hitsView.pHitGroupId()[hitIdx] = UINT32_MAX;
