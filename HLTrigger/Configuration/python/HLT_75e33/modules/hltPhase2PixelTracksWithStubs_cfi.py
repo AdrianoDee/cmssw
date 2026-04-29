@@ -13,5 +13,5 @@ hltPhase2PixelTracksWithStubs = cms.EDProducer("PixelTrackProducerFromSoAAlpaka"
     minQuality = cms.string('loose'),
     useOTExtension = cms.bool(True),
     expandStubs = cms.bool(True),
-    requireQuadsFromConsecutiveLayers = cms.bool(True)
+    requireQuadsFromConsecutiveLayers = cms.bool(False)
 )
