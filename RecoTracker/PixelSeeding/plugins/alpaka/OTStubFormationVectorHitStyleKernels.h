@@ -906,8 +906,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               // For PS modules, use the PIXEL hit position (better spatial precision)
               // In CMSSW convention, the pixel sensor is always the "lower" sensor in the
               // stack reference frame for PS modules, so lowerHit is the pixel hit.
-              // For SS modules, use average of both sensors for global, inner for local
-              // IMPORTANT: Compute stub position in local variables first, then write to
+              // For SS modules, use the physically-inner sensor (closer to the beam: smaller
+              // r in barrel, smaller |z| in endcap; resolved via `innerIdx` and `isFlipped`).
               // the stubs SoA once. Do NOT read back from stubs SoA after writing, because
               // the SoA view uses __restrict__ qualified pointers and the compiler will
               // generate unnecessary global memory reads instead of reusing register values.
@@ -935,13 +935,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        lowerHit.iphi(), lowerHit.xerrLocal(), lowerHit.yerrLocal(), lowerHit.sensorDetId());
 #endif
               } else {
-                xg = 0.5f * (lowerHit.xGlobal() + upperHit.xGlobal());
-                yg = 0.5f * (lowerHit.yGlobal() + upperHit.yGlobal());
-                zg = 0.5f * (lowerHit.zGlobal() + upperHit.zGlobal());
+                xg = hits[innerIdx].xGlobal();
+                yg = hits[innerIdx].yGlobal();
+                zg = hits[innerIdx].zGlobal();
                 stubs[stubIdx].xGlobal() = xg;
                 stubs[stubIdx].yGlobal() = yg;
                 stubs[stubIdx].zGlobal() = zg;
-                // Access inner hit directly using selected index
                 stubs[stubIdx].xLocal() = hits[innerIdx].xLocal();
                 stubs[stubIdx].yLocal() = hits[innerIdx].yLocal();
                 stubs[stubIdx].xerrLocal() = hits[innerIdx].xerrLocal();
