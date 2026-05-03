@@ -7,7 +7,6 @@
 #include "DataFormats/TrackSoA/interface/TracksSoA.h"
 
 class PixelTrackSoATab {
-
   // Indices to the 5-dimensional track state vector (CMS convention)
   static constexpr auto kStatePhi = 0;
   static constexpr auto kStateDxy = 1;
@@ -51,7 +50,7 @@ public:
     covPhiDxy_ = cov(kCovPhiDxy);
     covPhiQOverPt_ = cov(kCovPhiQOverPt);
   }
-  
+
   float chi2() const { return chi2_; }
   float dzError() const { return dzError_; }
   float dxyError() const { return dxyError_; }

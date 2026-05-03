@@ -14,7 +14,6 @@
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 
 #include "RecoTracker/FinalTrackSelectors/interface/PixelTrackFeaturesSoA.h"
-#include "RecoTracker/FinalTrackSelectors/interface/PixelRecHitFeaturesSoA.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -30,12 +29,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void launchFeaturesExtractor(Queue& queue,
                                const int maxPreselectedTracks,
                                const ::reco::TrackSoAConstView tracks,
-                               const ::reco::TrackHitSoAConstView track_hits,
-                               const ::reco::TrackingRecHitConstView hits,
                                const int* preselectedTrackIndices,
                                const int* nPreselectedTracks,
                                PixelTrackFeaturesSoA::View trackFeatures,
-                               RecHitFeatures::PixelRecHitFeaturesSoA::View hitFeatures,
                                int* nKeptHits);
 
   void launchScoreFilter(Queue& queue,

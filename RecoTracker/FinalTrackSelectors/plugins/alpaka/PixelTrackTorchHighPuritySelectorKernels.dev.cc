@@ -42,9 +42,7 @@ static constexpr auto kCovDzDz = 14;              // (4,4)
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
   using PixelTrackFeaturesSoAView = PixelTrackFeaturesSoA::View;
-  using PixelRecHitFeaturesSoAView = RecHitFeatures::PixelRecHitFeaturesSoA::View;
   using TrackHitSoA = ::reco::TrackHitSoA;
-  using HitFeaturesIDX = RecHitFeatures::HitFeature;
 
   // ------------------------------------------------------------------------------
   // --------------------------- Definitions of Kernels ---------------------------
@@ -106,38 +104,31 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   const int maxPreselectedTracks,
                                   const ::reco::TrackSoAConstView tracks,
-                                  const ::reco::TrackHitSoAConstView track_hits,
-                                  const ::reco::TrackingRecHitConstView hits,
                                   const int* preselectedTrackIndices,
                                   const int* nPreselectedTracks,
                                   PixelTrackFeaturesSoAView trackFeatures,
-                                  PixelRecHitFeaturesSoAView hitFeatures,
                                   int* nKeptHits) const {
       /**
-            * Extracts per-track and per-hit features used as input to
+            * Extracts per-track features used as input to
             * the Torch HighPurity classifier.
             *
             * For each valid preselected track:
             *  - Per-track features are written to PixelTrackFeaturesSoA
-            *  - Per-hit features are written to PixelRecHitFeaturesSoA
             *  - nKeptHits[i] initially stores the number of hits per track
             *    and is later transformed into hit offsets via prefix-scan
 
             *
             * Padding policy:
             *  - Slots i >= nPreselectedTracks are treated as padding
-            *  - All track and hit features for padding slots are filled with NaNs
+            *  - All track and for padding slots are filled with 0s
             *
             * Preconditions:
             *  - preselectedTrackIndices contains a compact list of valid track indices
             *  - The first nPreselectedTracks entries are valid
             * This guarantees fixed-size tensors for Torch inference.
         */
-      const cms::float16_t NaN = static_cast<cms::float16_t>(std::numeric_limits<float>::quiet_NaN());
       const auto nPreselected = *nPreselectedTracks;
       const auto nPreselectedTracksBound = alpaka::math::min(acc, nPreselected, maxPreselectedTracks);
-      constexpr auto MaxHitsPerTrack = RecHitFeatures::MaxHitsPerTrack;
-      constexpr auto HitFeatures = RecHitFeatures::HitFeatures;
 
       for (auto i : cms::alpakatools::uniform_elements(acc, maxPreselectedTracks)) {
         // Case 1: valid preselected track --> extract features
@@ -156,93 +147,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           const auto& cov = track.covariance();
           const auto& state = track.state();
           const auto numHits = nHits(tracks, inputTrackIdx);
-
           nKeptHits[i] = numHits;
 
-#ifdef KERNELS_DEBUG
-          if (numHits > MaxHitsPerTrack)
-            printf("PixelTrackTorchHighPuritySelectorKernels: Number of hits (%d) exceeds MaxHitsPerTrack (%d)\n",
-                   numHits,
-                   MaxHitsPerTrack);
-#endif
           // Fill per-track features
-          trackFeatures.chi2(i) = track.chi2();  // in the SoA chi2 is stored as chi2/ndof
-          trackFeatures.dzError(i) = xtd::sqrt(cov(kCovDzDz));
-          trackFeatures.dxyError(i) = xtd::sqrt(cov(kCovDxyDxy));
-          trackFeatures.eta(i) = track.eta();
-          trackFeatures.nHits(i) = numHits;
-          trackFeatures.phi(i) = state(kStatePhi);
-          trackFeatures.phiError(i) = xtd::sqrt(cov(kCovPhiPhi));
-          trackFeatures.pt(i) = track.pt();
-          trackFeatures.qOverPtError(i) = xtd::sqrt(cov(kCovQOverPtQOverPt));
-          trackFeatures.dzBS(i) = state(kStateDz);
-          trackFeatures.dxyBS(i) = state(kStateDxy);
-          trackFeatures.nLayers(i) = track.nLayers();
-          trackFeatures.cotThetaError(i) = xtd::sqrt(cov(kCovCotThetaCotTheta));
-          trackFeatures.covCotThetaDz(i) = cov(kCovCotThetaDz);
-          trackFeatures.covDxyQOverPt(i) = cov(kCovDxyQOverPt);
-          trackFeatures.covPhiDxy(i) = cov(kCovPhiDxy);
-          trackFeatures.covPhiQOverPt(i) = cov(kCovPhiQOverPt);
-
-          //Prefill hit features:
-          auto hitMatrix = hitFeatures.hits(i);
-          for (auto h = 0u; h < MaxHitsPerTrack; ++h) {
-            for (auto f = 0u; f < HitFeatures; ++f) {
-              hitMatrix(h, f) = NaN;
-            }
-          }
-
-          auto hitBegin = (inputTrackIdx == 0) ? 0 : tracks[inputTrackIdx - 1].hitOffsets();
-          auto hitEnd = track.hitOffsets();
-          auto nHitsTrack = hitEnd - hitBegin;
-
-          nHitsTrack = alpaka::math::min(acc, nHitsTrack, uint32_t(MaxHitsPerTrack));
-
-          for (auto h = 0u; h < nHitsTrack; ++h) {
-            auto hit_id = track_hits[hitBegin + h].id();
-            const auto& hit = hits[hit_id];
-
-            const auto x = hit.xGlobal();
-            const auto y = hit.yGlobal();
-            const auto z = hit.zGlobal();
-            const auto r = hit.rGlobal();
-
-            hitMatrix(h, HitFeaturesIDX::x) = x;
-            hitMatrix(h, HitFeaturesIDX::y) = y;
-            hitMatrix(h, HitFeaturesIDX::z) = z;
-            hitMatrix(h, HitFeaturesIDX::r) = r;
-
-            hitMatrix(h, HitFeaturesIDX::eta) = (r > 0.) ? xtd::asinh(z / r) : 0.;
-
-            hitMatrix(h, HitFeaturesIDX::phi) = xtd::atan2(y, x);
-          }
+          trackFeatures.chi2(i) = static_cast<cms::float16_t>(track.chi2());  // in the SoA chi2 is stored as chi2/ndof
+          trackFeatures.dzError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovDzDz)));
+          trackFeatures.dxyError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovDxyDxy)));
+          trackFeatures.eta(i) = static_cast<cms::float16_t>(track.eta());
+          trackFeatures.nHits(i) = static_cast<cms::float16_t>(numHits);
+          trackFeatures.phi(i) = static_cast<cms::float16_t>(state(kStatePhi));
+          trackFeatures.phiError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovPhiPhi)));
+          trackFeatures.pt(i) = static_cast<cms::float16_t>(track.pt());
+          trackFeatures.qOverPtError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovQOverPtQOverPt)));
+          trackFeatures.dzBS(i) = static_cast<cms::float16_t>(state(kStateDz));
+          trackFeatures.dxyBS(i) = static_cast<cms::float16_t>(state(kStateDxy));
+          trackFeatures.nLayers(i) = static_cast<cms::float16_t>(track.nLayers());
+          trackFeatures.cotThetaError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovCotThetaCotTheta)));
+          trackFeatures.covCotThetaDz(i) = static_cast<cms::float16_t>(cov(kCovCotThetaDz));
+          trackFeatures.covDxyQOverPt(i) = static_cast<cms::float16_t>(cov(kCovDxyQOverPt));
+          trackFeatures.covPhiDxy(i) = static_cast<cms::float16_t>(cov(kCovPhiDxy));
+          trackFeatures.covPhiQOverPt(i) = static_cast<cms::float16_t>(cov(kCovPhiQOverPt));
         }
-        // Case 2: padding entries --> fill with NaNs for inference
+        // Case 2: padding entries --> fill with 0s for inference
         else {
-          trackFeatures.chi2(i) = NaN;
-          trackFeatures.dzError(i) = NaN;
-          trackFeatures.dxyError(i) = NaN;
-          trackFeatures.eta(i) = NaN;
-          trackFeatures.nHits(i) = NaN;
-          trackFeatures.phi(i) = NaN;
-          trackFeatures.phiError(i) = NaN;
-          trackFeatures.pt(i) = NaN;
-          trackFeatures.qOverPtError(i) = NaN;
-          trackFeatures.dzBS(i) = NaN;
-          trackFeatures.dxyBS(i) = NaN;
-          trackFeatures.nLayers(i) = NaN;
-          trackFeatures.cotThetaError(i) = NaN;
-          trackFeatures.covCotThetaDz(i) = NaN;
-          trackFeatures.covDxyQOverPt(i) = NaN;
-          trackFeatures.covPhiDxy(i) = NaN;
-          trackFeatures.covPhiQOverPt(i) = NaN;
-
-          auto hitMatrix = hitFeatures.hits(i);
-          for (auto h = 0u; h < MaxHitsPerTrack; ++h) {
-            for (auto f = 0u; f < HitFeatures; ++f) {
-              hitMatrix(h, f) = NaN;
-            }
-          }
+          trackFeatures.chi2(i) = 0;
+          trackFeatures.dzError(i) = 0;
+          trackFeatures.dxyError(i) = 0;
+          trackFeatures.eta(i) = 0;
+          trackFeatures.nHits(i) = 0;
+          trackFeatures.phi(i) = 0;
+          trackFeatures.phiError(i) = 0;
+          trackFeatures.pt(i) = 0;
+          trackFeatures.qOverPtError(i) = 0;
+          trackFeatures.dzBS(i) = 0;
+          trackFeatures.dxyBS(i) = 0;
+          trackFeatures.nLayers(i) = 0;
+          trackFeatures.cotThetaError(i) = 0;
+          trackFeatures.covCotThetaDz(i) = 0;
+          trackFeatures.covDxyQOverPt(i) = 0;
+          trackFeatures.covPhiDxy(i) = 0;
+          trackFeatures.covPhiQOverPt(i) = 0;
         }
       }
     }
@@ -469,14 +413,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void launchFeaturesExtractor(Queue& queue,
                                const int maxPreselectedTracks,
                                const ::reco::TrackSoAConstView tracks,
-                               const ::reco::TrackHitSoAConstView track_hits,
-                               const ::reco::TrackingRecHitConstView hits,
                                const int* preselectedTrackIndices,
                                const int* nPreselectedTracks,
                                PixelTrackFeaturesSoAView trackFeatures,
-                               PixelRecHitFeaturesSoAView hitFeatures,
                                int* nKeptHits) {
-    // Extract per-track and per-hit features for Torch inference
+    // Extract per-track features for Torch inference
     constexpr auto threadsPerBlock = 256u;
     const auto blocks = cms::alpakatools::divide_up_by(maxPreselectedTracks, threadsPerBlock);
     const auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
@@ -486,12 +427,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         FeaturesExtractorKernel{},
                         maxPreselectedTracks,
                         tracks,
-                        track_hits,
-                        hits,
                         preselectedTrackIndices,
                         nPreselectedTracks,
                         trackFeatures,
-                        hitFeatures,
                         nKeptHits);
   }
 

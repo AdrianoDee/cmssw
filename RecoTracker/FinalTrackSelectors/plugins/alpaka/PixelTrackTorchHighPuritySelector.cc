@@ -73,7 +73,6 @@
 #include "DataFormats/TrackSoA/interface/alpaka/TracksSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
 
-#include "RecoTracker/FinalTrackSelectors/interface/PixelRecHitFeaturesSoA.h"
 #include "RecoTracker/FinalTrackSelectors/interface/PixelTrackFeaturesSoA.h"
 #include "RecoTracker/FinalTrackSelectors/plugins/alpaka/PixelTrackFeaturesDeviceCollection.h"
 #include "RecoTracker/FinalTrackSelectors/plugins/alpaka/PixelTrackTorchHighPuritySelectorKernels.h"
@@ -102,11 +101,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     void produce(device::Event&, const device::EventSetup&) override;
 
-    const device::EDGetToken<HitsOnDevice> recHitToken_;
     const device::EDGetToken<TkSoADevice> pixelTrackToken_;
     const int maxNumberOfTracks_;
     const int maxPreselectedTracks_;
-    const int maxHitsPerTrack_;
     const int minNumberOfHits_;
     const int avgHitsPerTrack_;
     const pixelTrack::Quality minimumTrackQuality_;
@@ -119,11 +116,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   PixelTrackTorchHighPuritySelector::PixelTrackTorchHighPuritySelector(const edm::ParameterSet& iConfig)
       : FixedQueueEDProducer(iConfig),
-        recHitToken_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
         pixelTrackToken_(consumes(iConfig.getParameter<edm::InputTag>("pixelTrackSrc"))),
         maxNumberOfTracks_(iConfig.getParameter<int>("maxNumberOfTracks")),
         maxPreselectedTracks_(iConfig.getParameter<int>("maxPreselectedTracks")),
-        maxHitsPerTrack_(RecHitFeatures::MaxHitsPerTrack),
         minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
         avgHitsPerTrack_(iConfig.getParameter<int>("avgHitsPerTrack")),
         minimumTrackQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minimumTrackQuality"))),
@@ -158,7 +153,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     nvtx3::scoped_range range{"PixelTrackTorchHP Producer"};
     // Retrieve tokens
     auto& queue = iEvent.queue();
-    const auto& hits = iEvent.get(recHitToken_).view();
     const auto& tracks = iEvent.get(pixelTrackToken_).view();
 
     // Instantiate the necessary objects in memory
@@ -179,7 +173,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     //  - Features and scores containers
     PixelTrackFeaturesOnDevice trackFeatures(queue, maxPreselectedTracks_);
-    PixelRecHitFeaturesOnDevice hitFeatures(queue, maxPreselectedTracks_);
     PixelTrackScoresOnDevice trackScoresOnDevice(queue, maxPreselectedTracks_);
 
     // Optional debug definitions
@@ -227,19 +220,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       launchFeaturesExtractor(queue,
                               maxPreselectedTracks_,
                               tracks.tracks(),
-                              tracks.trackHits(),
-                              hits.trackingHits(),
                               alpaka::getPtrNative(d_preselectedTrackIndices),
                               alpaka::getPtrNative(d_nPreselectedTracks),
                               trackFeatures.view(),
-                              hitFeatures.view(),
                               alpaka::getPtrNative(d_nKeptHits));
     }
 
     // 3. DNN inference
     //  Prepare TensorCollection inputs and outputs for the model
     auto track_record = trackFeatures.view().records();
-    auto hit_record = hitFeatures.view().records();
     auto score_record = trackScoresOnDevice.view().records();
     const auto n_batches = maxPreselectedTracks_ / batchSize_;
     std::deque<BatchIO> batches;
@@ -253,7 +242,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   cms::torch::alpakatools::TensorCollection<Queue>(batchSize_, maxPreselectedTracks_)});
 
       auto& batch = batches.back();
-      batch.inputs.add<::RecHitFeatures::PixelRecHitFeaturesSoA>("hit_features", i_batch, hit_record.hits());
       // Order must match the TorchScript model input schema
       batch.inputs.add<PixelTrackFeaturesSoA>("track_features",
                                               i_batch,
@@ -314,7 +302,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   void PixelTrackTorchHighPuritySelector::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
-    desc.add<edm::InputTag>("pixelRecHitSrc", {"hltPhase2SiPixelRecHitsSoA"});
     desc.add<edm::InputTag>("pixelTrackSrc", {"hltPhase2PixelTracksSoA"});
     desc.add<int>("maxNumberOfTracks", 100000);
     desc.add<int>("maxPreselectedTracks", 10000);
