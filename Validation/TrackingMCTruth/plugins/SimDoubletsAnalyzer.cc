@@ -90,10 +90,10 @@ namespace simdoublets {
     desc.add<std::string>("folder", "Tracking/TrackingMCTruth/SimDoublets");
 
     // cut parameters with scalar values
-    desc.add<int>("cellMaxDYSize12", TrackerTraits::maxDYsize12)
+    desc.add<int>("cellMaxDYSize12", TrackerTraits::maxDSizeB1)
         ->setComment("Maximum difference in cluster size for B1/B2");
-    desc.add<int>("cellMaxDYSize", TrackerTraits::maxDYsize)->setComment("Maximum difference in cluster size");
-    desc.add<int>("cellMaxDYPred", TrackerTraits::maxDYPred)
+    desc.add<int>("cellMaxDYSize", TrackerTraits::maxDSize)->setComment("Maximum difference in cluster size");
+    desc.add<int>("cellMaxDYPred", TrackerTraits::maxDSizePred)
         ->setComment("Maximum difference between actual and expected cluster size of inner RecHit");
   }
 }  // namespace simdoublets
@@ -584,7 +584,7 @@ void SimDoubletsAnalyzer<TrackerTraits>::bookHistograms(DQMStore::IBooker& ibook
                                             pTmin,
                                             pTmax);
 
-  // histograms for clusterCut  (minYsizeB1 and minYsizeB2)
+  // histograms for clusterCut  (minInnerSizeB1 and minInnerSizeB2)
   h_YsizeB1_ = ibook.book1D(
       "YsizeB1",
       "Cluster size along z (inner from B1); Size along z of inner cluster [num of pixels]; Number of SimDoublets",
@@ -610,7 +610,7 @@ void SimDoubletsAnalyzer<TrackerTraits>::bookHistograms(DQMStore::IBooker& ibook
                                  -1,
                                  50);
 
-  // histograms for zSizeCut  (maxDYsize12, maxDYsize and maxDYPred)
+  // histograms for zSizeCut  (maxDSizeB1, maxDSize and maxDSizePred)
   h_DYsize12_ =
       ibook.book1D("DYsize12",
                    "Difference in cluster size along z (inner from B1); Absolute difference in cluster size along z of "
@@ -793,7 +793,7 @@ void SimDoubletsAnalyzer<pixelTopology::Phase1>::fillDescriptions(edm::Configura
       ->setComment("Maximum z of inner RecHit for each layer pair");
   desc.add<std::vector<int>>(
           "cellPhiCuts",
-          std::vector<int>(std::begin(phase1PixelTopology::phicuts), std::end(phase1PixelTopology::phicuts)))
+          std::vector<int>(std::begin(phase1PixelTopology::maxDPhi), std::end(phase1PixelTopology::maxDPhi)))
       ->setComment("Cuts in delta phi for cells");
   desc.add<std::vector<double>>(
           "cellMaxr", std::vector<double>(std::begin(phase1PixelTopology::maxr), std::end(phase1PixelTopology::maxr)))
@@ -832,7 +832,7 @@ void SimDoubletsAnalyzer<pixelTopology::Phase2>::fillDescriptions(edm::Configura
       ->setComment("Maximum z of inner RecHit for each layer pair");
   desc.add<std::vector<int>>(
           "cellPhiCuts",
-          std::vector<int>(std::begin(phase2PixelTopology::phicuts), std::end(phase2PixelTopology::phicuts)))
+          std::vector<int>(std::begin(phase2PixelTopology::maxDPhi), std::end(phase2PixelTopology::maxDPhi)))
       ->setComment("Cuts in delta phi for cells");
   desc.add<std::vector<double>>(
           "cellMaxr", std::vector<double>(std::begin(phase2PixelTopology::maxr), std::end(phase2PixelTopology::maxr)))
