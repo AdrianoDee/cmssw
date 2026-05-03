@@ -22,14 +22,11 @@ tpSelectorPixelTracks = cms.PSet(
 )
 
 pixelTrackAssoc = trackingAssocValueMapsProducer.clone(
-    # To be updated according to
-    # https://github.com/cms-sw/cmssw/pull/50040#discussion_r2768436192
-    trackCollection =  cms.InputTag("hltPhase2PixelTracksCAExtension"),
+    trackCollection =  cms.InputTag("hltPhase2PixelTracks"),
     associator = cms.InputTag("hltTrackAssociatorByHits"),
     trackingParticles = cms.InputTag("mix", "MergedTrackTruth"),
     tpSelectorPSet = tpSelectorPixelTracks,
     storeTPKinematics = cms.bool(True),
-    useMuonAssociators = cms.bool(False)
 )
 
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
@@ -38,9 +35,7 @@ hltPhase2LegacyTracking.toModify(pixelTrackAssoc, trackCollection = "hltPhase2Pi
 hltPixelTrackTable = cms.EDProducer(
     "SimpleTriggerTrackFlatTableProducer",
     skipNonExistingSrc = cms.bool(True),
-    # To be updated according to
-    # https://github.com/cms-sw/cmssw/pull/50040#discussion_r2768436192
-    src = cms.InputTag("hltPhase2PixelTracksCAExtension"),
+    src = cms.InputTag("hltPhase2PixelTracks"),
     cut = cms.string(""),
     name = cms.string("hltPixelTrack"),
     doc = cms.string("HLT Pixel Track information"),
@@ -99,27 +94,47 @@ hltPixelTrackTable = cms.EDProducer(
 )
 
 hltPixelTrackExtTable = cms.EDProducer("HLTTracksExtraTableProducer",
-                                       tableName = cms.string("hltPixelTrack"),                                    
+                                       tableName = cms.string("hltPixelTrack"),
                                        skipNonExistingSrc = cms.bool(True),
-                                       # To be updated according to
-                                       # https://github.com/cms-sw/cmssw/pull/50040#discussion_r2768436192
-                                       tracksSrc = cms.InputTag("hltPhase2PixelTracksCAExtension"),
+                                       tracksSrc = cms.InputTag("hltPhase2PixelTracks"),
                                        beamSpot = cms.InputTag("hltOnlineBeamSpot"),
                                        precision = cms.int32(7))
 
 hltPixelTrackRecHitsTable = cms.EDProducer("HLTTracksRecHitsTableProducer",
                                            tableName = cms.string("hltPixelTrackRecHits"),
                                            skipNonExistingSrc = cms.bool(True),
-                                           # To be updated according to
-                                           # https://github.com/cms-sw/cmssw/pull/50040#discussion_r2768436192
-                                           tracksSrc = cms.InputTag("hltPhase2PixelTracksCAExtension"),
-                                           maxRecHits = cms.uint32(16),
+                                           tracksSrc = cms.InputTag("hltPhase2PixelTracks"),
                                            precision = cms.int32(7)
 )
 
-hltPhase2LegacyTracking.toModify(hltPixelTrackTable, src = "hltPhase2PixelTracks")
-hltPhase2LegacyTracking.toModify(hltPixelTrackExtTable, tracksSrc = "hltPhase2PixelTracks")
-hltPhase2LegacyTracking.toModify(hltPixelTrackRecHitsTable, tracksSrc = "hltPhase2PixelTracks")
+hltPixelTrackSoATable = cms.EDProducer(
+    "SimplePixelTrackSoATabFlatTableProducer",
+    src = cms.InputTag("hltPhase2PixelTrackSoATableProducer"),
+    name = cms.string("PixelTrackSoA"),
+    doc  = cms.string("Pixel tracks from TrackSoA"),
+    singleton = cms.bool(False),
+    extension = cms.bool(False),
+
+    variables = cms.PSet(
+        chi2 = Var("chi2()", "float"),
+        dzError = Var("dzError()", "float"),
+        dxyError = Var("dxyError()", "float"),
+        eta = Var("eta()","float"),
+        nHits  = Var("nHits()","float"),
+        phi = Var("phi()","float"),
+        phiError = Var("phiError()","float"),
+        pt = Var("pt()","float"),
+        qOverPtError = Var("qOverPtError()","float"),
+        dzBS = Var("dzBS()","float"),
+        dxyBS = Var("dxyBS()","float"),
+        nLayers = Var("nLayers()","float"),
+        cotThetaError = Var("cotThetaError()","float"),
+        covCotThetaDz = Var("covCotThetaDz()","float"),
+        covDxyQOverPt = Var("covDxyQOverPt()","float"),
+        covPhiDxy = Var("covPhiDxy()","float"),
+        covPhiQOverPt = Var("covPhiQOverPt()","float")
+    )
+)
 
 hltGeneralTrackTable = cms.EDProducer(
     "SimpleTriggerTrackFlatTableProducer",

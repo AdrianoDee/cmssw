@@ -33,6 +33,7 @@
 #include "SimDataFormats/Associations/interface/TrackToTrackingParticleAssociator.h"
 #include "SimTracker/TrackerHitAssociation/interface/ClusterTPAssociation.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
+#include "SimDataFormats/Associations/interface/TrackToTrackingParticleAssociator.h"
 
 class TrackingAssocValueMapsProducer : public edm::one::EDProducer<edm::one::SharedResources> {
 public:
@@ -124,7 +125,6 @@ void TrackingAssocValueMapsProducer::produce(edm::Event& iEvent, const edm::Even
 
   edm::Handle<edm::View<reco::Track>> tracksH;
   iEvent.getByToken(tracksToken_, tracksH);
-
   edm::Handle<TrackingParticleCollection> tpH;
   iEvent.getByToken(tpToken_, tpH);
 
@@ -275,7 +275,6 @@ void TrackingAssocValueMapsProducer::fillDescriptions(edm::ConfigurationDescript
   desc.add<edm::ParameterSetDescription>("tpSelectorPSet", tpSet);
   desc.add<bool>("storeTPKinematics", true);
   desc.add<bool>("useMuonAssociators", false);
-
   descriptions.addWithDefaultLabel(desc);
 }
 

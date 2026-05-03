@@ -38,3 +38,28 @@
 <library file="*.cc" name="RecoTrackerFinalTrackSelectorsPlugins">
   <flags EDM_PLUGIN="1"/>
 </library>
+
+<library file="alpaka/*.cc" name="RecoTrackerFinalTrackSelectorsAlpakaPlugins">
+  <use name="alpaka"/>
+  <use name="xtd"/>
+  <use name="DataFormats/BeamSpot"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/SoATemplate"/>
+  <use name="DataFormats/TrackSoA"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
+  <use name="HeterogeneousCore/AlpakaCore"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="PhysicsTools/PyTorchAlpaka"/>
+  <use name="pytorch"/>
+  <use name="pytorch-cuda"/>
+
+  <!-- work around for cms-sw/cmssw#45179 -->
+  <use name="no-array-bounds-flag" for="alpaka/serial"/>
+
+  <flags ALPAKA_BACKENDS="cuda"/>
+  <flags ALPAKA_BACKENDS="serial"/>
+  <!-- ROCm backend not yet supported, see: https://github.com/pytorch/pytorch/blob/main/aten/CMakeLists.txt#L75 -->
+  <!-- <flags ALPAKA_BACKENDS="rocm"/> -->
+  <flags EDM_PLUGIN="1"/>
+  <flags remove="1">ofast-flag</flags>
+</library>
