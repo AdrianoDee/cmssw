@@ -35,13 +35,13 @@ namespace caHitNtupletGenerator {
 
   // Triplet rejection cut indices (for kTrpRejBase offset access)
   enum TrpRejCut : int {
-    kAlignedRZ = 0,
-    kAlignedXY,
-    kBeamspotCompatibleXY,
-    kPhiCompatible,
-    kSameSignDPhi,
-    kStubsCurvCompatibleWithTriplet,
-    kStubsCompatibleWithInnerDoublet,
+    kCutAlignedRZ = 0,
+    kCutAlignedXY,
+    kCutBeamspotCompatibleXY,
+    kCutPhiCompatible,
+    kCutSameSignDPhi,
+    kCutStubsCurvCompatibleWithTriplet,
+    kCutStubsCompatibleWithInnerDoublet,
     kNTrpCuts
   };
 

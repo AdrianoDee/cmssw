@@ -153,17 +153,6 @@ for i, lp in enumerate(layerPairs):
     if not excludeLayerPair[i]:
         layerPairsCAExtension.append(lp)
 
-# get startingPairs for Ntuplet building
-startingPairsAlpaka = []
-for i, lp in enumerate(layerPairsAlpaka):
-    if lp[2]:
-        startingPairsAlpaka.append(i)
-
-startingPairsCAExtension = []
-for i, lp in enumerate(layerPairsCAExtension):
-    if lp[2]:
-        startingPairsCAExtension.append(i)
-
 hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2OT@alpaka',
     pixelRecHitSrc = cms.InputTag('hltPhase2PixelRecHitsExtendedSoA'),
     ptmin = cms.double(0.9),
@@ -172,7 +161,7 @@ hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2OT@alpaka',
     lateFishbone = cms.bool(False),
     onlySameLayersFishbone = cms.bool(False),
     fillStatistics = cms.bool(False),
-    minHitsPerNtuplet = cms.uint32(4),
+    minLayersPerNtuplet = cms.uint32(4),
     maxNumberOfDoublets = cms.string(str(6e6)), #12*512*1024
     maxNumberOfTuples = cms.string(str(2*60*1024)),
     minYsizeB1 = cms.int32(20),
@@ -201,39 +190,42 @@ hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2OT@alpaka',
         maxTip  = cms.double(0.3),
         maxZip  = cms.double(12),
     ),
-    geometry = cms.PSet(
-        # This cut also uses the hardCurvCut parameters inside the
-        # Kernel_connect "function". This is used to cut connections that have
-        # either a too low p_t or that do not intersect the BS+tolerance
-        # region. Internally, this cut is compared against the circle.dca0() in
-        # natural units divided by circle.curvature(), where circle is the
-        # circle passing through the 3 points of the triplet under
-        # investigation. Therefore the cut represent the compatibility of the
-        # circle in the transverse plane and the units are meant to be cm.
-        # caThetaCut is used in the areAlignedRZ function to check if two
-        # sibling cell are compatible in the R-Z plane. In that same function,
-        # we also use ptmin variable. The caThetaCut is assigned to the SoA of
-        # the layers, and is percolated into this compatibility function via
-        # the SoA itself.
-        startingPairs = cms.vuint32(startingPairsCAExtension),
+    # CA parameters
+    fishboneCuts = cms.vdouble([l[5] for l in layers]),
+    graph = cms.PSet(
+        layerPairs   = cms.vuint32(sum([[lp[0], lp[1]] for lp in layerPairsCAExtension], [])),
+        startingPair = cms.vuint32([int(lp[2]) for lp in layerPairsCAExtension]),
+        skipsLayers  = cms.vuint32([int(lp[3]) for lp in layerPairsCAExtension]),
+    ),
+    doubletCuts = cms.PSet(
+        maxDPhi          = cms.vint32( [lp[ 4] for lp in layerPairsCAExtension]),
+        minInner         = cms.vdouble([lp[ 5] for lp in layerPairsCAExtension]),
+        maxInner         = cms.vdouble([lp[ 6] for lp in layerPairsCAExtension]),
+        minOuter         = cms.vdouble([lp[ 7] for lp in layerPairsCAExtension]),
+        maxOuter         = cms.vdouble([lp[ 8] for lp in layerPairsCAExtension]),
+        maxDR            = cms.vdouble([lp[ 9] for lp in layerPairsCAExtension]),
+        minDZ            = cms.vdouble([lp[10] for lp in layerPairsCAExtension]),
+        maxDZ            = cms.vdouble([lp[11] for lp in layerPairsCAExtension]),
+        minPt            = cms.vdouble([lp[12] for lp in layerPairsCAExtension]),
+        maxZ0            = cms.vdouble([lp[13] for lp in layerPairsCAExtension]),
+        dzdrFact = cms.double(15.2),
+        minInnerSizeB1  = cms.int32(15),
+        minInnerSizeB2  = cms.int32(14),
+        maxDSizeB1      = cms.int32(15),
+        maxDSize        = cms.int32(20),
+        maxDSizePred    = cms.int32(24),
+    ),
+    tripletCuts = cms.PSet(
+        maxRZTolerance = cms.vdouble([lp[14] for lp in layerPairsCAExtension]),
+        maxDCA         = cms.vdouble([lp[15] for lp in layerPairsCAExtension]),
+        floorDCA       = cms.vdouble([lp[16] for lp in layerPairsCAExtension]),
+        ptmin   = cms.double(0.9),
+        maxCurv = cms.double(0.02),
+    ),
+    ntupletCuts = cms.PSet(
         startMaxInnerR = cms.vdouble([l[2] for l in layers]),
-        caDCurvCuts    = cms.vdouble([l[3] for l in layers]),
-        caDCurv0       = cms.vdouble([l[4] for l in layers]),
-        fishboneCuts   = cms.vdouble([l[5] for l in layers]),
-        pairGraph = cms.vuint32(sum([[lp[0], lp[1]] for lp in layerPairsCAExtension], [])),
-        skipsLayers = cms.vuint32( [int(lp[ 3]) for lp in layerPairsCAExtension]),
-        phiCuts     = cms.vint32( [lp[ 4] for lp in layerPairsCAExtension]),
-        minInner    = cms.vdouble([lp[ 5] for lp in layerPairsCAExtension]),
-        maxInner    = cms.vdouble([lp[ 6] for lp in layerPairsCAExtension]),
-        minOuter    = cms.vdouble([lp[ 7] for lp in layerPairsCAExtension]),
-        maxOuter    = cms.vdouble([lp[ 8] for lp in layerPairsCAExtension]),
-        maxDR       = cms.vdouble([lp[ 9] for lp in layerPairsCAExtension]),
-        minDZ       = cms.vdouble([lp[10] for lp in layerPairsCAExtension]),
-        maxDZ       = cms.vdouble([lp[11] for lp in layerPairsCAExtension]),
-        ptCuts      = cms.vdouble([lp[12] for lp in layerPairsCAExtension]),
-        z0Cuts      = cms.vdouble([lp[13] for lp in layerPairsCAExtension]),
-        caThetaCuts = cms.vdouble([lp[14] for lp in layerPairsCAExtension]),
-        caDCACuts   = cms.vdouble([lp[15] for lp in layerPairsCAExtension]),
+        maxDCurv       = cms.vdouble([l[3] for l in layers]),
+        floorDCurv     = cms.vdouble([l[4] for l in layers]),
     ),
     # autoselect the alpaka backend
     alpaka = cms.untracked.PSet(backend = cms.untracked.string(''))
@@ -248,7 +240,7 @@ _hltPhase2PixelTracksSoANonCAExtended = cms.EDProducer('CAHitNtupletAlpakaPhase2
     lateFishbone = cms.bool(False),
     onlySameLayersFishbone = cms.bool(False),
     fillStatistics = cms.bool(False),
-    minHitsPerNtuplet = cms.uint32(4),
+    minLayersPerNtuplet = cms.uint32(4),
     maxNumberOfDoublets = cms.string(str(6*512*1024)),
     maxNumberOfTuples = cms.string(str(60*1024)),
     minYsizeB1 = cms.int32(20),
@@ -277,27 +269,43 @@ _hltPhase2PixelTracksSoANonCAExtended = cms.EDProducer('CAHitNtupletAlpakaPhase2
         maxTip  = cms.double(0.3),
         maxZip  = cms.double(12),
     ),
-    geometry = cms.PSet(
-        startingPairs = cms.vuint32(startingPairsAlpaka),
+    # CA parameters
+    fishboneCuts = cms.vdouble([l[5] for l in layers[:28]]),
+    graph = cms.PSet(
+        layerPairs   = cms.vuint32(sum([[lp[0], lp[1]] for lp in layerPairsAlpaka], [])),
+        startingPair = cms.vuint32([int(lp[2]) for lp in layerPairsAlpaka]),
+        skipsLayers  = cms.vuint32([int(lp[3]) for lp in layerPairsAlpaka]),
+    ),
+    doubletCuts = cms.PSet(
+        maxDPhi          = cms.vint32( [lp[ 4] for lp in layerPairsAlpaka]),
+        minInner         = cms.vdouble([lp[ 5] for lp in layerPairsAlpaka]),
+        maxInner         = cms.vdouble([lp[ 6] for lp in layerPairsAlpaka]),
+        minOuter         = cms.vdouble([lp[ 7] for lp in layerPairsAlpaka]),
+        maxOuter         = cms.vdouble([lp[ 8] for lp in layerPairsAlpaka]),
+        maxDR            = cms.vdouble([lp[ 9] for lp in layerPairsAlpaka]),
+        minDZ            = cms.vdouble([lp[10] for lp in layerPairsAlpaka]),
+        maxDZ            = cms.vdouble([lp[11] for lp in layerPairsAlpaka]),
+        minPt            = cms.vdouble([lp[12] for lp in layerPairsAlpaka]),
+        maxZ0            = cms.vdouble([lp[13] for lp in layerPairsAlpaka]),
+        dzdrFact = cms.double(15.2),
+        minInnerSizeB1  = cms.int32(15),
+        minInnerSizeB2  = cms.int32(14),
+        maxDSizeB1      = cms.int32(15),
+        maxDSize        = cms.int32(20),
+        maxDSizePred    = cms.int32(24),
+    ),
+    tripletCuts = cms.PSet(
+        maxRZTolerance = cms.vdouble([lp[14] for lp in layerPairsAlpaka]),
+        maxDCA         = cms.vdouble([lp[15] for lp in layerPairsAlpaka]),
+        floorDCA       = cms.vdouble([lp[16] for lp in layerPairsAlpaka]),
+        ptmin   = cms.double(0.9),
+        maxCurv = cms.double(0.02),
+    ),
+    ntupletCuts = cms.PSet(
         startMaxInnerR = cms.vdouble([l[2] for l in layers[:28]]),
-        caDCurvCuts    = cms.vdouble([l[3] for l in layers[:28]]),
-        caDCurv0       = cms.vdouble([l[4] for l in layers[:28]]),
-        fishboneCuts   = cms.vdouble([l[5] for l in layers[:28]]),
-        pairGraph = cms.vuint32(sum([[lp[0], lp[1]] for lp in layerPairsAlpaka], [])),
-        skipsLayers = cms.vuint32( [int(lp[ 3]) for lp in layerPairsAlpaka]),
-        phiCuts     = cms.vint32( [lp[ 4] for lp in layerPairsAlpaka]),
-        minInner    = cms.vdouble([lp[ 5] for lp in layerPairsAlpaka]),
-        maxInner    = cms.vdouble([lp[ 6] for lp in layerPairsAlpaka]),
-        minOuter    = cms.vdouble([lp[ 7] for lp in layerPairsAlpaka]),
-        maxOuter    = cms.vdouble([lp[ 8] for lp in layerPairsAlpaka]),
-        maxDR       = cms.vdouble([lp[ 9] for lp in layerPairsAlpaka]),
-        minDZ       = cms.vdouble([lp[10] for lp in layerPairsAlpaka]),
-        maxDZ       = cms.vdouble([lp[11] for lp in layerPairsAlpaka]),
-        ptCuts      = cms.vdouble([lp[12] for lp in layerPairsAlpaka]),
-        z0Cuts      = cms.vdouble([lp[13] for lp in layerPairsAlpaka]),
-        caThetaCuts = cms.vdouble([lp[14] for lp in layerPairsAlpaka]),
-        caDCACuts   = cms.vdouble([lp[15] for lp in layerPairsAlpaka]),
-  ),
+        maxDCurv       = cms.vdouble([l[3] for l in layers[:28]]),
+        floorDCurv     = cms.vdouble([l[4] for l in layers[:28]]),
+    ),
     # autoselect the alpaka backend
     alpaka = cms.untracked.PSet(backend = cms.untracked.string(''))
 )

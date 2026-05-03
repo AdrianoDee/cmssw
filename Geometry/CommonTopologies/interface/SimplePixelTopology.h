@@ -161,9 +161,9 @@ namespace phase1PixelTopology {
       4, 6, 7, 9                     // Jumping Forward (19)
   };
 
-  HOST_DEVICE_CONSTANT uint8_t startingPairs[nStartingPairs] = {0, 1, 2};
+  HOST_DEVICE_CONSTANT uint8_t startingPairs[nPairs] = {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-  HOST_DEVICE_CONSTANT int16_t phicuts[nPairs]{phi0p05,
+  HOST_DEVICE_CONSTANT int16_t maxDPhi[nPairs]{phi0p05,
                                                phi0p07,
                                                phi0p07,
                                                phi0p05,
@@ -194,17 +194,18 @@ namespace phase1PixelTopology {
       -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100, -100};
   HOST_DEVICE_CONSTANT float maxDZ[nPairs] = {
       100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
-  HOST_DEVICE_CONSTANT float ptCuts[nPairs] = {
+  HOST_DEVICE_CONSTANT float minPt[nPairs] = {
       0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
-  HOST_DEVICE_CONSTANT float z0Cuts[nPairs] = {
+  HOST_DEVICE_CONSTANT float maxZ0[nPairs] = {
       12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5, 12.5};
   HOST_DEVICE_CONSTANT float maxDR[nPairs] = {
       20., 9., 9., 20., 7., 7., 5., 5., 20., 6., 6., 5., 5., 20., 20., 9., 9., 9., 9.};
 
-  HOST_DEVICE_CONSTANT float dcaCuts[numberOfLayers] = {0.15, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25};
+  HOST_DEVICE_CONSTANT float maxDCA[nPairs] = {0.15, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 
+                                               0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25};
 
-  HOST_DEVICE_CONSTANT float thetaCuts[numberOfLayers] = {
-      0.002, 0.002, 0.002, 0.002, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003};
+  HOST_DEVICE_CONSTANT float maxRZTolerance[nPairs] = {
+      0.002, 0.002, 0.002, 0.002, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003};
 
   // -------------------------------------------------------------------------------------------------------
   // Deprecated arrays only used in the CUDA version (values have no meaning in alpaka):
@@ -283,10 +284,16 @@ namespace phase2PixelTopology {
       28, 29, 29, 30                           // OT to OT (73)
   };
 
-  HOST_DEVICE_CONSTANT uint8_t startingPairs[nStartingPairs] = {0,  1,  2,  3,  4,  5,  6,  8,  10, 12, 15, 17,
-                                                                19, 21, 23, 25, 27, 36, 38, 40, 42, 44, 46, 48};
+  HOST_DEVICE_CONSTANT uint8_t startingPairs[nPairsTot] = {1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 
+                                                           1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 
+                                                           0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 
+                                                           0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 
+                                                           1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 
+                                                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+                                                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+                                                           0, 0, 0, };
 
-  HOST_DEVICE_CONSTANT int16_t phicuts[nPairsTot]{
+  HOST_DEVICE_CONSTANT int16_t maxDPhi[nPairsTot]{
       350,  600,  450,  522,  450,  522,       // BPIX1
       400,  650,  500,  730,  500,  730,       // BPIX2
       350,  400,  400,                         // BPIX3
@@ -422,7 +429,7 @@ namespace phase2PixelTopology {
       50.0,  40.0                         // OT to OT
   };
 
-  HOST_DEVICE_CONSTANT float ptCuts[nPairsTot] = {
+  HOST_DEVICE_CONSTANT float minPt[nPairsTot] = {
       0.85, 0.85, 0.85, 0.85, 0.85, 0.85,        // BPIX1
       0.85, 0.85, 0.85, 0.85, 0.85, 0.85,        // BPIX2
       0.85, 0.85, 0.85,                          // BPIX3
@@ -439,7 +446,7 @@ namespace phase2PixelTopology {
       0.85, 0.85                     // OT to OT
   };
 
-    HOST_DEVICE_CONSTANT float z0Cuts[nPairsTot] = {
+    HOST_DEVICE_CONSTANT float maxZ0[nPairsTot] = {
       12.5, 12.5, 12.5, 12.5, 12.5, 12.5,        // BPIX1
       12.5, 12.5, 12.5, 12.5, 12.5, 12.5,        // BPIX2
       12.5, 12.5, 12.5,                          // BPIX3
@@ -456,14 +463,14 @@ namespace phase2PixelTopology {
       12.5, 12.5                     // OT to OT
   };
 
-  HOST_DEVICE_CONSTANT float dcaCuts[nLayersTot] = {
+  HOST_DEVICE_CONSTANT float maxDCA[nPairsTot] = {
       0.15,  //BPix1
       0.25, 0.20, 0.20, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
       0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,  // Pixel layers
       0.10, 0.10, 0.10                                                               // OT layers
   };
 
-  HOST_DEVICE_CONSTANT float thetaCuts[nLayersTot] = {
+  HOST_DEVICE_CONSTANT float maxRZTolerance[nPairsTot] = {
       0.002, 0.002, 0.002, 0.002,  // BPix
       0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003,
       0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003,  // Pixel layers
@@ -472,7 +479,7 @@ namespace phase2PixelTopology {
 
   // Extended arrays for Phase2OTStubs (44 layers: 28 pixel + 6 OT barrel + 10 OT disks)
   constexpr uint32_t nLayersPhase2OTStubs = 44;
-  HOST_DEVICE_CONSTANT float dcaCutsPhase2OTStubs[nLayersPhase2OTStubs] = {
+  HOST_DEVICE_CONSTANT float maxDCAPhase2OTStubs[nPairsTot] = {
       0.15,  //BPix1
       0.25, 0.20, 0.20, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
       0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,  // Pixel layers (28 total)
@@ -480,7 +487,7 @@ namespace phase2PixelTopology {
       0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10  // OT disk layers (10)
   };
 
-  HOST_DEVICE_CONSTANT float thetaCutsPhase2OTStubs[nLayersPhase2OTStubs] = {
+  HOST_DEVICE_CONSTANT float maxRZTolerancePhase2OTStubs[nPairsTot] = {
       0.002, 0.002, 0.002, 0.002,  // BPix
       0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003,
       0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003,  // Pixel layers (28 total)
@@ -546,7 +553,7 @@ namespace phase2PixelTopology {
   };
 
   // Phi cuts for Phase2OTStubs layer pairs
-  HOST_DEVICE_CONSTANT int16_t phicutsPhase2OTStubs[nPairsPhase2OTStubs] = {
+  HOST_DEVICE_CONSTANT int16_t maxDPhiPhase2OTStubs[nPairsPhase2OTStubs] = {
       // Existing 73 pairs (same as Phase2OT)
       350,  600,  450,  522,  450,  522,       // BPIX1
       400,  650,  500,  730,  500,  730,       // BPIX2
@@ -762,7 +769,7 @@ namespace phase2PixelTopology {
   };
 
   // pT cuts for Phase2OTStubs layer pairs
-  HOST_DEVICE_CONSTANT float ptCutsPhase2OTStubs[nPairsPhase2OTStubs] = {
+  HOST_DEVICE_CONSTANT float minPtPhase2OTStubs[nPairsPhase2OTStubs] = {
       // Existing 73 pairs
       0.85, 0.85, 0.85, 0.85, 0.85, 0.85,        // BPIX1
       0.85, 0.85, 0.85, 0.85, 0.85, 0.85,        // BPIX2
@@ -789,7 +796,7 @@ namespace phase2PixelTopology {
   };
 
   // z0 cuts for Phase2OTStubs layer pairs
-  HOST_DEVICE_CONSTANT float z0CutsPhase2OTStubs[nPairsPhase2OTStubs] = {
+  HOST_DEVICE_CONSTANT float maxZ0Phase2OTStubs[nPairsPhase2OTStubs] = {
       // Existing 73 pairs
       12.5, 12.5, 12.5, 12.5, 12.5, 12.5,        // BPIX1
       12.5, 12.5, 12.5, 12.5, 12.5, 12.5,        // BPIX2
@@ -905,7 +912,7 @@ namespace phase1HIonPixelTopology {
 
   constexpr uint32_t maxNumClustersPerModules = 2048;
 
-  HOST_DEVICE_CONSTANT int16_t phicuts[phase1PixelTopology::nPairs]{phi0p09,
+  HOST_DEVICE_CONSTANT int16_t maxDPhi[phase1PixelTopology::nPairs]{phi0p09,
                                                                     phi0p09,
                                                                     phi0p09,
                                                                     phi0p09,
@@ -925,10 +932,10 @@ namespace phase1HIonPixelTopology {
                                                                     phi0p09,
                                                                     phi0p09};
 
-  HOST_DEVICE_CONSTANT float dcaCuts[phase1PixelTopology::numberOfLayers] = {
+  HOST_DEVICE_CONSTANT float maxDCA[phase1PixelTopology::numberOfLayers] = {
       0.05, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
 
-  HOST_DEVICE_CONSTANT float thetaCuts[phase1PixelTopology::numberOfLayers] = {
+  HOST_DEVICE_CONSTANT float maxRZTolerance[phase1PixelTopology::numberOfLayers] = {
       0.001, 0.001, 0.001, 0.001, 0.002, 0.002, 0.002, 0.002, 0.002, 0.002};
 
 }  // namespace phase1HIonPixelTopology
@@ -1034,11 +1041,11 @@ namespace pixelTopology {
     static constexpr uint8_t const *layerPairs = phase2PixelTopology::layerPairs;
     static constexpr uint8_t const *startingPairs = phase2PixelTopology::startingPairs;
     // scalar parameters (doublet building)
-    static constexpr int minYsizeB1 = 20;
-    static constexpr int minYsizeB2 = 18;
-    static constexpr int maxDYsize12 = 12;
-    static constexpr int maxDYsize = 10;
-    static constexpr int maxDYPred = 24;
+    static constexpr int minInnerSizeB1 = 20;
+    static constexpr int minInnerSizeB2 = 18;
+    static constexpr int maxDSizeB1 = 12;
+    static constexpr int maxDSize = 10;
+    static constexpr int maxDSizePred = 24;
     static constexpr float cellZ0Cut = 12.5;
     // vector parameters (doublet building)
     static constexpr float const *minInner = phase2PixelTopology::minInner;
@@ -1048,16 +1055,16 @@ namespace pixelTopology {
     static constexpr float const *maxDR = phase2PixelTopology::maxDR;
     static constexpr float const *minDZ = phase2PixelTopology::minDZ;
     static constexpr float const *maxDZ = phase2PixelTopology::maxDZ;
-    static constexpr int16_t const *phicuts = phase2PixelTopology::phicuts;
-    static constexpr float const *ptCuts = phase2PixelTopology::ptCuts;
-    static constexpr float const *z0Cuts = phase2PixelTopology::z0Cuts;
+    static constexpr int16_t const *maxDPhi = phase2PixelTopology::maxDPhi;
+    static constexpr float const *minPt = phase2PixelTopology::minPt;
+    static constexpr float const *maxZ0 = phase2PixelTopology::maxZ0;
     // scalar parameters (doublet linking)
     // p [GeV/c] = B [T] * R [m] * 0.3 (factor from conversion from J to GeV and q = e = 1.6 * 10e-19 C)
     // 87 cm/GeV = 1/(3.8T * 0.3)
-    static constexpr float hardCurvCut = 0.01425;  // corresponds to 800 MeV in 3.8T.
+    static constexpr float maxCurv = 0.01425;  // corresponds to 800 MeV in 3.8T.
     // vector parameters (doublet linking)
-    static constexpr float const *thetaCuts = phase2PixelTopology::thetaCuts;
-    static constexpr float const *dcaCuts = phase2PixelTopology::dcaCuts;
+    static constexpr float const *maxRZTolerance = phase2PixelTopology::maxRZTolerance;
+    static constexpr float const *maxDCA = phase2PixelTopology::maxDCA;
     // Deprecated arrays only used in the CUDA version
     static constexpr float const *minz = phase2PixelTopology::minz;
     static constexpr float const *maxz = phase2PixelTopology::maxz;
@@ -1098,11 +1105,11 @@ namespace pixelTopology {
     static constexpr uint8_t const *layerPairs = phase2PixelTopology::layerPairsPhase2OTStubs;
 
     // Override cut arrays to use extended versions (per-layer cuts)
-    static constexpr float const *thetaCuts = phase2PixelTopology::thetaCutsPhase2OTStubs;
-    static constexpr float const *dcaCuts = phase2PixelTopology::dcaCutsPhase2OTStubs;
+    static constexpr float const *maxRZTolerance = phase2PixelTopology::maxRZTolerancePhase2OTStubs;
+    static constexpr float const *maxDCA = phase2PixelTopology::maxDCAPhase2OTStubs;
 
     // Override cut arrays to use extended versions (per-pair cuts)
-    static constexpr int16_t const *phicuts = phase2PixelTopology::phicutsPhase2OTStubs;
+    static constexpr int16_t const *maxDPhi = phase2PixelTopology::maxDPhiPhase2OTStubs;
     static constexpr float const *minInner = phase2PixelTopology::minInnerPhase2OTStubs;
     static constexpr float const *maxInner = phase2PixelTopology::maxInnerPhase2OTStubs;
     static constexpr float const *minOuter = phase2PixelTopology::minOuterPhase2OTStubs;
@@ -1110,8 +1117,8 @@ namespace pixelTopology {
     static constexpr float const *maxDR = phase2PixelTopology::maxDRPhase2OTStubs;
     static constexpr float const *minDZ = phase2PixelTopology::minDZPhase2OTStubs;
     static constexpr float const *maxDZ = phase2PixelTopology::maxDZPhase2OTStubs;
-    static constexpr float const *ptCuts = phase2PixelTopology::ptCutsPhase2OTStubs;
-    static constexpr float const *z0Cuts = phase2PixelTopology::z0CutsPhase2OTStubs;
+    static constexpr float const *minPt = phase2PixelTopology::minPtPhase2OTStubs;
+    static constexpr float const *maxZ0 = phase2PixelTopology::maxZ0Phase2OTStubs;
     static constexpr float const *geomKappaSigmaCuts = phase2PixelTopology::geomKappaSigmaCutsPhase2OTStubs;
 
     // Increased capacities for extended tracking (sized from 1k ttbar PU200 peak occupancy)
@@ -1260,11 +1267,11 @@ namespace pixelTopology {
     static constexpr uint8_t const *layerPairs = phase1PixelTopology::layerPairs;
     static constexpr uint8_t const *startingPairs = phase1PixelTopology::startingPairs;
     // scalar parameters (doublet building)
-    static constexpr int minYsizeB1 = 1;
-    static constexpr int minYsizeB2 = 1;
-    static constexpr int maxDYsize12 = 28;
-    static constexpr int maxDYsize = 20;
-    static constexpr int maxDYPred = 20;
+    static constexpr int minInnerSizeB1 = 1;
+    static constexpr int minInnerSizeB2 = 1;
+    static constexpr int maxDSizeB1 = 28;
+    static constexpr int maxDSize = 20;
+    static constexpr int maxDSizePred = 20;
     static constexpr float cellZ0Cut = 12.5;
     // vector parameters (doublet building)
     static constexpr float const *minInner = phase1PixelTopology::minInner;
@@ -1274,16 +1281,16 @@ namespace pixelTopology {
     static constexpr float const *maxDR = phase1PixelTopology::maxDR;
     static constexpr float const *minDZ = phase1PixelTopology::minDZ;
     static constexpr float const *maxDZ = phase1PixelTopology::maxDZ;
-    static constexpr int16_t const *phicuts = phase1PixelTopology::phicuts;
-    static constexpr float const *ptCuts = phase1PixelTopology::ptCuts;
-    static constexpr float const *z0Cuts = phase1PixelTopology::z0Cuts;
+    static constexpr int16_t const *maxDPhi = phase1PixelTopology::maxDPhi;
+    static constexpr float const *minPt = phase1PixelTopology::minPt;
+    static constexpr float const *maxZ0 = phase1PixelTopology::maxZ0;
     // scalar parameters (doublet linking)
     // p [GeV/c] = B [T] * R [m] * 0.3 (factor from conversion from J to GeV and q = e = 1.6 * 10e-19 C)
     // 87 cm/GeV = 1/(3.8T * 0.3)
-    static constexpr float hardCurvCut = 1.f / (0.35 * 87.f);  // corresponds to 350 MeV in 3.8T.
+    static constexpr float maxCurv = 1.f / (0.35 * 87.f);  // corresponds to 350 MeV in 3.8T.
     // vector parameters (doublet linking)
-    static constexpr float const *thetaCuts = phase1PixelTopology::thetaCuts;
-    static constexpr float const *dcaCuts = phase1PixelTopology::dcaCuts;
+    static constexpr float const *maxRZTolerance = phase1PixelTopology::maxRZTolerance;
+    static constexpr float const *maxDCA = phase1PixelTopology::maxDCA;
     // Deprecated arrays only used in the CUDA version
     static constexpr float const *minz = phase1PixelTopology::minz;
     static constexpr float const *maxz = phase1PixelTopology::maxz;
@@ -1318,9 +1325,9 @@ namespace pixelTopology {
     static constexpr char const *nameModifier = "HIonPhase1";
 
     // specified vector cuts for HIon
-    static constexpr int16_t const *phicuts = phase1PixelTopology::phicuts;
-    static constexpr float const *thetaCuts = phase1PixelTopology::thetaCuts;
-    static constexpr float const *dcaCuts = phase1PixelTopology::dcaCuts;
+    static constexpr int16_t const *maxDPhi = phase1PixelTopology::maxDPhi;
+    static constexpr float const *maxRZTolerance = phase1PixelTopology::maxRZTolerance;
+    static constexpr float const *maxDCA = phase1PixelTopology::maxDCA;
   };
 
   template <typename T>

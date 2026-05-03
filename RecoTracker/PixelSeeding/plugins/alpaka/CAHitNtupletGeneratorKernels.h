@@ -190,6 +190,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        TkSoABlocksView& view,
                        const ::reco::CALayersSoAConstView& ll,
                        const ::reco::CAGraphSoAConstView& cc,
+                       const ::reco::CATripletCutsSoAConstView& tripletCuts,
+                       const ::reco::CANtupletCutsSoAConstView& ntupletCuts,
                        Queue& queue);
 
     void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
@@ -197,6 +199,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void buildDoublets(const HitsConstView& hh,
                        const ::reco::CAGraphSoAConstView& cc,
                        const ::reco::CALayersSoAConstView& ll,
+                       const ::reco::CADoubletCutsSoAConstView& doubletCuts,
                        uint32_t offsetBPIX2,
                        Queue& queue);
 

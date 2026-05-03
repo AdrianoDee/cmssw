@@ -24,18 +24,8 @@ namespace caStructures {
     float avgTracksPerCell_;
 
     // Algorithm Parameters
-    uint16_t minHitsPerNtuplet_;
+    uint16_t minLayersPerNtuplet_;
     uint16_t minHitsForSharingCut_;
-    float ptmin_;
-    float hardCurvCut_;
-
-    // Pixel Cluster Cut Params
-    float dzdrFact_;  // from dz/dr to "DY"
-    int16_t minYsizeB1_;
-    int16_t minYsizeB2_;
-    int16_t maxDYsize12_;
-    int16_t maxDYsize_;
-    int16_t maxDYPred_;
 
     // Flags
     bool useRiemannFit_;
@@ -58,9 +48,6 @@ namespace caStructures {
     // Orphan chain recovery (Phase2OTStubs only)
     bool doOrphanRecovery_;          // Enable/disable orphan chain recovery
     uint16_t minHitsOrphanNtuplet_;  // Minimum hits for orphan chains
-
-    // Chain phi residual consistency (Phase2OTStubs only)
-    float chainPhiResidCut_;  // Max |phi residual| per connection [rad]; negative = disabled
   };
 
   // Hits data formats

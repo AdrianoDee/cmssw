@@ -233,6 +233,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                   TkSoABlocksView &view,
                                                                   const reco::CALayersSoAConstView &ll,
                                                                   const reco::CAGraphSoAConstView &cc,
+                                                                  const reco::CATripletCutsSoAConstView &tripletCuts,
+                                                                  const reco::CANtupletCutsSoAConstView &ntupletCuts,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
     using namespace caHitNtupletGeneratorKernels;
@@ -271,15 +273,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         Kernel_connect<TrackerTraits>{},
                         this->device_hitTuple_apc_,  // needed only to be reset, ready for next kernel
                         hh,
-                        ll,
                         cc,
+                        tripletCuts,
                         this->deviceTriplets_->view(),
                         this->device_simpleCells_->data(),
                         this->device_nCells_->data(),
                         this->device_nTriplets_->data(),
                         this->device_hitToCell_->data(),
                         this->device_cellToNeighbors_->data(),
-                        this->m_params.algoParams_,
                         this->pipelineCountersPtr());
 
     CellToCell::template launchFinalize<Acc1D>(this->device_cellToNeighborsView_, queue);
@@ -380,8 +381,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::exec<Acc1D>(queue,
                         workDiv1D,
                         Kernel_find_ntuplets<TrackerTraits>{},
-                        ll,
                         cc,
+                        ntupletCuts,
                         tracks_view,
                         this->device_hitContainer_->data(),
                         this->device_cellToNeighbors_->data(),
@@ -405,8 +406,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         alpaka::exec<Acc1D>(queue,
                             workDiv1D,
                             Kernel_find_orphan_ntuplets<TrackerTraits>{},
-                            ll,
                             cc,
+                            ntupletCuts,
                             tracks_view,
                             this->device_hitContainer_->data(),
                             this->device_cellToNeighbors_->data(),
@@ -596,6 +597,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void CAHitNtupletGeneratorKernels<TrackerTraits>::buildDoublets(const HitsConstView &hh,
                                                                   const ::reco::CAGraphSoAConstView &cc,
                                                                   const ::reco::CALayersSoAConstView &ll,
+                                                                  const ::reco::CADoubletCutsSoAConstView &doubletCuts,
                                                                   uint32_t offsetBPIX2,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
@@ -634,10 +636,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         hh,
                         cc,
                         ll,
+                        doubletCuts,
                         this->device_layerStarts_->data(),
                         this->device_hitPhiHist_->data(),
                         this->device_hitToCell_->data(),
-                        this->m_params.algoParams_,
                         this->pipelineCountersPtr());
 
     HitToCell::template launchFinalize<Acc1D>(this->device_hitToCellView_, queue);
@@ -785,7 +787,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       alpaka::wait(queue);
       std::cout << "Kernel_sharedHitCleaner   -> done!" << std::endl;
 #endif
-      if (!(this->m_params.algoParams_.disableTripletCleaner_) && (this->m_params.algoParams_.minHitsPerNtuplet_ > 3)) {
+      if (!(this->m_params.algoParams_.disableTripletCleaner_) && (this->m_params.algoParams_.minLayersPerNtuplet_ > 3)) {
         if (this->m_params.algoParams_.useSimpleTripletCleaner_) {
           numberOfBlocks =
               cms::alpakatools::divide_up_by(int(nhits * this->m_params.algoParams_.avgHitsPerTrack_) + 1, blockSize);

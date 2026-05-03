@@ -49,41 +49,55 @@
 namespace reco {
   struct CAGeometryParams {
     //Constructor from ParameterSet
-    CAGeometryParams(edm::ParameterSet const& iConfig)
-        : caDCurvCuts_(iConfig.getParameter<std::vector<double>>("caDCurvCuts")),
-          caDCurv0_(iConfig.getParameter<std::vector<double>>("caDCurv0")),
-          startMaxInnerR_(iConfig.getParameter<std::vector<double>>("startMaxInnerR")),
-          fishboneCuts_(iConfig.getParameter<std::vector<double>>("fishboneCuts")),
-          pairGraph_(iConfig.getParameter<std::vector<unsigned int>>("pairGraph")),
-          skipsLayers_(iConfig.getParameter<std::vector<unsigned int>>("skipsLayers")),
-          startingPairs_(iConfig.getParameter<std::vector<unsigned int>>("startingPairs")),
-          phiCuts_(iConfig.getParameter<std::vector<int>>("phiCuts")),
-          ptCuts_(iConfig.getParameter<std::vector<double>>("ptCuts")),
-          z0Cuts_(iConfig.getParameter<std::vector<double>>("z0Cuts")),
-          minInner_(iConfig.getParameter<std::vector<double>>("minInner")),
-          maxInner_(iConfig.getParameter<std::vector<double>>("maxInner")),
-          minOuter_(iConfig.getParameter<std::vector<double>>("minOuter")),
-          maxOuter_(iConfig.getParameter<std::vector<double>>("maxOuter")),
-          maxDZ_(iConfig.getParameter<std::vector<double>>("maxDZ")),
-          minDZ_(iConfig.getParameter<std::vector<double>>("minDZ")),
-          maxDR_(iConfig.getParameter<std::vector<double>>("maxDR")),
-          stubSigmaCuts_(iConfig.existsAs<std::vector<double>>("stubSigmaCuts")
-                             ? iConfig.getParameter<std::vector<double>>("stubSigmaCuts")
-                             : std::vector<double>{}),
-          geomKappaSigmaCuts_(iConfig.existsAs<std::vector<double>>("geomKappaSigmaCuts")
-                                  ? iConfig.getParameter<std::vector<double>>("geomKappaSigmaCuts")
-                                  : std::vector<double>{}),
-          caPhiMiddleCuts_(iConfig.existsAs<std::vector<double>>("caPhiMiddleCuts")
-                               ? iConfig.getParameter<std::vector<double>>("caPhiMiddleCuts")
-                               : std::vector<double>{}),
-          caThetaCuts_(iConfig.getParameter<std::vector<double>>("caThetaCuts")),
-          caDCACuts_(iConfig.getParameter<std::vector<double>>("caDCACuts")),
-          caDCAFloors_(iConfig.existsAs<std::vector<double>>("caDCAFloors")
-                           ? iConfig.getParameter<std::vector<double>>("caDCAFloors")
-                           : std::vector<double>{}) {
+    CAGeometryParams(edm::ParameterSet const& graphConfig,
+                     edm::ParameterSet const& doubletCutConfig,
+                     edm::ParameterSet const& tripletCutConfig,
+                     edm::ParameterSet const& ntupletCutConfig,
+                     std::vector<double> const& fishboneCuts)
+        : layerPairs_(graphConfig.getParameter<std::vector<unsigned int>>("layerPairs")),
+          startingPair_(graphConfig.getParameter<std::vector<unsigned int>>("startingPair")),
+          skipsLayers_(graphConfig.getParameter<std::vector<unsigned int>>("skipsLayers")),
+          maxDPhi_(doubletCutConfig.getParameter<std::vector<int>>("maxDPhi")),
+          minInner_(doubletCutConfig.getParameter<std::vector<double>>("minInner")),
+          maxInner_(doubletCutConfig.getParameter<std::vector<double>>("maxInner")),
+          minOuter_(doubletCutConfig.getParameter<std::vector<double>>("minOuter")),
+          maxOuter_(doubletCutConfig.getParameter<std::vector<double>>("maxOuter")),
+          maxDR_(doubletCutConfig.getParameter<std::vector<double>>("maxDR")),
+          minDZ_(doubletCutConfig.getParameter<std::vector<double>>("minDZ")),
+          maxDZ_(doubletCutConfig.getParameter<std::vector<double>>("maxDZ")),
+          minPt_(doubletCutConfig.getParameter<std::vector<double>>("minPt")),
+          maxZ0_(doubletCutConfig.getParameter<std::vector<double>>("maxZ0")),
+          maxStubCurvSigma_(doubletCutConfig.existsAs<std::vector<double>>("maxStubCurvSigma")
+                                ? doubletCutConfig.getParameter<std::vector<double>>("maxStubCurvSigma")
+                                : std::vector<double>{}),
+          dzdrFact_(doubletCutConfig.getParameter<double>("dzdrFact")),
+          minInnerSizeB1_(doubletCutConfig.getParameter<int>("minInnerSizeB1")),
+          minInnerSizeB2_(doubletCutConfig.getParameter<int>("minInnerSizeB2")),
+          maxDSizeB1_(doubletCutConfig.getParameter<int>("maxDSizeB1")),
+          maxDSize_(doubletCutConfig.getParameter<int>("maxDSize")),
+          maxDSizePred_(doubletCutConfig.getParameter<int>("maxDSizePred")),
+          maxRZTolerance_(tripletCutConfig.getParameter<std::vector<double>>("maxRZTolerance")),
+          maxDCA_(tripletCutConfig.getParameter<std::vector<double>>("maxDCA")),
+          floorDCA_(tripletCutConfig.existsAs<std::vector<double>>("floorDCA")
+                        ? tripletCutConfig.getParameter<std::vector<double>>("floorDCA")
+                        : std::vector<double>{}),
+          maxStubGeomCurvSigma_(tripletCutConfig.existsAs<std::vector<double>>("maxStubGeomCurvSigma")
+                                    ? tripletCutConfig.getParameter<std::vector<double>>("maxStubGeomCurvSigma")
+                                    : std::vector<double>{}),
+          maxStubInnerDoubletDCurv_(tripletCutConfig.existsAs<std::vector<double>>("maxStubInnerDoubletDCurv")
+                                        ? tripletCutConfig.getParameter<std::vector<double>>("maxStubInnerDoubletDCurv")
+                                        : std::vector<double>{}),
+          ptmin_(tripletCutConfig.getParameter<double>("ptmin")),
+          maxCurv_(tripletCutConfig.getParameter<double>("maxCurv")),
+          maxPhiResid_(tripletCutConfig.getParameter<double>("maxPhiResid")),
+          sameDPhiSign_(tripletCutConfig.getParameter<bool>("sameDPhiSign")),
+          startMaxInnerR_(ntupletCutConfig.getParameter<std::vector<double>>("startMaxInnerR")),
+          maxDCurv_(ntupletCutConfig.getParameter<std::vector<double>>("maxDCurv")),
+          floorDCurv_(ntupletCutConfig.getParameter<std::vector<double>>("floorDCurv")),
+          fishboneCuts_(fishboneCuts) {
       startNoBPix1_ = false;
-      for (const unsigned int& i : startingPairs_) {
-        if (pairGraph_[2 * i] > 0) {
+      for (size_t i{0}; i < layerPairs_.size() / 2; ++i) {
+        if (startingPair_[i] && layerPairs_[2 * i] > 0) {
           startNoBPix1_ = true;
           break;
         }
@@ -91,48 +105,63 @@ namespace reco {
 #ifdef GPU_DEBUG
       std::cout << "\n========== CAGeometryParams CONSTRUCTOR ==========" << std::endl;
       std::cout << "Reading geometry from Python ParameterSet..." << std::endl;
-      std::cout << "  caThetaCuts size: " << caThetaCuts_.size() << std::endl;
-      std::cout << "  caDCACuts size: " << caDCACuts_.size() << std::endl;
-      std::cout << "  pairGraph size: " << pairGraph_.size() << " (= " << pairGraph_.size() / 2 << " pairs)"
+      std::cout << "  maxRZTolerance size: " << maxRZTolerance_.size() << std::endl;
+      std::cout << "  maxDCA size: " << maxDCA_.size() << std::endl;
+      std::cout << "  pairGraph size: " << layerPairs_.size() << " (= " << layerPairs_.size() / 2 << " pairs)"
                 << std::endl;
-      std::cout << "  startingPairs size: " << startingPairs_.size() << std::endl;
-      std::cout << "  phiCuts size: " << phiCuts_.size() << std::endl;
-      std::cout << "  First 5 phiCuts values: ";
-      for (size_t i = 0; i < std::min(size_t(5), phiCuts_.size()); ++i) {
-        std::cout << phiCuts_[i] << " ";
+      auto nStartingPairs = std::count(startingPair_.begin(), startingPair_.end(), 1);
+      std::cout << "  startingPairs number: " << nStartingPairs << std::endl;
+      std::cout << "  maxDPhi size: " << maxDPhi_.size() << std::endl;
+      std::cout << "  First 5 maxDPhi values: ";
+      for (size_t i = 0; i < std::min(size_t(5), maxDPhi_.size()); ++i) {
+        std::cout << maxDPhi_[i] << " ";
       }
       std::cout << std::endl;
       std::cout << "==================================================\n" << std::endl;
 #endif
     }
 
-    // Layers params
-    const std::vector<double> caDCurvCuts_;
-    const std::vector<double> caDCurv0_;
-    const std::vector<double> startMaxInnerR_;
-    const std::vector<double> fishboneCuts_;
-    const std::vector<int> isBarrel_;
-
-    // Cells params
-    const std::vector<unsigned int> pairGraph_;
+    // graph
+    const std::vector<unsigned int> layerPairs_;
+    const std::vector<unsigned int> startingPair_;
     const std::vector<unsigned int> skipsLayers_;
-    const std::vector<unsigned int> startingPairs_;
-    const std::vector<int> phiCuts_;
-    const std::vector<double> ptCuts_;
-    const std::vector<double> z0Cuts_;
+
+    // doublet cuts
+    const std::vector<int> maxDPhi_;
     const std::vector<double> minInner_;
     const std::vector<double> maxInner_;
     const std::vector<double> minOuter_;
     const std::vector<double> maxOuter_;
-    const std::vector<double> maxDZ_;
-    const std::vector<double> minDZ_;
     const std::vector<double> maxDR_;
-    const std::vector<double> stubSigmaCuts_;       // Stub-stub pairwise sigma cut (empty = disabled)
-    const std::vector<double> geomKappaSigmaCuts_;  // Geometric-vs-stub kappa significance cut (empty = disabled)
-    const std::vector<double> caPhiMiddleCuts_;     // Phi residual at middle hit cut [rad] (empty = disabled)
-    const std::vector<double> caThetaCuts_;
-    const std::vector<double> caDCACuts_;
-    const std::vector<double> caDCAFloors_;         // Additive DCA floor for high-pT tracks (empty = disabled)
+    const std::vector<double> minDZ_;
+    const std::vector<double> maxDZ_;
+    const std::vector<double> minPt_;
+    const std::vector<double> maxZ0_;
+    const std::vector<double> maxStubCurvSigma_;
+    const double dzdrFact_;
+    const int minInnerSizeB1_;
+    const int minInnerSizeB2_;
+    const int maxDSizeB1_;
+    const int maxDSize_;
+    const int maxDSizePred_;
+
+    // triplet cuts
+    const std::vector<double> maxRZTolerance_;
+    const std::vector<double> maxDCA_;
+    const std::vector<double> floorDCA_;
+    const std::vector<double> maxStubGeomCurvSigma_;
+    const std::vector<double> maxStubInnerDoubletDCurv_;
+    const double ptmin_;
+    const double maxCurv_;
+    const double maxPhiResid_;
+    const bool sameDPhiSign_;
+
+    // ntuplet cuts
+    const std::vector<double> startMaxInnerR_;
+    const std::vector<double> maxDCurv_;
+    const std::vector<double> floorDCurv_;
+
+    const std::vector<double> fishboneCuts_;
 
     bool startNoBPix1_;
 
@@ -178,26 +207,30 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     static std::shared_ptr<CAGeometryCache> globalBeginRun(edm::Run const& iRun,
                                                            edm::EventSetup const& iSetup,
                                                            GlobalCache const* iCache) {
+      assert(iCache->maxDR_.size() == iCache->skipsLayers_.size());
+      assert(iCache->maxDR_.size() == iCache->startingPair_.size());
+      assert(iCache->maxDR_.size() == iCache->maxDPhi_.size());
       assert(iCache->maxDR_.size() == iCache->minInner_.size());
       assert(iCache->maxDR_.size() == iCache->maxInner_.size());
       assert(iCache->maxDR_.size() == iCache->minOuter_.size());
       assert(iCache->maxDR_.size() == iCache->maxOuter_.size());
       assert(iCache->maxDR_.size() == iCache->maxDZ_.size());
       assert(iCache->maxDR_.size() == iCache->minDZ_.size());
-      assert(iCache->maxDR_.size() == iCache->phiCuts_.size());
-      assert(iCache->maxDR_.size() == iCache->ptCuts_.size());
-      assert(iCache->maxDR_.size() == iCache->z0Cuts_.size());
-      assert(iCache->maxDR_.size() == iCache->skipsLayers_.size());
-      assert(iCache->maxDR_.size() == iCache->caThetaCuts_.size());
-      assert(iCache->maxDR_.size() == iCache->caDCACuts_.size());
-      assert(iCache->maxDR_.size() == iCache->caDCAFloors_.size());
+      assert(iCache->maxDR_.size() == iCache->minPt_.size());
+      assert(iCache->maxDR_.size() == iCache->maxZ0_.size());
+      assert(iCache->maxDR_.size() == iCache->maxStubCurvSigma_.size());
+      assert(iCache->maxDR_.size() == iCache->maxRZTolerance_.size());
+      assert(iCache->maxDR_.size() == iCache->maxDCA_.size());
+      assert(iCache->maxDR_.size() == iCache->floorDCA_.size());
+      assert(iCache->maxDR_.size() == iCache->maxStubGeomCurvSigma_.size());
+      assert(iCache->maxDR_.size() == iCache->maxStubInnerDoubletDCurv_.size());
 
-      assert(iCache->fishboneCuts_.size() == iCache->caDCurvCuts_.size());
-      assert(iCache->fishboneCuts_.size() == iCache->caDCurv0_.size());
+      assert(iCache->fishboneCuts_.size() == iCache->maxDCurv_.size());
+      assert(iCache->fishboneCuts_.size() == iCache->floorDCurv_.size());
       assert(iCache->fishboneCuts_.size() == iCache->startMaxInnerR_.size());
 
       int n_layers = iCache->fishboneCuts_.size();
-      int n_pairs = iCache->pairGraph_.size() / 2;
+      int n_pairs = iCache->layerPairs_.size() / 2;
       int n_modules = 0;
 
 #ifdef GPU_DEBUG
@@ -206,8 +239,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
       assert(int(n_pairs) == int(iCache->maxDR_.size()));
-      assert(int(*std::max_element(iCache->startingPairs_.begin(), iCache->startingPairs_.end())) < n_pairs);
-      assert(int(*std::max_element(iCache->pairGraph_.begin(), iCache->pairGraph_.end())) < n_layers);
+      assert(int(*std::max_element(iCache->layerPairs_.begin(), iCache->layerPairs_.end())) < n_layers);
 
       auto const& trackerGeometry = iSetup.getData(iCache->tokenGeometry_);
       auto const& trackerTopology = iSetup.getData(iCache->tokenTopology_);
@@ -308,7 +340,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           << (isBarrel(detid) ? "barrel" : "not barrel") << std::endl;
 #endif
                 layerIsBarrel[layerCount] = isBarrel(detid);
-                layerIsOT[layerCount] = true;  // we are in the loop over PS modules, so these are all OT layers
+                layerIsOT[layerCount] = true;   // we are in the loop over PS modules, so these are all OT layers
                 layerIsSS[layerCount] = false;  // we are in the loop over PS modules, so these are not SS layers
                 layerStarts[layerCount++] = n_modules;
                 if (layerCount >= layerStarts.size())
@@ -357,14 +389,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             // Determine category: 0=barrel, 1=backward, 2=forward
             int category = isBarrel ? 0 : (isFwdEndcap ? 2 : 1);
 
-
             // Check if we've transitioned to a new CA layer
             // A new layer starts when category changes OR layer number changes within same category
             if (firstModule || category != prevCategory || otLayer != prevLayer || isPS != prevIsPS) {
               // Start new CA layer
               if (layerCount < layerStarts.size()) {
                 layerIsBarrel[layerCount] = isBarrel;
-                layerIsOT[layerCount] = true;  // we are in the loop over StackedModuleGeometry, so these are all OT layers
+                layerIsOT[layerCount] =
+                    true;  // we are in the loop over StackedModuleGeometry, so these are all OT layers
                 layerIsSS[layerCount] = !isPS;
                 layerStarts[layerCount++] = n_modules;
 
@@ -405,10 +437,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
       layerStarts[n_layers] = n_modules;
 
-      reco::CAGeometryHost product{cms::alpakatools::host(), n_layers + 1, n_pairs, n_modules};
+      reco::CAGeometryHost product{cms::alpakatools::host(), n_layers + 1, n_pairs, n_pairs, n_pairs, n_layers, n_modules};
 
       auto layerSoA = product.view().layers();
-      auto cellSoA = product.view().graph();
+      auto graphSoA = product.view().graph();
+      auto doubletCutsSoA = product.view().doubletCuts();
+      auto tripletCutsSoA = product.view().tripletCuts();
+      auto ntupletCutsSoA = product.view().ntupletCuts();
       auto modulesSoA = product.view().modules();
 
       for (int i = 0; i < n_modules; ++i) {
@@ -436,88 +471,95 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
 
       for (int i = 0; i < n_layers; ++i) {
-        layerSoA.layerStarts()[i] = layerStarts[i];
-        layerSoA.startMaxInnerR()[i] = iCache->startMaxInnerR_[i];
-        layerSoA.caDCurvCut()[i] = iCache->caDCurvCuts_[i];
-        layerSoA.caDCurv0()[i] = iCache->caDCurv0_[i];
         layerSoA.fishboneCut()[i] = iCache->fishboneCuts_[i];
+        layerSoA.layerStarts()[i] = layerStarts[i];
         layerSoA.isBarrel()[i] = layerIsBarrel[i];
         layerSoA.isOT()[i] = layerIsOT[i];
         layerSoA.isSS()[i] = layerIsSS[i];
+        ntupletCutsSoA.startMaxInnerR()[i] = iCache->startMaxInnerR_[i];
+        ntupletCutsSoA.maxDCurv()[i] = iCache->maxDCurv_[i];
+        ntupletCutsSoA.floorDCurv()[i] = iCache->floorDCurv_[i];
       }
 
       layerSoA.layerStarts()[n_layers] = layerStarts[n_layers];
 
       for (int i = 0; i < n_pairs; ++i) {
-        cellSoA.graph()[i] = {{uint32_t(iCache->pairGraph_[2 * i]), uint32_t(iCache->pairGraph_[2 * i + 1])}};
-        cellSoA.skipsLayers()[i] = uint16_t(bool(iCache->skipsLayers_[i]));
-        cellSoA.phiCuts()[i] = iCache->phiCuts_[i];
+        graphSoA.layerPair()[i] = {{uint32_t(iCache->layerPairs_[2 * i]), uint32_t(iCache->layerPairs_[2 * i + 1])}};
+        graphSoA.skipsLayers()[i] = uint16_t(bool(iCache->skipsLayers_[i]));
+        graphSoA.startingPair()[i] = iCache->startingPair_[i];
+        doubletCutsSoA.maxDPhi()[i] = iCache->maxDPhi_[i];
+        doubletCutsSoA.minInner()[i] = iCache->minInner_[i];
+        doubletCutsSoA.maxInner()[i] = iCache->maxInner_[i];
+        doubletCutsSoA.minOuter()[i] = iCache->minOuter_[i];
+        doubletCutsSoA.maxOuter()[i] = iCache->maxOuter_[i];
+        doubletCutsSoA.maxDZ()[i] = iCache->maxDZ_[i];
+        doubletCutsSoA.minDZ()[i] = iCache->minDZ_[i];
+        doubletCutsSoA.maxDR()[i] = iCache->maxDR_[i];
         // convert ptCut in curvature radius in cm
         // 1 GeV track has 1 GeV/c / (e * 3.8T) ~ 87 cm radius in a 3.8T field
-        const float minRadius = iCache->ptCuts_[i] * 87.78f;
+        const float minRadius = iCache->minPt_[i] * 87.78f;
         // Use minRadius^2/4 in the CA to avoid sqrt
         const float minRadius2T4 = 4.f * minRadius * minRadius;
-        cellSoA.ptCuts()[i] = minRadius2T4;
-        cellSoA.z0Cuts()[i] = iCache->z0Cuts_[i];
-        cellSoA.minInner()[i] = iCache->minInner_[i];
-        cellSoA.maxInner()[i] = iCache->maxInner_[i];
-        cellSoA.minOuter()[i] = iCache->minOuter_[i];
-        cellSoA.maxOuter()[i] = iCache->maxOuter_[i];
-        cellSoA.maxDZ()[i] = iCache->maxDZ_[i];
-        cellSoA.minDZ()[i] = iCache->minDZ_[i];
-        cellSoA.maxDR()[i] = iCache->maxDR_[i];
+        doubletCutsSoA.minPt()[i] = minRadius2T4;
+        doubletCutsSoA.maxZ0()[i] = iCache->maxZ0_[i];
         // Stub-stub pairwise sigma cut: use from config if available, otherwise -1.0 (disabled)
-        cellSoA.stubSigmaCut()[i] =
-            (!iCache->stubSigmaCuts_.empty()) ? static_cast<float>(iCache->stubSigmaCuts_[i]) : -1.0f;
-        cellSoA.startingPair()[i] = false;
-        cellSoA.caThetaCut()[i] = iCache->caThetaCuts_[i];
-        cellSoA.caDCACut()[i] = iCache->caDCACuts_[i];
-        cellSoA.geomKappaSigmaCut()[i] =
-            (!iCache->geomKappaSigmaCuts_.empty()) ? static_cast<float>(iCache->geomKappaSigmaCuts_[i]) : -1.0f;
-        cellSoA.caPhiMiddleCut()[i] =
-            (!iCache->caPhiMiddleCuts_.empty()) ? static_cast<float>(iCache->caPhiMiddleCuts_[i]) : -1.0f;
-        cellSoA.caDCAFloor()[i] =
-            (!iCache->caDCAFloors_.empty()) ? static_cast<float>(iCache->caDCAFloors_[i]) : -1.0f;
+        doubletCutsSoA.maxStubCurvSigma()[i] =
+            (!iCache->maxStubCurvSigma_.empty()) ? static_cast<float>(iCache->maxStubCurvSigma_[i]) : -1.0f;
+        tripletCutsSoA.maxRZTolerance()[i] = iCache->maxRZTolerance_[i];
+        tripletCutsSoA.maxDCA()[i] = iCache->maxDCA_[i];
+        tripletCutsSoA.floorDCA()[i] = (!iCache->floorDCA_.empty()) ? static_cast<float>(iCache->floorDCA_[i]) : -1.0f;
+        tripletCutsSoA.maxStubGeomCurvSigma()[i] =
+            (!iCache->maxStubGeomCurvSigma_.empty()) ? static_cast<float>(iCache->maxStubGeomCurvSigma_[i]) : -1.0f;
+        tripletCutsSoA.maxStubInnerDoubletDCurv()[i] = (!iCache->maxStubInnerDoubletDCurv_.empty())
+                                                           ? static_cast<float>(iCache->maxStubInnerDoubletDCurv_[i])
+                                                           : -1.0f;
       }
 
-      for (const unsigned int& i : iCache->startingPairs_)
-        cellSoA.startingPair()[i] = true;
+      doubletCutsSoA.dzdrFact() = iCache->dzdrFact_;
+      doubletCutsSoA.minInnerSizeB1() = iCache->minInnerSizeB1_;
+      doubletCutsSoA.minInnerSizeB2() = iCache->minInnerSizeB2_;
+      doubletCutsSoA.maxDSizeB1() = iCache->maxDSizeB1_;
+      doubletCutsSoA.maxDSize() = iCache->maxDSize_;
+      doubletCutsSoA.maxDSizePred() = iCache->maxDSizePred_;
+
+      tripletCutsSoA.ptmin() = iCache->ptmin_;
+      tripletCutsSoA.maxCurv() = iCache->maxCurv_;
+      tripletCutsSoA.maxPhiResid() = iCache->maxPhiResid_;
+      tripletCutsSoA.sameDPhiSign() = iCache->sameDPhiSign_;
 
 #ifdef GPU_DEBUG
       // Debug output: Print geometry values from Python config
       std::cout << "\n========== CA GEOMETRY FROM PYTHON CONFIG ==========" << std::endl;
       std::cout << "Number of layers: " << n_layers << std::endl;
       std::cout << "Number of layer pairs: " << n_pairs << std::endl;
-      std::cout << "Number of starting pairs: " << iCache->startingPairs_.size() << std::endl;
 
       std::cout << "\n--- Layer Pair Geometry (all pairs) ---" << std::endl;
-      std::cout << "Pair | Inner | Outer | phiCut | minIn | maxIn | minOut | maxOut | maxDR | minDZ | maxDZ | ptCut | "
+      std::cout << "Pair | Inner | Outer | phiCut | minIn | maxIn | minOut | maxOut | maxDR | minDZ | maxDZ | minPt | "
                    "stubSigma | start"
                 << std::endl;
       std::cout << "-----|-------|-------|--------|-------|-------|--------|--------|-------|-------|-------|-------|--"
                    "---------|------"
                 << std::endl;
       for (int i = 0; i < n_pairs; ++i) {
-        float stubSig = (!iCache->stubSigmaCuts_.empty()) ? iCache->stubSigmaCuts_[i] : -1.0;
-        std::cout << std::setw(4) << i << " | " << std::setw(5) << iCache->pairGraph_[2 * i] << " | " << std::setw(5)
-                  << iCache->pairGraph_[2 * i + 1] << " | " << std::setw(6) << iCache->phiCuts_[i] << " | "
+        float stubSig = (!iCache->maxStubCurvSigma_.empty()) ? iCache->maxStubCurvSigma_[i] : -1.0;
+        std::cout << std::setw(4) << i << " | " << std::setw(5) << iCache->layerPairs_[2 * i] << " | " << std::setw(5)
+                  << iCache->layerPairs_[2 * i + 1] << " | " << std::setw(6) << iCache->maxDPhi_[i] << " | "
                   << std::setw(5) << iCache->minInner_[i] << " | " << std::setw(5) << iCache->maxInner_[i] << " | "
                   << std::setw(6) << iCache->minOuter_[i] << " | " << std::setw(6) << iCache->maxOuter_[i] << " | "
                   << std::setw(5) << iCache->maxDR_[i] << " | " << std::setw(5) << iCache->minDZ_[i] << " | "
-                  << std::setw(5) << iCache->maxDZ_[i] << " | " << std::setw(5) << iCache->ptCuts_[i] << " | "
-                  << std::setw(9) << stubSig << " | " << (cellSoA.startingPair()[i] ? "Y" : "N") << std::endl;
+                  << std::setw(5) << iCache->maxDZ_[i] << " | " << std::setw(5) << iCache->minPt_[i] << " | "
+                  << std::setw(9) << stubSig << " | " << (graphSoA.startingPair()[i] ? "Y" : "N") << std::endl;
       }
 
       std::cout << "\n--- Layer Cuts (all layers) ---" << std::endl;
-      std::cout << "Layer | isBarrel | caThetaCut | caDCACut | geomKappa | caPhiMiddle"
-                << std::endl;
+      std::cout << "Layer | isBarrel | caThetaCut | caDCACut | geomKappa | caPhiMiddle" << std::endl;
       std::cout << "------|----------|------------|----------|-----------|-------------|------------|------------"
                 << std::endl;
       for (int i = 0; i < n_layers; ++i) {
-        float geomK = (!iCache->geomKappaSigmaCuts_.empty()) ? iCache->geomKappaSigmaCuts_[i] : -1.0;
-        float phiMid = (!iCache->caPhiMiddleCuts_.empty()) ? iCache->caPhiMiddleCuts_[i] : -1.0;
+        float geomK = (!iCache->maxStubGeomCurvSigma_.empty()) ? iCache->maxStubGeomCurvSigma_[i] : -1.0;
+        float phiMid = (!iCache->maxStubInnerDoubletDCurv_.empty()) ? iCache->maxStubInnerDoubletDCurv_[i] : -1.0;
         std::cout << std::setw(5) << i << " | " << std::setw(8) << (layerIsBarrel[i] ? "Y" : "N") << " | "
-                  << std::setw(10) << iCache->caThetaCuts_[i] << " | " << std::setw(8) << iCache->caDCACuts_[i] << " | "
+                  << std::setw(10) << iCache->maxRZTolerance_[i] << " | " << std::setw(8) << iCache->maxDCA_[i] << " | "
                   << std::setw(9) << geomK << " | " << std::setw(11) << phiMid << " | " << std::endl;
       }
       std::cout << "====================================================\n" << std::endl;
@@ -527,7 +569,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     static std::unique_ptr<::reco::CAGeometryParams> initializeGlobalCache(edm::ParameterSet const& iConfig) {
-      return std::make_unique<::reco::CAGeometryParams>(iConfig.getParameterSet("geometry"));
+      return std::make_unique<::reco::CAGeometryParams>(iConfig.getParameterSet("graph"),
+                                                        iConfig.getParameterSet("doubletCuts"),
+                                                        iConfig.getParameterSet("tripletCuts"),
+                                                        iConfig.getParameterSet("ntupletCuts"),
+                                                        iConfig.getParameter<std::vector<double>>("fishboneCuts"));
     }
 
   private:

@@ -24,20 +24,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                          const float r3,
                                                          const float z3,
                                                          const float ptmin,
-                                                         const float thetaCut) {
+                                                         const float maxRZTolerance) {
       float dr13 = std::abs(r1 - r3);
       float dist13Squared = dr13 * dr13 + (z1 - z3) * (z1 - z3);
 
       float pMin = ptmin * std::sqrt(dist13Squared);  // this needs to be divided by dr13 later
 
       float tan_12_13_half_mul_dist13Squared = fabs(z1 * (r2 - r3) + z2 * (r3 - r1) + z3 * (r1 - r2));
-      bool aligned = tan_12_13_half_mul_dist13Squared * pMin <= thetaCut * dist13Squared * dr13;
+      bool aligned = tan_12_13_half_mul_dist13Squared * pMin <= maxRZTolerance * dist13Squared * dr13;
 
 #ifdef CA_DEBUG
       float lhs = tan_12_13_half_mul_dist13Squared * pMin;
-      float rhs = thetaCut * dist13Squared * dr13;
+      float rhs = maxRZTolerance * dist13Squared * dr13;
       printf(
-          "TripletCuts::alignedRZ;r1=%.4f;z1=%.4f;r2=%.4f;z2=%.4f;r3=%.4f;z3=%.4f;lhs=%.6f;rhs=%.6f;thetaCut=%.6f;"
+          "TripletCuts::alignedRZ;r1=%.4f;z1=%.4f;r2=%.4f;z2=%.4f;r3=%.4f;z3=%.4f;lhs=%.6f;rhs=%.6f;maxRZTolerance=%."
+          "6f;"
           "ptmin=%.6f;aligned=%d\n",
           r1,
           z1,
@@ -47,7 +48,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           z3,                // hit positions (r,z for 3 hits)
           lhs,               // alignment value (LHS of check)
           rhs,               // threshold (RHS of check)
-          thetaCut,          // raw thetaCut parameter
+          maxRZTolerance,    // raw maxRZTolerance parameter
           ptmin,             // ptmin parameter
           aligned ? 1 : 0);  // pass/fail
 #endif
@@ -126,23 +127,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ALPAKA_FN_ACC ALPAKA_FN_INLINE static bool stubsCompatibleWithInnerDoublet(const float dPhi12,
                                                                                const float dr12,
                                                                                const float curvatureStubs,
-                                                                               const float maxDphiDrDiff) {
-      if (maxDphiDrDiff < 0.f)
+                                                                               const float maxStubInnerDoubletDCurv) {
+      if (maxStubInnerDoubletDCurv < 0.f)
         return true;  // cut disabled
 
       float dPhiDiff = std::abs(dPhi12 - curvatureStubs * dr12);
-      bool compatible = dPhiDiff < maxDphiDrDiff * dr12;
+      bool compatible = dPhiDiff < maxStubInnerDoubletDCurv * dr12;
 
 #ifdef CA_DEBUG
       printf(
-          "TripletCuts::stubsCompatibleWithInnerDoublet;dPhi12=%.4f;dr12=%.4f;curvatureStubs=%.4f;maxDphiDrDiff=%.4f;"
+          "TripletCuts::stubsCompatibleWithInnerDoublet;dPhi12=%.4f;dr12=%.4f;curvatureStubs=%.4f;"
+          "maxStubInnerDoubletDCurv=%.4f;"
           "dPhiDiff=%.4f;compatible=%d\n",
-          dPhi12,               // dPhi between inner and middle hit
-          dr12,                 // dr between inner and middle hit
-          curvatureStubs,       // curvature from stubs
-          maxDphiDrDiff,        // maximum allowed dPhi/dr difference
-          dPhiDiff,             // computed dPhi/dr difference
-          compatible ? 1 : 0);  // pass/fail
+          dPhi12,                    // dPhi between inner and middle hit
+          dr12,                      // dr between inner and middle hit
+          curvatureStubs,            // curvature from stubs
+          maxStubInnerDoubletDCurv,  // maximum allowed dPhi/dr difference
+          dPhiDiff,                  // computed dPhi/dr difference
+          compatible ? 1 : 0);       // pass/fail
 #endif
 
       return compatible;
@@ -157,8 +159,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                               const float r3,
                                                                               const float curvatureStubs,
                                                                               const float curvatureStubsErrSquared,
-                                                                              const float maxCurvatureDiff) {
-      if (maxCurvatureDiff < 0.f)
+                                                                              const float maxStubGeomCurvSigma) {
+      if (maxStubGeomCurvSigma < 0.f)
         return true;  // cut disabled
 
       float dr13 = r3 - r1;
@@ -173,19 +175,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           phiErrSquared / (dr13 * dr13 * conversionSquared * conversionSquared * conversionSquared);
       float curvatureDiffErrSquared = curvatureStubsErrSquared + curvature13ErrSquared;
       float curvatureDiff = curvatureStubs - curvature13;
-      bool compatible = curvatureDiff * curvatureDiff < maxCurvatureDiff * maxCurvatureDiff * curvatureDiffErrSquared;
+      bool compatible =
+          curvatureDiff * curvatureDiff < maxStubGeomCurvSigma * maxStubGeomCurvSigma * curvatureDiffErrSquared;
 
 #ifdef CA_DEBUG
       printf(
           "TripletCuts::stubsCurvCompatibleWithTriplet;dPhi13=%.4f;r1=%.4f;r3=%.4f;curvatureStubs=%.4f;"
-          "curvatureStubsErrSquared=%.4e;maxCurvatureDiff=%.4f;curvature13=%.4f;curvatureDiff=%.4f;"
+          "curvatureStubsErrSquared=%.4e;maxStubGeomCurvSigma=%.4f;curvature13=%.4f;curvatureDiff=%.4f;"
           "curvatureDiffErrSquared=%.4e;compatible=%d\n",
           dPhi13,                    // dPhi between inner and outer hit
           r1,                        // r of inner hit
           r3,                        // r of outer hit
           curvatureStubs,            // curvature from stubs
           curvatureStubsErrSquared,  // error squared of curvature from stubs
-          maxCurvatureDiff,          // maximum allowed curvature difference
+          maxStubGeomCurvSigma,      // maximum allowed geometry curvature sigma
           curvature13,               // curvature from inner-outer hit pair
           curvatureDiff,             // computed curvature difference
           curvatureDiffErrSquared,   // error squared of curvature difference
@@ -228,13 +231,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // MAIN FUNCTION: ACCEPT function applying the cuts in sequence
     // -------------------------------------------------------------------------------------------------------------
     // This function checks the compatibility of a triplet with the above CA cuts by applying them in sequence.
-    ALPAKA_FN_ACC ALPAKA_FN_INLINE static bool accept(CACell<TrackerTraits> const& innerCell,
-                                                      CACell<TrackerTraits> const& outerCell,
-                                                      float& curvature,
-                                                      HitsConstView hh,
-                                                      reco::CAGraphSoAConstView::const_element cc,
-                                                      AlgoParams const& params,
-                                                      uint32_t* __restrict__ pipelineCounters) {
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE static bool accept(
+        CACell<TrackerTraits> const& innerCell,
+        CACell<TrackerTraits> const& outerCell,
+        float& curvature,
+        HitsConstView hh,
+        reco::CATripletCutsSoAConstView tripletCuts,
+        reco::CATripletCutsSoAConstView::const_element tripletVectorCutsCol,
+        uint32_t* __restrict__ pipelineCounters) {
 #ifdef CA_PIPELINE_COUNTERS
       // set up the pipeline counter
       auto countRej = [&](int cut) {
@@ -253,9 +257,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       float z3 = outerCell.outer_z(hh);
 
       // apply alignment in RZ plane cut
-      if (!alignedRZ(r1, z1, r2, z2, r3, z3, params.ptmin_, cc.caThetaCut())) {
+      if (!alignedRZ(r1, z1, r2, z2, r3, z3, tripletCuts.ptmin(), tripletVectorCutsCol.maxRZTolerance())) {
 #ifdef CA_PIPELINE_COUNTERS
-        countRej(caHitNtupletGenerator::kAlignedRZ);
+        countRej(caHitNtupletGenerator::kCutAlignedRZ);
 #endif
         return false;
       }
@@ -272,18 +276,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       float absCurvature = std::abs(curvature);
 
       // apply alignment in XY plane cut
-      if (!alignedXY(absCurvature, params.hardCurvCut_)) {
+      if (!alignedXY(absCurvature, tripletCuts.maxCurv())) {
 #ifdef CA_PIPELINE_COUNTERS
-        countRej(caHitNtupletGenerator::kAlignedXY);
+        countRej(caHitNtupletGenerator::kCutAlignedXY);
 #endif
         return false;
       }
 
       // apply beamspot compatibility cut
       float tipTimesCurvature = std::abs(eq.dca0());
-      if (!beamspotCompatibleXY(absCurvature, tipTimesCurvature, cc.caDCACut(), cc.caDCAFloor())) {
+      if (!beamspotCompatibleXY(
+              absCurvature, tipTimesCurvature, tripletVectorCutsCol.maxDCA(), tripletVectorCutsCol.floorDCA())) {
 #ifdef CA_PIPELINE_COUNTERS
-        countRej(caHitNtupletGenerator::kBeamspotCompatibleXY);
+        countRej(caHitNtupletGenerator::kCutBeamspotCompatibleXY);
 #endif
         return false;
       }
@@ -301,9 +306,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         float dr13 = r3 - r1;
 
         // apply phi compatibility cut
-        if (!phiCompatible(dPhi12, dr12, dPhi13, dr13, params.chainPhiResidCut_)) {
+        if (!phiCompatible(dPhi12, dr12, dPhi13, dr13, tripletCuts.maxPhiResid())) {
 #ifdef CA_PIPELINE_COUNTERS
-          countRej(caHitNtupletGenerator::kPhiCompatible);
+          countRej(caHitNtupletGenerator::kCutPhiCompatible);
 #endif
           return false;
         }
@@ -317,9 +322,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           return true;
 
         // apply same sign dPhi cut
-        if (!sameSignDPhi(dPhi12, dPhi23)) {
+        if (tripletCuts.sameDPhiSign() && !sameSignDPhi(dPhi12, dPhi23)) {
 #ifdef CA_PIPELINE_COUNTERS
-          countRej(caHitNtupletGenerator::kSameSignDPhi);
+          countRej(caHitNtupletGenerator::kCutSameSignDPhi);
 #endif
           return false;
         }
@@ -348,17 +353,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         // apply compatibility with triplet cut
         if (!stubsCurvCompatibleWithTriplet(
-                dPhi13, r1, r3, curvatureStubs, curvatureStubsErrSquared, cc.geomKappaSigmaCut())) {
+                dPhi13, r1, r3, curvatureStubs, curvatureStubsErrSquared, tripletVectorCutsCol.maxStubGeomCurvSigma())) {
 #ifdef CA_PIPELINE_COUNTERS
-          countRej(caHitNtupletGenerator::kStubsCurvCompatibleWithTriplet);
+          countRej(caHitNtupletGenerator::kCutStubsCurvCompatibleWithTriplet);
 #endif
           return false;
         }
 
         // apply compatibility with inner doublet cut
-        if (!stubsCompatibleWithInnerDoublet(dPhi12, dr12, curvatureStubs, cc.caPhiMiddleCut())) {
+        if (!stubsCompatibleWithInnerDoublet(
+                dPhi12, dr12, curvatureStubs, tripletVectorCutsCol.maxStubInnerDoubletDCurv())) {
 #ifdef CA_PIPELINE_COUNTERS
-          countRej(caHitNtupletGenerator::kStubsCompatibleWithInnerDoublet);
+          countRej(caHitNtupletGenerator::kCutStubsCompatibleWithInnerDoublet);
 #endif
           return false;
         }

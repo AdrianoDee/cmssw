@@ -5976,7 +5976,7 @@ def plot_ca_tuning_variables(data, figsize=(18, 16)):
     - caThetaCuts: theta alignment cut per layer
 
     Per-layer-pair cuts (from layerPairs table):
-    - phiCuts: phi cut per layer pair
+    - maxDPhi: phi cut per layer pair
     - minDZ, maxDZ: z difference cuts per layer pair
     - maxDR: dr cut per layer pair
 
@@ -6284,7 +6284,7 @@ def plot_ca_layer_pair_variables(data, figsize=(20, 16)):
 
     For each layer pair, the CA algorithm checks compatibility between an inner hit
     and an outer hit. The cuts from the layerPairs table are:
-    - phiCuts: maximum dphi (in 1/65536 units of 2*pi) between inner and outer
+    - maxDPhi: maximum dphi (in 1/65536 units of 2*pi) between inner and outer
     - minDZ, maxDZ: allowed range for (outer_z - inner_z)
     - maxDR: maximum |outer_r - inner_r|
     - minIn, maxIn: z limits for inner hit

@@ -25,13 +25,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                   HitsConstView hh,
                                   ::reco::CAGraphSoAConstView cc,
                                   ::reco::CALayersSoAConstView ll,
+                                  ::reco::CADoubletCutsSoAConstView doubletCuts,
                                   uint32_t const* __restrict__ offsets,
                                   PhiBinner<TrackerTraits> const* phiBinner,
                                   HitToCell* outerHitHisto,
-                                  AlgoParams const& params,
                                   uint32_t* __restrict__ pipelineCounters) const {
-      doubletsFromHisto<TrackerTraits>(
-          acc, maxNumOfDoublets, cells, nCells, hh, cc, ll, offsets, phiBinner, outerHitHisto, params, pipelineCounters);
+      doubletsFromHisto<TrackerTraits>(acc,
+                                       maxNumOfDoublets,
+                                       cells,
+                                       nCells,
+                                       hh,
+                                       cc,
+                                       ll,
+                                       doubletCuts,
+                                       offsets,
+                                       phiBinner,
+                                       outerHitHisto,
+                                       pipelineCounters);
     }
   };
 

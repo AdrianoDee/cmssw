@@ -39,142 +39,176 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template <typename TrackerTraits>
     void fillDescriptionsCommon(edm::ParameterSetDescription& desc) {
       //// Pixel Cluster Cuts (@cell level)
-      desc.add<double>("dzdrFact", TrackerTraits::dzdrFact);
-      desc.add<int>("minYsizeB1", TrackerTraits::minYsizeB1)
-          ->setComment("Cut on inner hit cluster size (in global z / local y) for barrel-forward cells. Barrel 1 cut.");
-      desc.add<int>("minYsizeB2", TrackerTraits::minYsizeB2)
-          ->setComment(
-              "Cut on inner hit cluster size (in global z / local y) for barrel-forward cells. Anything but Barrel 1 "
-              "cut.");
-      desc.add<int>("maxDYsize12", TrackerTraits::maxDYsize12)
-          ->setComment(
-              "Cut on cluster size differences (in global z / local y) for barrel-forward cells. Barrel 1-2 cells.");
-      desc.add<int>("maxDYsize", TrackerTraits::maxDYsize)
-          ->setComment(
-              "Cut on cluster size differences (in global z / local y) for barrel-forward cells. Other barrel cells.");
-      desc.add<int>("maxDYPred", TrackerTraits::maxDYPred)
-          ->setComment(
-              "Maximum difference between actual and expected cluster size of inner RecHit. Barrel-forward cells.");
-
-      edm::ParameterSetDescription geometryParams;
-      // layers params
-      geometryParams
-          .add<std::vector<double>>(
-              "caDCACuts",
-              std::vector<double>(TrackerTraits::dcaCuts, TrackerTraits::dcaCuts + TrackerTraits::numberOfLayers))
-          ->setComment("Cut on RZ alignement. One per layer, the layer being the innermost one for a triplet.");
-      geometryParams
-          .add<std::vector<double>>(
-              "caThetaCuts",
-              std::vector<double>(TrackerTraits::thetaCuts, TrackerTraits::thetaCuts + TrackerTraits::numberOfLayers))
-          ->setComment("Cut on origin radius. One per layer-pair, the layers being the outer ones for a triplet.");
-      geometryParams
-          .add<std::vector<unsigned int>>(
-              "startingPairs",
-              std::vector<unsigned int>(TrackerTraits::startingPairs,
-                                        TrackerTraits::startingPairs + TrackerTraits::nStartingPairs))
-          ->setComment("The list of the ids of pairs from which the CA ntuplets building may start.");
-      geometryParams
-          .add<std::vector<double>>("startMaxInnerR", std::vector<double>(TrackerTraits::numberOfLayers, 99.0))
-          ->setComment(
-              "The maximum allowed r coordinate of the inner hit of a doublet to use it as a starting point for "
-              "ntuplet building.");
-      /*
-      Cut on quadruplets (two triplets sharing a doublet) using the curvatures Ci, Co of the triplets:
-      |Co - Ci| < (|Co| + |Ci|)/2 * caDCurvCut + caDCurv0
-      */
-      geometryParams.add<std::vector<double>>("caDCurvCuts", std::vector<double>(TrackerTraits::numberOfLayers, 99.))
-          ->setComment("Cut on curvature difference between two consecutive triplets.");
-      geometryParams.add<std::vector<double>>("caDCurv0", std::vector<double>(TrackerTraits::numberOfLayers, 99.))
-          ->setComment("Offset for the cut on curvature difference between two consecutive triplets.");
-      geometryParams
-          .add<std::vector<double>>("fishboneCuts", std::vector<double>(TrackerTraits::numberOfLayers, 0.99999f))
+      desc.add<std::vector<double>>("fishboneCuts", std::vector<double>(TrackerTraits::numberOfLayers, 0.99999f))
           ->setComment(
               "Threshold for merging aligned doublets in fishbone cleaning. Depends on the layer of the outer RecHit. "
               "Warning: this will be a float in the final algorithm, therefore 0.9999999 will become 1 == no merging!");
-      // cells params
-      geometryParams
+
+      // ---------------------------------------------
+      // CA Graph configuration
+      // ---------------------------------------------
+      edm::ParameterSetDescription graphParams;
+      graphParams
           .add<std::vector<unsigned int>>(
-              "pairGraph",
+              "layerPairs",
               std::vector<unsigned int>(TrackerTraits::layerPairs,
                                         TrackerTraits::layerPairs + (TrackerTraits::nPairsForQuadruplets * 2)))
-          ->setComment("CA graph (layer pairs used for building doublets/cells)");
-      geometryParams
+          ->setComment("layer pairs used for building doublets/cells");
+      graphParams
+          .add<std::vector<unsigned int>>(
+              "startingPair",
+              std::vector<unsigned int>(TrackerTraits::startingPairs,
+                                        TrackerTraits::startingPairs + TrackerTraits::nPairsForQuadruplets))
+          ->setComment(
+              "List of bools indicating whether layer pairs are starting points for N-tuplet building or not (0 means "
+              "non-starting, 1 means starting).");
+      graphParams
           .add<std::vector<unsigned int>>("skipsLayers",
                                           std::vector<unsigned int>(TrackerTraits::nPairsForQuadruplets, 0U))
           ->setComment(
-              "List of bools idicating whether layer pairs are skipping layers or not (0 means non-skipping, 1 means "
+              "List of bools indicating whether layer pairs are skipping layers or not (0 means non-skipping, 1 means "
               "skipping). This is relevant for the N-tuplet building as non-skipping ones are prioritized.");
-      geometryParams
+
+      desc.add<edm::ParameterSetDescription>("graph", graphParams)->setComment("CA graph");
+
+      // ----------------------------------------------
+      // Doublet cut configuration
+      // ----------------------------------------------
+      edm::ParameterSetDescription doubletCutParams;
+      doubletCutParams
           .add<std::vector<int>>(
-              "phiCuts",
-              std::vector<int>(TrackerTraits::phicuts, TrackerTraits::phicuts + TrackerTraits::nPairsForQuadruplets))
+              "maxDPhi",
+              std::vector<int>(TrackerTraits::maxDPhi, TrackerTraits::maxDPhi + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts in dphi for cells");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>(
-              "ptCuts",
-              std::vector<double>(TrackerTraits::ptCuts, TrackerTraits::ptCuts + TrackerTraits::nPairsForQuadruplets))
+              "minPt",
+              std::vector<double>(TrackerTraits::minPt, TrackerTraits::minPt + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts in pt for cells");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>(
-              "z0Cuts",
-              std::vector<double>(TrackerTraits::z0Cuts, TrackerTraits::z0Cuts + TrackerTraits::nPairsForQuadruplets))
+              "maxZ0",
+              std::vector<double>(TrackerTraits::maxZ0, TrackerTraits::maxZ0 + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts in z0 for cells");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>("minInner",
                                     std::vector<double>(TrackerTraits::minInner,
                                                         TrackerTraits::minInner + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts on inner hit's z (for barrel) or r (for endcap) for cells (min value)");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>("maxInner",
                                     std::vector<double>(TrackerTraits::maxInner,
                                                         TrackerTraits::maxInner + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts on inner hit's z (for barrel) or r (for endcap) for cells (max value)");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>("minOuter",
                                     std::vector<double>(TrackerTraits::minOuter,
                                                         TrackerTraits::minOuter + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts on outer hit's z (for barrel) or r (for endcap) for cells (min value)");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>("maxOuter",
                                     std::vector<double>(TrackerTraits::maxOuter,
                                                         TrackerTraits::maxOuter + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts on outer hit's z (for barrel) or r (for endcap) for cells (max value)");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>(
               "maxDR",
               std::vector<double>(TrackerTraits::maxDR, TrackerTraits::maxDR + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts in max dr for cells");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>(
               "minDZ",
               std::vector<double>(TrackerTraits::minDZ, TrackerTraits::minDZ + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts in minimum dz between hits for cells");
-      geometryParams
+      doubletCutParams
           .add<std::vector<double>>(
               "maxDZ",
               std::vector<double>(TrackerTraits::maxDZ, TrackerTraits::maxDZ + TrackerTraits::nPairsForQuadruplets))
           ->setComment("Cuts in maximum dz between hits for cells");
-      geometryParams.addOptional<std::vector<double>>("stubSigmaCuts")
+      doubletCutParams.addOptional<std::vector<double>>("maxStubCurvSigma")
           ->setComment(
               "Stub-stub pairwise sigma cut per layer pair. Negative = disabled.\n"
               "Barrel flat-flat: kappa-corrected significance. Forward: dPhiDr significance.");
-      geometryParams.addOptional<std::vector<double>>("geomKappaSigmaCuts")
+      doubletCutParams.add<double>("dzdrFact", TrackerTraits::dzdrFact);
+      doubletCutParams.add<int>("minInnerSizeB1", TrackerTraits::minInnerSizeB1)
+          ->setComment("Cut on inner hit cluster size (in global z / local y) for barrel-forward cells. Barrel 1 cut.");
+      doubletCutParams.add<int>("minInnerSizeB2", TrackerTraits::minInnerSizeB2)
+          ->setComment(
+              "Cut on inner hit cluster size (in global z / local y) for barrel-forward cells. Anything but Barrel 1 "
+              "cut.");
+      doubletCutParams.add<int>("maxDSizeB1", TrackerTraits::maxDSizeB1)
+          ->setComment(
+              "Cut on cluster size differences (in global z / local y) for barrel-forward cells. Barrel 1-2 cells.");
+      doubletCutParams.add<int>("maxDSize", TrackerTraits::maxDSize)
+          ->setComment(
+              "Cut on cluster size differences (in global z / local y) for barrel-forward cells. Other barrel cells.");
+      doubletCutParams.add<int>("maxDSizePred", TrackerTraits::maxDSizePred)
+          ->setComment(
+              "Maximum difference between actual and expected cluster size of inner RecHit. Barrel-forward cells.");
+
+      desc.add<edm::ParameterSetDescription>("doubletCuts", doubletCutParams)->setComment("Cuts for doublet building");
+
+      // -----------------------------------------------
+      // Triplet cut configuration
+      // -----------------------------------------------
+      edm::ParameterSetDescription tripletCutParams;
+      tripletCutParams
+          .add<std::vector<double>>(
+              "maxRZTolerance",
+              std::vector<double>(TrackerTraits::maxRZTolerance,
+                                  TrackerTraits::maxRZTolerance + TrackerTraits::nPairsForQuadruplets))
+          ->setComment("Cut on RZ alignement. One per layer, the layer being the innermost one for a triplet.");
+      tripletCutParams
+          .add<std::vector<double>>(
+              "maxDCA",
+              std::vector<double>(TrackerTraits::maxDCA, TrackerTraits::maxDCA + TrackerTraits::nPairsForQuadruplets))
+          ->setComment("Cut on origin radius. One per layer-pair, the layers being the outer ones for a triplet.");
+      tripletCutParams.addOptional<std::vector<double>>("floorDCA")
+          ->setComment(
+              "Additive DCA floor for high-pT tracks. Per layer (indexed by inner cell's inner layer).\n"
+              "dcaThreshold = maxDCA * curvature + floorDCA. Prevents threshold collapse at high pT.\n"
+              "Negative = disabled (no floor).");
+      tripletCutParams.addOptional<std::vector<double>>("maxStubGeomCurvSigma")
           ->setComment(
               "Geometric-vs-stub kappa significance cut. One per layer, using the middle layer for a triplet.\n"
               "Negative = disabled (no stubs on that layer).");
-      geometryParams.addOptional<std::vector<double>>("caPhiMiddleCuts")
+      tripletCutParams.addOptional<std::vector<double>>("maxStubInnerDoubletDCurv")
           ->setComment(
               "Phi residual at middle hit cut [rad]. One per layer, using the inner layer for a triplet.\n"
               "Negative = disabled. Requires nStubs >= 2 for reliable stub kappa prediction.");
-      geometryParams.addOptional<std::vector<double>>("caDCAFloors")
+      tripletCutParams.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
+      //// p [GeV/c] = B [T] * R [m] * 0.3 (factor from conversion from J to GeV and q = e = 1.6 * 10e-19 C)
+      //// 87 cm/GeV = 1/(3.8T * 0.3)
+      //// take less than radius given by the hardPtCut and reject everything below
+      tripletCutParams.add<double>("maxCurv", TrackerTraits::maxCurv)
+          ->setComment("Cut on maximum curvature / minimum pT");
+      // Chain phi residual consistency (Phase2OTStubs only)
+      tripletCutParams.add<double>("maxPhiResid", -1.0)
           ->setComment(
-              "Additive DCA floor for high-pT tracks. Per layer (indexed by inner cell's inner layer).\n"
-              "dcaThreshold = dcaCut * curvature + dcaFloor. Prevents threshold collapse at high pT.\n"
-              "Negative = disabled (no floor).");
+              "Max |phi residual| per connection during chain extension [rad]. "
+              "Negative = disabled. Typical value when enabled: 0.01.");
+      tripletCutParams.add<bool>("sameDPhiSign", false)
+          ->setComment("If true, require the in triplets that dPhi12 x dPhi23 > 0.");
 
-      desc.add<edm::ParameterSetDescription>("geometry", geometryParams)
-          ->setComment("Layer-dependent cuts and settings of the CA");
+      desc.add<edm::ParameterSetDescription>("tripletCuts", tripletCutParams)->setComment("Cuts for triplet building");
+
+      // ------------------------------------------------
+      // Ntuplet cut configuration
+      // ------------------------------------------------
+      edm::ParameterSetDescription ntupletCutParams;
+      // Cut on quadruplets (two triplets sharing a doublet) using the curvatures Ci, Co of the triplets:
+      //   |Co - Ci| < (|Co| + |Ci|)/2 * maxDCurv + floorDCurv
+      ntupletCutParams.add<std::vector<double>>("maxDCurv", std::vector<double>(TrackerTraits::numberOfLayers, 99.))
+          ->setComment("Cut on curvature difference between two consecutive triplets.");
+      ntupletCutParams.add<std::vector<double>>("floorDCurv", std::vector<double>(TrackerTraits::numberOfLayers, 99.))
+          ->setComment("Offset for the cut on curvature difference between two consecutive triplets.");
+      ntupletCutParams
+          .add<std::vector<double>>("startMaxInnerR", std::vector<double>(TrackerTraits::numberOfLayers, 99.0))
+          ->setComment(
+              "The maximum allowed r coordinate of the inner hit of a doublet to use it as a starting point for "
+              "ntuplet building.");
+
+      desc.add<edm::ParameterSetDescription>("ntupletCuts", ntupletCutParams)->setComment("Cuts for ntuplet building");
 
       // Container sizes
       //
@@ -189,7 +223,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       //
       // 	 maxNumberOfDoublets = cms.string(str(512*1024))
       //
-
       desc.add<std::string>("maxNumberOfDoublets", std::to_string(TrackerTraits::maxNumberOfDoublets))
           ->setComment(
               "Max nummber of doublets (cells) as a string. The string will be parsed to a TFormula, depending on "
@@ -205,19 +238,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<double>("avgTracksPerCell", TrackerTraits::avgTracksPerCell)
           ->setComment("Number of tracks to which a cell belongs. Average per cell.");
 
-      // nTuplet Cuts and Params
-      desc.add<double>("ptmin", 0.9f)->setComment("Cut on minimum pt");
-      //// p [GeV/c] = B [T] * R [m] * 0.3 (factor from conversion from J to GeV and q = e = 1.6 * 10e-19 C)
-      //// 87 cm/GeV = 1/(3.8T * 0.3)
-      //// take less than radius given by the hardPtCut and reject everything below
-      desc.add<double>("hardCurvCut", TrackerTraits::hardCurvCut)
-          ->setComment("Cut on minimum curvature, used in DCA ntuplet selection");
-
       desc.add<bool>("earlyFishbone", true);
       desc.add<bool>("lateFishbone", false);
       desc.add<bool>("onlySameLayersFishbone", false);
       desc.add<bool>("fillStatistics", false);
-      desc.add<unsigned int>("minHitsPerNtuplet", 4);
+      desc.add<unsigned int>("minLayersPerNtuplet", 4);
       desc.add<unsigned int>("minHitsForSharingCut", 10)
           ->setComment("Maximum number of hits in a tuple to clean also if the shared hit is on bpx1");
 
@@ -229,7 +254,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
       desc.add<bool>("disableTripletCleaner", false)
           ->setComment(
-              "Disable the triplet cleaner entirely.");  // FIXME this should be implemented as an automatic check (simple if) that disables if minHitsPerNtuplet > 3
+              "Disable the triplet cleaner entirely.");  // FIXME this should be implemented as an automatic check (simple if) that disables if minLayersPerNtuplet > 3
       desc.add<bool>("disableFastDuplicateRemover", false)->setComment("Disable the fastDuplicateRemover");
       desc.add<bool>("doEarlyDuplicateRemoval", true)
           ->setComment("Remove shorter tracks sharing a cell before fitting");
@@ -250,13 +275,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<unsigned int>("minHitsOrphanNtuplet", 5)
           ->setComment(
               "Minimum number of hits for orphan chains "
-              "(higher than minHitsPerNtuplet to suppress fakes).");
-
-      // Chain phi residual consistency (Phase2OTStubs only)
-      desc.add<double>("chainPhiResidCut", -1.0)
-          ->setComment(
-              "Max |phi residual| per connection during chain extension [rad]. "
-              "Negative = disabled. Typical value when enabled: 0.01.");
+              "(higher than minLayersPerNtuplet to suppress fakes).");
     }
 
     AlgoParams makeCommonParams(edm::ParameterSet const& cfg) {
@@ -269,18 +288,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           (float)cfg.getParameter<double>("avgTracksPerCell"),
 
           // Algo params
-          (uint16_t)cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
+          (uint16_t)cfg.getParameter<unsigned int>("minLayersPerNtuplet"),
           (uint16_t)cfg.getParameter<unsigned int>("minHitsForSharingCut"),
-          (float)cfg.getParameter<double>("ptmin"),
-          (float)cfg.getParameter<double>("hardCurvCut"),
-
-          // Pixel Cluster Cut Params
-          (float)cfg.getParameter<double>("dzdrFact"),
-          (int16_t)cfg.getParameter<int>("minYsizeB1"),
-          (int16_t)cfg.getParameter<int>("minYsizeB2"),
-          (int16_t)cfg.getParameter<int>("maxDYsize12"),
-          (int16_t)cfg.getParameter<int>("maxDYsize"),
-          (int16_t)cfg.getParameter<int>("maxDYPred"),
 
           // Flags
           cfg.getParameter<bool>("useRiemannFit"),
@@ -303,9 +312,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           // Orphan chain recovery
           cfg.getParameter<bool>("doOrphanRecovery"),
           (uint16_t)cfg.getParameter<unsigned int>("minHitsOrphanNtuplet"),
-
-          // Chain phi residual consistency
-          (float)cfg.getParameter<double>("chainPhiResidCut")});
+      });
     }
 
     //This is needed to have the partial specialization for isPhase1Topology/isPhase2Topology
@@ -511,6 +518,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     auto layers = geometry_d.view().layers();
     auto graph = geometry_d.view().graph();
+    auto doubletCuts = geometry_d.view().doubletCuts();
+    auto tripletCuts = geometry_d.view().tripletCuts();
+    auto ntupletCuts = geometry_d.view().ntupletCuts();
     auto modules = geometry_d.view().modules();
 
     // Don't bother if less than 2 this
@@ -524,9 +534,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         m_params, hits_d.nHits(), hits_d.offsetBPIX2(), nDoublets, nTracks, layers.metadata().size(), queue);
 
     kernels.prepareHits(trackingHits, hitModules, layers, queue);
-    kernels.buildDoublets(trackingHits, graph, layers, hits_d.offsetBPIX2(), queue);
-    kernels.launchKernels(
-        trackingHits, hits_d.offsetBPIX2(), layers.metadata().size(), trackCollection.view(), layers, graph, queue);
+    kernels.buildDoublets(trackingHits, graph, layers, doubletCuts, hits_d.offsetBPIX2(), queue);
+    kernels.launchKernels(trackingHits,
+                          hits_d.offsetBPIX2(),
+                          layers.metadata().size(),
+                          trackCollection.view(),
+                          layers,
+                          graph,
+                          tripletCuts,
+                          ntupletCuts,
+                          queue);
 
     HelixFit fitter(bfield, m_params.algoParams_.fitNas4_);
     fitter.allocate(kernels.tupleMultiplicity(), tracks, kernels.hitContainer());
@@ -572,6 +589,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     auto layers = geometry_d.view().layers();
     auto graph = geometry_d.view().graph();
+    auto doubletCuts = geometry_d.view().doubletCuts();
+    auto tripletCuts = geometry_d.view().tripletCuts();
+    auto ntupletCuts = geometry_d.view().ntupletCuts();
     auto modules = geometry_d.view().modules();
 
     // Don't bother if less than 2 hits
@@ -585,9 +605,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         m_params, hits_d.nHits(), hits_d.offsetBPIX2(), nDoublets, nTracks, layers.metadata().size(), queue);
 
     kernels.prepareHits(trackingHits, hitModules, layers, queue);
-    kernels.buildDoublets(trackingHits, graph, layers, hits_d.offsetBPIX2(), queue);
-    kernels.launchKernels(
-        trackingHits, hits_d.offsetBPIX2(), layers.metadata().size(), tracks.view(), layers, graph, queue);
+    kernels.buildDoublets(trackingHits, graph, layers, doubletCuts, hits_d.offsetBPIX2(), queue);
+    kernels.launchKernels(trackingHits,
+                          hits_d.offsetBPIX2(),
+                          layers.metadata().size(),
+                          tracks.view(),
+                          layers,
+                          graph,
+                          tripletCuts,
+                          ntupletCuts,
+                          queue);
 
     // Pass OT collections to fitter for stub hit expansion
     // IMPORTANT: Pass offsetStubs from the device container (has cached host-side value)

@@ -601,8 +601,8 @@ void Phase2OTValidateCATripletCuts::analyze(const edm::Event& iEvent, const edm:
     if (middleHits.empty() || innerHits.empty() || outerHits.empty())
       continue;
 
-    int16_t innerPhiCut = phase2PixelTopology::phicutsPhase2OTStubs[td.innerPairIdx];
-    int16_t outerPhiCut = phase2PixelTopology::phicutsPhase2OTStubs[td.outerPairIdx];
+    int16_t innerPhiCut = phase2PixelTopology::maxDPhiPhase2OTStubs[td.innerPairIdx];
+    int16_t outerPhiCut = phase2PixelTopology::maxDPhiPhase2OTStubs[td.outerPairIdx];
 
     // Build inner doublets indexed by middle hit
     // innerDoublets[m] = list of inner hit indices passing phi cut

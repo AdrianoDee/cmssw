@@ -380,15 +380,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
     ALPAKA_FN_ACC void operator()(Acc2D const &acc,
                                   cms::alpakatools::AtomicPairCounter *apc,  // just to zero them
                                   HitsConstView hh,
-                                  reco::CALayersSoAConstView ll,
                                   reco::CAGraphSoAConstView cc,
+                                  reco::CATripletCutsSoAConstView tripletCuts,
                                   caStructures::CACellPairSoAView cn,
                                   CACell<TrackerTraits> *cells,
                                   uint32_t const *nCells,
                                   uint32_t *nTrips,
                                   HitToCell const *__restrict__ outerHitHisto,
                                   CellToCell *cellNeighborsHisto,
-                                  AlgoParams const &params,
                                   uint32_t *__restrict__ pipelineCounters) const {
       using Cell = CACell<TrackerTraits>;
       uint32_t maxTriplets = cn.metadata().size();
@@ -408,8 +407,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         auto const *__restrict__ outerHitCells = outerHitHisto->begin(middleHitId);
         auto const numberOfPossibleNeighbors = outerHitHisto->size(middleHitId);
 
-        auto ccLayerPairParams = cc[outerCell.layerPairId()];
-        auto skips = ccLayerPairParams.skipsLayers();
+        auto tripletVectorCutsCol = tripletCuts[outerCell.layerPairId()];
+        auto skips = cc[outerCell.layerPairId()].skipsLayers();
 
 #ifdef CA_DEBUG
         printf("numberOfPossibleFromHisto;%d;%d;%d;%d;%d\n",
@@ -428,7 +427,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
           // apply compatibility cuts for this triplet (innerCell, outerCell)
           if (TripletCuts<TrackerTraits>::accept(
-                  innerCell, outerCell, curvature, hh, ccLayerPairParams, params, pipelineCounters)) {
+                  innerCell, outerCell, curvature, hh, tripletCuts, tripletVectorCutsCol, pipelineCounters)) {
             auto t_ind = alpaka::atomicAdd(acc, nTrips, 1u, alpaka::hierarchy::Blocks{});
 
 #ifdef CA_DEBUG
@@ -484,7 +483,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                 else {
                   alpaka::atomicAdd(acc, &pipelineCounters[PC::kTripletsOTOTOT], 1u, alpaka::hierarchy::Blocks{});
                   // OOO triplet region breakdown
-                  auto layer1 = innerCell.innerLayer();        // innermost
+                  auto layer1 = innerCell.innerLayer();  // innermost
                   auto layer2 = outerCell.innerLayer();  // middle
                   auto layer3 = outerCell.outerLayer();  // outermost
                   bool l1Brl = (layer1 >= 28 && layer1 <= 33);
@@ -692,8 +691,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   class Kernel_find_ntuplets {
   public:
     ALPAKA_FN_ACC void operator()(Acc1D const &acc,
-                                  const ::reco::CALayersSoAConstView &ll,
                                   const ::reco::CAGraphSoAConstView &cc,
+                                  const ::reco::CANtupletCutsSoAConstView &ntupletCuts,
                                   TkSoAView tracks_view,
                                   HitContainer *foundNtuplets,
                                   CellToCell const *__restrict__ cellNeighborsHisto,
@@ -729,7 +728,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
         // check if the most inner hit does not fulfill the starting requirement
         auto lid = thisCell.innerLayer();
-        if (thisCell.inner_r() > ll[lid].startMaxInnerR())
+        if (thisCell.inner_r() > ntupletCuts[lid].startMaxInnerR())
           doit = false;
 
         constexpr uint32_t maxDepth = TrackerTraits::maxLayersPerTrack - 1;
@@ -745,7 +744,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
             cellNeighborsHisto->size(2 * idx),
             cellNeighborsHisto->size(2 * idx + 1),
             thisCell.inner_r(),
-            ll[lid].startMaxInnerR());
+            ntupletCuts[lid].startMaxInnerR());
 #endif
 
         if (doit) {
@@ -753,7 +752,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
           stack.reset();
           thisCell.template find_ntuplets<maxDepth>(acc,
-                                                    ll,
+                                                    ntupletCuts,
                                                     cells,
                                                     *foundNtuplets,
                                                     cellNeighborsHisto,
@@ -765,7 +764,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
                                                     tracks_view.nLayers().data(),
                                                     tracks_view.pt().data(),
                                                     stack,
-                                                    params.minHitsPerNtuplet_);
+                                                    params.minLayersPerNtuplet_);
           ALPAKA_ASSERT_ACC(stack.empty());
         }
       }
@@ -782,8 +781,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
 
   public:
     ALPAKA_FN_ACC void operator()(Acc1D const &acc,
-                                  const ::reco::CALayersSoAConstView &ll,
                                   const ::reco::CAGraphSoAConstView &cc,
+                                  const ::reco::CANtupletCutsSoAConstView &ntupletCuts,
                                   TkSoAView tracks_view,
                                   HitContainer *foundNtuplets,
                                   CellToCell const *__restrict__ cellNeighborsHisto,
@@ -819,7 +818,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
         typename Cell::TmpTuple stack;
         stack.reset();
         thisCell.template find_ntuplets<maxDepth>(acc,
-                                                  ll,
+                                                  ntupletCuts,
                                                   cells,
                                                   *foundNtuplets,
                                                   cellNeighborsHisto,

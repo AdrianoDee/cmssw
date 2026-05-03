@@ -140,9 +140,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     ALPAKA_FN_ACC ALPAKA_FN_INLINE auto quadrupletCut(const float innerCurvature,
                                                       const float outerCurvature,
-                                                      const ::reco::CALayersSoAConstView& ll) const {
-      auto maxDCurv = ll[theOuterLayer_].caDCurvCut();
-      auto dCurv0 = ll[theOuterLayer_].caDCurv0();
+                                                      const ::reco::CANtupletCutsSoAConstView& ntupletCuts) const {
+      auto maxDCurv = ntupletCuts[theOuterLayer_].maxDCurv();
+      auto dCurv0 = ntupletCuts[theOuterLayer_].floorDCurv();
 
 #ifdef CA_DEBUG
       printf("quadCut: layer=%d, dCurv=%f, curv0=%f, Co=%f, Ci=%f",
@@ -165,7 +165,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     template <int DEPTH>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void find_ntuplets(Acc1D const& acc,
-                                                      const ::reco::CALayersSoAConstView& ll,
+                                                      const ::reco::CANtupletCutsSoAConstView& ntupletCuts,
                                                       CACell* __restrict__ cells,
                                                       HitContainer& foundNtuplets,
                                                       CellToCell const* __restrict__ cellNeighborsHisto,
@@ -177,7 +177,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       int8_t* __restrict__ nLayers,
                                                       float* __restrict__ pt,
                                                       TmpTuple& tmpNtuplet,
-                                                      const unsigned int minHitsPerNtuplet,
+                                                      const unsigned int minLayersPerNtuplet,
                                                       const float preCurvature = 0.) const {
       // the building process for a track ends if:
       // it has no right neighbor
@@ -210,7 +210,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             continue;
 
           // check compatiblity of triplets
-          if (tripletOrMore && cells[otherCell].quadrupletCut(preCurvature, thisCurvature, ll))
+          if (tripletOrMore && cells[otherCell].quadrupletCut(preCurvature, thisCurvature, ntupletCuts))
             continue;
 #ifdef CA_DEBUG
           printf("Doublet no. %d %d doubletId: %ld -> %d (isKilled %d) (%d,%d) -> (%d,%d) %d %d\n",
@@ -229,7 +229,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
           foundNeighbor = true;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(acc,
-                                                             ll,
+                                                             ntupletCuts,
                                                              cells,
                                                              foundNtuplets,
                                                              cellNeighborsHisto,
@@ -241,7 +241,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                              nLayers,
                                                              pt,
                                                              tmpNtuplet,
-                                                             minHitsPerNtuplet,
+                                                             minLayersPerNtuplet,
                                                              thisCurvature);
         }
 
@@ -249,7 +249,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         if (!foundNeighbor) {
           const uint8_t nl = tmpNtuplet.size() + 1;  // numLayers in tuplet
           // if long enough save...
-          if (nl >= minHitsPerNtuplet) {
+          if (nl >= minLayersPerNtuplet) {
             {
               hindex_type hits[TrackerTraits::maxHitsOnTrack];  // maxHitsOnTracks takes fishbone hits into account
               uint32_t nh = 0U;

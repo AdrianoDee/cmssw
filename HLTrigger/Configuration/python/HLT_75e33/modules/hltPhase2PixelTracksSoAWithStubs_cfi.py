@@ -220,12 +220,6 @@ for i, lp in enumerate(layerPairs):
     if not excludeLayerPair[i]:
         layerPairsStubs.append(lp)
 
-# get startingPairs for Ntuplet building
-startingPairsStubs = []
-for i, lp in enumerate(layerPairsStubs):
-    if lp[2]:
-        startingPairsStubs.append(i)
-
 hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStubs@alpaka',
     pixelRecHitSrc = cms.InputTag('hltPhase2PixelRecHitsStubsMerger'),
     otRecHitsSrc = cms.InputTag('hltPixelSeedingOTRecHitsSoA'),
@@ -262,11 +256,60 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     doOrphanRecovery = cms.bool(False),
     minHitsOrphanNtuplet = cms.uint32(5),  # require 5+ hits to suppress fakes
 
-    # Chain phi residual consistency: reject chain extensions where the phi residual
-    # at the middle hit exceeds this threshold [rad]. Negative = disabled.
-    chainPhiResidCut = cms.double(0.004),
 
-    # Track quality cuts (Phase2-specific)
+    # CA parameters (individual scalars)
+    minLayersPerNtuplet = cms.uint32(4),  # Require at least 1 OT hit for barrel testing
+    minHitsForSharingCut = cms.uint32(1),  # disables nLayers-based sharing cut in favor of nHits-based cut
+
+    # CA parameters
+    fishboneCuts = cms.vdouble([l[5] for l in layers]),
+
+    graph = cms.PSet(
+        layerPairs   = cms.vuint32(sum([[lp[0], lp[1]] for lp in layerPairsStubs], [])),
+        startingPair = cms.vuint32([int(lp[2]) for lp in layerPairsStubs]),
+        skipsLayers  = cms.vuint32([int(lp[3]) for lp in layerPairsStubs]),
+    ),
+
+    doubletCuts = cms.PSet(
+        maxDPhi          = cms.vint32( [lp[ 4] for lp in layerPairsStubs]),
+        minInner         = cms.vdouble([lp[ 5] for lp in layerPairsStubs]),
+        maxInner         = cms.vdouble([lp[ 6] for lp in layerPairsStubs]),
+        minOuter         = cms.vdouble([lp[ 7] for lp in layerPairsStubs]),
+        maxOuter         = cms.vdouble([lp[ 8] for lp in layerPairsStubs]),
+        maxDR            = cms.vdouble([lp[ 9] for lp in layerPairsStubs]),
+        minDZ            = cms.vdouble([lp[10] for lp in layerPairsStubs]),
+        maxDZ            = cms.vdouble([lp[11] for lp in layerPairsStubs]),
+        minPt            = cms.vdouble([lp[12] for lp in layerPairsStubs]),
+        maxZ0            = cms.vdouble([lp[13] for lp in layerPairsStubs]),
+        maxStubCurvSigma = cms.vdouble([lp[14] for lp in layerPairsStubs]),
+        
+        dzdrFact = cms.double(15.2),
+        minInnerSizeB1  = cms.int32(15),
+        minInnerSizeB2  = cms.int32(14),
+        maxDSizeB1      = cms.int32(15),
+        maxDSize        = cms.int32(20),
+        maxDSizePred    = cms.int32(24),
+    ),
+
+    tripletCuts = cms.PSet(
+        maxRZTolerance           = cms.vdouble([lp[17] for lp in layerPairsStubs]),
+        maxDCA                   = cms.vdouble([lp[18] for lp in layerPairsStubs]),
+        floorDCA                 = cms.vdouble([lp[19] for lp in layerPairsStubs]),
+        maxStubGeomCurvSigma     = cms.vdouble([lp[15] for lp in layerPairsStubs]),
+        maxStubInnerDoubletDCurv = cms.vdouble([lp[16] for lp in layerPairsStubs]),
+        
+        ptmin       = cms.double(0.9),
+        maxCurv     = cms.double(0.02),
+        maxPhiResid = cms.double(0.004),
+        sameDPhiSign = cms.bool(True),
+    ),
+
+    ntupletCuts = cms.PSet(
+        startMaxInnerR = cms.vdouble([l[2] for l in layers]),
+        maxDCurv       = cms.vdouble([l[3] for l in layers]),
+        floorDCurv     = cms.vdouble([l[4] for l in layers]),
+    ),
+
     trackQualityCuts = cms.PSet(
         maxChi2 = cms.double(7.0),
         maxChi2TripletsOrQuadruplets = cms.double(7.0),
@@ -274,47 +317,6 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
         minPt = cms.double(0.9),
         maxTip = cms.double(0.3),
         maxZip = cms.double(12.0),
-    ),
-
-    # CA parameters (scalars)
-    minHitsPerNtuplet = cms.uint32(4),  # Require at least 1 OT hit for barrel testing
-    minHitsForSharingCut = cms.uint32(1),  # disables nLayers-based sharing cut in favor of nHits-based cut
-    ptmin = cms.double(0.9),
-    hardCurvCut = cms.double(0.02),
-
-    # Pixel cluster cuts
-    dzdrFact = cms.double(15.2),
-    minYsizeB1 = cms.int32(15),
-    minYsizeB2 = cms.int32(14),
-    maxDYsize12 = cms.int32(15),
-    maxDYsize = cms.int32(20),
-    maxDYPred = cms.int32(24),
-
-    # Geometry parameters extracted from layers and layerPairs tables
-    geometry = cms.PSet(
-        startingPairs = cms.vuint32(startingPairsStubs),
-        startMaxInnerR = cms.vdouble([l[2] for l in layers]),
-        caDCurvCuts    = cms.vdouble([l[3] for l in layers]),
-        caDCurv0       = cms.vdouble([l[4] for l in layers]),
-        fishboneCuts   = cms.vdouble([l[5] for l in layers]),
-        pairGraph = cms.vuint32(sum([[lp[0], lp[1]] for lp in layerPairsStubs], [])),
-        skipsLayers    = cms.vuint32([int(lp[3]) for lp in layerPairsStubs]),
-        phiCuts            = cms.vint32( [lp[ 4] for lp in layerPairsStubs]),
-        minInner           = cms.vdouble([lp[ 5] for lp in layerPairsStubs]),
-        maxInner           = cms.vdouble([lp[ 6] for lp in layerPairsStubs]),
-        minOuter           = cms.vdouble([lp[ 7] for lp in layerPairsStubs]),
-        maxOuter           = cms.vdouble([lp[ 8] for lp in layerPairsStubs]),
-        maxDR              = cms.vdouble([lp[ 9] for lp in layerPairsStubs]),
-        minDZ              = cms.vdouble([lp[10] for lp in layerPairsStubs]),
-        maxDZ              = cms.vdouble([lp[11] for lp in layerPairsStubs]),
-        ptCuts             = cms.vdouble([lp[12] for lp in layerPairsStubs]),
-        z0Cuts             = cms.vdouble([lp[13] for lp in layerPairsStubs]),
-        stubSigmaCuts      = cms.vdouble([lp[14] for lp in layerPairsStubs]),
-        geomKappaSigmaCuts = cms.vdouble([lp[15] for lp in layerPairsStubs]),
-        caPhiMiddleCuts    = cms.vdouble([lp[16] for lp in layerPairsStubs]),
-        caThetaCuts        = cms.vdouble([lp[17] for lp in layerPairsStubs]),
-        caDCACuts          = cms.vdouble([lp[18] for lp in layerPairsStubs]),
-        caDCAFloors        = cms.vdouble([lp[19] for lp in layerPairsStubs]),
     ),
 
     mightGet = cms.optional.untracked.vstring,
