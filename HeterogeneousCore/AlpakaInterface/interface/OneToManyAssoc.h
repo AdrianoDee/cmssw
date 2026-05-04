@@ -253,39 +253,21 @@ namespace cms::alpakatools {
 
     template <alpaka::concepts::Acc TAcc, typename TQueue>
     ALPAKA_FN_INLINE static void launchFinalize(View view, TQueue &queue) {
-      // View stores a base pointer, we need to upcast back...
       auto h = static_cast<OneToManyAssocRandomAccess *>(view.assoc);
       ALPAKA_ASSERT_ACC(h);
-      if constexpr (!requires_single_thread_per_block_v<TAcc>) {
-        Counter *poff = (Counter *)((char *)(h) + offsetof(OneToManyAssocRandomAccess, off));
-        auto nOnes = OneToManyAssocRandomAccess::ctNOnes();
-        if constexpr (OneToManyAssocRandomAccess::ctNOnes() == kDynamicSize) {
-          ALPAKA_ASSERT_ACC(view.offStorage);
-          ALPAKA_ASSERT_ACC(view.offSize > 0);
-          nOnes = view.offSize;
-          poff = view.offStorage;
-        }
-        ALPAKA_ASSERT_ACC(nOnes > 0);
-        int32_t *ppsws = (int32_t *)((char *)(h) + offsetof(OneToManyAssocRandomAccess, psws));
-        auto nthreads = 1024;
-        auto nblocks = (nOnes + nthreads - 1) / nthreads;
-        auto workDiv = cms::alpakatools::make_workdiv<TAcc>(nblocks, nthreads);
-        cms::alpakatools::checkSharedMemoryPrefixScan<TAcc>(nOnes, nblocks, alpaka::getDev(queue));
-        alpaka::exec<TAcc>(queue,
-                           workDiv,
-                           multiBlockPrefixScan<Counter>(),
-                           poff,
-                           poff,
-                           nOnes,
-                           nblocks,
-                           ppsws,
-                           alpaka::getPreferredWarpSize(alpaka::getDev(queue)));
-      } else {
-        h->finalize();
+
+      Counter *poff = (Counter *)((char *)(h) + offsetof(OneToManyAssocRandomAccess, off));
+      auto nOnes = OneToManyAssocRandomAccess::ctNOnes();
+      if constexpr (OneToManyAssocRandomAccess::ctNOnes() == kDynamicSize) {
+        ALPAKA_ASSERT_ACC(view.offStorage);
+        ALPAKA_ASSERT_ACC(view.offSize > 0);
+        nOnes = view.offSize;
+        poff = view.offStorage;
       }
+      ALPAKA_ASSERT_ACC(nOnes > 0);
+      cms::alpakatools::iterativePrefixScan<TAcc>(poff, poff, static_cast<uint32_t>(nOnes), queue);
     }
   };
-
 }  // namespace cms::alpakatools
 
 #endif  //HeterogeneousCore_AlpakaInterface_interface_OneToManyAssoc_h
