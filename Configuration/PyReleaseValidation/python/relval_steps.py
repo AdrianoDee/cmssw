@@ -673,7 +673,8 @@ offset_pd = 0.001 # less than 100 pds per year
 offset_events = 0.0001 # less than 10 event setups (10k,50k,150k,250k,500k,1M)
 
 #### PDs to run
-pds_2025  = ['BTagMu', 'DisplacedJet', 'EGamma0', 'HcalNZS', 'JetMET0', 'Muon0', 'MuonEG', 'NoBPTX', 'ParkingDoubleMuonLowMass0', 'ParkingHH0', 'ParkingLLP0', 'ParkingSingleMuon0', 'ParkingVBF0', 'Tau', 'ZeroBias','JetMET1','ScoutingPFMonitor']
+pds_2026  = ['BTagMu', 'DisplacedJet', 'EGamma0', 'HcalNZS', 'JetMET0', 'Muon0', 'MuonEG', 'NoBPTX', 'ParkingDoubleMuonLowMass0', 'ParkingHH0', 'ParkingLLP0', 'ParkingSingleMuon0', 'ParkingVBF0', 'Tau', 'ZeroBias','JetMET1','ScoutingPFMonitor']
+pds_2025  = pds_2026
 pds_2024  = ['BTagMu', 'DisplacedJet', 'EGamma0', 'HcalNZS', 'JetMET0', 'Muon0', 'MuonEG', 'NoBPTX', 'ParkingDoubleMuonLowMass0', 'ParkingHH', 'ParkingLLP', 'ParkingSingleMuon0', 'ParkingVBF0', 'Tau', 'ZeroBias','JetMET1']
 pds_2023  = ['BTagMu', 'DisplacedJet', 'EGamma0', 'HcalNZS', 'JetMET0', 'Muon0', 'MuonEG', 'NoBPTX', 'ParkingDoubleElectronLowMass', 'ParkingDoubleMuonLowMass0', 'Tau', 'ZeroBias']
 pds_2022_1  = ['BTagMu', 'DisplacedJet', 'DoubleMuon', 'SingleMuon', 'EGamma', 'HcalNZS', 'JetHT', 'MET', 'MinimumBias', 'MuonEG', 'NoBPTX', 'Tau', 'ZeroBias']
@@ -681,7 +682,8 @@ pds_2022_1  = ['BTagMu', 'DisplacedJet', 'DoubleMuon', 'SingleMuon', 'EGamma', '
 pds_2022_2  = ['BTagMu', 'DisplacedJet', 'Muon', 'EGamma', 'HcalNZS', 'JetMET', 'MuonEG', 'NoBPTX', 'Tau', 'ZeroBias']
 
 #### Eras to run
-eras_2025 = ['B','C','D','E','F','G','H','I']
+eras_2026 = ['B','C','D','E','F','G','H','I']
+eras_2025 = eras_2026
 eras_2024 = eras_2025
 eras_2023 = ['B','C','D']
 eras_2022_1 = ['B','C']
@@ -727,6 +729,7 @@ def addFixedEventsInputs(years, pds, eras, evstep = event_steps_dict, skimmod = 
             
 
 run3FixedSteps = partial(addFixedEventsInputs,evstep = event_steps_dict, skimmod = run3SkimMod)
+run3FixedSteps(['2026'],pds_2026,eras_2026)
 run3FixedSteps(['2025'],pds_2025,eras_2025)
 run3FixedSteps(['2024'],pds_2024,eras_2024)
 run3FixedSteps(['2023'],pds_2023,eras_2023)
@@ -2399,7 +2402,8 @@ steps['HLTDR3_2022']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2022,},{'--con
 
 hltKey2023='relval2023' # currently points to Fake2
 hltKey2024='relval2024' # currently points to Fake2
-hltKey2025='relval2026' # currently points to GRun (hacky solution to keep running GRun on real data)
+hltKey2025='relval2025' # currently points to Fake2 
+hltKey2026='relval2026' 
 
 steps['HLTDR3_2023']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2023,},{'--conditions':'auto:run3_hlt_relval'},{'--era' : 'Run3_2023'},steps['HLTD'] ] )
 
@@ -2408,6 +2412,8 @@ steps['HLTDR3_2023B']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2023,},{'--co
 steps['HLTDR3_2024']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2024,},{'--conditions':'auto:run3_hlt_relval'},{'--era' : 'Run3_2024'},steps['HLTD'] ] )
 
 steps['HLTDR3_2025']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2025,},{'--conditions':'auto:run3_hlt_relval'},{'--era' : 'Run3_2025'},steps['HLTD'] ] )
+
+steps['HLTDR3_2026']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2026,},{'--conditions':'auto:run3_hlt_relval'},{'--era' : 'Run3_2026'},steps['HLTD'] ] )
 
 steps['HLTDR3_ScoutingPFMonitor_2024']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2024,},
                                                 {'--conditions':'auto:run3_hlt_relval'},
@@ -2418,6 +2424,11 @@ steps['HLTDR3_ScoutingPFMonitor_2024']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hl
 steps['HLTDR3_ScoutingPFMonitor_2025']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2025,},
                                                  {'--conditions':'auto:run3_hlt_relval'},
                                                  {'--era' : 'Run3_2025'},
+                                                 steps['HLTD'] ] )
+
+steps['HLTDR3_ScoutingPFMonitor_2026']=merge( [ {'-s':'L1REPACK:Full,HLT:@%s'%hltKey2026,},
+                                                 {'--conditions':'auto:run3_hlt_relval'},
+                                                 {'--era' : 'Run3_2026'},
                                                  steps['HLTD'] ] )
 
 steps['HLTDR3_HI2023ARawprime']=merge([{'-s':'L1REPACK:Full,HLT:HIon'},
@@ -2982,7 +2993,8 @@ steps['RECODR3_reHLT_2022']=merge([{'--conditions':'auto:run3_data_relval', '--h
 steps['RECODR3_reHLT_2023']=merge([{'--conditions':'auto:run3_data_relval', '--hltProcess':'reHLT'},steps['RECODR3_2023']])
 steps['RECODR3_reHLT_2023B']=merge([{'--conditions':'auto:run3_data_relval', '--hltProcess':'reHLT'},steps['RECODR3']])
 steps['RECODR3_reHLT_2024']=merge([{'--conditions':'auto:run3_data_relval', '--hltProcess':'reHLT'},steps['RECODR3_2024']])
-steps['RECODR3_reHLT_2025']=merge([{'--conditions':'auto:run3_data_prompt_relval', '--hltProcess':'reHLT'},steps['RECODR3_2025']])
+steps['RECODR3_reHLT_2025']=merge([{'--conditions':'auto:run3_data_relval', '--hltProcess':'reHLT'},steps['RECODR3_2025']])
+steps['RECODR3_reHLT_2026']=merge([{'--conditions':'auto:run3_data_prompt_relval', '--hltProcess':'reHLT'},steps['RECODR3_2026']])
 
 steps['RECODR2_2016_UPC']=merge([{'--conditions':'auto:run2_data', '--era':'Run2_2016_UPC', '-s':'RAW2DIGI,L1Reco,RECO,PAT,DQM:@commonFakeHLT+@standardDQMFakeHLT', '--repacked':''},steps['RECODR2_2016']])
 steps['RECODR3_2023_HIN']=merge([{'--conditions':'auto:run3_data_prompt', '-s':'RAW2DIGI,L1Reco,RECO,PAT,DQM:@commonFakeHLT+@standardDQMFakeHLT', '--repacked':'', '-n':1000},steps['RECODR3_2023']])
@@ -3398,8 +3410,13 @@ steps['RECONANORUN3_ZB_reHLT_2024']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,
 steps['RECONANORUN3_reHLT_2025']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQM+@miniAODDQM+@nanoAODDQM','--datatier':'RECO,MINIAOD,NANOAOD,DQMIO','--eventcontent':'RECO,MINIAOD,NANOEDMAOD,DQM'},steps['RECODR3_reHLT_2025']])
 steps['RECONANORUN3_ZB_reHLT_2025']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@rerecoZeroBias+@miniAODDQM+@nanoAODDQM'},steps['RECONANORUN3_reHLT_2025']])
 
+steps['RECONANORUN3_reHLT_2026']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQM+@miniAODDQM+@nanoAODDQM','--datatier':'RECO,MINIAOD,NANOAOD,DQMIO','--eventcontent':'RECO,MINIAOD,NANOEDMAOD,DQM'},steps['RECODR3_reHLT_2026']])
+steps['RECONANORUN3_ZB_reHLT_2026']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@rerecoZeroBias+@miniAODDQM+@nanoAODDQM'},steps['RECONANORUN3_reHLT_2026']])
+
 steps['RECONANORUN3_ScoutingPFMonitor_reHLT_2024']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQM+@miniAODDQM+@nanoAODDQM+@hltScouting'},steps['RECONANORUN3_reHLT_2024']])
 steps['RECONANORUN3_ScoutingPFMonitor_reHLT_2025']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQM+@miniAODDQM+@nanoAODDQM+@hltScouting'},steps['RECONANORUN3_reHLT_2025']])
+steps['RECONANORUN3_ScoutingPFMonitor_reHLT_2026']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQM+@miniAODDQM+@nanoAODDQM+@hltScouting'},steps['RECONANORUN3_reHLT_2026']])
+
 
 steps['AODNANORUN3_reHLT_2024']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQMFakeHLT+@miniAODDQM+@nanoAODDQM','--datatier':'AOD,MINIAOD,NANOAOD,DQMIO','--eventcontent':'AOD,MINIAOD,NANOEDMAOD,DQM'},steps['RECODR3_reHLT_2024']])
 
@@ -4298,6 +4315,12 @@ steps['HARVESTRUN3_ZB_2025']=merge([{'--era':'Run3_2025', '-s':'HARVESTING:@rere
 steps['HARVESTRUN3_2025']=merge([{'--era':'Run3_2025', '-s':'HARVESTING:@standardDQM+@miniAODDQM+@nanoAODDQM'},steps['HARVESTDRUN3']])
 steps['HARVESTRUN3_HFLAV_2025']=merge([{'--era':'Run3_2025', '-s':'HARVESTING:@standardDQM+@miniAODDQM+@nanoAODDQM+@heavyFlavor'},steps['HARVESTDRUN3']])
 steps['HARVESTRUN3_ScoutingPFMonitor_2025']=merge([{'--era':'Run3_2025', '-s':'HARVESTING:@standardDQM+@miniAODDQM+@nanoAODDQM+@hltScouting'},steps['HARVESTDRUN3']])
+# 2026
+steps['HARVESTRUN3_ZB_2026']=merge([{'--era':'Run3_2026', '-s':'HARVESTING:@rerecoZeroBias+@miniAODDQM+@nanoAODDQM'},steps['HARVESTDRUN3']])
+steps['HARVESTRUN3_2026']=merge([{'--era':'Run3_2026', '-s':'HARVESTING:@standardDQM+@miniAODDQM+@nanoAODDQM'},steps['HARVESTDRUN3']])
+steps['HARVESTRUN3_HFLAV_2026']=merge([{'--era':'Run3_2026', '-s':'HARVESTING:@standardDQM+@miniAODDQM+@nanoAODDQM+@heavyFlavor'},steps['HARVESTDRUN3']])
+steps['HARVESTRUN3_ScoutingPFMonitor_2026']=merge([{'--era':'Run3_2026', '-s':'HARVESTING:@standardDQM+@miniAODDQM+@nanoAODDQM+@hltScouting'},steps['HARVESTDRUN3']])
+
 # HI
 steps['HARVESTRUN3_HI2023A']=merge([{'--era':'Run3_pp_on_PbPb_approxSiStripClusters_2023', '-s':'HARVESTING:@standardDQM+@miniAODDQM'},steps['HARVESTRUN3_2022']])
 

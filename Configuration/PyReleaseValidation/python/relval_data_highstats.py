@@ -73,6 +73,7 @@ def addFixedEventsWfs(years, pds, eras, offset = 0, suffreco = None, suffhlt = N
     return wf_number - float(y) #to concatenate the offset
 
 run3FixedWfs = partial(addFixedEventsWfs,suffreco = run3RecoMod, suffhlt = run3HLTMod, suffharv = run3HarvMod, namemod = run3NameMod)
+run3FixedWfs(['2026'],pds_2026,eras_2026)
 run3FixedWfs(['2025'],pds_2025,eras_2025)
 run3FixedWfs(['2024'],pds_2024,eras_2024)
 run3FixedWfs(['2023'],pds_2023,eras_2023)
