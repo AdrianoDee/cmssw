@@ -101,7 +101,7 @@ process.load("RecoTracker.PixelSeeding.otStubProducerVectorHitStyle_cfi")
 # process.otStubProducer.stubModuleOffset = cms.int32(1856)
 # process.otStubProducerVectorHitStyle.stubModuleOffset = cms.int32(1856)
 # process.otStubProducerVectorHitStyle.barrelCut = cms.vdouble(0.0, 0.05, 0.06, 0.08, 0.09, 0.12, 0.2)
-# process.otStubProducerVectorHitStyle.endcapCut = cms.vdouble(0.0, 0.1, 0.1, 0.1, 0.1, 0.1)
+# process.otStubProducerVectorHitStyle.maxWidthEndcap = cms.vdouble(0.0, 0.1, 0.1, 0.1, 0.1, 0.1)
 
 # Load the analyzer
 process.load("RecoTracker.PixelSeeding.otStubAnalyzer_cfi")

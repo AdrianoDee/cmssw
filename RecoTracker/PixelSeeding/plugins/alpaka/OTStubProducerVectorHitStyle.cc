@@ -47,9 +47,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device::EDPutToken<reco::StubsSoACollection> stubToken_;
 
     // Configuration
-    std::vector<double> barrelFlatCut_;
-    std::vector<double> barrelTiltedCut_;
-    std::vector<double> endcapCut_;
+    std::vector<double> maxWidthBarrelFlat_;
+    std::vector<double> maxWidthBarrelTilted_;
+    std::vector<double> maxWidthEndcap_;
     std::vector<int32_t> barrelFlatMaxCSDiff_;
     std::vector<int32_t> barrelTiltedMaxCSDiff_;
     std::vector<int32_t> endcapMaxCSDiff_;
@@ -62,9 +62,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // Member variables for acquire/produce communication
     std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> stubOffsets_d_;
-    std::optional<cms::alpakatools::device_buffer<Device, float[]>> barrelFlatCut_d_;
-    std::optional<cms::alpakatools::device_buffer<Device, float[]>> barrelTiltedCut_d_;
-    std::optional<cms::alpakatools::device_buffer<Device, float[]>> endcapCut_d_;
+    std::optional<cms::alpakatools::device_buffer<Device, float[]>> maxWidthBarrelFlat_d_;
+    std::optional<cms::alpakatools::device_buffer<Device, float[]>> maxWidthBarrelTilted_d_;
+    std::optional<cms::alpakatools::device_buffer<Device, float[]>> maxWidthEndcap_d_;
     std::optional<cms::alpakatools::device_buffer<Device, int32_t[]>> barrelFlatMaxCSDiff_d_;
     std::optional<cms::alpakatools::device_buffer<Device, int32_t[]>> barrelTiltedMaxCSDiff_d_;
     std::optional<cms::alpakatools::device_buffer<Device, int32_t[]>> endcapMaxCSDiff_d_;
@@ -86,46 +86,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         hitToken_(consumes(iConfig.getParameter<edm::InputTag>("otRecHitsSoA"))),
         geomToken_(esConsumes()),
         stubToken_(produces()),
-        barrelFlatCut_(iConfig.getParameter<std::vector<double>>("barrelFlatCut")),
-        barrelTiltedCut_(iConfig.getParameter<std::vector<double>>("barrelTiltedCut")),
-        endcapCut_(iConfig.getParameter<std::vector<double>>("endcapCut")),
-        barrelFlatMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("barrelFlatMaxClusterSizeDiff")),
-        barrelTiltedMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("barrelTiltedMaxClusterSizeDiff")),
-        endcapMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("endcapMaxClusterSizeDiff")),
-        barrelFlatMaxCS_(iConfig.getParameter<std::vector<int32_t>>("barrelFlatMaxClusterSize")),
-        barrelTiltedMaxCS_(iConfig.getParameter<std::vector<int32_t>>("barrelTiltedMaxClusterSize")),
-        endcapMaxCS_(iConfig.getParameter<std::vector<int32_t>>("endcapMaxClusterSize")),
-        barrelFlatMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("barrelFlatMaxClusterSizeSum")),
-        barrelTiltedMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("barrelTiltedMaxClusterSizeSum")),
-        endcapMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("endcapMaxClusterSizeSum")) {}
+        maxWidthBarrelFlat_(iConfig.getParameter<std::vector<double>>("maxWidthBarrelFlat")),
+        maxWidthBarrelTilted_(iConfig.getParameter<std::vector<double>>("maxWidthBarrelTilted")),
+        maxWidthEndcap_(iConfig.getParameter<std::vector<double>>("maxWidthEndcap")),
+        barrelFlatMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeDiffBarrelFlat")),
+        barrelTiltedMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeDiffBarrelTilted")),
+        endcapMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeDiffEndcap")),
+        barrelFlatMaxCS_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeBarrelFlat")),
+        barrelTiltedMaxCS_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeBarrelTilted")),
+        endcapMaxCS_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeEndcap")),
+        barrelFlatMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeSumBarrelTilted")),
+        barrelTiltedMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeSumBarrelTilted")),
+        endcapMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeSumEndcap")) {}
 
   void OTStubProducerVectorHitStyle::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
     desc.add<edm::InputTag>("otRecHitsSoA", edm::InputTag("otRecHitsSoAConverter"))
         ->setComment("Input OT RecHits SoA collection");
-    desc.add<std::vector<double>>("barrelFlatCut", {0.0, 0.05, 0.06, 0.08, 0.09, 0.12, 0.2})
+    desc.add<std::vector<double>>("maxWidthBarrelFlat", {0.0, 0.05, 0.06, 0.08, 0.09, 0.12, 0.2})
         ->setComment("Layer-dependent width cuts for flat barrel modules (cm), indexed by layer 0-6");
-    desc.add<std::vector<double>>("barrelTiltedCut", {0.0, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15})
+    desc.add<std::vector<double>>("maxWidthBarrelTilted", {0.0, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15})
         ->setComment("Layer-dependent width cuts for tilted barrel modules (cm), indexed by layer 0-6. Only layers 1-3 have tilted modules.");
-    desc.add<std::vector<double>>("endcapCut", {0.0, 0.1, 0.1, 0.1, 0.1, 0.1})
+    desc.add<std::vector<double>>("maxWidthEndcap", {0.0, 0.1, 0.1, 0.1, 0.1, 0.1})
         ->setComment("Layer-dependent width cuts for endcap (cm), indexed by layer 0-5");
-    desc.add<std::vector<int32_t>>("barrelFlatMaxClusterSizeDiff", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeDiffBarrelFlat", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max |clusterSize_lower - clusterSize_upper| for flat barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelTiltedMaxClusterSizeDiff", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeDiffBarrelTilted", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max |clusterSize_lower - clusterSize_upper| for tilted barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("endcapMaxClusterSizeDiff", {999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeDiffEndcap", {999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max |clusterSize_lower - clusterSize_upper| for endcap (layers 0-5). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelFlatMaxClusterSize", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeBarrelFlat", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max cluster size for flat barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelTiltedMaxClusterSize", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeBarrelTilted", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max cluster size for tilted barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("endcapMaxClusterSize", {999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeEndcap", {999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max cluster size for endcap (layers 0-5). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelFlatMaxClusterSizeSum", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeBarrelFlatSum", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max (clusterSize_lower + clusterSize_upper) for flat barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelTiltedMaxClusterSizeSum", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeSumBarrelTilted", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max (clusterSize_lower + clusterSize_upper) for tilted barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("endcapMaxClusterSizeSum", {999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeSumEndcap", {999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max (clusterSize_lower + clusterSize_upper) for endcap (layers 0-5). 999 = disabled.");
     descriptions.addWithDefaultLabel(desc);
   }
@@ -160,32 +160,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto const& moduleView = otRecHits.const_view().otHitModules();
 
     // Copy cut arrays to device
-    std::vector<float> barrelFlatCutFloat(barrelFlatCut_.begin(), barrelFlatCut_.end());
-    std::vector<float> barrelTiltedCutFloat(barrelTiltedCut_.begin(), barrelTiltedCut_.end());
-    std::vector<float> endcapCutFloat(endcapCut_.begin(), endcapCut_.end());
+    std::vector<float> maxWidthBarrelFlatFloat(maxWidthBarrelFlat_.begin(), maxWidthBarrelFlat_.end());
+    std::vector<float> maxWidthBarrelTiltedFloat(maxWidthBarrelTilted_.begin(), maxWidthBarrelTilted_.end());
+    std::vector<float> maxWidthEndcapFloat(maxWidthEndcap_.begin(), maxWidthEndcap_.end());
 
 #ifdef OTSTUB_DEBUG_VERBOSE
     // Debug: print cut arrays
     edm::LogPrint("OTStubProducerVectorHitStyle") << "Barrel flat cuts:";
-    for (size_t i = 0; i < barrelFlatCutFloat.size(); ++i) {
-      edm::LogPrint("OTStubProducerVectorHitStyle") << "  barrelFlatCut[" << i << "] = " << barrelFlatCutFloat[i];
+    for (size_t i = 0; i < maxWidthBarrelFlatFloat.size(); ++i) {
+      edm::LogPrint("OTStubProducerVectorHitStyle") << "  maxWidthBarrelFlat[" << i << "] = " << maxWidthBarrelFlatFloat[i];
     }
     edm::LogPrint("OTStubProducerVectorHitStyle") << "Barrel tilted cuts:";
-    for (size_t i = 0; i < barrelTiltedCutFloat.size(); ++i) {
-      edm::LogPrint("OTStubProducerVectorHitStyle") << "  barrelTiltedCut[" << i << "] = " << barrelTiltedCutFloat[i];
+    for (size_t i = 0; i < maxWidthBarrelTiltedFloat.size(); ++i) {
+      edm::LogPrint("OTStubProducerVectorHitStyle") << "  maxWidthBarrelTilted[" << i << "] = " << maxWidthBarrelTiltedFloat[i];
     }
 #endif
 
-    barrelFlatCut_d_ = cms::alpakatools::make_device_buffer<float[]>(queue, barrelFlatCutFloat.size());
-    barrelTiltedCut_d_ = cms::alpakatools::make_device_buffer<float[]>(queue, barrelTiltedCutFloat.size());
-    endcapCut_d_ = cms::alpakatools::make_device_buffer<float[]>(queue, endcapCutFloat.size());
+    maxWidthBarrelFlat_d_ = cms::alpakatools::make_device_buffer<float[]>(queue, maxWidthBarrelFlatFloat.size());
+    maxWidthBarrelTilted_d_ = cms::alpakatools::make_device_buffer<float[]>(queue, maxWidthBarrelTiltedFloat.size());
+    maxWidthEndcap_d_ = cms::alpakatools::make_device_buffer<float[]>(queue, maxWidthEndcapFloat.size());
 
     alpaka::memcpy(
-        queue, *barrelFlatCut_d_, cms::alpakatools::make_host_view(barrelFlatCutFloat.data(), barrelFlatCutFloat.size()));
+        queue, *maxWidthBarrelFlat_d_, cms::alpakatools::make_host_view(maxWidthBarrelFlatFloat.data(), maxWidthBarrelFlatFloat.size()));
     alpaka::memcpy(
-        queue, *barrelTiltedCut_d_, cms::alpakatools::make_host_view(barrelTiltedCutFloat.data(), barrelTiltedCutFloat.size()));
+        queue, *maxWidthBarrelTilted_d_, cms::alpakatools::make_host_view(maxWidthBarrelTiltedFloat.data(), maxWidthBarrelTiltedFloat.size()));
     alpaka::memcpy(
-        queue, *endcapCut_d_, cms::alpakatools::make_host_view(endcapCutFloat.data(), endcapCutFloat.size()));
+        queue, *maxWidthEndcap_d_, cms::alpakatools::make_host_view(maxWidthEndcapFloat.data(), maxWidthEndcapFloat.size()));
 
     // Copy per-layer cluster size cut arrays to device
     barrelFlatMaxCSDiff_d_ = cms::alpakatools::make_device_buffer<int32_t[]>(queue, barrelFlatMaxCSDiff_.size());
@@ -231,9 +231,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        hitsView,
                        moduleView,
                        geomView,
-                       barrelFlatCut_d_->data(),
-                       barrelTiltedCut_d_->data(),
-                       endcapCut_d_->data(),
+                       maxWidthBarrelFlat_d_->data(),
+                       maxWidthBarrelTilted_d_->data(),
+                       maxWidthEndcap_d_->data(),
                        barrelFlatMaxCSDiff_d_->data(),
                        barrelTiltedMaxCSDiff_d_->data(),
                        endcapMaxCSDiff_d_->data(),
@@ -331,9 +331,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         hitsView,
                         moduleView,
                         geomView,
-                        barrelFlatCut_d_->data(),
-                        barrelTiltedCut_d_->data(),
-                        endcapCut_d_->data(),
+                        maxWidthBarrelFlat_d_->data(),
+                        maxWidthBarrelTilted_d_->data(),
+                        maxWidthEndcap_d_->data(),
                         barrelFlatMaxCSDiff_d_->data(),
                         barrelTiltedMaxCSDiff_d_->data(),
                         endcapMaxCSDiff_d_->data(),
@@ -363,9 +363,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // Clean up member variables
     stubOffsets_d_.reset();
-    barrelFlatCut_d_.reset();
-    barrelTiltedCut_d_.reset();
-    endcapCut_d_.reset();
+    maxWidthBarrelFlat_d_.reset();
+    maxWidthBarrelTilted_d_.reset();
+    maxWidthEndcap_d_.reset();
     barrelFlatMaxCSDiff_d_.reset();
     barrelTiltedMaxCSDiff_d_.reset();
     endcapMaxCSDiff_d_.reset();

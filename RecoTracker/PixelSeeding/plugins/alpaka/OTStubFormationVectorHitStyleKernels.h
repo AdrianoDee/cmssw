@@ -336,9 +336,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     ::reco::OTRecHitsConstView hits,
                                     ::reco::OTHitModuleConstView moduleView,
                                     ::reco::StackedModuleGeometryConstView geometry,
-                                    float const* barrelFlatCut,
-                                    float const* barrelTiltedCut,
-                                    float const* endcapCut,
+                                    float const* maxWidthBarrelFlat,
+                                    float const* maxWidthBarrelTilted,
+                                    float const* maxWidthEndcap,
                                     int32_t const* barrelFlatMaxCSDiff,
                                     int32_t const* barrelTiltedMaxCSDiff,
                                     int32_t const* endcapMaxCSDiff,
@@ -409,7 +409,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           float localXInGlobalZ = geometry[iModule].localXInGlobalZ();
 
           // Get layer-dependent cut (separate cuts for flat and tilted barrel modules)
-          float cut = isBarrel ? (isFlat ? barrelFlatCut[layer] : barrelTiltedCut[layer]) : endcapCut[layer];
+          float cut = isBarrel ? (isFlat ? maxWidthBarrelFlat[layer] : maxWidthBarrelTilted[layer]) : maxWidthEndcap[layer];
 
           // Per-layer cluster size cuts
           int32_t maxCSDiff = isBarrel ? (isFlat ? barrelFlatMaxCSDiff[layer] : barrelTiltedMaxCSDiff[layer])
@@ -645,9 +645,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     ::reco::OTRecHitsConstView hits,
                                     ::reco::OTHitModuleConstView moduleView,
                                     ::reco::StackedModuleGeometryConstView geometry,
-                                    float const* barrelFlatCut,
-                                    float const* barrelTiltedCut,
-                                    float const* endcapCut,
+                                    float const* maxWidthBarrelFlat,
+                                    float const* maxWidthBarrelTilted,
+                                    float const* maxWidthEndcap,
                                     int32_t const* barrelFlatMaxCSDiff,
                                     int32_t const* barrelTiltedMaxCSDiff,
                                     int32_t const* endcapMaxCSDiff,
@@ -687,7 +687,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           float localXInGlobalY = geometry[iModule].localXInGlobalY();
           float localXInGlobalZ = geometry[iModule].localXInGlobalZ();
 
-          float cut = isBarrel ? (isFlat ? barrelFlatCut[layer] : barrelTiltedCut[layer]) : endcapCut[layer];
+          float cut = isBarrel ? (isFlat ? maxWidthBarrelFlat[layer] : maxWidthBarrelTilted[layer]) : maxWidthEndcap[layer];
 
           // Per-layer cluster size cuts
           int32_t maxCSDiff = isBarrel ? (isFlat ? barrelFlatMaxCSDiff[layer] : barrelTiltedMaxCSDiff[layer])
@@ -1138,9 +1138,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     ::reco::OTRecHitsConstView hits,
                                     ::reco::OTHitModuleConstView moduleView,
                                     ::reco::StackedModuleGeometryConstView geometry,
-                                    float const* barrelFlatCut,
-                                    float const* barrelTiltedCut,
-                                    float const* endcapCut,
+                                    float const* maxWidthBarrelFlat,
+                                    float const* maxWidthBarrelTilted,
+                                    float const* maxWidthEndcap,
                                     uint32_t nModules) const {
         // Single thread computes event-level summary
         // This is inefficient but acceptable for diagnostic purposes
@@ -1182,7 +1182,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             float localXInGlobalY = geometry[iModule].localXInGlobalY();
             float localXInGlobalZ = geometry[iModule].localXInGlobalZ();
             bool isFlat = geometry[iModule].isFlat();
-            float cut = isBarrel ? (isFlat ? barrelFlatCut[layer] : barrelTiltedCut[layer]) : endcapCut[layer];
+            float cut = isBarrel ? (isFlat ? maxWidthBarrelFlat[layer] : maxWidthBarrelTilted[layer]) : maxWidthEndcap[layer];
 
             if (isPS) {
               totalPHits_PS += nLower;

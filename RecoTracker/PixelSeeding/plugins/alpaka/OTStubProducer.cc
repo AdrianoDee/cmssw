@@ -82,37 +82,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         hitToken_(consumes(iConfig.getParameter<edm::InputTag>("otRecHitsSoA"))),
         geomToken_(esConsumes()),
         stubToken_(produces()),
-        barrelFlatMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("barrelFlatMaxClusterSizeDiff")),
-        barrelTiltedMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("barrelTiltedMaxClusterSizeDiff")),
-        endcapMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("endcapMaxClusterSizeDiff")),
-        barrelFlatMaxCS_(iConfig.getParameter<std::vector<int32_t>>("barrelFlatMaxClusterSize")),
-        barrelTiltedMaxCS_(iConfig.getParameter<std::vector<int32_t>>("barrelTiltedMaxClusterSize")),
-        endcapMaxCS_(iConfig.getParameter<std::vector<int32_t>>("endcapMaxClusterSize")),
-        barrelFlatMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("barrelFlatMaxClusterSizeSum")),
-        barrelTiltedMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("barrelTiltedMaxClusterSizeSum")),
-        endcapMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("endcapMaxClusterSizeSum")) {}
+        barrelFlatMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeDiffBarrelFlat")),
+        barrelTiltedMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeDiffBarrelTilted")),
+        endcapMaxCSDiff_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeDiffEndcap")),
+        barrelFlatMaxCS_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeBarrelFlat")),
+        barrelTiltedMaxCS_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeBarrelTilted")),
+        endcapMaxCS_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeEndcap")),
+        barrelFlatMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeBarrelFlatSum")),
+        barrelTiltedMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeSumBarrelTilted")),
+        endcapMaxCSSum_(iConfig.getParameter<std::vector<int32_t>>("maxClusterSizeSumEndcap")) {}
 
   void OTStubProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
     desc.add<edm::InputTag>("otRecHitsSoA", edm::InputTag("otRecHitsSoAConverter"))
         ->setComment("Input OT RecHits SoA collection");
-    desc.add<std::vector<int32_t>>("barrelFlatMaxClusterSizeDiff", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeDiffBarrelFlat", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max |clusterSize_lower - clusterSize_upper| for flat barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelTiltedMaxClusterSizeDiff", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeDiffBarrelTilted", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max |clusterSize_lower - clusterSize_upper| for tilted barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("endcapMaxClusterSizeDiff", {999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeDiffEndcap", {999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max |clusterSize_lower - clusterSize_upper| for endcap (layers 0-5). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelFlatMaxClusterSize", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeBarrelFlat", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max cluster size for flat barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelTiltedMaxClusterSize", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeBarrelTilted", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max cluster size for tilted barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("endcapMaxClusterSize", {999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeEndcap", {999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max cluster size for endcap (layers 0-5). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelFlatMaxClusterSizeSum", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeBarrelFlatSum", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max (clusterSize_lower + clusterSize_upper) for flat barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("barrelTiltedMaxClusterSizeSum", {999, 999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeSumBarrelTilted", {999, 999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max (clusterSize_lower + clusterSize_upper) for tilted barrel (layers 0-6). 999 = disabled.");
-    desc.add<std::vector<int32_t>>("endcapMaxClusterSizeSum", {999, 999, 999, 999, 999, 999})
+    desc.add<std::vector<int32_t>>("maxClusterSizeSumEndcap", {999, 999, 999, 999, 999, 999})
         ->setComment("Per-layer max (clusterSize_lower + clusterSize_upper) for endcap (layers 0-5). 999 = disabled.");
     descriptions.addWithDefaultLabel(desc);
   }
