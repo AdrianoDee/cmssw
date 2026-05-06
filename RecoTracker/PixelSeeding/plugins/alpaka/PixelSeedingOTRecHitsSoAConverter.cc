@@ -34,7 +34,7 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-  class PixelSeedingOTRecHitsSoAConverter : public stream::EDProducer<> {
+  class PixelSeedingOTRecHitsSoAConverter : public stream::EDProducer<edm::stream::WatchRuns> {
   public:
     explicit PixelSeedingOTRecHitsSoAConverter(const edm::ParameterSet& iConfig);
     ~PixelSeedingOTRecHitsSoAConverter() override = default;
@@ -78,7 +78,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   };
 
   PixelSeedingOTRecHitsSoAConverter::PixelSeedingOTRecHitsSoAConverter(const edm::ParameterSet& iConfig)
-      : stream::EDProducer<>(iConfig),
+      : stream::EDProducer<edm::stream::WatchRuns>(iConfig),
         recHitToken_(consumes(iConfig.getParameter<edm::InputTag>("otRecHitSource"))),
         beamSpotToken_(consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))),
         geomToken_(esConsumes<edm::Transition::BeginRun>()),
