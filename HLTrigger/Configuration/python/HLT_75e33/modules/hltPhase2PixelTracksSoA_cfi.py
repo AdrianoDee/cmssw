@@ -155,8 +155,6 @@ for i, lp in enumerate(layerPairs):
 
 hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2OT@alpaka',
     pixelRecHitSrc = cms.InputTag('hltPhase2PixelRecHitsExtendedSoA'),
-    ptmin = cms.double(0.9),
-    hardCurvCut = cms.double(0.01425), # corresponds to 800 MeV in 3.8T.
     earlyFishbone = cms.bool(True),
     lateFishbone = cms.bool(False),
     onlySameLayersFishbone = cms.bool(False),
@@ -164,11 +162,6 @@ hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2OT@alpaka',
     minLayersPerNtuplet = cms.uint32(4),
     maxNumberOfDoublets = cms.string(str(6e6)), #12*512*1024
     maxNumberOfTuples = cms.string(str(2*60*1024)),
-    minYsizeB1 = cms.int32(20),
-    minYsizeB2 = cms.int32(18),
-    maxDYsize12 = cms.int32(12),
-    maxDYsize = cms.int32(10),
-    maxDYPred = cms.int32(24),
     avgHitsPerTrack = cms.double(8.0),
     avgCellsPerHit = cms.double(17),
     avgCellsPerCell = cms.double(0.5),

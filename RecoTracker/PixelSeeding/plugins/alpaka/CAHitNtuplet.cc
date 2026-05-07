@@ -218,13 +218,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       assert(iCache->maxDR_.size() == iCache->minDZ_.size());
       assert(iCache->maxDR_.size() == iCache->minPt_.size());
       assert(iCache->maxDR_.size() == iCache->maxZ0_.size());
-      assert(iCache->maxDR_.size() == iCache->maxStubCurvSigma_.size());
       assert(iCache->maxDR_.size() == iCache->maxRZTolerance_.size());
       assert(iCache->maxDR_.size() == iCache->maxDCA_.size());
-      assert(iCache->maxDR_.size() == iCache->floorDCA_.size());
-      assert(iCache->maxDR_.size() == iCache->maxStubGeomCurvSigma_.size());
-      assert(iCache->maxDR_.size() == iCache->maxStubInnerDoubletDCurv_.size());
 
+      // stubs-specific cuts are optional, but if they are present they need to have the same size as the number of layer pairs
+      if (iCache->maxStubCurvSigma_.size() > 0) {
+        assert(iCache->maxDR_.size() == iCache->maxStubCurvSigma_.size());
+        assert(iCache->maxDR_.size() == iCache->floorDCA_.size());
+        assert(iCache->maxDR_.size() == iCache->maxStubGeomCurvSigma_.size());
+        assert(iCache->maxDR_.size() == iCache->maxStubInnerDoubletDCurv_.size());
+      }
       assert(iCache->fishboneCuts_.size() == iCache->maxDCurv_.size());
       assert(iCache->fishboneCuts_.size() == iCache->floorDCurv_.size());
       assert(iCache->fishboneCuts_.size() == iCache->startMaxInnerR_.size());
