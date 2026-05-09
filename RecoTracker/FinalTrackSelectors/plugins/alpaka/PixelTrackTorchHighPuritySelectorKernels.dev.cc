@@ -11,7 +11,6 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/radixSort.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
-#include "HeterogeneousCore/AlpakaMath/interface/float16_t.h"
 #include "DataFormats/TrackSoA/interface/TracksDevice.h"
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TracksSoACollection.h"
@@ -150,23 +149,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           nKeptHits[i] = numHits;
 
           // Fill per-track features
-          trackFeatures.chi2(i) = static_cast<cms::float16_t>(track.chi2());  // in the SoA chi2 is stored as chi2/ndof
-          trackFeatures.dzError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovDzDz)));
-          trackFeatures.dxyError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovDxyDxy)));
-          trackFeatures.eta(i) = static_cast<cms::float16_t>(track.eta());
-          trackFeatures.nHits(i) = static_cast<cms::float16_t>(numHits);
-          trackFeatures.phi(i) = static_cast<cms::float16_t>(state(kStatePhi));
-          trackFeatures.phiError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovPhiPhi)));
-          trackFeatures.pt(i) = static_cast<cms::float16_t>(track.pt());
-          trackFeatures.qOverPtError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovQOverPtQOverPt)));
-          trackFeatures.dzBS(i) = static_cast<cms::float16_t>(state(kStateDz));
-          trackFeatures.dxyBS(i) = static_cast<cms::float16_t>(state(kStateDxy));
-          trackFeatures.nLayers(i) = static_cast<cms::float16_t>(track.nLayers());
-          trackFeatures.cotThetaError(i) = static_cast<cms::float16_t>(xtd::sqrt(cov(kCovCotThetaCotTheta)));
-          trackFeatures.covCotThetaDz(i) = static_cast<cms::float16_t>(cov(kCovCotThetaDz));
-          trackFeatures.covDxyQOverPt(i) = static_cast<cms::float16_t>(cov(kCovDxyQOverPt));
-          trackFeatures.covPhiDxy(i) = static_cast<cms::float16_t>(cov(kCovPhiDxy));
-          trackFeatures.covPhiQOverPt(i) = static_cast<cms::float16_t>(cov(kCovPhiQOverPt));
+          trackFeatures.chi2(i) = track.chi2();  // in the SoA chi2 is stored as chi2/ndof
+          trackFeatures.dzError(i) = xtd::sqrt(cov(kCovDzDz));
+          trackFeatures.dxyError(i) = xtd::sqrt(cov(kCovDxyDxy));
+          trackFeatures.eta(i) = track.eta();
+          trackFeatures.nHits(i) = numHits;
+          trackFeatures.phi(i) = state(kStatePhi);
+          trackFeatures.phiError(i) = xtd::sqrt(cov(kCovPhiPhi));
+          trackFeatures.pt(i) = track.pt();
+          trackFeatures.qOverPtError(i) = xtd::sqrt(cov(kCovQOverPtQOverPt));
+          trackFeatures.dzBS(i) = state(kStateDz);
+          trackFeatures.dxyBS(i) = state(kStateDxy);
+          trackFeatures.nLayers(i) = track.nLayers();
+          trackFeatures.cotThetaError(i) = xtd::sqrt(cov(kCovCotThetaCotTheta));
+          trackFeatures.covCotThetaDz(i) = cov(kCovCotThetaDz);
+          trackFeatures.covDxyQOverPt(i) = cov(kCovDxyQOverPt);
+          trackFeatures.covPhiDxy(i) = cov(kCovPhiDxy);
+          trackFeatures.covPhiQOverPt(i) = cov(kCovPhiQOverPt);
         }
         // Case 2: padding entries --> fill with 0s for inference
         else {
@@ -287,7 +286,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       for (auto i : cms::alpakatools::uniform_elements(acc, nValid)) {
         nKeptHits_copy[i] = nKeptHits[i];
         const auto score = trackScores[i].score();
-        selectionMask[i] = (score >= static_cast<cms::float16_t>(scoreThreshold)) ? 1 : 0;
+        selectionMask[i] = (score >= scoreThreshold) ? 1 : 0;
       }
     }
   };

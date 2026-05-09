@@ -265,7 +265,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       batch.outputs.add<PixelTrackScoresSoA>("track_scores", i_batch, score_record.score());
 
-      model_.forward(queue, batch.inputs, batch.outputs);
+      model_.forward(queue, batch.inputs, batch.outputs, ::torch::kHalf);
     }
 
     // 4. Score-based filtering
