@@ -78,7 +78,7 @@ namespace torchtest {
 
     auto m_path = edm::FileInPath(modelPath).fullPath();
     forEachCudaDevice([&](auto dev) {
-      auto m = cms::torch::Model(m_path);
+      auto m = cms::torch::Model(m_path, /*auto_freeze=*/false);
       m.to(dev);
 
       CPPUNIT_ASSERT_EQUAL(dev, m.device());
@@ -95,7 +95,7 @@ namespace torchtest {
 
     auto m_path = edm::FileInPath(modelPath).fullPath();
     forEachCudaDevice([&](auto dev) {
-      auto m = cms::torch::Model(m_path);
+      auto m = cms::torch::Model(m_path, /*auto_freeze=*/false);
       m.to(dev, true);
 
       CPPUNIT_ASSERT_EQUAL(dev, m.device());
@@ -147,7 +147,7 @@ namespace torchtest {
       auto torch_stream = c10::cuda::getStreamFromExternal(stream, dev.index());
       c10::cuda::setCurrentCUDAStream(torch_stream);
 
-      auto m = cms::torch::Model(m_path);
+      auto m = cms::torch::Model(m_path, /*auto_freeze=*/false);
       m.to(dev, true);
 
       auto inputs = std::vector<torch::IValue>();
