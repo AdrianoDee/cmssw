@@ -7,7 +7,7 @@ hltPhase2PixelTrackTorchHighPuritySelector = cms.EDProducer('PixelTrackTorchHigh
     minNumberOfHits = cms.int32(0),
     avgHitsPerTrack = cms.int32(8),
     minimumTrackQuality = cms.string('tight'),
-    model = cms.FileInPath('RecoTracker/FinalTrackSelectors/data/track-only_classifier_new-patatrack_FP16.pt'),
+    model = cms.FileInPath('RecoTracker/FinalTrackSelectors/data/PixelTrackTorchHighPuritySelector/pixel_track_classifier_FP16.pt'),
     scoreThreshold = cms.double(0.4),
     batchSize = cms.int32(4_992)
 )
