@@ -773,21 +773,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       alpaka::wait(queue);
       std::cout << "Kernel_rejectDuplicate   -> done!" << std::endl;
 #endif
-
-      alpaka::exec<Acc1D>(queue,
-                          workDiv1D,
-                          Kernel_sharedHitCleaner<TrackerTraits>{},
-                          hh,
-                          this->device_layerStarts_->data(),
-                          tracks_view,
-                          this->m_params.algoParams_.minHitsForSharingCut_,
-                          this->m_params.algoParams_.dupPassThrough_,
-                          this->device_hitToTuple_->data());
+      // Only run if the cut is doing something
+      if (this->m_params.algoParams_.minHitsForSharingCut_ > 1) {
+        alpaka::exec<Acc1D>(queue,
+                            workDiv1D,
+                            Kernel_sharedHitCleaner<TrackerTraits>{},
+                            hh,
+                            this->device_layerStarts_->data(),
+                            tracks_view,
+                            this->m_params.algoParams_.minHitsForSharingCut_,
+                            this->m_params.algoParams_.dupPassThrough_,
+                            this->device_hitToTuple_->data());
 #ifdef GPU_DEBUG
-      alpaka::wait(queue);
-      std::cout << "Kernel_sharedHitCleaner   -> done!" << std::endl;
+        alpaka::wait(queue);
+        std::cout << "Kernel_sharedHitCleaner   -> done!" << std::endl;
 #endif
-      if (!(this->m_params.algoParams_.disableTripletCleaner_) && (this->m_params.algoParams_.minLayersPerNtuplet_ > 3)) {
+      }
+
+      if (!(this->m_params.algoParams_.disableTripletCleaner_) &&
+          (this->m_params.algoParams_.minLayersPerNtuplet_ > 3)) {
         if (this->m_params.algoParams_.useSimpleTripletCleaner_) {
           numberOfBlocks =
               cms::alpakatools::divide_up_by(int(nhits * this->m_params.algoParams_.avgHitsPerTrack_) + 1, blockSize);
