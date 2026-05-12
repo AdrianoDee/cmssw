@@ -90,7 +90,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         uint8_t category;
         if (isBarrel) {
           category = 0;
-        } else if (!isFwdEndcap) {
+        } else if (isFwdEndcap) {
           category = 1;  // Backward (z < 0)
         } else {
           category = 2;  // Forward (z > 0)
@@ -284,7 +284,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       for (const auto& mod : modules) {
         if (mod.category == 0)
           nBarrel++;
-        else if (mod.category == 1)
+        else if (mod.category == 2)
           nBackward++;
         else
           nForward++;
