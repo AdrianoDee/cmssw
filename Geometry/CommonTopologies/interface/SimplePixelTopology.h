@@ -477,13 +477,14 @@ namespace phase2PixelTopology {
       0.003, 0.003, 0.003                                                                  // OT layers
   };
 
-  // Extended arrays for Phase2OTStubs (44 layers: 28 pixel + 6 OT barrel + 10 OT disks)
-  constexpr uint32_t nLayersPhase2OTStubs = 44;
+  // Extended arrays for Phase2OTStubs (54 layers: 28 pixel + 6 OT barrel + 20 OT disks)
+  constexpr uint32_t nLayersPhase2OTStubs = 54;
   HOST_DEVICE_CONSTANT float maxDCAPhase2OTStubs[nPairsTot] = {
       0.15,  //BPix1
       0.25, 0.20, 0.20, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
       0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,  // Pixel layers (28 total)
       0.10, 0.10, 0.10, 0.10, 0.10, 0.10,  // OT barrel layers (6)
+      0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10,  // OT disk layers (10)
       0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10  // OT disk layers (10)
   };
 
@@ -860,7 +861,9 @@ namespace phase2PixelTopology {
       false, false, false, false, false, false, false, false, false, false, false, false,  // Backward pixel (16-27)
       true, true, true, true, true, true,    // OT barrel layers 28-33
       false, false, false, false, false,     // OT backward disks 34-38
-      false, false, false, false, false      // OT forward disks 39-43
+      false, false, false, false, false,     // OT forward disks 39-43
+      false, false, false, false, false,     // OT backward disks
+      false, false, false, false, false      // OT forward disks
   };
 
   // Geometric-vs-stub kappa significance cut for Phase2OTStubs layers
@@ -872,7 +875,8 @@ namespace phase2PixelTopology {
       -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,            // Backward pixel (16-27)
       // 6 OT barrel layers: 5.0 (placeholder)
       5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
-      // 10 OT endcap disks: 5.0 (placeholder)
+      // 20 OT endcap disks: 5.0 (placeholder)
+      5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0,
       5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0
   };
 
@@ -1092,7 +1096,7 @@ namespace pixelTopology {
   struct Phase2OTStubs : public Phase2OT {
     // Extended Phase-2 configuration using OT stubs (barrel + disks) instead of P-side hits
     // CA layers: 28 pixel + 6 OT barrel + 10 OT disks (5 per side) = 44 total
-    static constexpr uint32_t numberOfLayers = 44;
+    static constexpr uint32_t numberOfLayers = phase2PixelTopology::nLayersPhase2OTStubs;
     // Total modules: 4000 pixel + 13200 OT (7288 barrel + 2956 backward + 2956 forward)
     static constexpr uint32_t numberOfModules = phase2PixelTopology::nModulesTotStubs;
 
