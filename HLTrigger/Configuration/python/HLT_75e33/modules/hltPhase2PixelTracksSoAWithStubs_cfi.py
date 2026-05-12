@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
 # list of layers to exclude from the CA (empty list doesn't exclude)
-layersToExclude = [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53]
+layersToExclude = [35, 37, 39, 41, 43, 45, 47, 49, 51, 53]
 
 # layers for Phase2 with OT stubs
 # CA layers: 28 pixel + 6 OT barrel + 10 OT disks = 44 total
