@@ -29,7 +29,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                   uint32_t const* __restrict__ offsets,
                                   PhiBinner<TrackerTraits> const* phiBinner,
                                   HitToCell* outerHitHisto,
-                                  uint32_t* __restrict__ pipelineCounters) const {
+                                  uint32_t* __restrict__ pipelineCounters,
+                                  MapToHitConstView maskView) const {
       doubletsFromHisto<TrackerTraits>(acc,
                                        maxNumOfDoublets,
                                        cells,
@@ -41,7 +42,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                        offsets,
                                        phiBinner,
                                        outerHitHisto,
-                                       pipelineCounters);
+                                       pipelineCounters,
+                                       maskView);
     }
   };
 

@@ -53,13 +53,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDGetToken<reco::StubsSoACollection> stubsToken_;
 
     const device::EDPutToken<reco::TrackingRecHitsSoACollection> outputRecHitsSoAToken_;
+    const device::EDPutToken<reco::TrackingRecHitsMaskingCollection> outputRecHitsMaskToken_;
   };
 
   SiPixelRecHitsStubsMerger::SiPixelRecHitsStubsMerger(const edm::ParameterSet& iConfig)
       : EDProducer(iConfig),
         pixelRecHitToken_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitsSoA"))),
         stubsToken_(consumes(iConfig.getParameter<edm::InputTag>("stubsSoA"))),
-        outputRecHitsSoAToken_(produces()) {}
+        outputRecHitsSoAToken_(produces()),
+        outputRecHitsMaskToken_(produces()) {}
 
   void SiPixelRecHitsStubsMerger::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
@@ -74,6 +76,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // Module count for Phase2OTStubs (from SimplePixelTopology)
     constexpr uint32_t nModulesCA = phase2PixelTopology::nModulesTotStubs;  // 17200
     constexpr uint32_t nPixelModules = phase2PixelTopology::nModulesPix;   // 4000
+
+    struct LaunchZerosPixelMask {
+    template <typename TAcc, typename MaskView>
+      ALPAKA_FN_ACC void operator()(const TAcc& acc,
+                                    MaskView mask) const {
+        for(uint32_t ic : cms::alpakatools::independent_group_elements(acc, mask.metadata().size())){
+          assert(ic < (uint32_t)mask.metadata().size());
+          mask[ic].recHitMask() = 0;
+        }
+      }
+    };
 
     // Kernel to initialize stub fields for pixel hits (set to zero/false)
     struct InitializePixelStubFieldsKernel {
@@ -354,6 +367,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // Update cached information and emit
     output.updateFromDevice(queue);
     iEvent.emplace(outputRecHitsSoAToken_, std::move(output));
+
+    auto mask_d = reco::TrackingRecHitsMaskingCollection(queue, static_cast<uint32_t>(output.nHits()));
+
+    uint32_t threadsZeroPixelMask = 128;
+    uint32_t blocksZeroPixelMask = static_cast<uint32_t>(output.nHits());
+    auto workDivZeroPixelMask = cms::alpakatools::make_workdiv<Acc1D>(blocksZeroPixelMask, threadsZeroPixelMask);
+    alpaka::exec<Acc1D>(queue, workDivZeroPixelMask, LaunchZerosPixelMask{}, mask_d.view());
+
+    // create masking vector with zeros and emplace in the event
+    iEvent.emplace(outputRecHitsMaskToken_, std::move(mask_d));
+
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

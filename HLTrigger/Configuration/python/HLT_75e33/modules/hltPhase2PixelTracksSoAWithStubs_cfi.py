@@ -225,6 +225,9 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     otRecHitsSrc = cms.InputTag('hltPixelSeedingOTRecHitsSoA'),
     stubsSrc = cms.InputTag('hltOTStubProducer'),
 
+    hitMask = cms.InputTag('hltPhase2PixelRecHitsStubsMerger'),
+    iterationName = cms.string('promptHighPt'),
+
     # Container size parameters
     avgHitsPerTrack = cms.double(10.0),   # pixel+OT tracks avg ~7 hits, max ~14
     avgCellsPerHit = cms.double(23),     # ~12% margin over peak ratio 20.6 (from 1k ttbar PU200)

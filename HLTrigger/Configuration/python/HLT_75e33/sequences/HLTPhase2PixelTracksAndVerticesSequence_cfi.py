@@ -121,6 +121,11 @@ from ..modules.hltPhase2PixelRecHitsStubsMerger_cfi import (
 from ..modules.hltSiPixelClusters_cfi import hltSiPixelClusters
 from ..modules.hltSiPixelRecHits_cfi import hltSiPixelRecHits
 
+from ..modules.hltPhase2PixelTrackHighPtMasking_cfi import hltPhase2PixelTrackHighPtMasking
+from ..modules.hltPhase2PixelTracksSoALowPt_cfi import hltPhase2PixelTracksSoALowPt
+from ..modules.hltPhase2PixelTrackTorchHighPuritySelectorLowPt_cfi import hltPhase2PixelTrackTorchHighPuritySelectorLowPt
+from ..modules.hltPhase2PixelTracksSoAMerger_cfi import hltPhase2PixelTracksSoAMerger
+
 _HLTPhase2PixelTracksAndVerticesSequenceCAStubs = cms.Sequence(
     HLTBeamSpotSequence
     + hltPhase2PixelTracksAndHighPtStepTrackingRegions  # needed by highPtTripletStep iteration
@@ -133,6 +138,12 @@ _HLTPhase2PixelTracksAndVerticesSequenceCAStubs = cms.Sequence(
     + hltPhase2PixelRecHitsStubsMerger
     + hltPhase2PixelTracksSoA  # Stub CA via modifier (label preserved)
     + hltPhase2PixelTrackTorchHighPuritySelector
+    # USED FOR MASKING
+    + hltPhase2PixelTrackHighPtMasking
+    + hltPhase2PixelTracksSoALowPt
+    + hltPhase2PixelTrackTorchHighPuritySelectorLowPt
+    + hltPhase2PixelTracksSoAMerger
+    # USED FOR MASKING
     # +hltPhase2PixelTrackSoATableProducer
     + hltPhase2PixelTracks
     + HLTPhase2PixelVertexingSequence # Vertexing from CAExtension tracks

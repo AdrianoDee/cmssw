@@ -27,7 +27,7 @@
 #include <vector>
 
 //#define HITS_DEBUG
-#define P_HIT_POSITION_DEBUG  // Compare P-hit positions with PS stub positions
+// #define P_HIT_POSITION_DEBUG  // Compare P-hit positions with PS stub positions
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 

@@ -4,7 +4,8 @@ import FWCore.ParameterSet.Config as cms
 # Converts SoA tracks to legacy reco::Track with stub expansion
 hltPhase2PixelTracksWithStubs = cms.EDProducer("PixelTrackProducerFromSoAAlpaka",
     beamSpot = cms.InputTag("hltOnlineBeamSpot"),
-    trackSrc = cms.InputTag("hltPhase2PixelTrackTorchHighPuritySelector"),
+    # trackSrc = cms.InputTag("hltPhase2PixelTrackTorchHighPuritySelector"),
+    trackSrc = cms.InputTag("hltPhase2PixelTracksSoAMerger"),
     pixelRecHitLegacySrc = cms.InputTag("hltSiPixelRecHits"),
     outerTrackerRecHitSrc = cms.InputTag("hltSiPhase2RecHits"),
     otRecHitsSoASrc = cms.InputTag("hltPixelSeedingOTRecHitsSoA"),

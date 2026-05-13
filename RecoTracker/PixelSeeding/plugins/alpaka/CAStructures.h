@@ -55,6 +55,8 @@ namespace caStructures {
   using HitModulesConstView = ::reco::HitModuleSoAConstView;
   using HitsConstView = ::reco::TrackingRecHitConstView;
 
+  using MapToHitConstView = ::reco::TrackingRecHitsMaskingConstView;
+
   // Tracks data formats
   using TkSoAView = ::reco::TrackSoAView;
   using TkHitsSoAView = ::reco::TrackHitSoAView;

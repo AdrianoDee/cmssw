@@ -23,6 +23,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::reco {
   using TrackingRecHitsSoACollection = std::conditional_t<std::is_same_v<Device, alpaka::DevCpu>,
                                                           ::reco::TrackingRecHitHost,
                                                           ::reco::TrackingRecHitDevice<Device>>;
+
+  using TrackingRecHitsMaskingCollection = std::conditional_t<std::is_same_v<Device, alpaka::DevCpu>,
+                                                              ::reco::TrackingRecHitsMaskingHost,
+                                                              ::reco::TrackingRecHitsMaskingDevice<Device>>;
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::reco
 
 namespace cms::alpakatools {
@@ -89,8 +93,26 @@ namespace cms::alpakatools {
     }
   };
 
+  template <typename TDevice>
+  struct CopyToHost<::reco::TrackingRecHitsMaskingDevice<TDevice>> {
+    template <typename TQueue>
+    static auto copyAsync(TQueue& queue, ::reco::TrackingRecHitsMaskingDevice<TDevice> const& deviceData) {
+      auto nHits = deviceData.view().metadata().size();
+
+      reco::TrackingRecHitsMaskingHost hostData(queue, nHits);
+
+      alpaka::memcpy(queue, hostData.buffer(), deviceData.buffer());
+
+      return hostData;
+    }
+
+    // No postCopy needed - host data is already synchronized
+    static void postCopy(reco::TrackingRecHitsMaskingHost&) {}
+  };
+
 }  // namespace cms::alpakatools
 
 ASSERT_DEVICE_MATCHES_HOST_COLLECTION(reco::TrackingRecHitsSoACollection, reco::TrackingRecHitHost);
+ASSERT_DEVICE_MATCHES_HOST_COLLECTION(reco::TrackingRecHitsMaskingCollection, reco::TrackingRecHitsMaskingHost);
 
 #endif  // DataFormats_TrackingRecHitSoA_interface_alpaka_TrackingRecHitsSoACollection_h

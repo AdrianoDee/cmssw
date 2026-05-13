@@ -182,6 +182,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
 
+    using MapToHit = reco::TrackingRecHitsMaskingCollection;
+
     using TkSoAHost = ::reco::TracksHost;
     using TkSoADevice = reco::TracksSoACollection;
 
@@ -583,6 +585,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> tokenField_;
     const device::EDGetToken<HitsOnDevice> tokenHit_;
     const device::EDPutToken<TkSoADevice> tokenTrack_;
+    const device::EDGetToken<MapToHit> tokenHitMask_;
 
     // Conditional tokens for OT stubs (only for Phase2OTStubs)
     [[no_unique_address]] std::conditional_t<std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>,
@@ -595,6 +598,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const ::reco::FormulaEvaluator maxNumberOfDoublets_;
     const ::reco::FormulaEvaluator maxNumberOfTuples_;
 
+    const pixelTrack::Iteration iterationName_;
+
     Algo deviceAlgo_;
   };
 
@@ -605,8 +610,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         tokenField_(esConsumes()),
         tokenHit_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
         tokenTrack_(produces()),
+        tokenHitMask_(consumes(iConfig.getParameter<edm::InputTag>("hitMask"))),
         maxNumberOfDoublets_(iConfig.getParameter<std::string>("maxNumberOfDoublets")),
         maxNumberOfTuples_(iConfig.getParameter<std::string>("maxNumberOfTuples")),
+        iterationName_(pixelTrack::iterationByName(iConfig.getParameter<std::string>("iterationName"))),
         deviceAlgo_(iConfig) {
     iCache->tokenGeometry_ = esConsumes<edm::Transition::BeginRun>();
     iCache->tokenTopology_ = esConsumes<edm::Transition::BeginRun>();
@@ -623,6 +630,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::ParameterSetDescription desc;
 
     desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingAlpaka"));
+    desc.add<edm::InputTag>("hitMask", edm::InputTag("hltPhase2PixelRecHitsExtendedSoA")); // This is just an example, it has to be changed for each tracking iteration
+    desc.add<std::string>("iterationName", std::string("promptHighPt")); // This is just an example, it has to be changed for each tracking iteration
 
     // Add OT input tags for Phase2OTStubs configuration
     if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
@@ -661,16 +670,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
              hits.nHits());
 #endif
 
+      auto const& mask = iEvent.get(tokenHitMask_);
+
       // Conditionally pass OT collections for stub-based tracking
       if constexpr (std::is_same_v<pixelTopology::Phase2OTStubs, TrackerTraits>) {
         auto const& otRecHits = iEvent.get(tokenOTRecHits_);
         auto const& stubs = iEvent.get(tokenStubs_);
         iEvent.emplace(
             tokenTrack_,
-            deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue(), otRecHits, stubs));
+            deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, mask, iterationName_, iEvent.queue(), otRecHits, stubs));
       } else {
         iEvent.emplace(tokenTrack_,
-                       deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, iEvent.queue()));
+                       deviceAlgo_.makeTuplesAsync(hits, geometry, bf, maxDoublets, maxTuples, mask, iterationName_, iEvent.queue()));
       }
 
     } else {
