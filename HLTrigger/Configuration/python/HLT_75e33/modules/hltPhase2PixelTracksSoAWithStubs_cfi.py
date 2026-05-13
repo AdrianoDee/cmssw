@@ -199,16 +199,16 @@ layerPairs = [
     # r-range: 20-115 cm (~15% margin over actual 23-110 cm disk extent)
     # maxDR=60: covers full disk r-extent with margin
     # Signed dz: enforces correct z-direction AND constrains to actual disk separations
-    [ 34, 36, False, False,   2500,     20,    115,      20,     115,  60.0,  15.0,   50.0,   0.85,   18.0,       6.5,       5.0,    0.1,   0.005,  0.50, 0.000],
-    [ 36, 38, False, False,   2500,     20,    115,      20,     115,  60.0,  15.0,   50.0,   0.85,   18.0,       5.6,       5.0,    0.1,   0.005,  0.50, 0.000],
-    [ 38, 40, False, False,   2500,     20,    115,      20,     115,  60.0,  15.0,   50.0,   0.85,   18.0,       5.4,       5.0,    0.1,   0.005,  0.50, 0.000],
-    [ 40, 42, False, False,   2500,     20,    115,      20,     115,  60.0,  15.0,   50.0,   0.85,   18.0,       6.0,       5.0,    0.1,   0.005,  0.50, 0.000],
+    [ 34, 36, False, False,   2500,     20,    115,      20,     115,  60.0,  15.0,   50.0,   0.85,   18.0,       6.5,       5.0,    0.1,   0.02,  0.50, 0.000],
+    [ 36, 38, False, False,   2500,     20,    115,      20,     115,  60.0,  15.0,   50.0,   0.85,   18.0,       5.6,       5.0,    0.1,   0.02,  0.50, 0.000],
+    [ 38, 40, False, False,   2500,     20,    115,      20,     115,  60.0,  15.0,   50.0,   0.85,   18.0,       5.4,       5.0,    0.1,   0.02,  0.50, 0.000],
+    [ 40, 42, False, False,   2500,     20,    115,      20,     115,  60.0,  15.0,   50.0,   0.85,   18.0,       6.0,       5.0,    0.1,   0.02,  0.50, 0.000],
     # Forward disk to disk consecutive connections (layers 39-43)
     # For forward disks: dz > 0 (moving to more positive z)
-    [ 44, 46, False, False,   2500,     20,    115,      20,     115,  60.0,  -50.0,  -15.0,   0.85,   18.0,       6.5,       5.0,    0.1,   0.005,  0.50, 0.000],
-    [ 46, 48, False, False,   2500,     20,    115,      20,     115,  60.0,  -50.0,  -15.0,   0.85,   18.0,       5.6,       5.0,    0.1,   0.005,  0.50, 0.000],
-    [ 48, 50, False, False,   2500,     20,    115,      20,     115,  60.0,  -50.0,  -15.0,   0.85,   18.0,       5.4,       5.0,    0.1,   0.005,  0.50, 0.000],
-    [ 50, 52, False, False,   2500,     20,    115,      20,     115,  60.0,  -50.0,  -15.0,   0.85,   18.0,       6.0,       5.0,    0.1,   0.005,  0.50, 0.000],
+    [ 44, 46, False, False,   2500,     20,    115,      20,     115,  60.0,  -50.0,  -15.0,   0.85,   18.0,       6.5,       5.0,    0.1,   0.02,  0.50, 0.000],
+    [ 46, 48, False, False,   2500,     20,    115,      20,     115,  60.0,  -50.0,  -15.0,   0.85,   18.0,       5.6,       5.0,    0.1,   0.02,  0.50, 0.000],
+    [ 48, 50, False, False,   2500,     20,    115,      20,     115,  60.0,  -50.0,  -15.0,   0.85,   18.0,       5.4,       5.0,    0.1,   0.02,  0.50, 0.000],
+    [ 50, 52, False, False,   2500,     20,    115,      20,     115,  60.0,  -50.0,  -15.0,   0.85,   18.0,       6.0,       5.0,    0.1,   0.02,  0.50, 0.000],
 ]
 
 # find the layerPairs that contain a layer that is excluded
@@ -292,11 +292,11 @@ hltPhase2PixelTracksSoAWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStu
     ),
 
     tripletCuts = cms.PSet(
+        maxStubGeomCurvSigma     = cms.vdouble([lp[15] for lp in layerPairsStubs]),
+        maxStubInnerDoubletDCurv = cms.vdouble([lp[16] for lp in layerPairsStubs]),
         maxRZTolerance           = cms.vdouble([lp[17] for lp in layerPairsStubs]),
         maxDCA                   = cms.vdouble([lp[18] for lp in layerPairsStubs]),
         floorDCA                 = cms.vdouble([lp[19] for lp in layerPairsStubs]),
-        maxStubGeomCurvSigma     = cms.vdouble([lp[15] for lp in layerPairsStubs]),
-        maxStubInnerDoubletDCurv = cms.vdouble([lp[16] for lp in layerPairsStubs]),
         
         ptmin       = cms.double(0.9),
         maxCurv     = cms.double(0.02),
