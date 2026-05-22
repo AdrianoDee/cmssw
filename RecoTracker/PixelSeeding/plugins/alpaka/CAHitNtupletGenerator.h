@@ -22,6 +22,7 @@
 
 #include "CACell.h"
 #include "CAHitNtupletGeneratorKernels.h"
+#include "CAITExtend/CAITExtendKernels.h"
 #include "HelixFit.h"
 
 namespace edm {
@@ -88,6 +89,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   private:
     Params m_params;
+    caITExtend::ExtensionConfig m_inwardExtension;
   };
 
   class CAHitMaskingAndMerger {

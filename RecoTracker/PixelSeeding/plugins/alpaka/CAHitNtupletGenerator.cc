@@ -45,6 +45,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "Warning: this will be a float in the final algorithm, therefore 0.9999999 will become 1 == no merging!");
 
       // ---------------------------------------------
+      // IT inward-extension PSet (optional; off by default)
+      // ---------------------------------------------
+      edm::ParameterSetDescription ext;
+      ext.add<bool>("enable", false);
+      // Default to a valid existing iteration / quality so iterationByName
+      // doesn't throw at producer construction even when enable=False.
+      // The cfg should override these when enable=True.
+      ext.add<std::string>("sourceIteration", "promptLowPt");
+      ext.add<std::string>("extendedIteration", "promptLowPt");
+      ext.add<std::string>("minQuality", "edup");
+      ext.add<double>("nSigmaPhi", 3.0);
+      ext.add<double>("nSigmaZ", 3.0);
+      ext.add<double>("floorDPhi", 0.01);
+      ext.add<double>("floorDZ", 0.20);
+      ext.add<double>("maxDPhi", 0.10);
+      ext.add<double>("maxDZ", 2.0);
+      ext.add<double>("kappaSigmaCut", 5.0);
+      ext.add<double>("scoreFloor2Phi", 1.e-6);
+      ext.add<double>("scoreFloor2Z", 1.e-4);
+      ext.add<double>("materialDensity", 0.01);
+      ext.add<unsigned int>("maxLayersPerTrack", 16);
+      ext.add<unsigned int>("maxNewLayers", 4);
+      ext.add<unsigned int>("refitMinNewHits", 1);
+      ext.add<bool>("doRefit", true);
+      ext.add<bool>("dropOnEmptyExtension", false);
+      desc.add<edm::ParameterSetDescription>("inwardExtension", ext)
+          ->setComment("IT inward-extension stage: attach pixel hits to OT-stub displaced tracks and refit");
+
+      // ---------------------------------------------
       // CA Graph configuration
       // ---------------------------------------------
       edm::ParameterSetDescription graphParams;
@@ -361,10 +390,48 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   using namespace std;
 
+  namespace {
+    caITExtend::ExtensionConfig makeInwardExtensionConfig(edm::ParameterSet const& cfg) {
+      caITExtend::ExtensionConfig out{};
+      if (!cfg.existsAs<edm::ParameterSet>("inwardExtension")) {
+        out.enable = false;
+        return out;
+      }
+      auto const& ext = cfg.getParameterSet("inwardExtension");
+      out.enable = ext.getParameter<bool>("enable");
+      // Short-circuit when disabled so invalid (e.g. placeholder) iteration /
+      // quality strings in the default PSet don't trip iterationByName /
+      // qualityByName at startup.  When enable=False the rest of out is
+      // never read.
+      if (!out.enable)
+        return out;
+      out.sourceIteration = ::pixelTrack::iterationByName(ext.getParameter<std::string>("sourceIteration"));
+      out.extendedIteration = ::pixelTrack::iterationByName(ext.getParameter<std::string>("extendedIteration"));
+      out.minQuality = ::pixelTrack::qualityByName(ext.getParameter<std::string>("minQuality"));
+      out.nSigmaPhi = (float)ext.getParameter<double>("nSigmaPhi");
+      out.nSigmaZ = (float)ext.getParameter<double>("nSigmaZ");
+      out.floorDPhi = (float)ext.getParameter<double>("floorDPhi");
+      out.floorDZ = (float)ext.getParameter<double>("floorDZ");
+      out.maxDPhi = (float)ext.getParameter<double>("maxDPhi");
+      out.maxDZ = (float)ext.getParameter<double>("maxDZ");
+      out.kappaSigmaCut = (float)ext.getParameter<double>("kappaSigmaCut");
+      out.scoreFloor2Phi = (float)ext.getParameter<double>("scoreFloor2Phi");
+      out.scoreFloor2Z = (float)ext.getParameter<double>("scoreFloor2Z");
+      out.materialDensity = (float)ext.getParameter<double>("materialDensity");
+      out.maxLayersPerTrack = (uint16_t)ext.getParameter<unsigned int>("maxLayersPerTrack");
+      out.maxNewLayers = (uint16_t)ext.getParameter<unsigned int>("maxNewLayers");
+      out.refitMinNewHits = (uint16_t)ext.getParameter<unsigned int>("refitMinNewHits");
+      out.doRefit = ext.getParameter<bool>("doRefit");
+      out.dropOnEmptyExtension = ext.getParameter<bool>("dropOnEmptyExtension");
+      return out;
+    }
+  }  // namespace
+
   template <typename TrackerTraits>
   CAHitNtupletGenerator<TrackerTraits>::CAHitNtupletGenerator(const edm::ParameterSet& cfg)
       : m_params(makeCommonParams(cfg),
-                 TopologyCuts<TrackerTraits>::makeQualityCuts(cfg.getParameterSet("trackQualityCuts"))) {
+                 TopologyCuts<TrackerTraits>::makeQualityCuts(cfg.getParameterSet("trackQualityCuts"))),
+        m_inwardExtension(makeInwardExtensionConfig(cfg)) {
 #ifdef DUMP_GPU_TK_TUPLES
     printf("TK: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
            "tid",
@@ -583,8 +650,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitContainer = caStructures::HitContainerT<TrackerTraits>;
 
     const int32_t H = m_params.algoParams_.avgHitsPerTrack_;
+    // Reserve per-track headroom when the IT-inward extension is enabled for
+    // this iteration so the post-refit trackHits content fits without overlap.
+    const bool extActive = m_inwardExtension.enable && iterationName == m_inwardExtension.sourceIteration;
+    const int32_t HExt = extActive ? int32_t(m_inwardExtension.maxNewLayers) : 0;
 
-    reco::TracksSoACollection tracks(queue, int(nTracks), int(nTracks * H));
+    reco::TracksSoACollection tracks(queue, int(nTracks), int(nTracks * (H + HExt)));
 
     auto tracksView = tracks.view().tracks();
 
@@ -645,6 +716,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                      hits_d.offsetStubs());
     }
     kernels.classifyTuples(trackingHits, tracksView, iterationName, queue);
+
+    // ---------------------------------------------------------------------
+    // IT inward extension: for the displaced OT-only iteration only.
+    // 1. Build per-track IT-hit candidates via the helix-guided collector.
+    // 2. Pick the lowest-score chain (top-K + global enumeration).
+    // 3. Refit through the existing fitter on the extended hit lists.
+    // ---------------------------------------------------------------------
+    if (extActive) {
+      caITExtend::Kernels<TrackerTraits> ext(m_inwardExtension, nTracks, hits_d.offsetStubs(), queue);
+      ext.setOrigAvgHitsPerTrack(uint32_t(H));
+      ext.buildChains(tracksView, trackingHits, kernels.phiBinner(), bfield, queue);
+      if (m_inwardExtension.doRefit) {
+        ext.runRefit(fitter,
+                     tracksView,
+                     tracks.view().trackHits(),
+                     tracks.view().trackHits(),
+                     trackingHits,
+                     modules,
+                     otRecHits_d.view().otRecHits(),
+                     stubs_d.view().stubs(),
+                     trackingHits.metadata().size(),
+                     TrackerTraits::maxNumberOfQuadruplets,
+                     TrackerTraits::maxHitsOnTrack,
+                     queue);
+        // NOTE: we do NOT re-run kernels.classifyTuples() here.  That kernel
+        // reads nHits from `this->device_hitContainer_` (the *original* Tuples)
+        // which no longer reflects the extended hit lists, so it would apply
+        // the wrong chi2 threshold (triplet/quadruplet vs quintuplet).  The
+        // refit DOES update state/cov/chi2/pt/eta in tracksView, and the
+        // pre-refit quality classification is preserved.  v2 should add an
+        // overload classifyTuples(hits, tracks, iter, foundNtuplets, queue)
+        // that takes an explicit container, and call it with the new Tuples.
+      }
+    }
+
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "finished building pixel tracks on GPU" << std::endl;

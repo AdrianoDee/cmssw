@@ -311,6 +311,48 @@ caHitNtupletAlpakaPhase2OTStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2OTStub
         stubSigmaCuts = cms.vdouble([lp[12] for lp in layerPairsStubs]),
     ),
 
+    # IT-inward extension (OT-stub displaced iteration -> attach inner pixel hits).
+    # Off by default; enable only for the OT-only displaced iteration so prompt
+    # iterations pay zero cost.  See plugins/alpaka/CAITExtend/ for the kernels.
+    # Per-slot candidate cap is compile-time (CandidateSlot::capacity, currently
+    # 8 -- change in CAITExtendLayout.h if you need more).
+    inwardExtension = cms.PSet(
+        enable = cms.bool(False),
+        sourceIteration = cms.string("dispOTOnly"),
+        extendedIteration = cms.string("dispOTOnlyExtended"),
+        # See CollectorParams::minQuality in CAITCandidateCollector.h for the
+        # enum order.  `edup` (recommended) skips only NaN-fit / sub-doublet
+        # tracks; OT-only displaced tracks may park below `strict` when the
+        # downstream DNN discriminator is bypassed.
+        minQuality = cms.string("edup"),
+        # Per-layer window sizing:  Delta = clip(nSigma * sigma_propagated, floor, max)
+        nSigmaPhi = cms.double(3.0),
+        nSigmaZ = cms.double(3.0),
+        floorDPhi = cms.double(0.01),   # rad
+        floorDZ = cms.double(0.20),     # cm
+        maxDPhi = cms.double(0.10),     # rad  -- absolute cap, bounds memory
+        maxDZ = cms.double(2.00),       # cm   -- absolute cap, bounds memory
+        # Doublet curvature-consistency cut (mini-CA inside per-track set).
+        kappaSigmaCut = cms.double(5.0),
+        # Score floors to keep chi2 well-defined for very small sigmas.
+        scoreFloor2Phi = cms.double(1.e-6),
+        scoreFloor2Z = cms.double(1.e-4),
+        # Single uniform material density (x/X0 per cm), matches the convention
+        # used by BrokenLine for the MS term.
+        materialDensity = cms.double(0.01),
+        # Per-track caps -- bound memory via the (nTracks * maxLayersPerTrack)
+        # outer dimension.  Per-slot cap is compile-time (see above).
+        maxLayersPerTrack = cms.uint32(16),
+        maxNewLayers = cms.uint32(4),
+        # Refit only tracks that gained at least this many IT hits.  v1 keeps
+        # it at 1.  Raise to 2 if refit cost is too high.
+        refitMinNewHits = cms.uint32(1),
+        doRefit = cms.bool(True),
+        # If true, drop tracks that ended up with no IT hits (otherwise pass
+        # them through unchanged with iteration = sourceIteration).
+        dropOnEmptyExtension = cms.bool(False),
+    ),
+
     mightGet = cms.optional.untracked.vstring,
     alpaka = cms.untracked.PSet(
         backend = cms.untracked.string('')

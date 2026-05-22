@@ -166,6 +166,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     TupleMultiplicity const* tupleMultiplicity() const { return device_tupleMultiplicity_->data(); }
     HitContainer const* hitContainer() const { return device_hitContainer_->data(); }
     HitToCell const* hitToCell() const { return device_hitToCell_->data(); }
+    // PhiBinner of the unified hit collection -- consumed by the IT inward
+    // extension stage to query candidate hits in a (phi, z|r) window.
+    PhiBinner const* phiBinner() const { return device_hitPhiHist_->data(); }
 
     // Pipeline counter pointer: returns device pointer when enabled, nullptr otherwise
     uint32_t* pipelineCountersPtr() {
