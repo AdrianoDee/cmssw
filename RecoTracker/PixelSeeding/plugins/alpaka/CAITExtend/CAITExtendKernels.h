@@ -67,7 +67,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
   //        Invariant: counter[12] == counter[3] + counter[4].
   //   13 = tracks where at least one disk crossing was valid + box-OK
   //   14 = tracks where at least one barrel crossing was valid + box-OK
-  constexpr int kNExtCounters = 15;
+  //   15 = post-extension total trackHits content size (= newOff[actualN]);
+  //        set ONCE by thread 0 of kernelFillExtendedTrackHits.  Sentinel
+  //        confirming the kernel ran AND showing how many entries the
+  //        rebuilt TrackHitSoA holds.  0 => writeback never ran.
+  //   16 = number of new IT hits written to trackHits (sum over extended
+  //        tracks of chain.nHits) -- should equal counter[9] (totalNewHits).
+  //        Disagreement indicates IT hits never reached the output SoA.
+  constexpr int kNExtCounters = 17;
 
   // ============================================================================
   // Launcher class -- method bodies defined in CAITExtendKernels.dev.cc.

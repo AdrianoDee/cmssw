@@ -145,12 +145,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
                                   ::pixelTrack::Iteration sourceIter,
                                   ::pixelTrack::Iteration extendedIter,
                                   uint16_t refitMinNewHits,
-                                  uint32_t /*nTracksCapacity*/) const {
+                                  uint32_t /*nTracksCapacity*/,
+                                  uint32_t* __restrict__ extCounters) const {
       const uint32_t actualN = tracks.nTracks();
+      // Sentinel: thread 0 of block 0 stamps counters[15] = nTotal so we can
+      // confirm host-side that the kernel ran AND that newOff is sized as
+      // expected.  Use atomicMax in case other diagnostic kernels also write.
+      if (cms::alpakatools::once_per_grid(acc) && extCounters) {
+        extCounters[15] = newOff[actualN];
+      }
       for (auto trackIdx : cms::alpakatools::uniform_elements(acc, actualN)) {
         tracks[trackIdx].hitOffsets() = newOff[trackIdx + 1];
-        if (tracks[trackIdx].iteration() == sourceIter && chains[trackIdx].nHits >= refitMinNewHits)
+        if (tracks[trackIdx].iteration() == sourceIter && chains[trackIdx].nHits >= refitMinNewHits) {
           tracks[trackIdx].iteration() = extendedIter;
+          if (extCounters)
+            alpaka::atomicAdd(acc,
+                              &extCounters[16],
+                              uint32_t(chains[trackIdx].nHits),
+                              alpaka::hierarchy::Blocks{});
+        }
       }
       const auto nTotal = newOff[actualN];
       for (auto idx : cms::alpakatools::uniform_elements(acc, nTotal)) {

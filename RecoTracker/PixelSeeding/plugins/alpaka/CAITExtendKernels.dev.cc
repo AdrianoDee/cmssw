@@ -195,7 +195,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
                         cfg_.sourceIteration,
                         cfg_.extendedIteration,
                         cfg_.refitMinNewHits,
-                        nTracks_);
+                        nTracks_,
+                        counters_->data());
   }
 
   // Host-side counter readback + log.  Forces a sync via alpaka::wait.
@@ -224,6 +225,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
               << " sumHits=" << host[9]
               << " | cand=" << host[0]
               << " dropped=" << host[1]
+              << " | writeback: trackHitsTotal=" << host[15]
+              << " newHitsWritten=" << host[16]
+              << " (expect=" << host[9] << ")"
               << std::endl;
   }
 
