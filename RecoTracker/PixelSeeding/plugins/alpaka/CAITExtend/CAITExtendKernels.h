@@ -47,12 +47,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
     uint16_t refitMinNewHits;
     bool dropOnEmptyExtension;
     bool doRefit;
+    bool verbose;  // when true: host-side counter readback + log line after each event
   };
 
-  // Counters indexed: 0=candidates accepted, 1=candidates dropped (over cap),
-  // 2=chain-step rejected by kappa-sig, 3=tracks extended (>=1 new hit),
-  // 4=tracks tagged but not extended (fallback).
-  constexpr int kNExtCounters = 5;
+  // Diagnostic counters.  Indexed:
+  //   0  = candidate hits accepted into per-slot lists (collector)
+  //   1  = candidate hits dropped because slot was at cap (collector)
+  //   2  = chain steps rejected by kappa-significance (selector)
+  //   3  = tracks that gained >=1 IT hit (extended)
+  //   4  = tracks tagged by source iteration but ended with 0 IT hits (fallback)
+  //   5  = tracks extended with exactly 1 IT hit
+  //   6  = tracks extended with exactly 2 IT hits
+  //   7  = tracks extended with exactly 3 IT hits
+  //   8  = tracks extended with exactly 4 IT hits
+  //   9  = total IT hits attached (sum of chain.nHits across all extended tracks)
+  //   10 = valid tracks rejected by iteration filter        (funnel: top)
+  //   11 = valid tracks rejected by quality filter          (funnel: mid)
+  //   12 = valid tracks that entered the per-layer scan     (funnel: passed)
+  //        Invariant: counter[12] == counter[3] + counter[4].
+  //   13 = tracks where at least one disk crossing was valid + box-OK
+  //   14 = tracks where at least one barrel crossing was valid + box-OK
+  constexpr int kNExtCounters = 15;
 
   // ============================================================================
   // Launcher class -- method bodies defined in CAITExtendKernels.dev.cc.
@@ -110,6 +125,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
 
     ExtendedChain const* chainsDevice() const { return chains_->data(); }
     uint32_t const* countersDevice() const { return counters_->data(); }
+
+    // Host-side counter readback + log via edm::LogInfo.  Forces a queue sync
+    // -- call only when debugging (controlled by ExtensionConfig::verbose).
+    void logCounters(Queue& queue) const;
 
    private:
     ExtensionConfig cfg_;

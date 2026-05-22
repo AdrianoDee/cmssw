@@ -98,21 +98,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
       using Layout = ::caITExtend::Layout<LayoutTraits>;
 
       const auto blockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0];
+      // First gate: skip uninitialised SoA slots past the actual track count.
+      // (extCounters[10..12] are funnel counters that should only reflect
+      //  *real* tracks, not capacity overflow.)
+      if (blockIdx >= tracks.nTracks())
+        return;
       if (blockIdx >= nTracks)
         return;
       const tindex_type trackIdx = blockIdx;
+      const auto leader = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0];
 
       // Filter: only tracks tagged for inward extension.
-      if (tracks[trackIdx].iteration() != params.filterIter)
+      if (tracks[trackIdx].iteration() != params.filterIter) {
+        if (extCounters && leader == 0)
+          alpaka::atomicAdd(acc, &extCounters[10], 1u, alpaka::hierarchy::Blocks{});
         return;
+      }
       // Skip tracks below the configured minimum quality.  See the comment in
       // CollectorParams::minQuality for the enum order and recommended values.
       // The recommended default is `edup`: skips ONLY NaN-fit / sub-doublet
       // tracks (which stay at `bad`), letting everything else through --
       // including edup/dup/loose -- since the OT-only displaced iteration may
       // hold valid tracks at lower quality values.
-      if (tracks[trackIdx].quality() < params.minQuality)
+      if (tracks[trackIdx].quality() < params.minQuality) {
+        if (extCounters && leader == 0)
+          alpaka::atomicAdd(acc, &extCounters[11], 1u, alpaka::hierarchy::Blocks{});
         return;
+      }
+      // Passed both filters.
+      if (extCounters && leader == 0)
+        alpaka::atomicAdd(acc, &extCounters[12], 1u, alpaka::hierarchy::Blocks{});
 
       const ::reco::Vector5f state = tracks[trackIdx].state();
       const ::reco::Vector15f covPacked = tracks[trackIdx].covariance();
@@ -127,6 +142,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
 
       // ---- Disk side (outermost-z first) -----------------------------------
       const int nDisks = forwardSide ? Layout::kNForward : Layout::kNBackward;
+      bool anyDiskCrossed = false;
       for (int d = 0; d < nDisks; ++d) {
         if (slot >= params.maxLayersPerTrack)
           break;
@@ -139,12 +155,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
         // Box test on r at the disk plane.
         if (crossing.r < L.rMin || crossing.r > L.rMax)
           continue;
+        anyDiskCrossed = true;
         scanLayer<TAcc>(acc, hits, phiBinner, params, buffers, trackIdx, slot, L.caLayerIdx,
                         crossing, /*isBarrel=*/false, L.rMin, L.rMax, extCounters);
         ++slot;
       }
+      if (anyDiskCrossed && extCounters && leader == 0)
+        alpaka::atomicAdd(acc, &extCounters[13], 1u, alpaka::hierarchy::Blocks{});
 
       // ---- Barrel layers, outermost-inward --------------------------------
+      bool anyBarrelCrossed = false;
       for (int b = 0; b < Layout::kNBarrel; ++b) {
         if (slot >= params.maxLayersPerTrack)
           break;
@@ -155,13 +175,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
           continue;
         if (crossing.z < L.zMin || crossing.z > L.zMax)
           continue;
+        anyBarrelCrossed = true;
         scanLayer<TAcc>(acc, hits, phiBinner, params, buffers, trackIdx, slot, L.caLayerIdx,
                         crossing, /*isBarrel=*/true, L.zMin, L.zMax, extCounters);
         ++slot;
       }
+      if (anyBarrelCrossed && extCounters && leader == 0)
+        alpaka::atomicAdd(acc, &extCounters[14], 1u, alpaka::hierarchy::Blocks{});
 
-      // Mark remaining slots as unused.
-      const auto leader = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0];
+      // Mark remaining slots as unused.  `leader` is already defined at the
+      // top of this function -- reuse it.
       if (leader == 0) {
         for (uint16_t s = slot; s < params.maxLayersPerTrack; ++s) {
           const auto idx = trackIdx * params.maxLayersPerTrack + s;

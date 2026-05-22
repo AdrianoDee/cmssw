@@ -70,6 +70,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       ext.add<unsigned int>("refitMinNewHits", 1);
       ext.add<bool>("doRefit", true);
       ext.add<bool>("dropOnEmptyExtension", false);
+      ext.add<bool>("verbose", false)->setComment(
+          "If true: host-side counter readback + per-event log line "
+          "('cand/dropped/kappaRej/extended/fallback/ext1..4/totalNewHits'). "
+          "Forces a queue sync; use only for debugging.");
       desc.add<edm::ParameterSetDescription>("inwardExtension", ext)
           ->setComment("IT inward-extension stage: attach pixel hits to OT-stub displaced tracks and refit");
 
@@ -423,6 +427,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       out.refitMinNewHits = (uint16_t)ext.getParameter<unsigned int>("refitMinNewHits");
       out.doRefit = ext.getParameter<bool>("doRefit");
       out.dropOnEmptyExtension = ext.getParameter<bool>("dropOnEmptyExtension");
+      out.verbose = ext.getParameter<bool>("verbose");
       return out;
     }
   }  // namespace
@@ -740,15 +745,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                      TrackerTraits::maxNumberOfQuadruplets,
                      TrackerTraits::maxHitsOnTrack,
                      queue);
-        // NOTE: we do NOT re-run kernels.classifyTuples() here.  That kernel
-        // reads nHits from `this->device_hitContainer_` (the *original* Tuples)
-        // which no longer reflects the extended hit lists, so it would apply
-        // the wrong chi2 threshold (triplet/quadruplet vs quintuplet).  The
-        // refit DOES update state/cov/chi2/pt/eta in tracksView, and the
-        // pre-refit quality classification is preserved.  v2 should add an
-        // overload classifyTuples(hits, tracks, iter, foundNtuplets, queue)
-        // that takes an explicit container, and call it with the new Tuples.
       }
+      if (m_inwardExtension.verbose)
+        ext.logCounters(queue);
+      // NOTE: we do NOT re-run kernels.classifyTuples() here.  That kernel
+      // reads nHits from `this->device_hitContainer_` (the *original* Tuples)
+      // which no longer reflects the extended hit lists, so it would apply
+      // the wrong chi2 threshold (triplet/quadruplet vs quintuplet).  The
+      // refit DOES update state/cov/chi2/pt/eta in tracksView, and the
+      // pre-refit quality classification is preserved.  v2 should add an
+      // overload classifyTuples(hits, tracks, iter, foundNtuplets, queue)
+      // that takes an explicit container, and call it with the new Tuples.
     }
 
 #ifdef GPU_DEBUG

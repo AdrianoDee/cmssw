@@ -356,6 +356,9 @@ hltPhase2PixelTracksSoALowPtWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2
         refitMinNewHits = cms.uint32(1),
         doRefit = cms.bool(True),
         dropOnEmptyExtension = cms.bool(False),
+        # Verbose: prints per-event counters via edm::LogInfo("CAITExtend").
+        # Forces a queue sync -- turn off for performance runs.
+        verbose = cms.bool(True),
     ),
 
     mightGet = cms.optional.untracked.vstring,

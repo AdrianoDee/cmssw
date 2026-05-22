@@ -1,3 +1,6 @@
+#include <array>
+#include <iostream>
+
 #include <alpaka/alpaka.hpp>
 
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
@@ -193,6 +196,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
                         cfg_.extendedIteration,
                         cfg_.refitMinNewHits,
                         nTracks_);
+  }
+
+  // Host-side counter readback + log.  Forces a sync via alpaka::wait.
+  template <typename TrackerTraits>
+  void Kernels<TrackerTraits>::logCounters(Queue& queue) const {
+    std::array<uint32_t, kNExtCounters> host{};
+    auto hostView = cms::alpakatools::make_host_view(host.data(), kNExtCounters);
+    alpaka::memcpy(queue, hostView, *counters_);
+    alpaka::wait(queue);
+    const auto totalValid = host[10] + host[11] + host[12];
+    std::cout << "[ITExtend]"
+              << " | funnel: valid=" << totalValid
+              << " rejIter=" << host[10]
+              << " rejQual=" << host[11]
+              << " passed=" << host[12]
+              << " (=extended+fallback=" << (host[3] + host[4]) << ")"
+              << " | crossings: anyDisk=" << host[13]
+              << " anyBarrel=" << host[14]
+              << " | chain: extended=" << host[3]
+              << " fallback=" << host[4]
+              << " kappaRej=" << host[2]
+              << " | hist: ext1=" << host[5]
+              << " ext2=" << host[6]
+              << " ext3=" << host[7]
+              << " ext4=" << host[8]
+              << " sumHits=" << host[9]
+              << " | cand=" << host[0]
+              << " dropped=" << host[1]
+              << std::endl;
   }
 
   // Explicit instantiations -- one per TrackerTraits that CAHitNtupletGenerator

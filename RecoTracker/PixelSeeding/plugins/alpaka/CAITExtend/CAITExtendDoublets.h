@@ -236,8 +236,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
         }
         chains[trackIdx].nHits = out;
 
-        if (extCounters)
+        if (extCounters) {
+          // counter[3]   = tracks extended (>=1 IT hit)
+          // counter[5+k] = tracks extended with exactly (k+1) IT hits  (k = 0..3)
+          // counter[9]   = total IT hits attached (sum)
           alpaka::atomicAdd(acc, &extCounters[3], 1u, alpaka::hierarchy::Blocks{});
+          alpaka::atomicAdd(acc, &extCounters[9], uint32_t(out), alpaka::hierarchy::Blocks{});
+          if (out >= 1 && out <= 4)
+            alpaka::atomicAdd(acc, &extCounters[4 + out], 1u, alpaka::hierarchy::Blocks{});
+        }
       }
     }
 
