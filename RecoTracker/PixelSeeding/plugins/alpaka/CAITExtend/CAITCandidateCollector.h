@@ -101,7 +101,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
       // First gate: skip uninitialised SoA slots past the actual track count.
       // (extCounters[10..12] are funnel counters that should only reflect
       //  *real* tracks, not capacity overflow.)
-      if (blockIdx >= tracks.nTracks())
+      if (int(blockIdx) >= tracks.nTracks())
         return;
       if (blockIdx >= nTracks)
         return;
