@@ -112,7 +112,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
     extTuplesStorage_ = cms::alpakatools::make_device_buffer<SequentialContainerStorage[]>(queue, contentCap);
     extTuplesOffsets_ = cms::alpakatools::make_device_buffer<SequentialContainerOffsets[]>(queue, nTracks_ + 1);
 
-    const uint32_t multNOnes = uint32_t(maxHitsOnTrack) + 2;
+    // Account for IT-extended tracks: nHits can grow up to maxHitsOnTrack +
+    // maxNewLayers.  Multiplicity buckets [0..multNOnes-2] must cover that
+    // range, so allocate maxHitsOnTrack + maxNewLayers + 2 slots.
+    const uint32_t multNOnes = uint32_t(maxHitsOnTrack) + uint32_t(cfg_.maxNewLayers) + 2;
     extMult_ = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
     extMultStorage_ = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, nTracks_);
     extMultOffsets_ = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, multNOnes);

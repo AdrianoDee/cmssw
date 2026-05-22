@@ -36,16 +36,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
                                   caStructures::SequentialContainerOffsets* off,
                                   uint16_t refitMinNewHits,
                                   ::pixelTrack::Iteration sourceIter,
-                                  uint32_t nTracks) const {
-      for (auto trackIdx : cms::alpakatools::uniform_elements(acc, nTracks)) {
+                                  uint32_t /*nTracksCapacity*/) const {
+      // tracks.nTracks() is the actual filled count (set by Kernel_fillHitDetIndices).
+      // Iterating past it would read uninitialised hitOffsets and produce a
+      // garbage (unsigned-underflowed) nOld -- then the bucket key in the
+      // multiplicity count phase would exceed nOnes() and assert.
+      const uint32_t actualN = tracks.nTracks();
+      for (auto trackIdx : cms::alpakatools::uniform_elements(acc, actualN)) {
         const auto origStart = (trackIdx == 0) ? 0u : tracks[trackIdx - 1].hitOffsets();
         const auto origEnd = tracks[trackIdx].hitOffsets();
-        const uint32_t nOld = origEnd - origStart;
+        const uint32_t nOld = (origEnd >= origStart) ? (origEnd - origStart) : 0u;
         const bool sourceTagged = (tracks[trackIdx].iteration() == sourceIter);
         const uint32_t nNew =
             (sourceTagged && chains[trackIdx].nHits >= refitMinNewHits) ? chains[trackIdx].nHits : 0u;
         off[trackIdx + 1] = nOld + nNew;
       }
+      // off[i+1] for trackIdx >= actualN stays at 0 (from launchZero); after
+      // prefix scan those bucket sizes are zero and downstream kernels skip
+      // them via the (n == 0) guard.
     }
   };
 
@@ -65,11 +73,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
                                   caStructures::hindex_type* content,
                                   uint16_t refitMinNewHits,
                                   ::pixelTrack::Iteration sourceIter,
-                                  uint32_t nTracks) const {
-      for (auto trackIdx : cms::alpakatools::uniform_elements(acc, nTracks)) {
+                                  uint32_t /*nTracksCapacity*/) const {
+      const uint32_t actualN = tracks.nTracks();
+      for (auto trackIdx : cms::alpakatools::uniform_elements(acc, actualN)) {
         const auto origStart = (trackIdx == 0) ? 0u : tracks[trackIdx - 1].hitOffsets();
         const auto origEnd = tracks[trackIdx].hitOffsets();
-        const uint32_t nOld = origEnd - origStart;
+        const uint32_t nOld = (origEnd >= origStart) ? (origEnd - origStart) : 0u;
         const bool sourceTagged = (tracks[trackIdx].iteration() == sourceIter);
         const uint32_t nNew =
             (sourceTagged && chains[trackIdx].nHits >= refitMinNewHits) ? chains[trackIdx].nHits : 0u;
@@ -136,13 +145,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
                                   ::pixelTrack::Iteration sourceIter,
                                   ::pixelTrack::Iteration extendedIter,
                                   uint16_t refitMinNewHits,
-                                  uint32_t nTracks) const {
-      for (auto trackIdx : cms::alpakatools::uniform_elements(acc, nTracks)) {
+                                  uint32_t /*nTracksCapacity*/) const {
+      const uint32_t actualN = tracks.nTracks();
+      for (auto trackIdx : cms::alpakatools::uniform_elements(acc, actualN)) {
         tracks[trackIdx].hitOffsets() = newOff[trackIdx + 1];
         if (tracks[trackIdx].iteration() == sourceIter && chains[trackIdx].nHits >= refitMinNewHits)
           tracks[trackIdx].iteration() = extendedIter;
       }
-      const auto nTotal = newOff[nTracks];
+      const auto nTotal = newOff[actualN];
       for (auto idx : cms::alpakatools::uniform_elements(acc, nTotal)) {
         const auto hi = newContent[idx];
         trackHits[idx].id() = hi;
