@@ -324,6 +324,40 @@ hltPhase2PixelTracksSoALowPtWithStubs = cms.EDProducer('CAHitNtupletAlpakaPhase2
         maxZip = cms.double(12.0),
     ),
 
+    # IT inward extension: after the OT-stub-driven fit, propagate each track
+    # back through the IT and try to attach inner pixel hits, then refit.
+    # Source and extended iterations are both 'promptLowPt' (the current
+    # Iteration enum doesn't have a distinct 'promptLowPtExtended' tag, so
+    # extended tracks keep the same iteration label).  Per-slot candidate cap
+    # is compile-time (CandidateSlot::capacity, see CAITExtendLayout.h).
+    inwardExtension = cms.PSet(
+        enable = cms.bool(True),
+        sourceIteration = cms.string("promptLowPt"),
+        extendedIteration = cms.string("promptLowPt"),
+        # `edup` (recommended) skips only NaN-fit / sub-doublet tracks.
+        minQuality = cms.string("edup"),
+        # Per-layer window:  Delta = clip(nSigma * sigma_propagated, floor, max)
+        nSigmaPhi = cms.double(3.0),
+        nSigmaZ = cms.double(3.0),
+        floorDPhi = cms.double(0.01),   # rad
+        floorDZ = cms.double(0.20),     # cm
+        maxDPhi = cms.double(0.10),     # rad -- absolute cap, bounds memory
+        maxDZ = cms.double(2.00),       # cm  -- absolute cap, bounds memory
+        # Doublet curvature-consistency cut (mini-CA inside per-track set).
+        kappaSigmaCut = cms.double(5.0),
+        # Score floors to keep chi2 well-defined for very small sigmas.
+        scoreFloor2Phi = cms.double(1.e-6),
+        scoreFloor2Z = cms.double(1.e-4),
+        # Single uniform material density (x/X0 per cm), matches BrokenLine.
+        materialDensity = cms.double(0.01),
+        # Per-track caps -- bound memory.
+        maxLayersPerTrack = cms.uint32(16),
+        maxNewLayers = cms.uint32(4),
+        refitMinNewHits = cms.uint32(1),
+        doRefit = cms.bool(True),
+        dropOnEmptyExtension = cms.bool(False),
+    ),
+
     mightGet = cms.optional.untracked.vstring,
     alpaka = cms.untracked.PSet(
         backend = cms.untracked.string('')
