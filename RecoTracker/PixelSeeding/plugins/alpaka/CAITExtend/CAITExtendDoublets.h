@@ -1,6 +1,7 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAITExtend_CAITExtendDoublets_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAITExtend_CAITExtendDoublets_h
 
+#include <algorithm>
 #include <cstdint>
 
 #include <alpaka/alpaka.hpp>
@@ -71,7 +72,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
       using namespace ::caITExtend;
       using Layout = ::caITExtend::Layout<LayoutTraits>;
 
-      for (auto trackIdx : cms::alpakatools::uniform_elements(acc, nTracks)) {
+      // Bound the iteration by the actual filled-track count (set by
+      // Kernel_fillHitDetIndices).  Without this, the chain walker would
+      // process up to maxNumberOfTuples (~500 k) ghost slots whose `iteration`
+      // got stamped to filterIter by Kernel_assignIteration but whose
+      // `quality` is undefined (PortableDeviceCollection does NOT zero-init).
+      // Those ghosts then pass the filters and bump the `fallback` counter
+      // and write garbage into chains[].
+      const auto actualN = static_cast<uint32_t>(std::max(0, tracks.nTracks()));
+      const auto iterBound = std::min(nTracks, actualN);
+      for (auto trackIdx : cms::alpakatools::uniform_elements(acc, iterBound)) {
         chains[trackIdx].nHits = 0;
         for (int k = 0; k < kMaxLayersForEnum; ++k)
           chains[trackIdx].hitIds[k] = 0;
