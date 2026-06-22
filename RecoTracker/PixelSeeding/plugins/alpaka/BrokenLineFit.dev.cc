@@ -359,6 +359,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   TupleMultiplicity const* __restrict__ tupleMultiplicity,
                                   double bField,
                                   OutputSoAView results_view,
+                                  const ::reco::CAMaterialSoAConstView material,
                                   typename caStructures::tindex_type const* __restrict__ ptkids,
                                   double* __restrict__ phits,
                                   float* __restrict__ phits_ge,
@@ -389,7 +390,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         brokenline::karimaki_circle_fit circle;
         riemannFit::LineFit line;
 
-        brokenline::prepareBrokenLineData(acc, hits, fast_fit, bField, data);
+        const bool useMaterialMap = material.matMapNBinZ() * material.matMapNBinR() > 1;
+        brokenline::prepareBrokenLineData(acc, hits, fast_fit, bField, data, material, useMaterialMap);
         brokenline::lineFit(acc, hits_ge, fast_fit, bField, data, line);
         brokenline::circleFit(acc, hits, hits_ge, fast_fit, bField, data, circle);
 
@@ -425,6 +427,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TrackerTraits>
   void HelixFit<TrackerTraits>::launchBrokenLineKernels(const ::reco::TrackingRecHitConstView& hv,
                                                         const ::reco::CAModulesConstView& cm,
+                                                        const ::reco::CAMaterialSoAConstView& material,
                                                         uint32_t hitsInFit,
                                                         uint32_t maxNumberOfTuples,
                                                         Queue& queue) {
@@ -478,6 +481,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           tupleMultiplicity_,
                           bField_,
                           outputSoa_,
+                          material,
                           tkidDevice.data(),
                           hitsDevice.data(),
                           hits_geDevice.data(),
@@ -498,7 +502,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                        &fast_fit_resultsDevice,
                                                                        &offset,
                                                                        &queue,
-                                                                       &workDivQuadsPenta](auto i) {
+                                                                       &workDivQuadsPenta,
+                                                                       material](auto i) {
           alpaka::exec<Acc1D>(queue,
                               workDivQuadsPenta,
                               Kernel_BLFastFit<4>{},
@@ -520,6 +525,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               tupleMultiplicity_,
                               bField_,
                               outputSoa_,
+                              material,
                               tkidDevice.data(),
                               hitsDevice.data(),
                               hits_geDevice.data(),
@@ -535,7 +541,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                                  &fast_fit_resultsDevice,
                                                                                  &offset,
                                                                                  &queue,
-                                                                                 &workDivQuadsPenta](auto i) {
+                                                                                 &workDivQuadsPenta,
+                                                                                 material](auto i) {
           alpaka::exec<Acc1D>(queue,
                               workDivQuadsPenta,
                               Kernel_BLFastFit<i>{},
@@ -557,6 +564,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               tupleMultiplicity_,
                               bField_,
                               outputSoa_,
+                              material,
                               tkidDevice.data(),
                               hitsDevice.data(),
                               hits_geDevice.data(),
@@ -591,6 +599,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             tupleMultiplicity_,
                             bField_,
                             outputSoa_,
+                            material,
                             tkidDevice.data(),
                             hitsDevice.data(),
                             hits_geDevice.data(),
@@ -606,6 +615,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   template <typename TrackerTraits>
   void HelixFit<TrackerTraits>::launchBrokenLineKernels(const ::reco::TrackingRecHitConstView& hv,
                                                         const ::reco::CAModulesConstView& cm,
+                                                        const ::reco::CAMaterialSoAConstView& material,
                                                         uint32_t hitsInFit,
                                                         uint32_t maxNumberOfTuples,
                                                         Queue& queue,
@@ -672,6 +682,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           tupleMultiplicity_,
                           bField_,
                           outputSoa_,
+                          material,
                           tkidDevice.data(),
                           hitsDevice.data(),
                           hits_geDevice.data(),
@@ -689,6 +700,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                        &offset,
                                                                        &queue,
                                                                        &workDivQuadsPenta,
+                                                                       material,
                                                                        otRecHits,
                                                                        stubs,
                                                                        offsetStubs](auto i) {
@@ -716,6 +728,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               tupleMultiplicity_,
                               bField_,
                               outputSoa_,
+                              material,
                               tkidDevice.data(),
                               hitsDevice.data(),
                               hits_geDevice.data(),
@@ -749,6 +762,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             tupleMultiplicity_,
                             bField_,
                             outputSoa_,
+                            material,
                             tkidDevice.data(),
                             hitsDevice.data(),
                             hits_geDevice.data(),
@@ -765,6 +779,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                                  &offset,
                                                                                  &queue,
                                                                                  &workDivQuadsPenta,
+                                                                                 material,
                                                                                  otRecHits,
                                                                                  stubs,
                                                                                  offsetStubs](auto i) {
@@ -792,6 +807,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               tupleMultiplicity_,
                               bField_,
                               outputSoa_,
+                              material,
                               tkidDevice.data(),
                               hitsDevice.data(),
                               hits_geDevice.data(),
@@ -829,6 +845,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             tupleMultiplicity_,
                             bField_,
                             outputSoa_,
+                            material,
                             tkidDevice.data(),
                             hitsDevice.data(),
                             hits_geDevice.data(),

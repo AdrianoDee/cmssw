@@ -44,7 +44,7 @@
 #include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
 #include "DataFormats/SiStripDetId/interface/StripSubdetector.h"
 
-#define GPU_DEBUG
+// #define GPU_DEBUG
 
 namespace reco {
   struct CAGeometryParams {
@@ -53,6 +53,7 @@ namespace reco {
                      edm::ParameterSet const& doubletCutConfig,
                      edm::ParameterSet const& tripletCutConfig,
                      edm::ParameterSet const& ntupletCutConfig,
+                     edm::ParameterSet const& materialConfig,
                      std::vector<double> const& fishboneCuts)
         : layerPairs_(graphConfig.getParameter<std::vector<unsigned int>>("layerPairs")),
           startingPair_(graphConfig.getParameter<std::vector<unsigned int>>("startingPair")),
@@ -94,7 +95,21 @@ namespace reco {
           startMaxInnerR_(ntupletCutConfig.getParameter<std::vector<double>>("startMaxInnerR")),
           maxDCurv_(ntupletCutConfig.getParameter<std::vector<double>>("maxDCurv")),
           floorDCurv_(ntupletCutConfig.getParameter<std::vector<double>>("floorDCurv")),
-          fishboneCuts_(fishboneCuts) {
+          fishboneCuts_(fishboneCuts),
+          invX0Map_(materialConfig.getParameter<std::vector<double>>("invX0Map")),
+          geomFactor_(materialConfig.getParameter<double>("geomFactor")),
+          matMapMinZ_(materialConfig.getParameter<double>("matMapMinZ")),
+          matMapMaxZ_(materialConfig.getParameter<double>("matMapMaxZ")),
+          matMapMinR_(materialConfig.getParameter<double>("matMapMinR")),
+          matMapMaxR_(materialConfig.getParameter<double>("matMapMaxR")),
+          matMapNBinZ_(materialConfig.getParameter<unsigned int>("matMapNBinZ")),
+          matMapNBinR_(materialConfig.getParameter<unsigned int>("matMapNBinR")) {
+      assert(matMapNBinZ_ > 0);
+      assert(matMapNBinR_ > 0);
+      assert(invX0Map_.size() == matMapNBinZ_ * matMapNBinR_);
+      assert(matMapMaxZ_ > matMapMinZ_);
+      assert(matMapMaxR_ > matMapMinR_);
+
       startNoBPix1_ = false;
       for (size_t i{0}; i < layerPairs_.size() / 2; ++i) {
         if (startingPair_[i] && layerPairs_[2 * i] > 0) {
@@ -162,6 +177,16 @@ namespace reco {
     const std::vector<double> floorDCurv_;
 
     const std::vector<double> fishboneCuts_;
+
+    // RZ material map for broken-line multiple scattering.
+    const std::vector<double> invX0Map_;
+    const double geomFactor_;
+    const double matMapMinZ_;
+    const double matMapMaxZ_;
+    const double matMapMinR_;
+    const double matMapMaxR_;
+    const unsigned int matMapNBinZ_;
+    const unsigned int matMapNBinR_;
 
     bool startNoBPix1_;
 
@@ -237,6 +262,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       int n_layers = iCache->fishboneCuts_.size();
       int n_pairs = iCache->layerPairs_.size() / 2;
       int n_modules = 0;
+      int n_materialBins = iCache->invX0Map_.size();
 
 #ifdef GPU_DEBUG
       std::cout << "No. Layers to be used = " << n_layers << std::endl;
@@ -442,7 +468,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
       layerStarts[n_layers] = n_modules;
 
-      reco::CAGeometryHost product{cms::alpakatools::host(), n_layers + 1, n_pairs, n_pairs, n_pairs, n_layers, n_modules};
+      reco::CAGeometryHost product{
+          cms::alpakatools::host(), n_layers + 1, n_pairs, n_pairs, n_pairs, n_layers, n_modules, n_materialBins};
 
       auto layerSoA = product.view().layers();
       auto graphSoA = product.view().graph();
@@ -450,6 +477,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto tripletCutsSoA = product.view().tripletCuts();
       auto ntupletCutsSoA = product.view().ntupletCuts();
       auto modulesSoA = product.view().modules();
+      auto materialSoA = product.view().material();
+
+      for (int i = 0; i < n_materialBins; ++i) {
+        materialSoA.invX0()[i] = static_cast<float>(iCache->invX0Map_[i]);
+      }
+      materialSoA.geomFactor() = static_cast<float>(iCache->geomFactor_);
+      materialSoA.matMapMinZ() = static_cast<float>(iCache->matMapMinZ_);
+      materialSoA.matMapMaxZ() = static_cast<float>(iCache->matMapMaxZ_);
+      materialSoA.matMapMinR() = static_cast<float>(iCache->matMapMinR_);
+      materialSoA.matMapMaxR() = static_cast<float>(iCache->matMapMaxR_);
+      materialSoA.matMapNBinZ() = iCache->matMapNBinZ_;
+      materialSoA.matMapNBinR() = iCache->matMapNBinR_;
+      materialSoA.invBinWidthZ() =
+          static_cast<float>(double(iCache->matMapNBinZ_) / (iCache->matMapMaxZ_ - iCache->matMapMinZ_));
+      materialSoA.invBinWidthR() =
+          static_cast<float>(double(iCache->matMapNBinR_) / (iCache->matMapMaxR_ - iCache->matMapMinR_));
 
       for (int i = 0; i < n_modules; ++i) {
         auto idx = moduleToindexInDets[i];
@@ -578,6 +621,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                         iConfig.getParameterSet("doubletCuts"),
                                                         iConfig.getParameterSet("tripletCuts"),
                                                         iConfig.getParameterSet("ntupletCuts"),
+                                                        iConfig.getParameterSet("materialBudget"),
                                                         iConfig.getParameter<std::vector<double>>("fishboneCuts"));
     }
 

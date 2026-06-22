@@ -1,0 +1,66 @@
+++ : /data/user/adiflori/cmssw_prs/PR_TrackToTheFuture/dev
+++ events=5000
+++ geometry=ExtendedRun4D121
+++ era=Phase2C22I13M9
+++ getopts :n:g: opt
+++ . runMaterialDumpFunctions
+++ checkFile SingleMuPt10_pythia8_cfi_GEN_SIM_PhaseII.root
+++ [[ ! -e SingleMuPt10_pythia8_cfi_GEN_SIM_PhaseII.root ]]
+++ [[ ! -s SingleMuPt10_pythia8_cfi_GEN_SIM_PhaseII.root ]]
+++ checkFile SingleMuPt10_step2_DIGI_L1_DIGI2RAW_HLT_PhaseII.root
+++ [[ ! -e SingleMuPt10_step2_DIGI_L1_DIGI2RAW_HLT_PhaseII.root ]]
+++ [[ ! -s SingleMuPt10_step2_DIGI_L1_DIGI2RAW_HLT_PhaseII.root ]]
+++ checkFile SingleMuPt10_step3_RECO_DQM_PhaseII.root
+++ [[ ! -e SingleMuPt10_step3_RECO_DQM_PhaseII.root ]]
+++ [[ ! -s SingleMuPt10_step3_RECO_DQM_PhaseII.root ]]
+++ cmsDriver.py step3 -s RAW2DIGI,RECO,RECOSIM,PAT,VALIDATION:@phase2Validation+@miniAODValidation,DQM:@phase2+@miniAODDQM --conditions auto:phase2_realistic_T35 -n -1 --era Phase2C22I13M9 --eventcontent FEVTDEBUGHLT,MINIAODSIM,DQM --datatier GEN-SIM-RECO,MINIAODSIM,DQMIO --nThreads=32 --geometry ExtendedRun4D121 --filein file:SingleMuPt10_step2_DIGI_L1_DIGI2RAW_HLT_PhaseII.root --fileout file:SingleMuPt10_step3_RECO_DQM_PhaseII.root --python_filename SingleMuPt10_step2_RECO_DQM_PhaseII.py
+++ '[' 0 -ne 0 ']'
+++ checkFile DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root
+++ [[ ! -e DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root ]]
+++ [[ ! -s DQM_V0001_R000000001__Global__CMSSW_X_Y_Z__RECO.root ]]
+++ checkFile single_neutrino_random.root
+++ [[ ! -e single_neutrino_random.root ]]
+++ [[ ! -s single_neutrino_random.root ]]
+++ for t in BeamPipe Tracker Phase2PixelBarrel Phase2OTBarrel Phase2PixelEndcap Phase2OTForward
+++ '[' '!' -e matbdg_BeamPipe.root ']'
+++ for t in BeamPipe Tracker Phase2PixelBarrel Phase2OTBarrel Phase2PixelEndcap Phase2OTForward
+++ '[' '!' -e matbdg_Tracker.root ']'
+++ python3 runP_Tracker.py geom=ExtendedRun4D121 label=BeamPipe
+++ for t in BeamPipe Tracker Phase2PixelBarrel Phase2OTBarrel Phase2PixelEndcap Phase2OTForward
+++ '[' '!' -e matbdg_Phase2PixelBarrel.root ']'
+++ python3 runP_Tracker.py geom=ExtendedRun4D121 label=Tracker
+++ for t in BeamPipe Tracker Phase2PixelBarrel Phase2OTBarrel Phase2PixelEndcap Phase2OTForward
+++ '[' '!' -e matbdg_Phase2OTBarrel.root ']'
+++ python3 runP_Tracker.py geom=ExtendedRun4D121 label=Phase2PixelBarrel
+++ for t in BeamPipe Tracker Phase2PixelBarrel Phase2OTBarrel Phase2PixelEndcap Phase2OTForward
+++ '[' '!' -e matbdg_Phase2PixelEndcap.root ']'
+++ python3 runP_Tracker.py geom=ExtendedRun4D121 label=Phase2OTBarrel
+++ for t in BeamPipe Tracker Phase2PixelBarrel Phase2OTBarrel Phase2PixelEndcap Phase2OTForward
+++ '[' '!' -e matbdg_Phase2OTForward.root ']'
+++ python3 runP_Tracker.py geom=ExtendedRun4D121 label=Phase2PixelEndcap
+++ waitPendingJobs
+++ python3 runP_Tracker.py geom=ExtendedRun4D121 label=Phase2OTForward
++++ jobs -p
+++ for job in $(jobs -p)
+++ wait 400177
+++ for job in $(jobs -p)
+++ wait 400178
+++ for job in $(jobs -p)
+++ wait 400179
+++ for job in $(jobs -p)
+++ wait 400180
+++ for job in $(jobs -p)
+++ wait 400181
+++ for job in $(jobs -p)
+++ wait 400182
+++ for t in BeamPipe Tracker TrackerSumPhaseII Phase2PixelBarrel Phase2OTBarrel Phase2PixelEndcap Phase2OTForward
+++ python3 MaterialBudget.py -s -d BeamPipe
+Error, missing geometry. -g is Required
+Traceback (most recent call last):
+  File "/data/user/adiflori/cmssw_prs/PR_TrackToTheFuture/dev/src/Validation/Geometry/test/MaterialBudget.py", line 1058, in <module>
+    raise RuntimeError
+RuntimeError
+++ '[' 1 -ne 0 ']'
+++ echo 'Error while producing simulation material for BeamPipe, aborting'
+Error while producing simulation material for BeamPipe, aborting
+++ exit 1

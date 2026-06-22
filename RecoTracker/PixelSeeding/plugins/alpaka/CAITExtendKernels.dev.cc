@@ -98,11 +98,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
   void Kernels<TrackerTraits>::runRefit(HelixFit<TrackerTraits>& fitter,
                                         TkSoAView tracks,
                                         TkHitSoAView trackHits,
-                                        TkHitSoAConstView origTrackHits,
-                                        HitsConstView hits,
-                                        ::reco::CAModulesConstView modules,
-                                        ::reco::OTRecHitsConstView otRecHits,
-                                        ::reco::StubsConstView stubs,
+                                         TkHitSoAConstView origTrackHits,
+                                         HitsConstView hits,
+                                         ::reco::CAModulesConstView modules,
+                                         ::reco::CAMaterialSoAConstView material,
+                                         ::reco::OTRecHitsConstView otRecHits,
+                                         ::reco::StubsConstView stubs,
                                         uint32_t nHits,
                                         uint32_t maxNumberOfTuples,
                                         uint16_t maxHitsOnTrack,
@@ -180,7 +181,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
     fitter.deallocate();
     fitter.allocate(extMult_->data(), tracks, extTuples_->data());
     fitter.launchBrokenLineKernels(
-        hits, modules, nHits, maxNumberOfTuples, queue, otRecHits, stubs, offsetStubs_);
+        hits, modules, material, nHits, maxNumberOfTuples, queue, otRecHits, stubs, offsetStubs_);
 
     // Rebuild TrackHitSoA + update hitOffsets + stamp iteration.
     alpaka::exec<Acc1D>(queue,

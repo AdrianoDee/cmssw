@@ -6,6 +6,7 @@
 #include <Eigen/Core>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
+#include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
 #include "RecoTracker/PixelTrackFitting/interface/alpaka/FitUtils.h"
 
 //#define BL_DEEPDEBUG
@@ -36,8 +37,84 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
                                           //   starting from the pre-fitted closest approach
     riemannFit::VectorNd<n> sTotal;       //!< total distance traveled (three-dimensional)
     riemannFit::VectorNd<n> zInSZplane;   //!< orthogonal coordinate to the pre-fitted line in the sz plane
+    riemannFit::VectorNd<n> varBetaSegment;  //!< multiple scattering variance for segment i -> i+1
     riemannFit::VectorNd<n> varBeta;      //!< kink angles in the SZ plane
   };
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int clampBin(int bin, int nBins) {
+    return bin < 0 ? 0 : (bin >= nBins ? nBins - 1 : bin);
+  }
+
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float materialInvX0At(
+      const TAcc& acc, const ::reco::CAMaterialSoAConstView& material, double z, double r) {
+    const int nBinsZ = int(material.matMapNBinZ());
+    const int nBinsR = int(material.matMapNBinR());
+    const double zForLookup = material.matMapMinZ() >= 0.f ? alpaka::math::abs(acc, z) : z;
+    const int zBin = clampBin(int(alpaka::math::floor(
+                              acc, (zForLookup - double(material.matMapMinZ())) * double(material.invBinWidthZ()))),
+                              nBinsZ);
+    const int rBin = clampBin(int(alpaka::math::floor(
+                              acc, (r - double(material.matMapMinR())) * double(material.invBinWidthR()))),
+                              nBinsR);
+    return material.invX0()[rBin * nBinsZ + zBin];
+  }
+
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE double integrateXOverX0SegmentRZ(const TAcc& acc,
+                                                                  double x0,
+                                                                  double y0,
+                                                                  double z0,
+                                                                  double x1,
+                                                                  double y1,
+                                                                  double z1,
+                                                                  const ::reco::CAMaterialSoAConstView& material) {
+    const double dx = x1 - x0;
+    const double dy = y1 - y0;
+    const double dz = z1 - z0;
+    const double length = alpaka::math::sqrt(acc, dx * dx + dy * dy + dz * dz);
+    if (length <= 0.)
+      return 0.;
+
+    const double r0 = alpaka::math::sqrt(acc, x0 * x0 + y0 * y0);
+    const double r1 = alpaka::math::sqrt(acc, x1 * x1 + y1 * y1);
+    const double dr = r1 - r0;
+
+    int nSteps = int(alpaka::math::abs(acc, dz) * double(material.invBinWidthZ())) +
+                 int(alpaka::math::abs(acc, dr) * double(material.invBinWidthR())) + 1;
+    nSteps = nSteps < 1 ? 1 : (nSteps > 64 ? 64 : nSteps);
+
+    double xOverX0 = 0.;
+    const double stepLength = length / double(nSteps);
+    for (int i = 0; i < nSteps; ++i) {
+      const double t = (double(i) + 0.5) / double(nSteps);
+      const double z = z0 + t * dz;
+      const double r = r0 + t * dr;
+      xOverX0 += stepLength * double(materialInvX0At(acc, material, z, r));
+    }
+    return xOverX0;
+  }
+
+  /*!
+    \brief Computes the Coulomb multiple scattering variance from integrated x/X0.
+  */
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE double multScattFromXOverX0(const TAcc& acc,
+                                                             double xOverX0,
+                                                             const double bField,
+                                                             const double radius,
+                                                             double slope,
+                                                             double geometryFactor) {
+    if (xOverX0 <= 0.)
+      return 0.;
+
+    auto pt2 = alpaka::math::min(acc, 20., bField * radius);
+    pt2 *= pt2;
+    constexpr double formulaFactor = 13.6 / 1000.;
+    const double safeXOverX0 = xOverX0 > 1.e-12 ? xOverX0 : 1.e-12;
+    return geometryFactor * riemannFit::sqr(formulaFactor) / (pt2 * (1. + riemannFit::sqr(slope))) * safeXOverX0 *
+           riemannFit::sqr(1. + 0.038 * log(safeXOverX0));
+  }
 
   /*!
     \brief Computes the Coulomb multiple scattering variance of the planar angle.
@@ -61,19 +138,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE double multScatt(
       const TAcc& acc, const double& length, const double bField, const double radius, int layer, double slope) {
-    // limit R to 20GeV...
-    auto pt2 = alpaka::math::min(acc, 20., bField * radius);
-    pt2 *= pt2;
     constexpr double inv_X0 = 0.06 / 16.;  //!< inverse of radiation length of the material in cm
-    //if(Layer==1) XXI_0=0.06/16.;
-    // else XXI_0=0.06/16.;
-    //XX_0*=1;
-
-    //! number between 1/3 (uniform material) and 1 (thin scatterer) to be manually tuned
     constexpr double geometry_factor = 0.7;
-    constexpr double fact = geometry_factor * riemannFit::sqr(13.6 / 1000.);
-    return fact / (pt2 * (1. + riemannFit::sqr(slope))) * (alpaka::math::abs(acc, length) * inv_X0) *
-           riemannFit::sqr(1. + 0.038 * log(alpaka::math::abs(acc, length) * inv_X0));
+    return multScattFromXOverX0(acc, alpaka::math::abs(acc, length) * inv_X0, bField, radius, slope, geometry_factor);
   }
 
   /*!
@@ -157,7 +224,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
   */
   template <alpaka::concepts::Acc TAcc, typename M3xN, typename V4, int n>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void __attribute__((always_inline)) prepareBrokenLineData(
-      const TAcc& acc, const M3xN& hits, const V4& fast_fit, const double bField, PreparedBrokenLineData<n>& results) {
+      const TAcc& acc,
+      const M3xN& hits,
+      const V4& fast_fit,
+      const double bField,
+      PreparedBrokenLineData<n>& results,
+      const ::reco::CAMaterialSoAConstView& material = ::reco::CAMaterialSoAConstView(),
+      bool useMaterialMap = false) {
     riemannFit::Vector2d dVec;
     riemannFit::Vector2d eVec;
 
@@ -215,10 +288,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
 #endif
     //calculate varBeta
     results.varBeta(0) = results.varBeta(n - 1) = 0;
+    results.varBetaSegment(n - 1) = 0;
+    for (u_int i = 0; i < n - 1; i++) {
+      if (useMaterialMap) {
+        const double xOverX0 = integrateXOverX0SegmentRZ(acc,
+                                                         hits(0, i),
+                                                         hits(1, i),
+                                                         hits(2, i),
+                                                         hits(0, i + 1),
+                                                         hits(1, i + 1),
+                                                         hits(2, i + 1),
+                                                         material);
+        results.varBetaSegment(i) =
+            multScattFromXOverX0(acc, xOverX0, bField, fast_fit(2), slope, double(material.geomFactor()));
+      } else {
+        results.varBetaSegment(i) =
+            multScatt(acc, results.sTotal(i + 1) - results.sTotal(i), bField, fast_fit(2), int(i) + 2, slope);
+      }
+    }
     for (u_int i = 1; i < n - 1; i++) {
-      results.varBeta(i) =
-          multScatt(acc, results.sTotal(i + 1) - results.sTotal(i), bField, fast_fit(2), i + 2, slope) +
-          multScatt(acc, results.sTotal(i) - results.sTotal(i - 1), bField, fast_fit(2), i + 1, slope);
+      results.varBeta(i) = results.varBetaSegment(i) + results.varBetaSegment(i - 1);
     }
   }
 
@@ -349,7 +438,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     circle_results.qCharge = data.qCharge;
     auto& radii = data.radii;
     const auto& sTransverse = data.sTransverse;
-    const auto& sTotal = data.sTotal;
     auto& zInSZplane = data.zInSZplane;
     auto& varBeta = data.varBeta;
     const double slope = -circle_results.qCharge / fast_fit(3);
@@ -443,8 +531,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     //...Translate in the system in which the first corrected hit is the origin, adding the m.s. correction...
 
     translateKarimaki(acc, circle_results, 0.5 * eMinusd(0), 0.5 * eMinusd(1), jacobian);
-    circle_results.cov(0, 0) +=
-        (1 + riemannFit::sqr(slope)) * multScatt(acc, sTotal(1) - sTotal(0), bField, fast_fit(2), 2, slope);
+    circle_results.cov(0, 0) += (1 + riemannFit::sqr(slope)) * data.varBetaSegment(0);
 
     //...And translate back to the original system
 
@@ -543,7 +630,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     line_results.par << (uVec(1) - uVec(0)) / (sTotal(1) - sTotal(0)), uVec(0);
     auto idiff = 1. / (sTotal(1) - sTotal(0));
     line_results.cov << (iMat(0, 0) - 2 * iMat(0, 1) + iMat(1, 1)) * riemannFit::sqr(idiff) +
-                            multScatt(acc, sTotal(1) - sTotal(0), bField, fast_fit(2), 2, slope),
+                            data.varBetaSegment(0),
         (iMat(0, 1) - iMat(0, 0)) * idiff, (iMat(0, 1) - iMat(0, 0)) * idiff, iMat(0, 0);
 
     // translate to the original SZ system

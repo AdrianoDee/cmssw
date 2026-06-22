@@ -3,7 +3,7 @@
 
 // #define GPU_DEBUG
 // #define CA_DEBUG
-// #define CA_WARNINGS
+#define CA_WARNINGS
 
 #include <cmath>
 #include <limits>

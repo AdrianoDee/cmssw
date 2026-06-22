@@ -907,9 +907,9 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
 
   // if (aux > 0) std::cout << "========================================\n" << "The amount of zeros in this event is: " << aux << "\n========================================" << std::endl; // To check for events with too many zeros in eta and phi
 
-#ifdef GPU_DEBUG
+// #ifdef GPU_DEBUG
   std::cout << "processed " << nt << " good tuples " << tracks.size() << " out of " << indToEdm.size() << std::endl;
-#endif
+// #endif
 
 #ifdef LEGACY_CONVERTER_DEBUG
   // Print event-level summary for eta asymmetry diagnosis

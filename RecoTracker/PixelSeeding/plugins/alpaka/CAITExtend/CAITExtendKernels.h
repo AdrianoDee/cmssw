@@ -118,6 +118,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caITExtend {
                   TkHitSoAConstView origTrackHits,
                   HitsConstView hits,
                   ::reco::CAModulesConstView modules,
+                  ::reco::CAMaterialSoAConstView material,
                   ::reco::OTRecHitsConstView otRecHits,
                   ::reco::StubsConstView stubs,
                   uint32_t nHits,

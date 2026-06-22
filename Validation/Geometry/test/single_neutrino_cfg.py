@@ -20,13 +20,13 @@ options.register('nEvents',
                  "Maximum number of events"
 )
 options.register('etaMin',
-                 -6.0,
+                 -5.0,
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.float,
                  "Minimum Eta for the neutrinos"
 )
 options.register('etaMax',
-                 6.0,
+                 5.0,
                  VarParsing.multiplicity.singleton,
                  VarParsing.varType.float,
                  "Maximum Eta for the neutrinos"

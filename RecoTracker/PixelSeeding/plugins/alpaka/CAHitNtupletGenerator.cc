@@ -243,6 +243,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       desc.add<edm::ParameterSetDescription>("ntupletCuts", ntupletCutParams)->setComment("Cuts for ntuplet building");
 
+      edm::ParameterSetDescription materialBudgetParams;
+      materialBudgetParams.add<std::vector<double>>("invX0Map", std::vector<double>(1, 0.06 / 16.0))
+          ->setComment("Flattened RZ inverse-radiation-length map in 1/cm. Indexing: rBin * matMapNBinZ + zBin.");
+      materialBudgetParams.add<double>("geomFactor", 0.7)
+          ->setComment("Geometry factor used in the multiple-scattering variance.");
+      materialBudgetParams.add<double>("matMapMinZ", -300.0);
+      materialBudgetParams.add<double>("matMapMaxZ", 300.0);
+      materialBudgetParams.add<double>("matMapMinR", 0.0);
+      materialBudgetParams.add<double>("matMapMaxR", 120.0);
+      materialBudgetParams.add<unsigned int>("matMapNBinZ", 1);
+      materialBudgetParams.add<unsigned int>("matMapNBinR", 1);
+      desc.add<edm::ParameterSetDescription>("materialBudget", materialBudgetParams)->setComment("RZ material budget map");
+
       // Container sizes
       //
       // maxNumberOfDoublets and maxNumberOfTuples may be defined at runtime depending on the number of hits.
@@ -596,6 +609,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto tripletCuts = geometry_d.view().tripletCuts();
     auto ntupletCuts = geometry_d.view().ntupletCuts();
     auto modules = geometry_d.view().modules();
+    auto material = geometry_d.view().material();
 
     // Don't bother if less than 2 this
     if (trackingHits.metadata().size() < 2) {
@@ -626,7 +640,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           trackingHits, modules, trackingHits.metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
     } else {
       fitter.launchBrokenLineKernels(
-          trackingHits, modules, trackingHits.metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
+          trackingHits, modules, material, trackingHits.metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
     }
     kernels.classifyTuples(trackingHits, tracks, iterationName, queue);
 #ifdef GPU_DEBUG
@@ -673,6 +687,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto tripletCuts = geometry_d.view().tripletCuts();
     auto ntupletCuts = geometry_d.view().ntupletCuts();
     auto modules = geometry_d.view().modules();
+    auto material = geometry_d.view().material();
 
     // Don't bother if less than 2 hits
     if (trackingHits.metadata().size() < 2) {
@@ -713,6 +728,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     } else {
       fitter.launchBrokenLineKernels(trackingHits,
                                      modules,
+                                     material,
                                      trackingHits.metadata().size(),
                                      TrackerTraits::maxNumberOfQuadruplets,
                                      queue,
@@ -739,6 +755,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                      tracks.view().trackHits(),
                      trackingHits,
                      modules,
+                     material,
                      otRecHits_d.view().otRecHits(),
                      stubs_d.view().stubs(),
                      trackingHits.metadata().size(),

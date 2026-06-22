@@ -74,6 +74,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               Queue &queue);
     void launchBrokenLineKernels(const HitConstView &hv,
                                  const ::reco::CAModulesConstView &fr,
+                                 const ::reco::CAMaterialSoAConstView &material,
                                  uint32_t nhits,
                                  uint32_t maxNumberOfTuples,
                                  Queue &queue);
@@ -91,6 +92,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               int32_t offsetStubs);
     void launchBrokenLineKernels(const HitConstView &hv,
                                  const ::reco::CAModulesConstView &fr,
+                                 const ::reco::CAMaterialSoAConstView &material,
                                  uint32_t nhits,
                                  uint32_t maxNumberOfTuples,
                                  Queue &queue,

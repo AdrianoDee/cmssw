@@ -1,6 +1,8 @@
 #ifndef RecoTracker_PixelSeeding_interface_CAGeometry_h
 #define RecoTracker_PixelSeeding_interface_CAGeometry_h
 
+#include <cstdint>
+
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
@@ -88,13 +90,28 @@ namespace reco {
                       SOA_COLUMN(float, maxDCurv),
                       SOA_COLUMN(float, floorDCurv))
 
+  GENERATE_SOA_LAYOUT(CAMaterialLayout,
+                      // Flattened RZ map, index = rBin * nBinsZ + zBin.
+                      // Values are inverse radiation length in 1/cm.
+                      SOA_COLUMN(float, invX0),
+                      SOA_SCALAR(float, matMapMinZ),
+                      SOA_SCALAR(float, matMapMaxZ),
+                      SOA_SCALAR(float, matMapMinR),
+                      SOA_SCALAR(float, matMapMaxR),
+                      SOA_SCALAR(float, invBinWidthZ),
+                      SOA_SCALAR(float, invBinWidthR),
+                      SOA_SCALAR(uint32_t, matMapNBinZ),
+                      SOA_SCALAR(uint32_t, matMapNBinR),
+                      SOA_SCALAR(float, geomFactor))
+
   GENERATE_SOA_BLOCKS(CALayoutTemplate,
                       SOA_BLOCK(layers, CALayersLayout),
                       SOA_BLOCK(graph, CAGraphLayout),
                       SOA_BLOCK(doubletCuts, CADoubletCutsLayout),
                       SOA_BLOCK(tripletCuts, CATripletCutsLayout),
                       SOA_BLOCK(ntupletCuts, CANtupletCutsLayout),
-                      SOA_BLOCK(modules, CAModulesLayout))
+                      SOA_BLOCK(modules, CAModulesLayout),
+                      SOA_BLOCK(material, CAMaterialLayout))
 
   using CALayersSoA = CALayersLayout<>;
   using CALayersSoAView = CALayersSoA::View;
@@ -123,6 +140,10 @@ namespace reco {
   using CALayout = CALayoutTemplate<>;
   using CALayoutView = CALayout::View;
   using CALayoutConstView = CALayout::ConstView;
+
+  using CAMaterialSoA = CAMaterialLayout<>;
+  using CAMaterialSoAView = CAMaterialSoA::View;
+  using CAMaterialSoAConstView = CAMaterialSoA::ConstView;
 
 }  // namespace reco
 #endif  // RecoTracker_PixelSeeding_interface_CAGeometry_h
