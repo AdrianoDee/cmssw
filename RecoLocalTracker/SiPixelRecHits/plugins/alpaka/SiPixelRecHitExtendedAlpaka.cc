@@ -6,6 +6,7 @@
 #include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsDevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -43,7 +44,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDGetToken<reco::TrackingRecHitsSoACollection> trackerRecHitToken_;
 
     const device::EDPutToken<reco::TrackingRecHitsSoACollection> outputRecHitsSoAToken_;
-    const device::EDPutToken<reco::TrackingRecHitsMaskingCollection> outputRecHitsMaskToken_;
+    const device::EDPutToken<reco::TrackingRecHitsMaskingSoACollection> outputRecHitsMaskToken_;
 
     const pixelgpudetails::PixelRecHitMaskingKernel Algo_;
   };

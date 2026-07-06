@@ -12,6 +12,7 @@
 #include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsDevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
@@ -49,7 +50,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       PixelRecHitMaskingKernel& operator=(const PixelRecHitMaskingKernel&) = delete;
       PixelRecHitMaskingKernel& operator=(PixelRecHitMaskingKernel&&) = delete;
 
-      reco::TrackingRecHitsMaskingCollection makeHitsMaskingAsync(uint32_t const nHits, Queue queue) const;
+      reco::TrackingRecHitsMaskingSoACollection makeHitsMaskingAsync(uint32_t const nHits, Queue queue) const;
     };
   }  // namespace pixelgpudetails
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
