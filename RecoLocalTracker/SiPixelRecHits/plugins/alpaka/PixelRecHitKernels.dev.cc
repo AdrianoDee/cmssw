@@ -12,6 +12,7 @@
 #include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -78,11 +79,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return hits_d;
     }
 
-    TrackingRecHitsMaskingCollection PixelRecHitMaskingKernel::makeHitsMaskingAsync(uint32_t const nHits,
+    TrackingRecHitsMaskingSoACollection PixelRecHitMaskingKernel::makeHitsMaskingAsync(uint32_t const nHits,
                                                                                     Queue queue) const {
       using namespace pixelRecHits;
 
-      TrackingRecHitsMaskingCollection mask_d(queue, nHits);
+      TrackingRecHitsMaskingSoACollection mask_d(queue, nHits);
 
       int threadsPerBlock = 128;
       int blocks = cms::alpakatools::divide_up_by(nHits, threadsPerBlock);

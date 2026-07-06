@@ -477,14 +477,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     return trackCollection;
   }
 
-  reco::TrackingRecHitsMaskingCollection CAHitMaskingAndMerger::makeMaskingAsync(MapToHit const& mask_d,
+  reco::TrackingRecHitsMaskingSoACollection CAHitMaskingAndMerger::makeMaskingAsync(MapToHit const& mask_d,
                                                                                  TkSoADevice const& tracks_d,
                                                                                  const pixelTrack::Quality minQuality,
                                                                                  uint32_t const& iterationIndex,
                                                                                  Queue& queue) const {
     const int nHits = mask_d.view().metadata().size();
 
-    reco::TrackingRecHitsMaskingCollection mask(queue, static_cast<uint32_t>(nHits));
+    reco::TrackingRecHitsMaskingSoACollection mask(queue, static_cast<uint32_t>(nHits));
 
     alpaka::memcpy(queue,
                    cms::alpakatools::make_device_view(queue, mask.view().recHitMask(), nHits),

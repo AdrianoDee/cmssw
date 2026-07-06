@@ -9,7 +9,9 @@
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/TracksDevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -34,7 +36,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
 
-    using MapToHit = reco::TrackingRecHitsMaskingCollection;
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
 
     using TkSoADevice = reco::TracksSoACollection;
     using Quality = ::pixelTrack::Quality;
@@ -73,7 +75,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class CAHitMaskingAndMerger {
   public:
-    using MapToHit = reco::TrackingRecHitsMaskingCollection;
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
     using TkSoADevice = reco::TracksSoACollection;
 
   public:
