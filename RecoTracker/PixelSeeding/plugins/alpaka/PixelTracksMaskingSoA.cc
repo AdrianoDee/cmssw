@@ -4,6 +4,7 @@
 #include "DataFormats/TrackSoA/interface/alpaka/TracksSoACollection.h"
 #include "DataFormats/TrackSoA/interface/TracksDevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -33,10 +34,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     uint32_t const iterationIndex_;
     pixelTrack::Quality const minQuality_;
 
-    const device::EDGetToken<reco::TrackingRecHitsMaskingCollection> inputRecHitsMaskToken_;
+    const device::EDGetToken<reco::TrackingRecHitsMaskingSoACollection> inputRecHitsMaskToken_;
     const device::EDGetToken<reco::TracksSoACollection> inputTrackSoAToken_;
 
-    const device::EDPutToken<reco::TrackingRecHitsMaskingCollection> outputRecHitsMaskToken_;
+    const device::EDPutToken<reco::TrackingRecHitsMaskingSoACollection> outputRecHitsMaskToken_;
 
     Algo deviceAlgo_;
   };
