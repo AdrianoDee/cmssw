@@ -24,7 +24,7 @@
 #include "RecoLocalTracker/SiPixelRecHits/interface/alpaka/PixelCPEFastParamsCollection.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
 
-#include "PixelRecHitKernel.h"
+#include "PixelRecHitMaskingKernel.h"
 
 //#define GPU_DEBUG
 
