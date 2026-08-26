@@ -40,18 +40,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                        ParamsOnDevice const* cpeParams,
                                                        Queue queue) const;
     };
-    class PixelRecHitMaskingKernel {
-    public:
-      PixelRecHitMaskingKernel() = default;
-      ~PixelRecHitMaskingKernel() = default;
-
-      PixelRecHitMaskingKernel(const PixelRecHitMaskingKernel&) = delete;
-      PixelRecHitMaskingKernel(PixelRecHitMaskingKernel&&) = delete;
-      PixelRecHitMaskingKernel& operator=(const PixelRecHitMaskingKernel&) = delete;
-      PixelRecHitMaskingKernel& operator=(PixelRecHitMaskingKernel&&) = delete;
-
-      reco::TrackingRecHitsMaskingSoACollection makeHitsMaskingAsync(uint32_t const nHits, Queue queue) const;
-    };
   }  // namespace pixelgpudetails
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
