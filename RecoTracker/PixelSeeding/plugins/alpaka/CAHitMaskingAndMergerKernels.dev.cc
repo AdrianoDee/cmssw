@@ -22,12 +22,12 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-  void CAHitMaskingAndMergerKernels::updateMasking(::reco::TrackingRecHitsMaskingView &mask_view,
+  void CAHitMaskingAndMergerKernels::updateMasking(Queue &queue,
+                                                   ::reco::TrackingRecHitsMaskingView &mask_view,
                                                    const ::reco::TrackSoAConstView &trackd_view,
                                                    const ::reco::TrackHitSoAConstView &trackhitd_view,
-                                                   const pixelTrack::Quality minQuality,
-                                                   uint32_t const &iterationIndex,
-                                                   Queue &queue) {
+                                                   pixelTrack::Quality minQuality,
+                                                   uint32_t iterationIndex) {
     using namespace caHitMaskingAndMergerKernels;
 
 #ifdef GPU_DEBUG
@@ -36,8 +36,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
 
     int threadsPerBlock = 128;
-    int blocks = int((trackd_view.metadata().size() + threadsPerBlock - 1) / threadsPerBlock);
+    int blocks = cms::alpakatools::divide_up_by(trackd_view.metadata().size(), threadsPerBlock);
     const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
+
     alpaka::exec<Acc1D>(
         queue, workDiv1D, Kernel_updateMasking{}, mask_view, trackd_view, trackhitd_view, minQuality, iterationIndex);
 #ifdef GPU_DEBUG
@@ -47,7 +48,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   void CAHitMaskingAndMergerKernels::updateHitOffsets(
-      int const &tksBeg, int const &tksEnd, int const &nHits, ::reco::TrackSoAView &trackd_view, Queue &queue) {
+      Queue &queue, int tksBeg, int tksEnd, int nHits, ::reco::TrackSoAView &trackd_view) {
     using namespace caHitMaskingAndMergerKernels;
 
 #ifdef GPU_DEBUG
@@ -65,13 +66,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
   }
 
-  void CAHitMaskingAndMergerKernels::filterTracks(::reco::TrackSoAView &track_view,
+  void CAHitMaskingAndMergerKernels::filterTracks(Queue &queue,
+                                                  ::reco::TrackSoAView &track_view,
                                                   ::reco::TrackHitSoAView &trackHit_view,
                                                   const ::reco::TrackSoAConstView &inpTrack_view,
                                                   const ::reco::TrackHitSoAConstView &inpTrackHit_view,
-                                                  const pixelTrack::Quality minQuality,
-                                                  const double matchFraction,
-                                                  Queue &queue) {
+                                                  pixelTrack::Quality minQuality,
+                                                  double matchFraction) {
     using namespace caHitMaskingAndMergerKernels;
 
 #ifdef GPU_DEBUG

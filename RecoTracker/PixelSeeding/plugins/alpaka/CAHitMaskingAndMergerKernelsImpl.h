@@ -110,7 +110,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
                                   const ::reco::TrackHitSoAConstView &inpTrackHit_view,
                                   const pixelTrack::Quality minQuality,
                                   const double matchFraction) const {
-      if (alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0] == 0) {
+      if (cms::alpakatools::once_per_grid(acc)) {
         uint32_t auxOutputTkIndex = 0;
         uint32_t auxOutputHitIndex = 0;
 
@@ -119,7 +119,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
             continue;
 
           bool hasDuplicate = false;
-          for (uint32_t j : cms::alpakatools::uniform_elements_x(acc, inpTrack_view.metadata().size())) {
+          for (uint32_t j : cms::alpakatools::uniform_elements(acc, inpTrack_view.metadata().size())) {
             if (j < i + 1)
               continue;
             if (inpTrack_view[j].quality() < minQuality)

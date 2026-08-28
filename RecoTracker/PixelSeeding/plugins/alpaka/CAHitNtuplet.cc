@@ -421,7 +421,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       iEvent.emplace(tokenTrack_,
                      deviceAlgo_.makeTuplesAsync(
-                         hits, geometry, bf, maxDoublets, maxTuples, mask, iterationName_, iEvent.queue()));
+                         iEvent.queue(), hits, geometry, bf, maxDoublets, maxTuples, mask, iterationName_));
 
     } else {
       edm::LogWarning("CAHitNtupletAlpaka") << "No hit on BPix1 (" << hits.offsetBPIX2()

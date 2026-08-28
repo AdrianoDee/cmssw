@@ -417,14 +417,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   template <typename TrackerTraits>
   reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
+      Queue& queue,
       HitsOnDevice const& hits_d,
       CAGeometryOnDevice const& geometry_d,
       float bfield,
       uint32_t nDoublets,
       uint32_t nTracks,
       MapToHit const& mask,
-      const pixelTrack::Iteration iterationName,
-      Queue& queue) const {
+      pixelTrack::Iteration iterationName) const {
     using HelixFit = HelixFit<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
     using TrackHitSoA = ::reco::TrackHitSoA;

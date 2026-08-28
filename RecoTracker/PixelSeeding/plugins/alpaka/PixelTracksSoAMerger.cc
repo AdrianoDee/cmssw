@@ -239,7 +239,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       // update outputTemp hitOffsets to take into account the previous SoAs
       deviceAlgo_.updateHitOffsets(
-          cumulNTks[nSoAsAux], cumulNTks[nSoAsAux + 1], cumulNHits[nSoAsAux], outputTemp, queue);
+          queue, cumulNTks[nSoAsAux], cumulNTks[nSoAsAux + 1], cumulNHits[nSoAsAux], outputTemp);
 
       // copy track hits information
       alpaka::memcpy(queue,
@@ -370,7 +370,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // emplace the merged SoA collection in the event
     iEvent.emplace(outputTkSoAToken_,
-                   deviceAlgo_.makeFilteredTracks(totTracks, totHits, outputTemp, minQuality_, matchFraction_, queue));
+                   deviceAlgo_.makeFilteredTracks(queue, totTracks, totHits, outputTemp, minQuality_, matchFraction_));
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

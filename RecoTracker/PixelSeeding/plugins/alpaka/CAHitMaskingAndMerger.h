@@ -38,21 +38,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     CAHitMaskingAndMerger& operator=(const CAHitMaskingAndMerger&) = delete;
     CAHitMaskingAndMerger& operator=(CAHitMaskingAndMerger&&) = delete;
 
-    MapToHit makeMaskingAsync(MapToHit const& mask_d,
+    MapToHit makeMaskingAsync(Queue& queue,
+                              MapToHit const& mask_d,
                               TkSoADevice const& tracks_d,
-                              const pixelTrack::Quality minQuality,
-                              uint32_t const& iterationIndex,
-                              Queue& queue) const;
+                              pixelTrack::Quality minQuality,
+                              uint32_t iterationIndex) const;
 
-    void updateHitOffsets(
-        int const& tksBeg, int const& tksEnd, int const& nHits, TkSoADevice& tracks_d, Queue& queue) const;
+    void updateHitOffsets(Queue& queue, int tksBeg, int tksEnd, int nHits, TkSoADevice& tracks_d) const;
 
-    TkSoADevice makeFilteredTracks(int const& nTracks,
-                                   int const& nHits,
+    TkSoADevice makeFilteredTracks(Queue& queue,
+                                   int nTracks,
+                                   int nHits,
                                    TkSoADevice const& inpTracks,
-                                   pixelTrack::Quality const& minQuality,
-                                   double const& matchFraction,
-                                   Queue& queue) const;
+                                   pixelTrack::Quality minQuality,
+                                   double matchFraction) const;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
