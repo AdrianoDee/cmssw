@@ -36,23 +36,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     CAHitMaskingAndMergerKernels& operator=(const CAHitMaskingAndMergerKernels&) = delete;
     CAHitMaskingAndMergerKernels& operator=(CAHitMaskingAndMergerKernels&&) = delete;
 
-    void updateMasking(::reco::TrackingRecHitsMaskingView& mask_view,
+    void updateMasking(Queue& queue,
+                       ::reco::TrackingRecHitsMaskingView& mask_view,
                        const ::reco::TrackSoAConstView& trackd_view,
                        const ::reco::TrackHitSoAConstView& trackhitd_view,
-                       const pixelTrack::Quality minQuality,
-                       uint32_t const& iterationIndex,
-                       Queue& queue);
+                       pixelTrack::Quality minQuality,
+                       uint32_t iterationIndex);
 
-    void updateHitOffsets(
-        int const& tksBeg, int const& tksEnd, int const& nHits, ::reco::TrackSoAView& trackd_view, Queue& queue);
+    void updateHitOffsets(Queue& queue, int tksBeg, int tksEnd, int nHits, ::reco::TrackSoAView& trackd_view);
 
-    void filterTracks(::reco::TrackSoAView& track_view,
+    void filterTracks(Queue& queue,
+                      ::reco::TrackSoAView& track_view,
                       ::reco::TrackHitSoAView& trackHit_view,
                       const ::reco::TrackSoAConstView& inpTrack_view,
                       const ::reco::TrackHitSoAConstView& inpTrackHit_view,
-                      const pixelTrack::Quality minQuality,
-                      const double matchFraction,
-                      Queue& queue);
+                      pixelTrack::Quality minQuality,
+                      double matchFraction);
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

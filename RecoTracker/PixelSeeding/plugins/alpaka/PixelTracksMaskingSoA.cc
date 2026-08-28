@@ -82,7 +82,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const auto& inpTkColl = iEvent.get(inputTrackSoAToken_);
 
     iEvent.emplace(outputRecHitsMaskToken_,
-                   deviceAlgo_.makeMaskingAsync(inpMaskColl, inpTkColl, minQuality_, iterationIndex_, iEvent.queue()));
+                   deviceAlgo_.makeMaskingAsync(iEvent.queue(), inpMaskColl, inpTkColl, minQuality_, iterationIndex_));
   }
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

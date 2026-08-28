@@ -34,6 +34,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsConstView = ::reco::TrackingRecHitConstView;
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
 
     using TkSoADevice = reco::TracksSoACollection;
     using Quality = ::pixelTrack::Quality;
@@ -44,8 +45,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     using CAGeometryOnDevice = reco::CAGeometrySoACollection;
 
-    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
-    
   public:
     CAHitNtupletGenerator(const edm::ParameterSet& cfg);
 
@@ -59,14 +58,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // void beginJob();
     // void endJob();
 
-    TkSoADevice makeTuplesAsync(HitsOnDevice const& hits_d,
+    TkSoADevice makeTuplesAsync(Queue& queue,
+                                HitsOnDevice const& hits_d,
                                 CAGeometryOnDevice const& params_d,
                                 float bfield,
                                 uint32_t maxDoublets,
                                 uint32_t maxTuples,
                                 MapToHit const& mask,
-                                const pixelTrack::Iteration iterationName,
-                                Queue& queue) const;
+                                pixelTrack::Iteration iterationName) const;
 
   private:
     Params m_params;
