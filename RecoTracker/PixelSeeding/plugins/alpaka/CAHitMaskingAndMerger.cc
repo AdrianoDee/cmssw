@@ -1,0 +1,93 @@
+// #define GPU_DEBUG
+// #define DUMP_GPU_TK_TUPLES
+
+#include <array>
+#include <cassert>
+#include <functional>
+#include <vector>
+
+#include <alpaka/alpaka.hpp>
+
+
+// #include "FWCore/ParameterSet/interface/ParameterSet.h"
+// #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+// #include "FWCore/Utilities/interface/Exception.h"
+// #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
+
+#include "CAHitMaskingAndMerger.h"
+
+namespace ALPAKA_ACCELERATOR_NAMESPACE {
+
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
+    using TkSoADevice = reco::TracksSoACollection;
+
+
+    MapToHit CAHitMaskingAndMerger::makeMaskingAsync(MapToHit const& mask_d,
+                                                                                 TkSoADevice const& tracks_d,
+                                                                                 const pixelTrack::Quality minQuality,
+                                                                                 uint32_t const& iterationIndex,
+                                                                                 Queue& queue) const {
+    const int nHits = mask_d.view().metadata().size();
+
+    MapToHit mask(queue, static_cast<uint32_t>(nHits));
+
+    // alpaka::memcpy(queue,
+    //                cms::alpakatools::make_device_view(queue, mask.view().recHitMask(), nHits),
+    //                cms::alpakatools::make_device_view(queue, mask_d.view().recHitMask(), nHits));
+    alpaka::memcpy(queue, mask.buffer(), mask_d.buffer());
+
+    CAHitMaskingAndMergerKernels kernels;
+
+    auto tracksd_view = tracks_d.view().tracks();
+    auto tracks_hitsd_view = tracks_d.view().trackHits();
+
+    kernels.updateMasking(mask.view(), tracksd_view, tracks_hitsd_view, minQuality, iterationIndex, queue);
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
+    std::cout << "finished updating pixel masking on GPU" << std::endl;
+#endif
+
+    return mask;
+  }
+
+  void CAHitMaskingAndMerger::updateHitOffsets(
+      int const& tksBeg, int const& tksEnd, int const& nHits, TkSoADevice& tracks_d, Queue& queue) const {
+    CAHitMaskingAndMergerKernels kernels;
+
+    auto tracksd_view = tracks_d.view().tracks();
+
+    kernels.updateHitOffsets(tksBeg, tksEnd, nHits, tracksd_view, queue);
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
+    std::cout << "finished updating track SoAs hit offsets on GPU" << std::endl;
+#endif
+
+    return;
+  }
+
+  TkSoADevice CAHitMaskingAndMerger::makeFilteredTracks(int const& nTracks,
+                                                                      int const& nHits,
+                                                                      TkSoADevice const& inpTracks,
+                                                                      pixelTrack::Quality const& minQuality,
+                                                                      double const& matchFraction,
+                                                                      Queue& queue) const {
+    CAHitMaskingAndMergerKernels kernels;
+
+    TkSoADevice tracks(queue, nTracks, nHits);
+
+    auto tracksd_view = tracks.view().tracks();
+    auto tracks_hitsd_view = tracks.view().trackHits();
+    auto inptracksd_view = inpTracks.view().tracks();
+    auto inptracks_hitsd_view = inpTracks.view().trackHits();
+
+    kernels.filterTracks(
+        tracksd_view, tracks_hitsd_view, inptracksd_view, inptracks_hitsd_view, minQuality, matchFraction, queue);
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
+    std::cout << "finished filtering track SoAs on GPU" << std::endl;
+#endif
+
+    return tracks;
+  }
+
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
