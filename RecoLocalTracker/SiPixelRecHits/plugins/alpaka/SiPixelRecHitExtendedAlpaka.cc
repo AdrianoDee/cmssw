@@ -46,7 +46,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDPutToken<reco::TrackingRecHitsSoACollection> outputRecHitsSoAToken_;
     const device::EDPutToken<reco::TrackingRecHitsMaskingSoACollection> outputRecHitsMaskToken_;
 
-    const pixelgpudetails::PixelRecHitMaskingKernel Algo_;
   };
 
   SiPixelRecHitExtendedAlpaka::SiPixelRecHitExtendedAlpaka(const edm::ParameterSet& iConfig)
@@ -195,7 +194,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // create masking vector with zeros and emplace in the event
     iEvent.emplace(outputRecHitsMaskToken_,
-                   Algo_.makeHitsMaskingAsync(static_cast<uint32_t>(output.nHits()), iEvent.queue()));
+                   pixelgpudetails::makeHitsMaskingAsync(static_cast<uint32_t>(output.nHits()), iEvent.queue()));
   }
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

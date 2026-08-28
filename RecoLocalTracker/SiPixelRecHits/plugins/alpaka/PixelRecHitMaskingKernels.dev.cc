@@ -32,30 +32,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   namespace pixelgpudetails {
 
-    TrackingRecHitsMaskingSoACollection PixelRecHitMaskingKernel::makeHitsMaskingAsync(uint32_t const nHits,
-                                                                                    Queue queue) const {
-      // using namespace pixelRecHits;
-
-//       TrackingRecHitsMaskingSoACollection mask_d(queue, nHits);
-
-//       int threadsPerBlock = 128;
-//       int blocks = cms::alpakatools::divide_up_by(nHits, threadsPerBlock);
-//       const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
-
-// #ifdef GPU_DEBUG
-//       std::cout << "launching LaunchZerosPixelMask kernel on " << alpaka::core::demangled<Acc1D> << " with " << blocks
-//                 << " blocks" << std::endl;
-// #endif
-//       alpaka::exec<Acc1D>(queue, workDiv1D, LaunchZerosPixelMask{}, mask_d.view());
-
-// #ifdef GPU_DEBUG
-//       alpaka::wait(queue);
-//       std::cout << "makeHitsMaskingAsync -> DONE!" << std::endl;
-// #endif
+    TrackingRecHitsMaskingSoACollection makeHitsMaskingAsync(uint32_t const nHits,
+                                                                                    Queue& queue) {
       
       TrackingRecHitsMaskingSoACollection mask_d(queue, nHits);
 
-      alpaka::memset(queue,cms::alpakatools::make_device_view(queue, mask_d.view().recHitMask(), nHits),0);
+      auto deviceMask = cms::alpakatools::make_device_view<uint32_t>(queue, mask_d.view().recHitMask(), nHits);
+    
+      alpaka::memset(queue,deviceMask,0x0);
+
       return mask_d;
     }
   }  // namespace pixelgpudetails
