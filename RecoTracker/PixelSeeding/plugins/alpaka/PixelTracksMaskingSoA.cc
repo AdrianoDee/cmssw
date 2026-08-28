@@ -15,7 +15,7 @@
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDPutToken.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/Event.h"
 
-#include "CAHitNtupletGenerator.h"
+#include "CAHitMaskingAndMerger.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 

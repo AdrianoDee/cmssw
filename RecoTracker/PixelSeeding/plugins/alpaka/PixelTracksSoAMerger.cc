@@ -18,7 +18,8 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
-#include "CAHitNtupletGenerator.h"
+// #include "CAHitNtupletGenerator.h"
+#include "CAHitMaskingAndMerger.h"
 
 // #define GPU_DEBUG
 // #define NTRACKS_DEBUG

@@ -9,7 +9,6 @@
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/TracksDevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
-#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -36,8 +35,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
 
-    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
-
     using TkSoADevice = reco::TracksSoACollection;
     using Quality = ::pixelTrack::Quality;
 
@@ -47,6 +44,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     using CAGeometryOnDevice = reco::CAGeometrySoACollection;
 
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
+    
   public:
     CAHitNtupletGenerator(const edm::ParameterSet& cfg);
 
@@ -71,37 +70,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   private:
     Params m_params;
-  };
-
-  class CAHitMaskingAndMerger {
-  public:
-    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
-    using TkSoADevice = reco::TracksSoACollection;
-
-  public:
-    CAHitMaskingAndMerger() = default;
-    ~CAHitMaskingAndMerger() = default;
-
-    CAHitMaskingAndMerger(const CAHitMaskingAndMerger&) = delete;
-    CAHitMaskingAndMerger(CAHitMaskingAndMerger&&) = delete;
-    CAHitMaskingAndMerger& operator=(const CAHitMaskingAndMerger&) = delete;
-    CAHitMaskingAndMerger& operator=(CAHitMaskingAndMerger&&) = delete;
-
-    MapToHit makeMaskingAsync(MapToHit const& mask_d,
-                              TkSoADevice const& tracks_d,
-                              const pixelTrack::Quality minQuality,
-                              uint32_t const& iterationIndex,
-                              Queue& queue) const;
-
-    void updateHitOffsets(
-        int const& tksBeg, int const& tksEnd, int const& nHits, TkSoADevice& tracks_d, Queue& queue) const;
-
-    TkSoADevice makeFilteredTracks(int const& nTracks,
-                                   int const& nHits,
-                                   TkSoADevice const& inpTracks,
-                                   pixelTrack::Quality const& minQuality,
-                                   double const& matchFraction,
-                                   Queue& queue) const;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
