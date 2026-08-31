@@ -6,6 +6,7 @@
 #include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsDevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -22,6 +23,8 @@
 #include "RecoLocalTracker/SiPixelRecHits/interface/PixelCPEBase.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/alpaka/PixelCPEFastParamsCollection.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
+
+#include "PixelRecHitMaskingKernel.h"
 
 //#define GPU_DEBUG
 
@@ -41,13 +44,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDGetToken<reco::TrackingRecHitsSoACollection> trackerRecHitToken_;
 
     const device::EDPutToken<reco::TrackingRecHitsSoACollection> outputRecHitsSoAToken_;
+    const device::EDPutToken<reco::TrackingRecHitsMaskingSoACollection> outputRecHitsMaskToken_;
+
   };
 
   SiPixelRecHitExtendedAlpaka::SiPixelRecHitExtendedAlpaka(const edm::ParameterSet& iConfig)
       : EDProducer(iConfig),
         pixelRecHitToken_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitsSoA"))),
         trackerRecHitToken_(consumes(iConfig.getParameter<edm::InputTag>("trackerRecHitsSoA"))),
-        outputRecHitsSoAToken_(produces()) {}
+        outputRecHitsSoAToken_(produces()),
+        outputRecHitsMaskToken_(produces()) {}
 
   void SiPixelRecHitExtendedAlpaka::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
@@ -185,6 +191,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // emplace the merged SoA collection in the event
     iEvent.emplace(outputRecHitsSoAToken_, std::move(output));
+
+    // create masking vector with zeros and emplace in the event
+    iEvent.emplace(outputRecHitsMaskToken_,
+                   pixelgpudetails::makeHitsMaskingAsync(static_cast<uint32_t>(output.nHits()), iEvent.queue()));
   }
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

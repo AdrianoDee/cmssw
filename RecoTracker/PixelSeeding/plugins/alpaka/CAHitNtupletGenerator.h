@@ -10,6 +10,7 @@
 #include "DataFormats/TrackSoA/interface/TracksDevice.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -33,6 +34,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsConstView = ::reco::TrackingRecHitConstView;
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
 
     using TkSoADevice = reco::TracksSoACollection;
     using Quality = ::pixelTrack::Quality;
@@ -56,12 +58,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // void beginJob();
     // void endJob();
 
-    TkSoADevice makeTuplesAsync(HitsOnDevice const& hits_d,
+    TkSoADevice makeTuplesAsync(Queue& queue,
+                                HitsOnDevice const& hits_d,
                                 CAGeometryOnDevice const& params_d,
                                 float bfield,
                                 uint32_t maxDoublets,
                                 uint32_t maxTuples,
-                                Queue& queue) const;
+                                MapToHit const& mask,
+                                pixelTrack::Iteration iterationName) const;
 
   private:
     Params m_params;

@@ -416,12 +416,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   template <typename TrackerTraits>
-  reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(HitsOnDevice const& hits_d,
-                                                                                  CAGeometryOnDevice const& geometry_d,
-                                                                                  float bfield,
-                                                                                  uint32_t nDoublets,
-                                                                                  uint32_t nTracks,
-                                                                                  Queue& queue) const {
+  reco::TracksSoACollection CAHitNtupletGenerator<TrackerTraits>::makeTuplesAsync(
+      Queue& queue,
+      HitsOnDevice const& hits_d,
+      CAGeometryOnDevice const& geometry_d,
+      float bfield,
+      uint32_t nDoublets,
+      uint32_t nTracks,
+      MapToHit const& mask,
+      pixelTrack::Iteration iterationName) const {
     using HelixFit = HelixFit<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
     using TrackHitSoA = ::reco::TrackHitSoA;
@@ -452,7 +455,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         m_params, hits_d.nHits(), hits_d.offsetBPIX2(), nDoublets, nTracks, layers.metadata().size(), queue);
 
     kernels.prepareHits(trackingHits, hitModules, layers, queue);
-    kernels.buildDoublets(trackingHits, graph, layers, hits_d.offsetBPIX2(), queue);
+    kernels.buildDoublets(trackingHits, graph, layers, hits_d.offsetBPIX2(), mask.view(), queue);
     kernels.launchKernels(
         trackingHits, hits_d.offsetBPIX2(), layers.metadata().size(), trackCollection.view(), layers, graph, queue);
 
@@ -465,7 +468,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       fitter.launchBrokenLineKernels(
           trackingHits, modules, trackingHits.metadata().size(), TrackerTraits::maxNumberOfQuadruplets, queue);
     }
-    kernels.classifyTuples(trackingHits, tracks, queue);
+    kernels.classifyTuples(trackingHits, tracks, iterationName, queue);
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "finished building pixel tracks on GPU" << std::endl;

@@ -12,6 +12,7 @@
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/AtomicPairCounter.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -168,12 +169,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        const ::reco::CAGraphSoAConstView& cc,
                        Queue& queue);
 
-    void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
+    void classifyTuples(const HitsConstView& hh,
+                        TkSoAView& track_view,
+                        const pixelTrack::Iteration iterationName,
+                        Queue& queue);
 
     void buildDoublets(const HitsConstView& hh,
                        const ::reco::CAGraphSoAConstView& cc,
                        const ::reco::CALayersSoAConstView& ll,
                        uint32_t offsetBPIX2,
+                       const MapToHitConstView& maskView,
                        Queue& queue);
 
     static void printCounters();
@@ -247,6 +252,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // this could be inferred from the above buffers
     // but seems cleaner to have a dedicate variable
     uint32_t maxNumberOfDoublets_;
+  };
+
+  class CAHitMaskingAndMergerKernels {
+  public:
+    CAHitMaskingAndMergerKernels() = default;
+    ~CAHitMaskingAndMergerKernels() = default;
+
+    CAHitMaskingAndMergerKernels(const CAHitMaskingAndMergerKernels&) = delete;
+    CAHitMaskingAndMergerKernels(CAHitMaskingAndMergerKernels&&) = delete;
+    CAHitMaskingAndMergerKernels& operator=(const CAHitMaskingAndMergerKernels&) = delete;
+    CAHitMaskingAndMergerKernels& operator=(CAHitMaskingAndMergerKernels&&) = delete;
+
+    void updateMasking(::reco::TrackingRecHitsMaskingView& mask_view,
+                       const ::reco::TrackSoAConstView& trackd_view,
+                       const ::reco::TrackHitSoAConstView& trackhitd_view,
+                       const pixelTrack::Quality minQuality,
+                       uint32_t const& iterationIndex,
+                       Queue& queue);
+
+    void updateHitOffsets(
+        int const& tksBeg, int const& tksEnd, int const& nHits, ::reco::TrackSoAView& trackd_view, Queue& queue);
+        
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
