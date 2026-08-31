@@ -46,10 +46,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void updateHitOffsets(Queue& queue, int tksBeg, int tksEnd, int nHits, TkSoADevice& tracks_d) const;
 
-    TkSoADevice makeFilteredTracks(Queue& queue,
+    void makeFilteredTracks(Queue& queue,
                                    int nTracks,
                                    int nHits,
-                                   TkSoADevice const& inpTracks,
+                                   TkSoADevice& inpTracks,
                                    pixelTrack::Quality minQuality,
                                    double matchFraction) const;
   };

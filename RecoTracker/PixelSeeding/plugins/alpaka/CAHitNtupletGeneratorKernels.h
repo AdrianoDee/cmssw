@@ -273,14 +273,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void updateHitOffsets(
         int const& tksBeg, int const& tksEnd, int const& nHits, ::reco::TrackSoAView& trackd_view, Queue& queue);
-
-    void filterTracks(::reco::TrackSoAView& track_view,
-                      ::reco::TrackHitSoAView& trackHit_view,
-                      const ::reco::TrackSoAConstView& inpTrack_view,
-                      const ::reco::TrackHitSoAConstView& inpTrackHit_view,
-                      const pixelTrack::Quality minQuality,
-                      const double matchFraction,
-                      Queue& queue);
+        
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

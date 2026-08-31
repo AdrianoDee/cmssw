@@ -369,8 +369,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     int totHits = std::reduce(nHits.begin(), nHits.end());
 
     // emplace the merged SoA collection in the event
-    iEvent.emplace(outputTkSoAToken_,
-                   deviceAlgo_.makeFilteredTracks(queue, totTracks, totHits, outputTemp, minQuality_, matchFraction_));
+    deviceAlgo_.makeFilteredTracks(queue, totTracks, totHits, outputTemp, minQuality_, matchFraction_);
+    iEvent.emplace(outputTkSoAToken_,std::move(outputTemp));
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

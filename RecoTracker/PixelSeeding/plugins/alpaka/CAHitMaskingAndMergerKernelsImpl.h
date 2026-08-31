@@ -101,6 +101,57 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
     }
   };
 
+
+  class Kernel_filterAndMark {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc2D const &acc,
+                                  ::reco::TrackSoAView track_view,
+                                  ::reco::TrackHitSoAView trackHit_view,
+                                  // const ::reco::TrackSoAConstView &inpTrack_view,
+                                  // const ::reco::TrackHitSoAConstView &inpTrackHit_view,
+                                  const pixelTrack::Quality minQuality,
+                                  const double matchFraction) const 
+      {
+
+        for (uint32_t i : cms::alpakatools::uniform_elements_x(acc, track_view.nTracks())) { //should be nTracks?
+          if (track_view[i].quality() < minQuality)
+            continue;
+
+          bool hasDuplicate = false;
+          for (uint32_t j : cms::alpakatools::uniform_elements_y(acc, i, track_view.nTracks())) {
+
+            if (j <= i) // should be useless
+              continue;
+            if (track_view[j].quality() < minQuality)
+                continue;
+
+              if (::reco::nHits(track_view, i) == ::reco::nHits(track_view, j)) {
+                uint32_t matchedHits = 0;
+                for (uint32_t k = 0; k < uint32_t(::reco::nHits(track_view, i)); ++k) {
+                  uint32_t auxHitOffsetsId = 0;
+                  if (i > 0)
+                    auxHitOffsetsId = track_view[i - 1].hitOffsets();
+                  if (trackHit_view[auxHitOffsetsId + k].id() ==
+                      trackHit_view[track_view[j - 1].hitOffsets() + k].id())
+                    ++matchedHits;
+                }
+                if (double(matchedHits) / double(::reco::nHits(track_view, i)) > matchFraction)
+                  hasDuplicate = true;
+              }
+
+              if(hasDuplicate)
+                break;
+          }
+
+          if(hasDuplicate)
+            track_view[i].quality() = pixelTrack::Quality::dup;
+           
+
+        }
+
+    }
+              };
+
   class Kernel_filterTracks {
   public:
     ALPAKA_FN_ACC void operator()(Acc1D const &acc,
