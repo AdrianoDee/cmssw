@@ -46,7 +46,7 @@
  * objects from the output of SoA CA.
  */
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 // struct that holds two maps for detIds of the OT modules
 struct DetIdMaps {
   DetIdMaps() : detIdToOTModuleId_(), detIdIsUsedOTModule_() {}

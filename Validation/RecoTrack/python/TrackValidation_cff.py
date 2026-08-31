@@ -1088,16 +1088,16 @@ trackingParticleHighPtPixelTrackAsssociation = trackingParticleRecoTrackAsssocia
     label_tr = "pixelTracksHighPt",
     associator = "quickTrackAssociatorByHitsPreSplitting",
 )
-PixelVertexAssociatorByPositionAndHighPtTracks = VertexAssociatorByPositionAndTracks.clone(
-    trackAssociation = "trackingParticleHighPtPixelTrackAsssociation"
+PixelVertexAssociatorByPositionAndHighPtTracks = vertexAssociatorByPositionAndTracksProducer.clone(
+    trackAssociations = ["trackingParticleHighPtPixelTrackAsssociation"]
 )
 
 trackingParticleLowPtPixelTrackAsssociation = trackingParticleRecoTrackAsssociation.clone(
     label_tr = "pixelTracksLowPt",
     associator = "quickTrackAssociatorByHitsPreSplitting",
 )
-PixelVertexAssociatorByPositionAndLowPtTracks = VertexAssociatorByPositionAndTracks.clone(
-    trackAssociation = "trackingParticleLowPtPixelTrackAsssociation"
+PixelVertexAssociatorByPositionAndLowPtTracks = vertexAssociatorByPositionAndTracksProducer.clone(
+    trackAssociations = ["trackingParticleLowPtPixelTrackAsssociation"]
 )
 
 _pixelTracksCustom = dict(
@@ -1222,7 +1222,7 @@ trackValidatorBHadronPixelTrackingOnly = trackValidatorPixelTrackingOnly.clone(
 
 tracksValidationTruthPixelTrackingOnly = tracksValidationTruth.copy()
 tracksValidationTruthPixelTrackingOnly.replace(trackingParticleRecoTrackAsssociation, trackingParticlePixelTrackAsssociation)
-tracksValidationTruthPixelTrackingOnly.replace(VertexAssociatorByPositionAndTracks, PixelVertexAssociatorByPositionAndTracks)
+tracksValidationTruthPixelTrackingOnly.replace(vertexAssociatorByPositionAndTracksProducer, PixelVertexAssociatorByPositionAndTracks)
 ##### TODO: put this behind a modifier
 tracksValidationTruthPixelTrackingOnly.add(trackingParticleHighPtPixelTrackAsssociation)
 tracksValidationTruthPixelTrackingOnly.add(PixelVertexAssociatorByPositionAndHighPtTracks)

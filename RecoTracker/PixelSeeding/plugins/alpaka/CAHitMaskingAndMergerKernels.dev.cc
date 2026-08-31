@@ -16,7 +16,7 @@
 #include "CAHitMaskingAndMergerKernels.h"
 #include "CAHitMaskingAndMergerKernelsImpl.h"
 
-//#define GPU_DEBUG
+#define GPU_DEBUG
 // #define NTUPLE_DEBUG
 //#define CA_STATS
 
@@ -69,8 +69,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void CAHitMaskingAndMergerKernels::filterTracks(Queue &queue,
                                                   ::reco::TrackSoAView &track_view,
                                                   ::reco::TrackHitSoAView &trackHit_view,
-                                                  const ::reco::TrackSoAConstView &inpTrack_view,
-                                                  const ::reco::TrackHitSoAConstView &inpTrackHit_view,
+                                                //   const ::reco::TrackSoAConstView &inpTrack_view,
+                                                //   const ::reco::TrackHitSoAConstView &inpTrackHit_view,
                                                   pixelTrack::Quality minQuality,
                                                   double matchFraction) {
     using namespace caHitMaskingAndMergerKernels;
@@ -80,21 +80,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::cout << "Starting CAHitMaskingAndMergerKernels::filterTracks" << std::endl;
 #endif
 
-    int threadsPerBlock = 128;
-    int blocks = inpTrack_view.metadata().size();
-    const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
-    alpaka::exec<Acc1D>(queue,
-                        workDiv1D,
-                        Kernel_filterTracks{},
+// 
+    const auto threadsPerBlock = 128u;
+    auto blockSize = track_view.metadata().size() / 128u;
+    auto numberOfBlocks = cms::alpakatools::divide_up_by(track_view.metadata().size() * track_view.metadata().size()/2, blockSize);
+    const auto rescale = numberOfBlocks / 65536;
+    blockSize *= (rescale + 1);
+
+    Vec2D const blocks{numberOfBlocks, 1u};  
+    Vec2D const threads{blockSize, threadsPerBlock};
+    const auto workDiv2D = cms::alpakatools::make_workdiv<Acc2D>(blocks, threads);
+    alpaka::exec<Acc2D>(queue,
+                        workDiv2D,
+                        Kernel_filterAndMark{},
                         track_view,
                         trackHit_view,
-                        inpTrack_view,
-                        inpTrackHit_view,
+                        // inpTrack_view,
+                        // inpTrackHit_view,
                         minQuality,
                         matchFraction);
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
-    std::cout << "Kernel_filterTracks -> done!" << std::endl;
+    std::cout << "Kernel_filterAndMark -> done!" << std::endl;
 #endif
   }
 

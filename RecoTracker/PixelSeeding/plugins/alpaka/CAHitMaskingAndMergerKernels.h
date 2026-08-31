@@ -48,8 +48,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void filterTracks(Queue& queue,
                       ::reco::TrackSoAView& track_view,
                       ::reco::TrackHitSoAView& trackHit_view,
-                      const ::reco::TrackSoAConstView& inpTrack_view,
-                      const ::reco::TrackHitSoAConstView& inpTrackHit_view,
+                      // const ::reco::TrackSoAConstView& inpTrack_view,
+                      // const ::reco::TrackHitSoAConstView& inpTrackHit_view,
                       pixelTrack::Quality minQuality,
                       double matchFraction);
   };

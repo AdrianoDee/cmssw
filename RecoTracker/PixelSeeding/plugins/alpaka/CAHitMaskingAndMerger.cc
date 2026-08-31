@@ -65,29 +65,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     return;
   }
 
-  TkSoADevice CAHitMaskingAndMerger::makeFilteredTracks(Queue& queue,
+  void CAHitMaskingAndMerger::makeFilteredTracks(Queue& queue,
                                                         int nTracks,
                                                         int nHits,
-                                                        TkSoADevice const& inpTracks,
+                                                        TkSoADevice& inpTracks,
                                                         pixelTrack::Quality minQuality,
                                                         double matchFraction) const {
     CAHitMaskingAndMergerKernels kernels;
 
-    TkSoADevice tracks(queue, nTracks, nHits);
+    // TkSoADevice tracks(queue, nTracks, nHits);
 
-    auto tracksd_view = tracks.view().tracks();
-    auto tracks_hitsd_view = tracks.view().trackHits();
+    // auto tracksd_view = tracks.view().tracks();
+    // auto tracks_hitsd_view = tracks.view().trackHits();
     auto inptracksd_view = inpTracks.view().tracks();
     auto inptracks_hitsd_view = inpTracks.view().trackHits();
 
+    // kernels.filterTracks(
+    //     queue, tracksd_view, tracks_hitsd_view, inptracksd_view, inptracks_hitsd_view, minQuality, matchFraction);
     kernels.filterTracks(
-        queue, tracksd_view, tracks_hitsd_view, inptracksd_view, inptracks_hitsd_view, minQuality, matchFraction);
+        queue, inptracksd_view, inptracks_hitsd_view, minQuality, matchFraction);
+
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "finished filtering track SoAs on GPU" << std::endl;
 #endif
 
-    return tracks;
+    // return tracks;
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
