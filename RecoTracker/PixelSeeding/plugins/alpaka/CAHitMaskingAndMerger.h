@@ -1,6 +1,8 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAHitMaskingAndMerger_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAHitMaskingAndMerger_h
 
+#include <utility>
+
 #include <alpaka/alpaka.hpp>
 
 
@@ -20,7 +22,6 @@
 // #include "CACell.h"
 #include "CAHitMaskingAndMergerKernels.h"
 // #include "HelixFit.h"
-
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -46,6 +47,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void updateHitOffsets(Queue& queue, int tksBeg, int tksEnd, int nHits, TkSoADevice& tracks_d) const;
 
+    void countGoodTracks(Queue& queue, ::reco::InputTracks const& allTracks, int maxTracks,pixelTrack::Quality minQuality) const;
     void makeFilteredTracks(Queue& queue,
                                    int nTracks,
                                    int nHits,
