@@ -33,33 +33,119 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
 
-  // using namespace ::caStructures;
-
-  // constexpr uint32_t tkNotFound = std::numeric_limits<uint32_t>::max();
-  // constexpr float maxScore = std::numeric_limits<float>::max();
-  // constexpr float nSigma2Phase1 = 25.f;
-  // constexpr float nSigma2 = 5.f;
-  // constexpr int nTrackParameters = 5;
-  // // map: index of a track parameter -> index of its covariance
-  // HOST_DEVICE_CONSTANT std::array<uint8_t, nTrackParameters> iParam2iCov = {0u, 5u, 9u, 12u, 14u};
-
-  // all of these below are mostly to avoid carrying around the relative namespace
-
-  // using Quality = ::pixelTrack::Quality;
-  // using TkSoAView = ::reco::TrackSoAView;
-  // using TkHitSoAView = ::reco::TrackHitSoAView;
-
-  // template <typename TrackerTraits>
-  // using QualityCuts = ::pixelTrack::QualityCutsT<TrackerTraits>;
-
-  // using HitToTuple = caStructures::GenericContainer;
-  // using HitContainer = caStructures::SequentialContainer;
-  // using TupleMultiplicity = caStructures::GenericContainer;
-  // using HitToCell = caStructures::GenericContainer;
-  // using CellToCell = caStructures::GenericContainer;
-  // using CellToTrack = caStructures::GenericContainer;
-
   using namespace cms::alpakatools;
+
+    class Kernel_fillGoodTracks {
+    public:
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                    ::reco::InputTracks const allTracks,
+                                    caStructures::CAPairSoAConstView cn,
+                                    uint32_t const* hitsPerTrack, //TODO remove or wrap in GPU_DEBUG
+                                    ::reco::TrackSoAView outTracks,
+                                    ::reco::TrackHitSoAView outHits) const {
+        
+        auto nGoodTracks = outTracks.metadata().size();                          
+        printf("Kernel_fillGoodTracks: nGoodTracks: %u\n", nGoodTracks);
+        for (uint32_t t : cms::alpakatools::uniform_elements(acc, nGoodTracks)) {
+          auto const collectionIndex = cn[t].inner();
+          auto const inputTrackIndex = cn[t].outer();
+
+          auto const& inTracks = allTracks.views[collectionIndex];
+          auto const& inHits = allTracks.hitViews[collectionIndex];
+
+          outTracks[t].quality() = inTracks[inputTrackIndex].quality();
+          outTracks[t].chi2() = inTracks[inputTrackIndex].chi2();
+          outTracks[t].nLayers() = inTracks[inputTrackIndex].nLayers();
+          outTracks[t].eta() = inTracks[inputTrackIndex].eta();
+          outTracks[t].pt() = inTracks[inputTrackIndex].pt();
+          outTracks[t].iteration() = inTracks[inputTrackIndex].iteration();
+
+          printf("Track %u: collectionIndex: %u, inputTrackIndex: %u, quality: %d, chi2: %f, nLayers: %d, eta: %f, pt: %f",
+                 t, collectionIndex, inputTrackIndex,
+                 uint32_t(outTracks[t].quality()), outTracks[t].chi2(), outTracks[t].nLayers(),
+                 outTracks[t].eta(), outTracks[t].pt());
+
+          for (uint32_t i = 0; i < 5; ++i)
+            outTracks[t].state()(i) = inTracks[inputTrackIndex].state()(i);
+
+          for (uint32_t i = 0; i < 15; ++i)
+            outTracks[t].covariance()(i) = inTracks[inputTrackIndex].covariance()(i);
+
+          ALPAKA_ASSERT_ACC((t== 0 && outTracks[t].hitOffsets() == 0) || (t>0 && hitsPerTrack[t] == outTracks[t].hitOffsets() - outTracks[t-1].hitOffsets()));
+
+          uint32_t const inHitBegin = inTracks[inputTrackIndex].hitOffsets();
+          uint32_t const inHitEnd = inTracks[inputTrackIndex + 1].hitOffsets();
+
+          uint32_t const outHitBegin = outTracks[t].hitOffsets();
+          uint32_t const outHitEnd = outTracks[t+1].hitOffsets();
+          
+          ALPAKA_ASSERT_ACC(outHitEnd - outHitBegin == inHitEnd - inHitBegin);
+
+          printf("Track %u: inHits: [%u, %u), outHits: [%u, %u)\n", t, inHitBegin, inHitEnd, outHitBegin, outHitEnd);
+          for (uint32_t h = 0; h < inHitEnd - inHitBegin; ++h) {
+            outHits[outHitBegin + h].id() = inHits[inHitBegin + h].id();
+            outHits[outHitBegin + h].detId() = inHits[inHitBegin + h].detId();
+          }
+        }
+
+        if (cms::alpakatools::once_per_grid(acc))
+          outTracks.nTracks() = nGoodTracks;
+      }
+    };
+    
+  class Kernel_countGoodTracks {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                  ::reco::InputTracks const allTracks,
+                                  const pixelTrack::Quality minQuality,
+                                  uint32_t *totTracks,
+                                  uint32_t *totHits,
+                                  uint32_t *hitsPerTrack,
+                                  caStructures::CAPairSoAView cn) const {
+
+      if (cms::alpakatools::once_per_grid(acc)) {
+        hitsPerTrack[0] = 0;
+      }
+
+      for (uint32_t globalIndex : cms::alpakatools::uniform_elements(acc, totalTrackCapacity(allTracks))) {
+
+        printf("globalIndex: %u %u\n", globalIndex, totalTrackCapacity(allTracks));
+        uint32_t trackIndex = globalIndex;
+
+        for (int collectionIndex = 0; collectionIndex < allTracks.nInputs; ++collectionIndex) {
+          auto const& tracks = allTracks.views[collectionIndex];
+          uint32_t const capacity = tracks.metadata().size();
+
+          if (trackIndex >= capacity) {
+            trackIndex -= capacity;
+            continue;
+          }
+
+          if (tracks[trackIndex].quality() >= minQuality) {
+            auto t = alpaka::atomicAdd(acc, totTracks, 1u, alpaka::hierarchy::Blocks{});
+            uint32_t h = ::reco::nHits(tracks, trackIndex);
+            alpaka::atomicAdd(acc, totHits, h, alpaka::hierarchy::Blocks{});
+            
+            printf("collectionIndex: %d, trackIndex: %d, t: %d, h: %d\n", collectionIndex, trackIndex, t, h);
+            cn[t].inner() = collectionIndex;
+            cn[t].outer() = trackIndex;
+            hitsPerTrack[t+1] = h;
+            
+          }
+          break;
+        }
+      }
+    }
+
+  private:
+    ALPAKA_FN_ACC static uint32_t totalTrackCapacity(::reco::InputTracks const& allTracks) {
+      uint32_t total = 0;
+      for (int collectionIndex = 0; collectionIndex < allTracks.nInputs; ++collectionIndex) {
+        total += allTracks.views[collectionIndex].nTracks();
+      }
+      return total;
+    }
+  };
 
   class Kernel_updateMasking {
   public:

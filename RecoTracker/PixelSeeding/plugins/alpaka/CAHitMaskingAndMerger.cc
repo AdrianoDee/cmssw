@@ -21,6 +21,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
     using TkSoADevice = reco::TracksSoACollection;
 
+    void CAHitMaskingAndMerger::countGoodTracks(Queue& queue,
+                                                              ::reco::InputTracks const& allTracks,
+                                                              int maxTracks,
+                                                              pixelTrack::Quality minQuality) const {
+    CAHitMaskingAndMergerKernels kernels (maxTracks, queue);
+
+    kernels.countGoodTracks(queue, allTracks, minQuality);
+    kernels.fillGoodTracks(queue, allTracks);                                                    
+  }
+
 
     MapToHit CAHitMaskingAndMerger::makeMaskingAsync(Queue& queue,
                                                    MapToHit const& mask_d,
