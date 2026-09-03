@@ -29,6 +29,7 @@ namespace reco {
     reco::TrackSoAConstView views[maxTrackSoACollections];
     reco::TrackHitSoAConstView hitViews[maxTrackSoACollections];
     int nInputs;
+    int nTracks;
   };
 }  // namespace reco
 
@@ -63,15 +64,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void fillGoodTracks(Queue& queue,
                                     ::reco::InputTracks const& allTracks);
 
-    void updateHitOffsets(Queue& queue, int tksBeg, int tksEnd, int nHits, ::reco::TrackSoAView& trackd_view);
-
     void filterTracks(Queue& queue,
-                      ::reco::TrackSoAView& track_view,
-                      ::reco::TrackHitSoAView& trackHit_view,
-                      // const ::reco::TrackSoAConstView& inpTrack_view,
-                      // const ::reco::TrackHitSoAConstView& inpTrackHit_view,
-                      pixelTrack::Quality minQuality,
-                      double matchFraction);
+                      double matchFraction,
+                      int minHitsForDuplicate);
+
+    reco::TracksSoACollection getTracks() {
+        return std::move(*tracks_d_);
+      }
+
   private:
 
     std::optional<reco::TracksSoACollection> tracks_d_;

@@ -45,15 +45,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               pixelTrack::Quality minQuality,
                               uint32_t iterationIndex) const;
 
-    void updateHitOffsets(Queue& queue, int tksBeg, int tksEnd, int nHits, TkSoADevice& tracks_d) const;
+    TkSoADevice makeMergedTracks(Queue& queue,
+                                 ::reco::InputTracks const& allTracks,
+                                 int maxTracks,
+                                 float matchFraction,
+                                 int minHitsForDuplicate,
+                                 pixelTrack::Quality minQuality) const;
 
-    void countGoodTracks(Queue& queue, ::reco::InputTracks const& allTracks, int maxTracks,pixelTrack::Quality minQuality) const;
-    void makeFilteredTracks(Queue& queue,
-                                   int nTracks,
-                                   int nHits,
-                                   TkSoADevice& inpTracks,
-                                   pixelTrack::Quality minQuality,
-                                   double matchFraction) const;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
