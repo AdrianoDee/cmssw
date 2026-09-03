@@ -45,6 +45,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     pixelTrack::Quality const minQuality_;
     double const matchFraction_;
+    int const minHitsForDuplicate_;
 
     std::vector<device::EDGetToken<reco::TracksSoACollection>> inputTkSoATokenV_;
     std::vector<edm::InputTag> inputTkSoATagV_;
@@ -55,8 +56,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDPutToken<reco::TracksSoACollection> outputTkSoAToken_;
     
     Algo deviceAlgo_;
-    uint32_t nTracks_ = 0;
-    uint32_t nHits_ = 0;
+    uint32_t maxTracks_ = 0;
 
     std::optional<reco::TracksSoACollection> tracks_d_;
 
@@ -66,6 +66,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       : SynchronizingEDProducer(iConfig),
         minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))),
         matchFraction_(iConfig.getParameter<double>("matchFraction")),
+        minHitsForDuplicate_(iConfig.getParameter<int>("minHitsForDuplicate")),
         inputTkSoATagV_(iConfig.getParameter<std::vector<edm::InputTag>>("inputTkSoAs")),
         outputTkSoAToken_(produces()) {
     for (const auto& it : inputTkSoATagV_) {
@@ -93,7 +94,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         "inputTkSoAs", {edm::InputTag("pixelTracksHighPtAlpaka"), edm::InputTag("pixelTracksLowPtAlpaka")});
     desc.add<std::string>("minQuality", "highPurity");
     desc.add<double>("matchFraction", 0.0);
-
+    desc.add<int>("minHitsForDuplicate", 3);
     descriptions.addWithDefaultLabel(desc);
   }
 
@@ -115,35 +116,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   void PixelTracksSoAMerger::acquire(device::Event const& iEvent, device::EventSetup const& iSetup) {
 
-    // get both Pixel and Tracker SoA collections
     auto queue = iEvent.queue();
 
     std::vector<const reco::TracksSoACollection*> inputTkSoAs;
     inputTkSoAs.resize(inputTkSoATokenV_.size());
-    // for (const auto& it : inputTkSoATokenV_) {
-    //   auto const& aux = iEvent.get(it);
-    //   inputTkSoAs.push_back(&aux);
-    // }
 
-    int maxTracks = 0;
+    maxTracks_ = 0;
+    std::cout << "PixelTracksSoAMerger::acquire: nCollections_: " << nCollections_ << std::endl;
     for (int i = 0; i < nCollections_; ++i) {
 
       auto const& aux = iEvent.get(inputTkSoATokenV_[i]);
       inputTkSoAs[i] = &aux;
       allTrackView_.views[i] = aux.view().tracks();
-      maxTracks +=  aux.view().tracks().metadata().size(); 
+      maxTracks_ +=  aux.view().tracks().metadata().size();
       allTrackView_.hitViews[i] = aux.view().trackHits();
+      std::cout << "PixelTracksSoAMerger::acquire: inputTkSoAs[" << i << "]: " << inputTkSoATagV_[i] << ", nTracks: "
+                << aux.view().tracks().metadata().size() << std::endl;
     }
 
-    deviceAlgo_.countGoodTracks(queue, allTrackView_, maxTracks, minQuality_);
-    //nTracks_ = nGoodTracks;
-    //nHits_ = nGoodHits;
+    allTrackView_.nTracks = maxTracks_;
+    
+    if (maxTracks_ > 0) {
+      tracks_d_ = deviceAlgo_.makeMergedTracks(queue, allTrackView_, maxTracks_, matchFraction_, minHitsForDuplicate_, minQuality_); //TODO: better constructor
+    } else {
+      tracks_d_ = reco::TracksSoACollection(queue, 0, 0);
+    }
+
 
   }
 
-  void PixelTracksSoAMerger::produce(/*edm::StreamID streamID,*/
+  void PixelTracksSoAMerger::produce(
                                      device::Event& iEvent,
                                      const device::EventSetup& es) {
+
+    iEvent.emplace(outputTkSoAToken_, std::move(*tracks_d_));
 
   }
 

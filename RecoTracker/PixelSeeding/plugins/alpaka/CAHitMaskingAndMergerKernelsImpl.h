@@ -44,8 +44,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
                                     ::reco::TrackSoAView outTracks,
                                     ::reco::TrackHitSoAView outHits) const {
         
-        auto nGoodTracks = outTracks.metadata().size();                          
-        printf("Kernel_fillGoodTracks: nGoodTracks: %u\n", nGoodTracks);
+        auto nGoodTracks = outTracks.metadata().size();      
+#ifdef GPU_DEBUG                    
+        if (cms::alpakatools::once_per_grid(acc)) {
+          printf("Kernel_fillGoodTracks: nGoodTracks: %u\n", nGoodTracks);
+        }
+#endif
         for (uint32_t t : cms::alpakatools::uniform_elements(acc, nGoodTracks)) {
           auto const collectionIndex = cn[t].inner();
           auto const inputTrackIndex = cn[t].outer();
@@ -59,29 +63,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
           outTracks[t].eta() = inTracks[inputTrackIndex].eta();
           outTracks[t].pt() = inTracks[inputTrackIndex].pt();
           outTracks[t].iteration() = inTracks[inputTrackIndex].iteration();
-
-          printf("Track %u: collectionIndex: %u, inputTrackIndex: %u, quality: %d, chi2: %f, nLayers: %d, eta: %f, pt: %f",
+#ifdef GPU_DEBUG
+          printf("Track %u: collectionIndex: %u, inputTrackIndex: %u, quality: %d, chi2: %f, nLayers: %d, eta: %f, pt: %f \n",
                  t, collectionIndex, inputTrackIndex,
                  uint32_t(outTracks[t].quality()), outTracks[t].chi2(), outTracks[t].nLayers(),
                  outTracks[t].eta(), outTracks[t].pt());
-
+#endif
           for (uint32_t i = 0; i < 5; ++i)
             outTracks[t].state()(i) = inTracks[inputTrackIndex].state()(i);
 
           for (uint32_t i = 0; i < 15; ++i)
             outTracks[t].covariance()(i) = inTracks[inputTrackIndex].covariance()(i);
 
-          ALPAKA_ASSERT_ACC((t== 0 && outTracks[t].hitOffsets() == 0) || (t>0 && hitsPerTrack[t] == outTracks[t].hitOffsets() - outTracks[t-1].hitOffsets()));
+          ALPAKA_ASSERT_ACC((t== 0 && hitsPerTrack[t] ==outTracks[t].hitOffsets()) || (t>0 && hitsPerTrack[t] == outTracks[t].hitOffsets() - outTracks[t-1].hitOffsets()));
 
-          uint32_t const inHitBegin = inTracks[inputTrackIndex].hitOffsets();
-          uint32_t const inHitEnd = inTracks[inputTrackIndex + 1].hitOffsets();
+          uint32_t const inHitBegin = inputTrackIndex == 0 ? 0 : inTracks[inputTrackIndex-1].hitOffsets();
+          uint32_t const inHitEnd = inTracks[inputTrackIndex].hitOffsets();
 
-          uint32_t const outHitBegin = outTracks[t].hitOffsets();
-          uint32_t const outHitEnd = outTracks[t+1].hitOffsets();
-          
-          ALPAKA_ASSERT_ACC(outHitEnd - outHitBegin == inHitEnd - inHitBegin);
-
+          uint32_t const outHitBegin = t == 0 ? 0 : outTracks[t-1].hitOffsets();
+          uint32_t const outHitEnd = outTracks[t].hitOffsets();
+#ifdef GPU_DEBUG
           printf("Track %u: inHits: [%u, %u), outHits: [%u, %u)\n", t, inHitBegin, inHitEnd, outHitBegin, outHitEnd);
+#endif          
+          ALPAKA_ASSERT_ACC(outHitEnd - outHitBegin == inHitEnd - inHitBegin);
+#ifdef GPU_DEBUG
+          printf("Track %u: inHits: [%u, %u), outHits: [%u, %u)\n", t, inHitBegin, inHitEnd, outHitBegin, outHitEnd);
+#endif
           for (uint32_t h = 0; h < inHitEnd - inHitBegin; ++h) {
             outHits[outHitBegin + h].id() = inHits[inHitBegin + h].id();
             outHits[outHitBegin + h].detId() = inHits[inHitBegin + h].detId();
@@ -103,13 +110,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
                                   uint32_t *hitsPerTrack,
                                   caStructures::CAPairSoAView cn) const {
 
-      if (cms::alpakatools::once_per_grid(acc)) {
-        hitsPerTrack[0] = 0;
-      }
+#ifdef GPU_DEBUG
+      if (cms::alpakatools::once_per_grid(acc)) 
+        printf("Kernel_countGoodTracks: nInputs: %u\n", allTracks.nInputs);
+#endif
 
-      for (uint32_t globalIndex : cms::alpakatools::uniform_elements(acc, totalTrackCapacity(allTracks))) {
+      for (uint32_t globalIndex : cms::alpakatools::uniform_elements(acc, allTracks.nTracks)) {
 
-        printf("globalIndex: %u %u\n", globalIndex, totalTrackCapacity(allTracks));
+#ifdef GPU_DEBUG
+        if (globalindex % 1000 == 0) 
+          printf("globalIndex: %u %u - nInputs: %u\n", globalIndex, allTracks.nTracks, allTracks.nInputs);
+#endif
         uint32_t trackIndex = globalIndex;
 
         for (int collectionIndex = 0; collectionIndex < allTracks.nInputs; ++collectionIndex) {
@@ -125,25 +136,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
             auto t = alpaka::atomicAdd(acc, totTracks, 1u, alpaka::hierarchy::Blocks{});
             uint32_t h = ::reco::nHits(tracks, trackIndex);
             alpaka::atomicAdd(acc, totHits, h, alpaka::hierarchy::Blocks{});
-            
+#ifdef GPU_DEBUG 
+          if (trackIndex % 1000 == 0) 
             printf("collectionIndex: %d, trackIndex: %d, t: %d, h: %d\n", collectionIndex, trackIndex, t, h);
+#endif
             cn[t].inner() = collectionIndex;
             cn[t].outer() = trackIndex;
-            hitsPerTrack[t+1] = h;
+            hitsPerTrack[t] = h;
             
           }
           break;
         }
       }
-    }
-
-  private:
-    ALPAKA_FN_ACC static uint32_t totalTrackCapacity(::reco::InputTracks const& allTracks) {
-      uint32_t total = 0;
-      for (int collectionIndex = 0; collectionIndex < allTracks.nInputs; ++collectionIndex) {
-        total += allTracks.views[collectionIndex].nTracks();
-      }
-      return total;
     }
   };
 
@@ -171,72 +175,152 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
     }
   };
 
-  class Kernel_updateHitOffsets {
-  public:
-    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
-                                  int const &tksBeg,
-                                  int const &tksEnd,
-                                  int const &nHits,
-                                  ::reco::TrackSoAView trackd_view) const {
-      if (alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0] == 0) {
-        for (int i = tksBeg; i < tksEnd; ++i) {
-          trackd_view[i].hitOffsets() += nHits;
-        }
-      }
-      alpaka::syncBlockThreads(acc);
-    }
-  };
-
-
-  class Kernel_filterAndMark {
+  class Kernel_sameHitsDuplicates {
   public:
     ALPAKA_FN_ACC void operator()(Acc2D const &acc,
                                   ::reco::TrackSoAView track_view,
                                   ::reco::TrackHitSoAView trackHit_view,
-                                  // const ::reco::TrackSoAConstView &inpTrack_view,
-                                  // const ::reco::TrackHitSoAConstView &inpTrackHit_view,
-                                  const pixelTrack::Quality minQuality,
-                                  const double matchFraction) const 
+                                  const double matchFraction,
+                                  const int minHitsForDuplicate) const 
       {
+#ifdef GPU_DEBUG
+        if (cms::alpakatools::once_per_grid(acc)) {
+          printf("Kernel_sameHitsDuplicates: nTracks: %u\n", track_view.nTracks());
+        }
+#endif
+        for (uint32_t i : cms::alpakatools::uniform_elements_x(acc, track_view.nTracks())) 
+        { 
 
-        for (uint32_t i : cms::alpakatools::uniform_elements_x(acc, track_view.nTracks())) { //should be nTracks?
-          if (track_view[i].quality() < minQuality)
-            continue;
+          auto const nHitsI = uint32_t(::reco::nHits(track_view, i));
+          auto const hitBeginI = i == 0 ? 0 : track_view[i - 1].hitOffsets();
 
-          bool hasDuplicate = false;
-          for (uint32_t j : cms::alpakatools::uniform_elements_y(acc, i, track_view.nTracks())) {
-
-            if (j <= i) // should be useless
+          for (uint32_t j : cms::alpakatools::uniform_elements_y(acc, i + 1, track_view.nTracks())) {
+            
+            if (nHitsI != uint32_t(::reco::nHits(track_view, j)))
               continue;
-            if (track_view[j].quality() < minQuality)
-                continue;
 
-              if (::reco::nHits(track_view, i) == ::reco::nHits(track_view, j)) {
-                uint32_t matchedHits = 0;
-                for (uint32_t k = 0; k < uint32_t(::reco::nHits(track_view, i)); ++k) {
-                  uint32_t auxHitOffsetsId = 0;
-                  if (i > 0)
-                    auxHitOffsetsId = track_view[i - 1].hitOffsets();
-                  if (trackHit_view[auxHitOffsetsId + k].id() ==
-                      trackHit_view[track_view[j - 1].hitOffsets() + k].id())
-                    ++matchedHits;
-                }
-                if (double(matchedHits) / double(::reco::nHits(track_view, i)) > matchFraction)
-                  hasDuplicate = true;
+            auto const hitBeginJ = track_view[j - 1].hitOffsets(); // j > 0
+            int matchedHits = 0;
+
+            for (uint32_t k = 0; k < nHitsI; ++k) {
+              if (trackHit_view[hitBeginI + k].id() == trackHit_view[hitBeginJ + k].id()) {
+                ++matchedHits;
               }
+            }
+            
+            if (double(matchedHits) / double(nHitsI) > matchFraction or matchedHits == minHitsForDuplicate) {
+              track_view[i].quality() = pixelTrack::Quality::dup;
+#ifdef GPU_DEBUG
+              printf("Kernel_sameHitsDuplicates: i: %u, j: %u, matchedHits: %u, nHitsI: %u, matchFraction: %f, quality: %d\n", i, j, matchedHits, nHitsI, matchFraction, uint32_t(track_view[i].quality()));
+#endif
+              break;
+            }
 
-              if(hasDuplicate)
-                break;
+
           }
-
-          if(hasDuplicate)
-            track_view[i].quality() = pixelTrack::Quality::dup;
-           
 
         }
 
     }
               };
+
+  class Kernel_trackParameterDuplicates {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc2D const& acc,
+                                  ::reco::TrackSoAView track_view,
+                                  const float nSigma2,
+                                  const float maxDeltaR2,
+                                  const float maxRelativePtDifference) const {
+
+#ifdef GPU_DEBUG
+        if (cms::alpakatools::once_per_grid(acc)) {
+          printf("Kernel_trackParameterDuplicates: nTracks: %u\n", track_view.nTracks());
+        }
+#endif
+        for (uint32_t i : cms::alpakatools::uniform_elements_x(acc, track_view.nTracks())) 
+        { 
+
+          auto const qi = track_view[i].quality();
+
+
+          if (qi == pixelTrack::Quality::dup)
+            continue;
+
+          auto const nHitsI = uint32_t(::reco::nHits(track_view, i));
+          auto const pti = track_view[i].pt();
+          auto const etai = track_view[i].eta();
+          auto const phii = ::reco::phi(track_view, i);
+          auto const chargei = ::reco::charge(track_view, i);
+
+          
+
+          for (uint32_t j : cms::alpakatools::uniform_elements_y(acc, i + 1, track_view.nTracks())) {
+            
+              auto const qj = track_view[j].quality();
+              if (qj == pixelTrack::Quality::dup)
+                return;
+              if (qi == pixelTrack::Quality::dup)
+                break;
+
+              if (chargei != ::reco::charge(track_view, j))
+                return;
+
+              auto deltaPhi = phii - ::reco::phi(track_view, j);
+              if (deltaPhi > M_PI)
+                deltaPhi -= 2.f * M_PI;
+              else if (deltaPhi < -M_PI)
+                deltaPhi += 2.f * M_PI;
+
+              auto square = [](auto x) { return x * x; };
+              
+              if (square(deltaPhi) + square(etai - track_view[j].eta()) > maxDeltaR2)
+                return;
+
+              auto better = [&](uint32_t a, uint32_t b) {
+              if (track_view[a].nLayers() != track_view[b].nLayers())
+                return track_view[a].nLayers() > track_view[b].nLayers();
+              if (track_view[a].quality() != track_view[b].quality())
+                return track_view[a].quality() > track_view[b].quality();
+              if (track_view[a].chi2() != track_view[b].chi2())
+                return track_view[a].chi2() < track_view[b].chi2();
+              return a < b;
+              };
+
+              auto const ptj = track_view[j].pt();
+              auto const minPt = alpaka::math::min(acc, pti, ptj);
+              if (minPt <= 0.f or alpaka::math::abs(acc, pti - ptj) > maxRelativePtDifference * minPt)
+                return;
+
+              constexpr int diagCov[5] = {0, 5, 9, 12, 14};
+              float chi2 = 0.f;
+              for (int p = 0; p < 5; ++p) {
+                auto const variance = track_view[i].covariance()(diagCov[p]) + track_view[j].covariance()(diagCov[p]);
+                if (variance <= 0.f)
+                  return;
+
+                auto delta = track_view[i].state()(p) - track_view[j].state()(p);
+                if (p == 0) {
+                  if (delta > M_PI)
+                    delta -= 2.f * M_PI;
+                  else if (delta < -M_PI)
+                    delta += 2.f * M_PI;
+                }
+                chi2 += delta * delta / variance;
+              }
+
+      if (chi2 > nSigma2)
+        return;
+
+      track_view[better(i, j) ? j : i].quality() = pixelTrack::Quality::dup;
+#ifdef GPU_DEBUG
+      printf("Kernel_trackParameterDuplicates: i: %u, j: %u, chi2: %f, nSigma2: %f, quality: %d\n", i, j, chi2, nSigma2, uint32_t(track_view[better(i, j) ? j : i].quality()));
+      printf("Kernel_trackParameterDuplicates: i: %u, j: %u, pti: %f, ptj: %f, deltaPhi: %f, deltaEta: %f, maxDeltaR2: %f, maxRelativePtDifference: %f\n", i, j, pti, ptj, deltaPhi, etai - track_view[j].eta(), maxDeltaR2, maxRelativePtDifference);
+#endif
+            }
+          }
+    }
+  };
+
 
   class Kernel_filterTracks {
   public:
