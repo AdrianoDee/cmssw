@@ -194,10 +194,10 @@ pixelTracksHighPtAlpakaSerial = makeSerialClone(pixelTracksHighPtAlpaka,
     pixelRecHitSrc = 'siPixelRecHitsPreSplittingAlpakaSerial'
 )
 
-# pixel tracks SoA merger
-from RecoTracker.PixelSeeding.pixelTracksMaskingSoA_cfi import pixelTracksMaskingSoA as _pixelTracksMaskingSoA
+# pixel tracks SoA Mask
+from RecoTracker.PixelSeeding.caMasking_cfi import caMasking as _caMasking
 
-pixelTracksHighPtMaskingSoA = _pixelTracksMaskingSoA.clone(
+pixelTracksHighPtMaskingSoA = _caMasking.clone(
     iterationIndex = 1,
     minQuality = "tight",
     tracksSoASrc = "pixelTracksHighPtAlpaka",
@@ -236,9 +236,9 @@ from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpaka_cfi import p
 ))
 
 # pixel tracks SoA merger
-from RecoTracker.PixelSeeding.pixelTracksSoAMerger_cfi import pixelTracksSoAMerger as _pixelTracksSoAMerger
+from RecoTracker.FinalTrackSelectors.tracksSoAMerger_cfi import tracksSoAMerger as _tracksSoAMerger
 
-(pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksAlpaka, _pixelTracksSoAMerger.clone(
+(pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksAlpaka, _tracksSoAMerger.clone(
     inputTkSoAs = cms.VInputTag("pixelTracksHighPtAlpaka","pixelTracksLowPtAlpaka"),
     minQuality = cms.string('tight'),
     matchFraction = cms.double(0.0),

@@ -15,16 +15,15 @@
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDPutToken.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/Event.h"
 
-#include "CAHitMaskingAndMerger.h"
+#include "CAMaskingMerging.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-  class PixelTracksMaskingSoA : public global::EDProducer<> {
-    using Algo = CAHitMaskingAndMerger;
+  class CAMasking : public global::EDProducer<> {
 
   public:
-    explicit PixelTracksMaskingSoA(const edm::ParameterSet& iConfig);
-    ~PixelTracksMaskingSoA() override = default;
+    explicit CAMasking(const edm::ParameterSet& iConfig);
+    ~CAMasking() override = default;
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -39,10 +38,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     const device::EDPutToken<reco::TrackingRecHitsMaskingSoACollection> outputRecHitsMaskToken_;
 
-    Algo deviceAlgo_;
   };
 
-  PixelTracksMaskingSoA::PixelTracksMaskingSoA(const edm::ParameterSet& iConfig)
+  CAMasking::CAMasking(const edm::ParameterSet& iConfig)
       : EDProducer(iConfig),
         iterationIndex_(iConfig.getParameter<uint32_t>("iterationIndex")),
         minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))),
@@ -59,7 +57,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
   }
 
-  void PixelTracksMaskingSoA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+  void CAMasking::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
 
     desc.add<edm::InputTag>(
@@ -73,7 +71,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     descriptions.addWithDefaultLabel(desc);
   }
 
-  void PixelTracksMaskingSoA::produce(edm::StreamID streamID,
+  void CAMasking::produce(edm::StreamID streamID,
                                       device::Event& iEvent,
                                       const device::EventSetup& es) const {
     // get both Pixel and Tracker SoA collections
@@ -81,10 +79,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const auto& inpMaskColl = iEvent.get(inputRecHitsMaskToken_);
     const auto& inpTkColl = iEvent.get(inputTrackSoAToken_);
 
-    iEvent.emplace(outputRecHitsMaskToken_,
-                   deviceAlgo_.makeMaskingAsync(iEvent.queue(), inpMaskColl, inpTkColl, minQuality_, iterationIndex_));
+    reco::TrackingRecHitsMaskingSoACollection outMask(queue, inpMaskColl.view().metadata().size());
+    alpaka::memcpy(queue, outMask.buffer(), inpMaskColl.buffer());
+                                    
+    caMasking::makeMaskingAsync(queue, outMask, inpMaskColl, inpTkColl, minQuality_, iterationIndex_);
+
+    iEvent.emplace(outputRecHitsMaskToken_, std::move(outMask));
   }
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
-DEFINE_FWK_ALPAKA_MODULE(PixelTracksMaskingSoA);
+DEFINE_FWK_ALPAKA_MODULE(CAMasking);

@@ -1,5 +1,5 @@
-#ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAHitMaskingAndMergerKernelsImpl_h
-#define RecoTracker_PixelSeeding_plugins_alpaka_CAHitMaskingAndMergerKernelsImpl_h
+#ifndef RecoTracker_FinalTrackSelectors_plugins_alpaka_TrackSoAMergerKernelsImpl_h
+#define RecoTracker_FinalTrackSelectors_plugins_alpaka_TrackSoAMergerKernelsImpl_h
 
 // #define GPU_DEBUG
 // #define NTUPLE_DEBUG
@@ -24,23 +24,20 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "FWCore/Utilities/interface/isFinite.h"
-#include "RecoTracker/PixelSeeding/interface/CAPairSoA.h"
+#include "RecoTracker/FinalTrackSelectors/interface/TrackMergerCounterSoA.h"
 
 // local includes
-#include "CACell.h"
-#include "CAHitMaskingAndMergerKernels.h"
-#include "CAStructures.h"
+#include "TrackSoAMergerKernels.h"
 
-namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::trackSoAMergerKernels {
 
   using namespace cms::alpakatools;
 
     class Kernel_fillGoodTracks {
     public:
       ALPAKA_FN_ACC void operator()(Acc1D const& acc,
-                                    ::reco::InputTracks const allTracks,
-                                    caStructures::CAPairSoAConstView cn,
-                                    uint32_t const* hitsPerTrack, //TODO remove or wrap in GPU_DEBUG
+                                    ::mergerKernels::InputTracks const allTracks,
+                                    ::reco::TrackMergerCounterSoAView cn,
                                     ::reco::TrackSoAView outTracks,
                                     ::reco::TrackHitSoAView outHits) const {
         
@@ -51,8 +48,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
         }
 #endif
         for (uint32_t t : cms::alpakatools::uniform_elements(acc, nGoodTracks)) {
-          auto const collectionIndex = cn[t].inner();
-          auto const inputTrackIndex = cn[t].outer();
+          auto const collectionIndex = cn[t].collection();
+          auto const inputTrackIndex = cn[t].track();
 
           auto const& inTracks = allTracks.views[collectionIndex];
           auto const& inHits = allTracks.hitViews[collectionIndex];
@@ -75,7 +72,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
           for (uint32_t i = 0; i < 15; ++i)
             outTracks[t].covariance()(i) = inTracks[inputTrackIndex].covariance()(i);
 
-          ALPAKA_ASSERT_ACC((t== 0 && hitsPerTrack[t] ==outTracks[t].hitOffsets()) || (t>0 && hitsPerTrack[t] == outTracks[t].hitOffsets() - outTracks[t-1].hitOffsets()));
+          ALPAKA_ASSERT_ACC((t== 0 && cn[t].hitsInTrack() ==outTracks[t].hitOffsets()) || (t>0 && cn[t].hitsInTrack() == outTracks[t].hitOffsets() - outTracks[t-1].hitOffsets()));
 
           uint32_t const inHitBegin = inputTrackIndex == 0 ? 0 : inTracks[inputTrackIndex-1].hitOffsets();
           uint32_t const inHitEnd = inTracks[inputTrackIndex].hitOffsets();
@@ -103,12 +100,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
   class Kernel_countGoodTracks {
   public:
     ALPAKA_FN_ACC void operator()(Acc1D const &acc,
-                                  ::reco::InputTracks const allTracks,
+                                  ::mergerKernels::InputTracks const allTracks,
                                   const pixelTrack::Quality minQuality,
+                                  ::reco::TrackMergerCounterSoAView cn,
                                   uint32_t *totTracks,
-                                  uint32_t *totHits,
-                                  uint32_t *hitsPerTrack,
-                                  caStructures::CAPairSoAView cn) const {
+                                  uint32_t *totHits
+                                ) const {
 
 #ifdef GPU_DEBUG
       if (cms::alpakatools::once_per_grid(acc)) 
@@ -118,7 +115,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
       for (uint32_t globalIndex : cms::alpakatools::uniform_elements(acc, allTracks.nTracks)) {
 
 #ifdef GPU_DEBUG
-        if (globalindex % 1000 == 0) 
+        if (globalIndex % 1000 == 0) 
           printf("globalIndex: %u %u - nInputs: %u\n", globalIndex, allTracks.nTracks, allTracks.nInputs);
 #endif
         uint32_t trackIndex = globalIndex;
@@ -140,36 +137,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
           if (trackIndex % 1000 == 0) 
             printf("collectionIndex: %d, trackIndex: %d, t: %d, h: %d\n", collectionIndex, trackIndex, t, h);
 #endif
-            cn[t].inner() = collectionIndex;
-            cn[t].outer() = trackIndex;
-            hitsPerTrack[t] = h;
+            cn[t].collection() = collectionIndex;
+            cn[t].track() = trackIndex;
+            cn[t].hitsInTrack() = h;
             
           }
           break;
-        }
-      }
-    }
-  };
-
-  class Kernel_updateMasking {
-  public:
-    ALPAKA_FN_ACC void operator()(Acc1D const &acc,
-                                  ::reco::TrackingRecHitsMaskingView mask_view,
-                                  const ::reco::TrackSoAConstView &trackd_view,
-                                  const ::reco::TrackHitSoAConstView &trackhitd_view,
-                                  const pixelTrack::Quality minQuality,
-                                  uint32_t const &iterationIndex) const {
-      if (alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0] == 0) {
-        int getHit = 0;
-        for (int j = 0; j < int(trackd_view.nTracks()); ++j) {
-          getHit = getHit + ::reco::nHits(trackd_view, j);
-
-          if (trackd_view[j].quality() < minQuality)
-            continue;
-
-          for (uint32_t k = 0; k < uint32_t(::reco::nHits(trackd_view, j)); ++k) {
-            mask_view[trackhitd_view[getHit - k - 1].id()].recHitMask() = iterationIndex;
-          }
         }
       }
     }
@@ -246,7 +219,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
           if (qi == pixelTrack::Quality::dup)
             continue;
 
-          auto const nHitsI = uint32_t(::reco::nHits(track_view, i));
           auto const pti = track_view[i].pt();
           auto const etai = track_view[i].eta();
           auto const phii = ::reco::phi(track_view, i);
@@ -407,6 +379,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels {
   };
 
 
-}  // namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitMaskingAndMergerKernels
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
-#endif  // RecoTracker_PixelSeeding_plugins_alpaka_CAHitMaskingAndMergerKernelsImpl_h
+#endif  // RecoTracker_FinalTrackSelectors_plugins_alpaka_TrackSoAMergerKernelsImpl_h

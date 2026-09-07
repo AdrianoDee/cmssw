@@ -180,6 +180,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        uint32_t offsetBPIX2,
                        const MapToHitConstView& maskView,
                        Queue& queue);
+    
+    void updateMasking(Queue& queue,
+                       ::reco::TrackingRecHitsMaskingView& mask_view,
+                       const ::reco::TrackSoAConstView& trackd_view,
+                       const ::reco::TrackHitSoAConstView& trackhitd_view,
+                       pixelTrack::Quality minQuality,
+                       uint32_t iterationIndex);
 
     static void printCounters();
 

@@ -7,92 +7,70 @@
 #include <alpaka/alpaka.hpp>
 
 // CMSSW headers
-#include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
+// #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
 // local headers
-#include "CAHitMaskingAndMergerKernels.h"
-#include "CAHitMaskingAndMergerKernelsImpl.h"
+#include "TrackSoAMergerKernels.h"
+#include "TrackSoAMergerKernelsImpl.h"
 
 // #define GPU_DEBUG
-// #define NTUPLE_DEBUG
-//#define CA_STATS
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-    CAHitMaskingAndMergerKernels::CAHitMaskingAndMergerKernels(uint32_t maxTracks, Queue &queue)
+    TrackSoAMergerKernels::TrackSoAMergerKernels(Params const& params, Queue &queue):
+        params_(params)
     {
-        iterGood_ = CAPairSoACollection(queue, maxTracks);
+        counters_d_ = reco::TrackMergerCounterSoACollection(queue, params_.maxTracks);
         totCounters_ = cms::alpakatools::make_device_buffer<uint32_t []>(queue, 2u);
-        iterGoodHits_ = cms::alpakatools::make_device_buffer<uint32_t []>(queue,maxTracks);
 
         totTracks_ = cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(totCounters_->data()));
         totHits_ = cms::alpakatools::make_device_view(queue, *reinterpret_cast<uint32_t *>(totCounters_->data() + 1));
 
-        // alpaka::memset(queue, iterGoodHits_, 0);
         alpaka::memset(queue, *totTracks_, 0);
         alpaka::memset(queue, *totHits_, 0);
     }
 
-  void CAHitMaskingAndMergerKernels::updateMasking(Queue &queue,
-                                                   ::reco::TrackingRecHitsMaskingView &mask_view,
-                                                   const ::reco::TrackSoAConstView &trackd_view,
-                                                   const ::reco::TrackHitSoAConstView &trackhitd_view,
-                                                   pixelTrack::Quality minQuality,
-                                                   uint32_t iterationIndex) {
-    using namespace caHitMaskingAndMergerKernels;
+    reco::TracksSoACollection TrackSoAMergerKernels::makeMergedTracks(Queue& queue,
+                                                                                ::mergerKernels::InputTracks const& allTracks){
+   
+	    countGoodTracks(queue, allTracks);
+	    fillGoodTracks(queue, allTracks);
+	    filterTracks(queue);
 
 #ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Starting CAHitMaskingAndMergerKernels::updateMasking" << std::endl;
+        alpaka::wait(queue);
+	    std::cout << "finished filtering track SoAs on GPU" << std::endl;
 #endif
 
-    int threadsPerBlock = 128;
-    int blocks = cms::alpakatools::divide_up_by(trackd_view.metadata().size(), threadsPerBlock);
-    const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
-
-    alpaka::exec<Acc1D>(
-        queue, workDiv1D, Kernel_updateMasking{}, mask_view, trackd_view, trackhitd_view, minQuality, iterationIndex);
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Kernel_updateMasking -> done!" << std::endl;
-#endif
-  }
-
-   void CAHitMaskingAndMergerKernels::countGoodTracks(Queue &queue,
-                                                                    ::reco::InputTracks const &allTracks,
-                                                                    pixelTrack::Quality minQuality) {
-    using namespace caHitMaskingAndMergerKernels;
-
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Starting CAHitMaskingAndMergerKernels::countGoodTracks" << std::endl;
-#endif
-
-    uint32_t totalTrackCapacity = 0;
-    for (int collectionIndex = 0; collectionIndex < allTracks.nInputs; ++collectionIndex) {
-      totalTrackCapacity += allTracks.views[collectionIndex].metadata().size();
+        return std::move(*tracks_d_);
     }
+      
 
-    auto countsDevice = cms::alpakatools::make_device_buffer<int[]>(queue, 2);
-    alpaka::memset(queue, countsDevice, 0);
+   void TrackSoAMergerKernels::countGoodTracks(Queue &queue,
+                                                ::mergerKernels::InputTracks const &allTracks) {
+    using namespace trackSoAMergerKernels;
 
-    if (totalTrackCapacity != 0) {
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
+    std::cout << "Starting TrackSoAMergerKernels::countGoodTracks" << std::endl;
+#endif
+
+    if (allTracks.nTracks != 0) {
       const auto threadsPerBlock = 128u;
-      const auto blocks = cms::alpakatools::divide_up_by(totalTrackCapacity, threadsPerBlock);
+      const auto blocks = cms::alpakatools::divide_up_by(allTracks.nTracks, threadsPerBlock);
       const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
 
       alpaka::exec<Acc1D>(queue,
                           workDiv1D,
                           Kernel_countGoodTracks{},
                           allTracks,
-                          minQuality,
+                          params_.minQuality,
+                          counters_d_->view(),
                           totTracks_->data(),
-                          totHits_->data(),
-                          iterGoodHits_->data(),
-                          iterGood_->view());
+                          totHits_->data());
     }
 
     auto totCountersHost  = cms::alpakatools::make_host_buffer<uint32_t[]>(queue, 2);
@@ -120,7 +98,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       alpaka::exec<Acc1D>(queue,
                           workDivPrefixScan,
                           cms::alpakatools::multiBlockPrefixScan<uint32_t>(),
-                          iterGoodHits_->data(),
+                          counters_d_->view().hitsInTrack().data(),
                           tracks_d_->view().tracks().hitOffsets().data(),
                           totCountersHost[0],
                           blocksPrefixScan,
@@ -130,15 +108,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   }
 
-  void CAHitMaskingAndMergerKernels::fillGoodTracks(Queue &queue,
-                                                    ::reco::InputTracks const &allTracks) {
-    using namespace caHitMaskingAndMergerKernels;
+  void TrackSoAMergerKernels::fillGoodTracks(Queue &queue,
+                                                    ::mergerKernels::InputTracks const &allTracks) {
+    using namespace trackSoAMergerKernels;
     
     if (tracks_d_->view().tracks().metadata().size() > 0) {
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
-    std::cout << "Starting CAHitMaskingAndMergerKernels::fillGoodTracks" << std::endl;
+    std::cout << "Starting TrackSoAMergerKernels::fillGoodTracks" << std::endl;
 #endif
       const auto threadsPerBlock = 128u;
       const auto blocks = cms::alpakatools::divide_up_by(tracks_d_->view().tracks().metadata().size(), threadsPerBlock);
@@ -148,8 +126,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           workDiv1D,
                           Kernel_fillGoodTracks{},
                           allTracks,
-                          iterGood_->view(),
-                          iterGoodHits_->data(),
+                          counters_d_->view(),
                           tracks_d_->view().tracks(),
                           tracks_d_->view().trackHits());
     }
@@ -160,14 +137,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 }
 
-  void CAHitMaskingAndMergerKernels::filterTracks(Queue &queue,
-                                                  double matchFraction,
-                                                  int minHitsForDuplicate) {
-    using namespace caHitMaskingAndMergerKernels;
+  void TrackSoAMergerKernels::filterTracks(Queue &queue) {
+    using namespace trackSoAMergerKernels;
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
-    std::cout << "Starting CAHitMaskingAndMergerKernels::filterTracks" << std::endl;
+    std::cout << "Starting TrackSoAMergerKernels::filterTracks" << std::endl;
 #endif
 
     auto const nTracks = tracks_d_->view().tracks().metadata().size();
@@ -193,8 +168,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         Kernel_sameHitsDuplicates{},
                         tracks_d_->view().tracks(),
                         tracks_d_->view().trackHits(),
-                        matchFraction,
-                        minHitsForDuplicate);
+                        params_.matchFraction,
+                        params_.dupMinHits);
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Kernel_sameHitsDuplicates -> done!" << std::endl;
@@ -204,9 +179,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         workDiv2D,
                         Kernel_trackParameterDuplicates{},
                         tracks_d_->view().tracks(),
-                        25.f,
-                        1e-4f,
-                        0.15f);
+                        params_.dupNSigma2,
+                        params_.dupMaxDeltaR2,
+                        params_.dupPtDifference);
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Kernel_trackParameterDuplicates -> done!" << std::endl;
