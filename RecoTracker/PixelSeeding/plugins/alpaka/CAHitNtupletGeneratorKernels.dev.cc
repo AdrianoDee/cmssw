@@ -874,7 +874,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 #endif
   }
-
+  
   /* This will make sense when we will be able to run this once per job in Alpaka
 
   template <typename TrackerTraits>
