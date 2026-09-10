@@ -33,6 +33,8 @@ namespace mergerKernels {
   struct Params
   {
     // minquality ?
+    bool doSameHitsDuplicates;
+    bool doParamDuplicates;
     pixelTrack::Quality minQuality;
     int maxTracks;
     int dupMinHits;

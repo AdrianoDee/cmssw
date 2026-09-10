@@ -161,31 +161,38 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     Vec2D const blocks{blocksX, blocksY};
     Vec2D const threads{tracksPerBlock, comparisonsPerTrack};
     auto const workDiv2D = cms::alpakatools::make_workdiv<Acc2D>(blocks, threads);
-
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
     printf("filterTracks: nTracks %d, blocksX %d, blocksY %d tracksPerBlock %d\n", nTracks, blocksX, blocksY, tracksPerBlock);
-    alpaka::exec<Acc2D>(queue,
-                        workDiv2D,
-                        Kernel_sameHitsDuplicates{},
-                        tracks_d_->view().tracks(),
-                        tracks_d_->view().trackHits(),
-                        params_.matchFraction,
-                        params_.dupMinHits);
+#endif
+    if (params_.doSameHitsDuplicates) {
+      alpaka::exec<Acc2D>(queue,
+                          workDiv2D,
+                          Kernel_sameHitsDuplicates{},
+                          tracks_d_->view().tracks(),
+                          tracks_d_->view().trackHits(),
+                          params_.matchFraction,
+                          params_.dupMinHits);
+
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Kernel_sameHitsDuplicates -> done!" << std::endl;
 #endif
+      }
 
-    alpaka::exec<Acc2D>(queue,
-                        workDiv2D,
-                        Kernel_trackParameterDuplicates{},
-                        tracks_d_->view().tracks(),
-                        params_.dupNSigma2,
-                        params_.dupMaxDeltaR2,
-                        params_.dupPtDifference);
+    if(params_.doParamDuplicates) {
+        alpaka::exec<Acc2D>(queue,
+                            workDiv2D,
+                            Kernel_trackParameterDuplicates{},
+                            tracks_d_->view().tracks(),
+                            params_.dupNSigma2,
+                            params_.dupMaxDeltaR2,
+                            params_.dupPtDifference);
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Kernel_trackParameterDuplicates -> done!" << std::endl;
 #endif
+        }
 
   }
 

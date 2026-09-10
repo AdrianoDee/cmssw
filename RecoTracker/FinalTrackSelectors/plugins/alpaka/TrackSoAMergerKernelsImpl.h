@@ -181,7 +181,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::trackSoAMergerKernels {
               }
             }
             
-            if (double(matchedHits) / double(nHitsI) > matchFraction or matchedHits == minHitsForDuplicate) {
+            if (double(matchedHits) / double(nHitsI) > matchFraction and matchedHits >= minHitsForDuplicate) {
               track_view[i].quality() = pixelTrack::Quality::dup;
 #ifdef GPU_DEBUG
               printf("Kernel_sameHitsDuplicates: i: %u, j: %u, matchedHits: %u, nHitsI: %u, matchFraction: %f, quality: %d\n", i, j, matchedHits, nHitsI, matchFraction, uint32_t(track_view[i].quality()));
