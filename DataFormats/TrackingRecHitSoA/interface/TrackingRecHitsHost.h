@@ -20,6 +20,8 @@ namespace reco {
 
   using HitPortableCollectionHost = PortableHostCollection<reco::TrackingBlocksSoA>;
 
+  using TrackingRecHitsMaskingHost = PortableHostCollection<reco::TrackingRecHitsMaskingSoA>;
+
   class TrackingRecHitHost : public HitPortableCollectionHost {
   public:
     explicit TrackingRecHitHost(edm::Uninitialized)
@@ -64,6 +66,11 @@ namespace reco {
     uint32_t nModules() const { return this->view().hitModules().metadata().size() - 1; }
 
     int32_t offsetBPIX2() const { return this->view().trackingHits().offsetBPIX2(); }
+    uint32_t offsetStubs() const { return this->view().trackingHits().offsetStubs(); }
+
+    // Host counterpart of TrackingRecHitDevice::setOffsets: a no-op, the accessors above read the SoA
+    // directly.
+    void setOffsets(int32_t, uint32_t) {}
 
     // do nothing for a host collection
     template <typename TQueue>

@@ -59,6 +59,11 @@ The offsets currently in use are:
 * 0.7502: HLT phase-2 menu, with tracking ntuple
 * 0.7503: HLT phase-2 menu, CPU vs. GPU validation
 * 0.751: HLT phase-2 timing menu Alpaka variant
+* 0.7512: HLT phase-2 timing menu, stub-seeded pixel tracking (phase2CAStubs)
+* 0.7513: HLT phase-2 timing menu, stub-seeded pixel tracking with truth-matched stubs, CPU only
+* 0.7514: HLT phase-2 timing menu, stub-seeded pixel tracking with two iterations (phase2CAStubs, pixelTrackMask)
+* 0.7515: HLT phase-2 menu, CPU vs. GPU validation of the stub-seeded pixel tracking
+* 0.7516: HLT phase-2 menu, CPU vs. GPU validation of the two-iteration stub-seeded pixel tracking
 * 0.7521: HLT phase-2 timing menu ticlv5TrackLinkingGNN variant
 * 0.7522: HLT phase-2 timing menu mtd_at_hlt variant
 * 0.753: HLT phase-2 timing menu legacy tracking
@@ -77,6 +82,7 @@ The offsets currently in use are:
 * 0.773: HLT phase-2 NGT Scouting menu, with NANO:@NGTScoutingVal
 * 0.774: HLT phase-2 NGT Scouting menu, with NANO:@NGTScoutingVal+@Phase2L1DPGwithGen (L1+HLT objects)
 * 0.775: HLT phase-2 NGT Scouting menu with Pixeltracks CA Extension + LST T5s as GeneralTracks
+* 0.776: HLT phase-2 NGT Scouting menu, single-iteration stub-seeded pixel tracking as general tracks
 * 0.778 L3 Tracker Muons reconstruction Outside-In first, HLT Muon NanoAOD
 * 0.78: Complete L1 workflow
 * 0.781: Complete L1 workflow, producing FEVT and NANO output L1/P2GT objects

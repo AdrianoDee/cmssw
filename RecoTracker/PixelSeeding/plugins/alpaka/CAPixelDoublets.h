@@ -12,12 +12,9 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
 
-  template <typename TrackerTraits>
+  template <typename TrackerTraits, bool CountOnly = false>
   class GetDoubletsFromHisto {
   public:
-    // #ifdef __CUDACC__
-    //       __launch_bounds__(getDoubletsFromHistoMaxBlockSize, getDoubletsFromHistoMinBlocksPerMP)  // TODO: Alapakafy
-    // #endif
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   uint32_t maxNumOfDoublets,
                                   CACell<TrackerTraits>* cells,
@@ -25,12 +22,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                   HitsConstView hh,
                                   ::reco::CAGraphSoAConstView cc,
                                   ::reco::CALayersSoAConstView ll,
+                                  ::reco::CADoubletCutsSoAConstView doubletCuts,
                                   uint32_t const* __restrict__ offsets,
                                   PhiBinner<TrackerTraits> const* phiBinner,
                                   HitToCell* outerHitHisto,
-                                  AlgoParams const& params) const {
-      doubletsFromHisto<TrackerTraits>(
-          acc, maxNumOfDoublets, cells, nCells, hh, cc, ll, offsets, phiBinner, outerHitHisto, params);
+                                  uint32_t* __restrict__ pipelineCounters,
+                                  MapToHitConstView maskView) const {
+      doubletsFromHisto<TrackerTraits, CountOnly>(acc,
+                                                  maxNumOfDoublets,
+                                                  cells,
+                                                  nCells,
+                                                  hh,
+                                                  cc,
+                                                  ll,
+                                                  doubletCuts,
+                                                  offsets,
+                                                  phiBinner,
+                                                  outerHitHisto,
+                                                  pipelineCounters,
+                                                  maskView);
     }
   };
 

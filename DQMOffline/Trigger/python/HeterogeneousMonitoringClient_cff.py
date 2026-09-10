@@ -9,6 +9,14 @@ alpakaValidationHLT.toModify(hltSiPixelTrackComparisonHarvester,
                              topFolderName = 'HLT/HeterogeneousComparisons/pixelTracksSoA'
 )
 
+# Two-iteration stub-seeded pixel tracking: the displaced and the merged selections are compared as well.
+hltSiPixelTrackComparisonHarvesterDisplaced = hltSiPixelTrackComparisonHarvester.clone(
+    topFolderName = 'HLT/HeterogeneousComparisons/pixelTracksSoADisplaced'
+)
+hltSiPixelTrackComparisonHarvesterMerged = hltSiPixelTrackComparisonHarvester.clone(
+    topFolderName = 'HLT/HeterogeneousComparisons/pixelTracksSoAMerged'
+)
+
 from DQMServices.Core.DQMEDHarvester import DQMEDHarvester
 hltTrackToTrackEfficiencies = DQMEDHarvester("DQMGenericClient",
     subDirs        = cms.untracked.vstring(
@@ -47,3 +55,11 @@ HLTHeterogeneousMonitoringHarvesting =  cms.Sequence(
 _HLTHeterogeneousMonitoringHarvesting = HLTHeterogeneousMonitoringHarvesting.copy()
 _HLTHeterogeneousMonitoringHarvesting += hltTrackToTrackEfficiencies
 alpakaValidationHLT.toReplaceWith(HLTHeterogeneousMonitoringHarvesting, _HLTHeterogeneousMonitoringHarvesting)
+
+from Configuration.ProcessModifiers.phase2CAStubs_cff import phase2CAStubs
+from Configuration.ProcessModifiers.pixelTrackMask_cff import pixelTrackMask
+_HLTHeterogeneousMonitoringHarvestingTwoIterations = _HLTHeterogeneousMonitoringHarvesting.copy()
+_HLTHeterogeneousMonitoringHarvestingTwoIterations += hltSiPixelTrackComparisonHarvesterDisplaced
+_HLTHeterogeneousMonitoringHarvestingTwoIterations += hltSiPixelTrackComparisonHarvesterMerged
+(phase2CAStubs & pixelTrackMask & alpakaValidationHLT).toReplaceWith(HLTHeterogeneousMonitoringHarvesting,
+                                                                     _HLTHeterogeneousMonitoringHarvestingTwoIterations)

@@ -1,6 +1,12 @@
 #ifndef RecoTracker_PixelSeeding_plugins_alpaka_CAStructures_h
 #define RecoTracker_PixelSeeding_plugins_alpaka_CAStructures_h
 
+#include <cmath>
+#include <cstdint>
+
+#include <alpaka/alpaka.hpp>
+
+#include "DataFormats/TrackSoA/interface/TrackDefinitions.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/SimpleVector.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
@@ -18,22 +24,17 @@ namespace caStructures {
     float avgTracksPerCell_;
 
     // Algorithm Parameters
+    // minHitsPerNtuplet_ is compared against the number of layers in the ntuplet
+    // (CACell::find_ntuplets); the name is that of the configuration parameter set by the menus.
     uint16_t minHitsPerNtuplet_;
     uint16_t minHitsForSharingCut_;
-    float ptmin_;
-    float hardCurvCut_;
-    float cellZ0Cut_;
-
-    // Pixel Cluster Cut Params
-    float dzdrFact_;  // from dz/dr to "DY"
-    int16_t minYsizeB1_;
-    int16_t minYsizeB2_;
-    int16_t maxDYsize12_;
-    int16_t maxDYsize_;
-    int16_t maxDYPred_;
 
     // Flags
     bool useRiemannFit_;
+    // Enables the broken-line fit corrections (material partition and rigid-node guard, Karimaki Fisher
+    // basis, pion 1/beta, trapezoid quadrature, 3x3 covariance blend; see BrokenLine.h). Read only by
+    // the CA main fit. Positional struct: keep this slot in the makeCommonParams initializer order.
+    bool useFitCorrections_;
     bool fitNas4_;
     bool earlyFishbone_;
     bool lateFishbone_;
@@ -45,12 +46,40 @@ namespace caStructures {
     bool doTripletCleaner_;
     bool doFastDuplicateRemover_;
     bool doEarlyDuplicateRemover_;
+
+    // Inline per-triplet DNN gate (Phase2OTStubs only): an MLP with compile-time weights
+    // (CATripletDNN.h) scores every accepted triplet in Kernel_connect, pixel-only ones included
+    // (nStubs==0, sentinel stub features), and rejects those below tripletDNNThreshold_
+    // (negative => the threshold compiled into the weight header).
+    bool useTripletDNN_;
+    float tripletDNNThreshold_;
+
+    // Track classifier (Phase2OTStubs only): an MLP with compile-time weights (CATrackDNN.h) scores
+    // each fitted candidate in Kernel_classifyTracks; its score replaces the chi2-based
+    // strict->tight promotion (trackDNNThreshold_ negative => the threshold in the weight header).
+    bool useTrackDNN_;
+    float trackDNNThreshold_;
+
+    // Device-memory allocation strategy (see CAHitNtupletGeneratorKernels)
+    bool delayAllocations_;    // Defer cell-derived + hit->track buffers until their real size is known
+    bool countDoubletsFirst_;  // Run a count-only doublet pass to size simpleCells/hitToCellStorage exactly
+
+    // Duplicate gate width, in units of the fitted covariance: two tracks are duplicates when every
+    // fitted parameter p satisfies dp^2 <= fastDupNSigma2_*(cov_i+cov_j) (Kernel_fastDuplicateRemover
+    // and Kernel_rejectDuplicate). The Phase-1 specializations use their own nSigma2Phase1 constant.
+    float fastDupNSigma2_;
+
+    // Tracking iteration this configuration belongs to; keeps the diagnostics separated when
+    // several CA instances run in the same job.
+    ::pixelTrack::Iteration iterationName_;
   };
 
   // Hits data formats
   using HitsView = ::reco::TrackingRecHitView;
   using HitModulesConstView = ::reco::HitModuleSoAConstView;
   using HitsConstView = ::reco::TrackingRecHitConstView;
+
+  using MapToHitConstView = ::reco::TrackingRecHitsMaskingConstView;
 
   // Tracks data formats
   using TkSoAView = ::reco::TrackSoAView;

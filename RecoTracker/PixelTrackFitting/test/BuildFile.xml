@@ -21,6 +21,7 @@
 
 <bin file="testFits.cpp" name="testBrokenLineFit">
   <use name="eigen"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
   <flags CXXFLAGS="-g -DUSE_BL"/>
 </bin>
 
@@ -38,6 +39,7 @@
 <bin file="PixelTrackFits.cc" name="PixelTrackBrokenLineFit">
   <use name="eigen"/>
   <use name="root"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
   <flags CXXFLAGS="-DEIGEN_NO_DEBUG -DUSE_BL"/>
 </bin>
 
@@ -47,7 +49,34 @@
   <flags CXXFLAGS="-g"/>
 </bin>
 
-<bin file="testEigenJacobian.cpp">  
+<bin name="testGblFitDevice" file="alpaka/testGblFitDevice.dev.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<bin file="testGblJacobian.cc" name="testGblJacobian">
+  <use name="eigen"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <use name="DataFormats/GeometryVector"/>
+  <use name="MagneticField/Engine"/>
+  <use name="TrackingTools/AnalyticalJacobians"/>
+  <use name="TrackingTools/TrajectoryParametrization"/>
+  <flags CXXFLAGS="-g"/>
+</bin>
+
+<bin file="testGblPerigee.cc" name="testGblPerigee">
+  <use name="eigen"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <use name="DataFormats/GeometryVector"/>
+  <use name="MagneticField/Engine"/>
+  <use name="TrackingTools/TrajectoryState"/>
+  <flags CXXFLAGS="-g"/>
+</bin>
+
+<bin file="testEigenJacobian.cpp">
   <use name="eigen"/>
   <use name="DataFormats/GeometrySurface"/>
   <use name="MagneticField/Engine"/>
@@ -55,3 +84,81 @@
   <use name="TrackingTools/TrajectoryParametrization"/>
   <flags CXXFLAGS="-g"/>
 </bin>
+
+<!-- GblHostOracles.cc is host-only (external gbl/CMSSW headers); .dev.cc goes to the device compiler. -->
+<bin name="testGblOracleDevice" file="alpaka/testGblOracleDevice.dev.cc GblHostOracles.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="eigen"/>
+  <use name="gbl"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <use name="DataFormats/GeometryVector"/>
+  <use name="MagneticField/Engine"/>
+  <use name="TrackingTools/TrajectoryParametrization"/>
+  <use name="TrackingTools/TrajectoryState"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<bin name="testGblTiltedDevice" file="alpaka/testGblTiltedDevice.dev.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<bin name="testGblMeasFrameDevice" file="alpaka/testGblMeasFrameDevice.dev.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<bin name="testGblReplayDevice" file="alpaka/testGblReplayDevice.dev.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<bin name="testBLBFieldMapDevice" file="alpaka/testBLBFieldMapDevice.dev.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<!-- Offline replay driver: needs a dump file as argv[1]; NO_TESTRUN skips the argument-less runtests. -->
+<bin file="gblReplay.cc" name="gblReplay">
+  <use name="eigen"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <flags CXXFLAGS="-g"/>
+  <flags NO_TESTRUN="1"/>
+</bin>
+
+<!-- Regeneration of the compiled-in material table (blMaterialMap/blMaterialMapRun.sh): needs step trees as
+     arguments; NO_TESTRUN skips the argument-less runtests. -->
+<bin file="blMaterialMap/blMaterialMapBuild.cc" name="blMaterialMapBuild">
+  <use name="root"/>
+  <flags NO_TESTRUN="1"/>
+</bin>
+
+<!-- Checks the two EventSetup maps the fits read against their sources (blMapsCheck_cfg.py). -->
+<library file="BLMapsCheck.cc" name="RecoTrackerPixelTrackFittingTestBLMapsCheck">
+  <use name="DataFormats/GeometryVector"/>
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="MagneticField/Engine"/>
+  <use name="MagneticField/Records"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+  <use name="RecoTracker/Record"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+<test name="testBLMapsCheck" command="cmsRun ${LOCALTOP}/src/RecoTracker/PixelTrackFitting/test/blMapsCheck_cfg.py"/>

@@ -66,6 +66,10 @@ numWFIB.extend([prefixDet+34.7501]) # HLTTrackingOnly75e33
 numWFIB.extend([prefixDet+34.7502]) # HLTTrackingNtuple75e33
 numWFIB.extend([prefixDet+34.7503]) # HLTHeterogeneousValid
 numWFIB.extend([prefixDet+34.751])  # HLTTiming75e33, alpaka
+numWFIB.extend([prefixDet+34.7512]) # HLTTiming75e33, stub-seeded pixel tracking
+numWFIB.extend([prefixDet+34.7514]) # HLTTiming75e33, stub-seeded pixel tracking, two iterations
+numWFIB.extend([prefixDet+34.7515]) # HLTHeterogeneousValid, stub-seeded pixel tracking
+numWFIB.extend([prefixDet+34.7516]) # HLTHeterogeneousValid, stub-seeded pixel tracking, two iterations
 numWFIB.extend([prefixDet+34.7521]) # HLTTiming75e33, ticlv5TrackLinkingGNN
 numWFIB.extend([prefixDet+34.7522]) # HLTTiming75e33, mtd_at_hlt
 numWFIB.extend([prefixDet+34.753])  # HLTTiming75e33, legacy tracking
@@ -83,6 +87,7 @@ numWFIB.extend([prefixDet+34.7721]) # NGTScouting + NANO (with separate DQM step
 numWFIB.extend([prefixDet+34.773])  # NGTScouting + NANO (including validation)
 numWFIB.extend([prefixDet+34.774])  # NGTScouting + NANO containing both L1 and HLT objects (including validation)
 numWFIB.extend([prefixDet+34.775])  # NGTScouting + Phase2CAExtension&LSTT5 as GeneralTracks
+numWFIB.extend([prefixDet+34.776])  # NGTScouting, single-iteration stub-seeded pixel tracking
 
 for numWF in numWFIB:
     workflows[numWF] = _upgrade_workflows[numWF]

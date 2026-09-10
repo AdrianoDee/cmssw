@@ -2045,6 +2045,42 @@ upgradeWFs['HLTTiming75e33TiclBarrel'].suffix = '_HLT75e33TimingTiclBarrel'
 upgradeWFs['HLTTiming75e33TiclBarrel'].offset = 0.758
 upgradeWFs['HLTTiming75e33TiclBarrel'].step2['--procModifiers'] = 'ticl_barrel'
 
+# Stub-based CA tracking workflow
+upgradeWFs['HLTTiming75e33CAStubs'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTTiming75e33CAStubs'].suffix = '_HLT75e33TimingCAStubs'
+upgradeWFs['HLTTiming75e33CAStubs'].offset = 0.7512
+upgradeWFs['HLTTiming75e33CAStubs'].step2['--procModifiers'] = 'phase2CAStubs'
+upgradeWFs['HLTTiming75e33CAStubs'].step3['--procModifiers'] = 'phase2CAStubs'
+
+# Truth-matched stubs workflow (overlay on phase2CAStubs)
+upgradeWFs['HLTTiming75e33CATrueStubs'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTTiming75e33CATrueStubs'].suffix = '_HLT75e33TimingCATrueStubs'
+upgradeWFs['HLTTiming75e33CATrueStubs'].offset = 0.7513
+upgradeWFs['HLTTiming75e33CATrueStubs'].step2['--procModifiers'] = 'phase2CAStubs,phase2CATrueStubs'
+upgradeWFs['HLTTiming75e33CATrueStubs'].step2['--accelerators'] = 'cpu'
+upgradeWFs['HLTTiming75e33CATrueStubs'].step3['--procModifiers'] = 'phase2CAStubs,phase2CATrueStubs'
+upgradeWFs['HLTTiming75e33CATrueStubs'].step3['--accelerators'] = 'cpu'
+
+# Two-iteration stub chain (hit masking, displaced iteration, merger)
+upgradeWFs['HLTTiming75e33CAStubsTwoIter'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTTiming75e33CAStubsTwoIter'].suffix = '_HLT75e33TimingCAStubsTwoIter'
+upgradeWFs['HLTTiming75e33CAStubsTwoIter'].offset = 0.7514
+upgradeWFs['HLTTiming75e33CAStubsTwoIter'].step2['--procModifiers'] = 'phase2CAStubs,pixelTrackMask'
+upgradeWFs['HLTTiming75e33CAStubsTwoIter'].step3['--procModifiers'] = 'phase2CAStubs,pixelTrackMask'
+
+# CPU vs. GPU validation of the stub chain, single and two iterations
+upgradeWFs['HLTHeterogeneousValidCAStubs'] = deepcopy(upgradeWFs['HLTHeterogeneousValid'])
+upgradeWFs['HLTHeterogeneousValidCAStubs'].suffix = '_HLTHeterogeneousValidCAStubs'
+upgradeWFs['HLTHeterogeneousValidCAStubs'].offset = 0.7515
+upgradeWFs['HLTHeterogeneousValidCAStubs'].step2['--procModifiers'] = 'alpakaValidationHLT,phase2CAStubs'
+upgradeWFs['HLTHeterogeneousValidCAStubs'].step3['--procModifiers'] = 'alpakaValidationHLT,phase2CAStubs'
+
+upgradeWFs['HLTHeterogeneousValidCAStubsTwoIter'] = deepcopy(upgradeWFs['HLTHeterogeneousValid'])
+upgradeWFs['HLTHeterogeneousValidCAStubsTwoIter'].suffix = '_HLTHeterogeneousValidCAStubsTwoIter'
+upgradeWFs['HLTHeterogeneousValidCAStubsTwoIter'].offset = 0.7516
+upgradeWFs['HLTHeterogeneousValidCAStubsTwoIter'].step2['--procModifiers'] = 'alpakaValidationHLT,phase2CAStubs,pixelTrackMask'
+upgradeWFs['HLTHeterogeneousValidCAStubsTwoIter'].step3['--procModifiers'] = 'alpakaValidationHLT,phase2CAStubs,pixelTrackMask'
+
 class UpgradeWorkflow_HLTPhase2_WithNano(UpgradeWorkflow):
     def setup_(self, step, stepName, stepDict, k, properties):
         # skip RECO, ALCA and HLT
@@ -2303,6 +2339,13 @@ upgradeWFs['NGTScoutingCAExtensionMergeT5'].step2['-s'] = upgradeWFs['NGTScoutin
 )
 upgradeWFs['NGTScoutingCAExtensionMergeT5'].step2['--procModifiers'] += ',trackingLST'
 del upgradeWFs['NGTScoutingCAExtensionMergeT5'].step3['--procModifiers']
+
+# Single-iteration stub-seeded pixel tracking as general tracks (ngtScouting runs both iterations)
+upgradeWFs['NGTScoutingSingleIter'] = deepcopy(upgradeWFs['NGTScouting'])
+upgradeWFs['NGTScoutingSingleIter'].suffix = '_NGTScoutingSingleIter'
+upgradeWFs['NGTScoutingSingleIter'].offset = 0.776
+upgradeWFs['NGTScoutingSingleIter'].step2['--procModifiers'] = 'alpaka,ngtScoutingSingleIter'
+upgradeWFs['NGTScoutingSingleIter'].step3['--procModifiers'] = 'alpaka,ngtScoutingSingleIter'
 
 class UpgradeWorkflow_L1Complete(UpgradeWorkflow):
     def setup_(self, step, stepName, stepDict, k, properties):
