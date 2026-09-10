@@ -203,7 +203,7 @@ pixelTracksHighPtMaskingSoA = _caMasking.clone(
     tracksSoASrc = "pixelTracksHighPtAlpaka",
 )
 
-lowPtPtMinCut = 0.45 # 0.45 works, but 0.40 starts showing too many tracks with "zero" eta and phi
+lowPtPtMinCut = 0.4 # 0.45 works, but 0.40 starts showing too many tracks with "zero" eta and phi
                      # Maybe there is another cell cut that balances this, but need to check
 
 pixelTracksLowPtAlpakaPhase2Extended = _pixelTracksAlpakaPhase2Extended.clone(
@@ -238,10 +238,29 @@ from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpaka_cfi import p
 # pixel tracks SoA merger
 from RecoTracker.FinalTrackSelectors.tracksSoAMerger_cfi import tracksSoAMerger as _tracksSoAMerger
 
-(pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksAlpaka, _tracksSoAMerger.clone(
-    inputTkSoAs = cms.VInputTag("pixelTracksHighPtAlpaka","pixelTracksLowPtAlpaka"),
+# pixelTracksAlpakaPreDNN 
+pixelTracksSoA = _tracksSoAMerger.clone(
+    inputTkSoAs = cms.VInputTag("pixelTracksAlpakaPostDNN","pixelTracksLowPtAlpaka"),
     minQuality = cms.string('tight'),
-    matchFraction = cms.double(0.0),
+    matchFraction = cms.double(0.5),
+    dupNSigma2 = 3.0,
+    dupMaxDeltaR2 = 0.001,
+)
+
+pixelTracksAlpakaPostDNN = cms.EDProducer('PixelTrackTorchHighPuritySelector@alpaka',
+    pixelTrackSrc = cms.InputTag('pixelTracksHighPtAlpaka'),
+    maxNumberOfTracks = cms.int32(2*60*1024),
+    maxPreselectedTracks = cms.int32(9_984),
+    minNumberOfHits = cms.int32(0),
+    avgHitsPerTrack = cms.int32(8),
+    minimumTrackQuality = cms.string('tight'),
+    model = cms.FileInPath('RecoTracker/FinalTrackSelectors/data/PixelTrackTorchHighPuritySelector/pixel_track_classifier_FP16.pt'),
+    scoreThreshold = cms.double(0.4),
+    batchSize = cms.int32(4_992)
+)
+
+
+(pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksAlpaka, pixelTracksSoA.clone(
 ))
 
 (pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksHighPt, _pixelTrackProducerFromSoAAlpaka.clone(
@@ -280,6 +299,10 @@ from RecoTracker.FinalTrackSelectors.tracksSoAMerger_cfi import tracksSoAMerger 
     requireQuadsFromConsecutiveLayers = cms.bool(True)
 ))
 
+
+
+
+
 # Used 2 iterations to check that the machinery works
 (pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksTask, cms.Task(
     # Build the highPt pixel ntuplets and the pixel tracks in SoA format with alpaka on the device
@@ -290,6 +313,7 @@ from RecoTracker.FinalTrackSelectors.tracksSoAMerger_cfi import tracksSoAMerger 
     pixelTracksHighPtMaskingSoA,
     # Convert the highPt pixel tracks from SoA to legacy format for validation
     pixelTracksHighPt,
+    pixelTracksAlpakaPostDNN,
     
     # Build the lowPt pixel ntuplets and the pixel tracks in SoA format with alpaka on the device
     pixelTracksLowPtAlpaka,
@@ -299,7 +323,11 @@ from RecoTracker.FinalTrackSelectors.tracksSoAMerger_cfi import tracksSoAMerger 
     pixelTracksLowPt,
 
     # Merge the produced SoAs directly
+    pixelTracksSoA,
+
+    # Run the DNN on the merged
     pixelTracksAlpaka,
+
     # Convert the pixel tracks from SoA to legacy format
     pixelTracks)
 )

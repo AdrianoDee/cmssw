@@ -114,7 +114,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     inputTkSoAs.resize(inputTkSoATokenV_.size());
 
     maxTracks_ = 0;
+#ifdef GPU_DEBUG
     std::cout << "TracksSoAMerger::acquire: nCollections_: " << nCollections_ << std::endl;
+#endif
     for (int i = 0; i < nCollections_; ++i) {
 
       auto const& aux = iEvent.get(inputTkSoATokenV_[i]);
@@ -122,12 +124,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       allTrackView_.views[i] = aux.view().tracks();
       maxTracks_ +=  aux.view().tracks().metadata().size();
       allTrackView_.hitViews[i] = aux.view().trackHits();
+#ifdef GPU_DEBUG
       std::cout << "TracksSoAMerger::acquire: inputTkSoAs[" << i << "]: " << inputTkSoATagV_[i] << ", nTracks: "
                 << aux.view().tracks().metadata().size() << std::endl;
+#endif
     }
 
     allTrackView_.nTracks = maxTracks_;
-    AlgoParams params{minQuality_, maxTracks_, dupMinHits_, matchFraction_, dupNSigma2_, dupMaxDeltaR2_, dupPtDifference_};
+    bool doSameHitsDuplicates = (dupMinHits_ > 0) || (matchFraction_ > 0.0); //these are min
+    bool doParmsDupRejection = (dupNSigma2_ > 0.0) && (dupMaxDeltaR2_ > 0.0) && (dupPtDifference_ > 0.0); //these are max
+    
+    AlgoParams params{doSameHitsDuplicates, doParmsDupRejection, minQuality_, maxTracks_, dupMinHits_, matchFraction_, dupNSigma2_, dupMaxDeltaR2_, dupPtDifference_};
     Algo deviceAlgo_(params, queue);
     
     if (maxTracks_ > 0) {

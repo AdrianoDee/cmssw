@@ -87,7 +87,8 @@ private:
   const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> trackerTopologyToken_;
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> trackerGeometryTokenRun_;
 
-  int32_t const minNumberOfHits_;
+  int32_t const minNumberOfHits_;  
+  int32_t const minNumberOfPixelHits_;
   pixelTrack::Quality const minQuality_;
   const bool useOTExtension_;
   const bool requireQuadsFromConsecutiveLayers_;
@@ -103,6 +104,7 @@ PixelTrackProducerFromSoAAlpaka::PixelTrackProducerFromSoAAlpaka(const edm::Para
       trackerTopologyToken_(esConsumes()),
       trackerGeometryTokenRun_(esConsumes<edm::Transition::BeginRun>()),
       minNumberOfHits_(iConfig.getParameter<int>("minNumberOfHits")),
+      minNumberOfPixelHits_(iConfig.getParameter<int>("minNumberOfPixelHits")),
       minQuality_(pixelTrack::qualityByName(iConfig.getParameter<std::string>("minQuality"))),
       useOTExtension_(iConfig.getParameter<bool>("useOTExtension")),
       requireQuadsFromConsecutiveLayers_(iConfig.getParameter<bool>("requireQuadsFromConsecutiveLayers")) {
@@ -173,6 +175,7 @@ void PixelTrackProducerFromSoAAlpaka::fillDescriptions(edm::ConfigurationDescrip
   desc.add<edm::InputTag>("outerTrackerRecHitSrc", edm::InputTag("hltSiPhase2RecHits"));
   desc.add<edm::InputTag>("outerTrackerRecHitSoAConverterSrc", edm::InputTag("phase2OTRecHitsSoAConverter"));
   desc.add<int>("minNumberOfHits", 0);
+  desc.add<int>("minNumberOfPixelHits", 0);
   desc.add<std::string>("minQuality", "loose");
   desc.add<bool>("useOTExtension", false);
 
@@ -199,8 +202,6 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
 #ifdef GPU_DEBUG
   std::cout << "Converting soa helix in reco tracks" << std::endl;
 #endif
-
-  // int aux = 0; // To check for events with too many zeros in eta and phi
 
   // index map: trackId(in SoA) -> trackId(in legacy edm)
   auto indToEdmP = std::make_unique<IndToEdm>();
@@ -393,11 +394,9 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
   // loop over (sorted) tracks
   for (const auto &it : sortIdxs) {
     auto nHits = reco::nHits(tsoa.view().tracks(), it);
+    int nPixels = 0;
     assert(nHits >= 3);
     auto q = quality[it];
-    // auto auxIt = iteration[it]; // To check for events with too many zeros in eta and phi
-    //                             // But can be more general and used for validation of distinct iterations
-    //                             // Has to be implemented yet
 
     // apply cuts on quality and number of hits
     if (q < minQuality_)
@@ -407,10 +406,6 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     if (nHits < minNumberOfHits_)  //move to nLayers?
       continue;
 
-    // // To check for events with too many zeros in eta and phi
-    // if (auxIt == pixelTrack::iterationByName("promptLowPt") && abs(tsoa.view().tracks().eta()[it]) < 0.001) {
-    //   ++aux;
-    // }
 
     hits.resize(nHits);
     auto start = (it == 0) ? 0 : hitOffs[it - 1];
@@ -425,7 +420,15 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
       // else remove the OT hit from the track
       else
         nRemovedHits++;
+
+      // this is assuming pixel hits are before OT hits
+      if (hitIdx < uint32_t(nPixelHits))
+        nPixels++;
     }
+
+    if(nPixels < minNumberOfPixelHits_)
+      continue;
+
     hits.resize(nHits - nRemovedHits);
     end = end - nRemovedHits;
 
@@ -518,7 +521,6 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     tracks.emplace_back(track.release(), hits);
   }
 
-  // if (aux > 0) std::cout << "========================================\n" << "The amount of zeros in this event is: " << aux << "\n========================================" << std::endl; // To check for events with too many zeros in eta and phi
 
 #ifdef GPU_DEBUG
   std::cout << "processed " << nt << " good tuples " << tracks.size() << " out of " << indToEdm.size() << std::endl;
