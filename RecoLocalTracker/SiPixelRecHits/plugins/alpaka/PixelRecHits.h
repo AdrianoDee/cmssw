@@ -17,6 +17,7 @@
 #include "DataFormats/SiPixelClusterSoA/interface/SiPixelClustersSoA.h"
 #include "DataFormats/SiPixelDigiSoA/interface/SiPixelDigisSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoLocalTracker/SiPixelRecHits/interface/pixelCPEforDevice.h"
@@ -225,6 +226,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             alpaka::syncBlockThreads(acc);
           }  // end loop on batches
         }
+      }
+    };
+
+    class LaunchZerosPixelMask {
+    public:
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc, ::reco::TrackingRecHitsMaskingView mask) const {
+        for (uint32_t ic : cms::alpakatools::independent_group_elements(acc, mask.metadata().size())) {
+          assert(ic < (uint32_t)mask.metadata().size());
+          mask[ic].recHitMask() = 0;
+        }
+        alpaka::syncBlockThreads(acc);
       }
     };
 

@@ -64,8 +64,6 @@ namespace reco {
                       SOA_SCALAR(int32_t, endCapZPos),
                       SOA_SCALAR(int32_t, endCapZNeg))
 
-  GENERATE_SOA_LAYOUT(TrackingRecHitsMaskingLayout, SOA_COLUMN(uint32_t, recHitMask));
-
   using TrackingRecHitSoA = TrackingHitsLayout<>;
   using TrackingRecHitView = TrackingRecHitSoA::View;
   using TrackingRecHitConstView = TrackingRecHitSoA::ConstView;
@@ -85,10 +83,6 @@ namespace reco {
   ALPAKA_FN_HOST_ACC inline bool isStub(const TrackingRecHitConstView &hits, int32_t i) {
     return hits[i].dPhiDrError() >= 0.f;
   }
-
-  using TrackingRecHitsMaskingSoA = TrackingRecHitsMaskingLayout<>;
-  using TrackingRecHitsMaskingView = TrackingRecHitsMaskingSoA::View;
-  using TrackingRecHitsMaskingConstView = TrackingRecHitsMaskingSoA::ConstView;
 
 };  // namespace reco
 

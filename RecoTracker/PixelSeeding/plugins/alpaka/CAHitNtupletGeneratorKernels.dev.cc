@@ -1047,14 +1047,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   template <typename TrackerTraits>
-  uint32_t CAHitNtupletGeneratorKernels<TrackerTraits>::buildDoublets(
-      const HitsConstView &hh,
-      const ::reco::CAGraphSoAConstView &cc,
-      const ::reco::CALayersSoAConstView &ll,
-      const ::reco::CADoubletCutsSoAConstView &doubletCuts,
-      uint32_t offsetBPIX2,
-      const MapToHitConstView &maskPtr,
-      Queue &queue) {
+
+  void CAHitNtupletGeneratorKernels<TrackerTraits>::buildDoublets(const HitsConstView &hh,
+                                                                  const ::reco::CAGraphSoAConstView &cc,
+                                                                  const ::reco::CALayersSoAConstView &ll,
+                                                                  uint32_t offsetBPIX2,
+                                                                  const MapToHitConstView &maskPtr,
+                                                                  Queue &queue) {
+
     using namespace caPixelDoublets;
     using namespace caHitNtupletGeneratorKernels;
 
@@ -1873,527 +1873,527 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
   }
 
-  void CAHitMaskingAndMergerKernels::updateMasking(::reco::TrackingRecHitsMaskingView &mask_view,
-                                                   const ::reco::TrackSoAConstView &trackd_view,
-                                                   const ::reco::TrackHitSoAConstView &trackhitd_view,
-                                                   const pixelTrack::Quality minQuality,
-                                                   uint32_t const &iterationIndex,
-                                                   Queue &queue,
-                                                   bool maskAttachedHits) {
-    using namespace caHitNtupletGeneratorKernels;
+//   void CAHitMaskingAndMergerKernels::updateMasking(::reco::TrackingRecHitsMaskingView &mask_view,
+//                                                    const ::reco::TrackSoAConstView &trackd_view,
+//                                                    const ::reco::TrackHitSoAConstView &trackhitd_view,
+//                                                    const pixelTrack::Quality minQuality,
+//                                                    uint32_t const &iterationIndex,
+//                                                    Queue &queue,
+//                                                    bool maskAttachedHits) {
+//     using namespace caHitNtupletGeneratorKernels;
 
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Starting CAHitMaskingAndMergerKernels::updateMasking" << std::endl;
-#endif
+// #ifdef GPU_DEBUG
+//     alpaka::wait(queue);
+//     std::cout << "Starting CAHitMaskingAndMergerKernels::updateMasking" << std::endl;
+// #endif
 
-    int threadsPerBlock = 128;
-    // max(1, ...) guards against a 0-block launch (invalid CUDA launch configuration)
-    // when the track collection is empty (e.g. an empty event in a no-PU sample).
-    int blocks = std::max(1, int((trackd_view.metadata().size() + threadsPerBlock - 1) / threadsPerBlock));
-    const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
-    // Parallel updateMasking: fills the already-sized ceil(nTracks/128) grid one thread per track
-    // (pure idempotent same-value writes; see Kernel_updateMaskingParallel in Impl.h).
-    alpaka::exec<Acc1D>(queue,
-                        workDiv1D,
-                        Kernel_updateMaskingParallel{},
-                        mask_view,
-                        trackd_view,
-                        trackhitd_view,
-                        minQuality,
-                        iterationIndex,
-                        maskAttachedHits);
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Kernel_updateMasking -> done!" << std::endl;
-#endif
-  }
+//     int threadsPerBlock = 128;
+//     // max(1, ...) guards against a 0-block launch (invalid CUDA launch configuration)
+//     // when the track collection is empty (e.g. an empty event in a no-PU sample).
+//     int blocks = std::max(1, int((trackd_view.metadata().size() + threadsPerBlock - 1) / threadsPerBlock));
+//     const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
+//     // Parallel updateMasking: fills the already-sized ceil(nTracks/128) grid one thread per track
+//     // (pure idempotent same-value writes; see Kernel_updateMaskingParallel in Impl.h).
+//     alpaka::exec<Acc1D>(queue,
+//                         workDiv1D,
+//                         Kernel_updateMaskingParallel{},
+//                         mask_view,
+//                         trackd_view,
+//                         trackhitd_view,
+//                         minQuality,
+//                         iterationIndex,
+//                         maskAttachedHits);
+// #ifdef GPU_DEBUG
+//     alpaka::wait(queue);
+//     std::cout << "Kernel_updateMasking -> done!" << std::endl;
+// #endif
+//   }
 
-  void CAHitMaskingAndMergerKernels::filterTracks(::reco::TrackSoAView &track_view,
-                                                  ::reco::TrackHitSoAView &trackHit_view,
-                                                  const ::reco::TrackSoAConstView &inpTrack_view,
-                                                  const ::reco::TrackHitSoAConstView &inpTrackHit_view,
-                                                  const pixelTrack::Quality minQuality,
-                                                  const double matchFraction,
-                                                  Queue &queue,
-                                                  const int32_t *loserOf,
-                                                  const int32_t *isLoser,
-                                                  const bool twinMergeRefit,
-                                                  const bool refitAllTracks,
-                                                  int32_t *unitedMaskOut,
-                                                  const uint8_t *pocketArmIn,
-                                                  uint8_t *pocketArmIdOut) {
-    using namespace caHitNtupletGeneratorKernels;
+//   void CAHitMaskingAndMergerKernels::filterTracks(::reco::TrackSoAView &track_view,
+//                                                   ::reco::TrackHitSoAView &trackHit_view,
+//                                                   const ::reco::TrackSoAConstView &inpTrack_view,
+//                                                   const ::reco::TrackHitSoAConstView &inpTrackHit_view,
+//                                                   const pixelTrack::Quality minQuality,
+//                                                   const double matchFraction,
+//                                                   Queue &queue,
+//                                                   const int32_t *loserOf,
+//                                                   const int32_t *isLoser,
+//                                                   const bool twinMergeRefit,
+//                                                   const bool refitAllTracks,
+//                                                   int32_t *unitedMaskOut,
+//                                                   const uint8_t *pocketArmIn,
+//                                                   uint8_t *pocketArmIdOut) {
+//     using namespace caHitNtupletGeneratorKernels;
 
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Starting CAHitMaskingAndMergerKernels::filterTracks" << std::endl;
-#endif
+// #ifdef GPU_DEBUG
+//     alpaka::wait(queue);
+//     std::cout << "Starting CAHitMaskingAndMergerKernels::filterTracks" << std::endl;
+// #endif
 
-    // Parallel Mark -> prefix-sum -> Scatter filter. nIn == 0 (empty event) leaves the output count to the
-    // caller, which never reaches this point with an empty input (PixelTracksSoAMerger early-returns).
-    const int32_t nIn = int32_t(inpTrack_view.metadata().size());
+//     // Parallel Mark -> prefix-sum -> Scatter filter. nIn == 0 (empty event) leaves the output count to the
+//     // caller, which never reaches this point with an empty input (PixelTracksSoAMerger early-returns).
+//     const int32_t nIn = int32_t(inpTrack_view.metadata().size());
 
-    if (nIn > 0) {
-      const int threadsPerBlock = 128;
-      const int blocks = cms::alpakatools::divide_up_by(nIn, threadsPerBlock);
-      const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
+//     if (nIn > 0) {
+//       const int threadsPerBlock = 128;
+//       const int blocks = cms::alpakatools::divide_up_by(nIn, threadsPerBlock);
+//       const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
 
-      // Scratch (freed stream-ordered by the caching allocator after the launches below complete).
-      // keep[]/outHitCnt[] are fully written by the Mark kernel over [0,nIn) -> no memset needed.
-      auto keep = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nIn);
-      auto outHitCnt = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nIn);
-      auto tkOff = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nIn);
-      auto hitOff = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nIn);
+//       // Scratch (freed stream-ordered by the caching allocator after the launches below complete).
+//       // keep[]/outHitCnt[] are fully written by the Mark kernel over [0,nIn) -> no memset needed.
+//       auto keep = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nIn);
+//       auto outHitCnt = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nIn);
+//       auto tkOff = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nIn);
+//       auto hitOff = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nIn);
 
-      alpaka::exec<Acc1D>(queue,
-                          workDiv1D,
-                          Kernel_filterTracksMark{},
-                          inpTrack_view,
-                          inpTrackHit_view,
-                          minQuality,
-                          matchFraction,
-                          loserOf,
-                          isLoser,
-                          keep.data(),
-                          outHitCnt.data());
+//       alpaka::exec<Acc1D>(queue,
+//                           workDiv1D,
+//                           Kernel_filterTracksMark{},
+//                           inpTrack_view,
+//                           inpTrackHit_view,
+//                           minQuality,
+//                           matchFraction,
+//                           loserOf,
+//                           isLoser,
+//                           keep.data(),
+//                           outHitCnt.data());
 
-      cms::alpakatools::iterativePrefixScan<Acc1D>(keep.data(), tkOff.data(), uint32_t(nIn), queue);
-      cms::alpakatools::iterativePrefixScan<Acc1D>(outHitCnt.data(), hitOff.data(), uint32_t(nIn), queue);
+//       cms::alpakatools::iterativePrefixScan<Acc1D>(keep.data(), tkOff.data(), uint32_t(nIn), queue);
+//       cms::alpakatools::iterativePrefixScan<Acc1D>(outHitCnt.data(), hitOff.data(), uint32_t(nIn), queue);
 
-      alpaka::exec<Acc1D>(queue,
-                          workDiv1D,
-                          Kernel_filterTracksScatter{},
-                          track_view,
-                          trackHit_view,
-                          inpTrack_view,
-                          inpTrackHit_view,
-                          loserOf,
-                          twinMergeRefit,
-                          refitAllTracks,
-                          unitedMaskOut,
-                          keep.data(),
-                          outHitCnt.data(),
-                          tkOff.data(),
-                          hitOff.data(),
-                          nIn,
-                          pocketArmIn,
-                          pocketArmIdOut);
-    }
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "filterTracks -> done!" << std::endl;
-#endif
-  }
+//       alpaka::exec<Acc1D>(queue,
+//                           workDiv1D,
+//                           Kernel_filterTracksScatter{},
+//                           track_view,
+//                           trackHit_view,
+//                           inpTrack_view,
+//                           inpTrackHit_view,
+//                           loserOf,
+//                           twinMergeRefit,
+//                           refitAllTracks,
+//                           unitedMaskOut,
+//                           keep.data(),
+//                           outHitCnt.data(),
+//                           tkOff.data(),
+//                           hitOff.data(),
+//                           nIn,
+//                           pocketArmIn,
+//                           pocketArmIdOut);
+//     }
+// #ifdef GPU_DEBUG
+//     alpaka::wait(queue);
+//     std::cout << "filterTracks -> done!" << std::endl;
+// #endif
+//   }
 
-  void CAHitMaskingAndMergerKernels::twinMerge(const ::reco::TrackSoAConstView &inpTrack_view,
-                                               const ::reco::TrackHitSoAConstView &inpTrackHit_view,
-                                               const int32_t *armOfTrack,
-                                               const float twinDEta,
-                                               const float twinDPhi,
-                                               const int twinMinShared,
-                                               const bool twinTier2,
-                                               const float twinDEta2,
-                                               const float twinDPhi2,
-                                               const float twinNSigma2,
-                                               const int twinMinSharedFwd,
-                                               const pixelTrack::Quality minQuality,
-                                               int32_t *bestTwin,
-                                               int32_t *loserOf,
-                                               int32_t *isLoser,
-                                               int const &nTracks,
-                                               Queue &queue) {
-    using namespace caHitNtupletGeneratorKernels;
-    if (nTracks <= 0)
-      return;
-    // isLoser must already be zero-initialised by the caller: it is written cross-thread in
-    // Kernel_twinConfirm. makeFilteredTracks memsets it before calling this.
+//   void CAHitMaskingAndMergerKernels::twinMerge(const ::reco::TrackSoAConstView &inpTrack_view,
+//                                                const ::reco::TrackHitSoAConstView &inpTrackHit_view,
+//                                                const int32_t *armOfTrack,
+//                                                const float twinDEta,
+//                                                const float twinDPhi,
+//                                                const int twinMinShared,
+//                                                const bool twinTier2,
+//                                                const float twinDEta2,
+//                                                const float twinDPhi2,
+//                                                const float twinNSigma2,
+//                                                const int twinMinSharedFwd,
+//                                                const pixelTrack::Quality minQuality,
+//                                                int32_t *bestTwin,
+//                                                int32_t *loserOf,
+//                                                int32_t *isLoser,
+//                                                int const &nTracks,
+//                                                Queue &queue) {
+//     using namespace caHitNtupletGeneratorKernels;
+//     if (nTracks <= 0)
+//       return;
+//     // isLoser must already be zero-initialised by the caller: it is written cross-thread in
+//     // Kernel_twinConfirm. makeFilteredTracks memsets it before calling this.
 
-    const int threadsPerBlock = 128;
-    const int blocks = cms::alpakatools::divide_up_by(nTracks, threadsPerBlock);
-    const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
+//     const int threadsPerBlock = 128;
+//     const int blocks = cms::alpakatools::divide_up_by(nTracks, threadsPerBlock);
+//     const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
 
-    // phi -> track pre-filter binner over this collection, so twinFindBest visits only the phi bins
-    // overlapping the twinDPhi window instead of all N tracks; the kernel's whole-ring guard makes it
-    // equivalent to an exhaustive scan, and the trackBinKey clamp keeps every key in [0,kTwinPhiBins)
-    // so the binner cannot overflow. nItems = -1 makes the binner iterate the device-side nTracks()
-    // instead of the capacity, so the tail, whose eta/phi are uninitialised, is never binned; a
-    // candidate there would be rejected at Kernel_twinFindBest's quality gate anyway.
-    const int32_t nBin = int32_t(inpTrack_view.metadata().size());
-    const uint32_t nKeys = uint32_t(kTwinPhiBins);
-    auto phiBinnerBuf = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
-    auto phiOffBuf = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nKeys + 1);
-    auto phiStoreBuf = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, uint32_t(nBin));
-    auto phiOvf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1);
-    alpaka::memset(queue, phiOvf, 0);
-    GenericContainerView view{phiBinnerBuf.data(), phiOffBuf.data(), phiStoreBuf.data(), nKeys + 1, uint32_t(nBin)};
-    GenericContainer::template launchZero<Acc1D>(view, queue);
-    alpaka::exec<Acc1D>(queue,
-                        workDiv1D,
-                        Kernel_trackBinCount{},
-                        inpTrack_view,
-                        int32_t(-1),
-                        phiBinnerBuf.data(),
-                        kTwinPhiBins,
-                        1,
-                        0.f,
-                        nKeys,
-                        phiOvf.data());
-    finalizeAssocOffsets(view, queue);
-    alpaka::exec<Acc1D>(queue,
-                        workDiv1D,
-                        Kernel_trackBinFill{},
-                        inpTrack_view,
-                        int32_t(-1),
-                        phiBinnerBuf.data(),
-                        kTwinPhiBins,
-                        1,
-                        0.f,
-                        nKeys,
-                        phiOvf.data());
+//     // phi -> track pre-filter binner over this collection, so twinFindBest visits only the phi bins
+//     // overlapping the twinDPhi window instead of all N tracks; the kernel's whole-ring guard makes it
+//     // equivalent to an exhaustive scan, and the trackBinKey clamp keeps every key in [0,kTwinPhiBins)
+//     // so the binner cannot overflow. nItems = -1 makes the binner iterate the device-side nTracks()
+//     // instead of the capacity, so the tail, whose eta/phi are uninitialised, is never binned; a
+//     // candidate there would be rejected at Kernel_twinFindBest's quality gate anyway.
+//     const int32_t nBin = int32_t(inpTrack_view.metadata().size());
+//     const uint32_t nKeys = uint32_t(kTwinPhiBins);
+//     auto phiBinnerBuf = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
+//     auto phiOffBuf = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nKeys + 1);
+//     auto phiStoreBuf = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, uint32_t(nBin));
+//     auto phiOvf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1);
+//     alpaka::memset(queue, phiOvf, 0);
+//     GenericContainerView view{phiBinnerBuf.data(), phiOffBuf.data(), phiStoreBuf.data(), nKeys + 1, uint32_t(nBin)};
+//     GenericContainer::template launchZero<Acc1D>(view, queue);
+//     alpaka::exec<Acc1D>(queue,
+//                         workDiv1D,
+//                         Kernel_trackBinCount{},
+//                         inpTrack_view,
+//                         int32_t(-1),
+//                         phiBinnerBuf.data(),
+//                         kTwinPhiBins,
+//                         1,
+//                         0.f,
+//                         nKeys,
+//                         phiOvf.data());
+//     finalizeAssocOffsets(view, queue);
+//     alpaka::exec<Acc1D>(queue,
+//                         workDiv1D,
+//                         Kernel_trackBinFill{},
+//                         inpTrack_view,
+//                         int32_t(-1),
+//                         phiBinnerBuf.data(),
+//                         kTwinPhiBins,
+//                         1,
+//                         0.f,
+//                         nKeys,
+//                         phiOvf.data());
 
-    alpaka::exec<Acc1D>(queue,
-                        workDiv1D,
-                        Kernel_twinFindBest{},
-                        inpTrack_view,
-                        inpTrackHit_view,
-                        armOfTrack,
-                        minQuality,
-                        twinDEta,
-                        twinDPhi,
-                        twinMinShared,
-                        twinTier2,
-                        twinDEta2,
-                        twinDPhi2,
-                        twinNSigma2,
-                        twinMinSharedFwd,
-                        phiBinnerBuf.data(),
-                        kTwinPhiBins,
-                        bestTwin);
-    // twinFindBest and twinConfirm cannot be fused: twinConfirm thread i reads bestTwin[j] with
-    // j = bestTwin[i], an arbitrary opposite-arm track index, so it needs the whole bestTwin[]
-    // finalized, a grid-wide producer to consumer barrier. The inter-kernel queue boundary provides
-    // it; alpaka::syncBlockThreads inside a fused kernel is only block-local.
-    alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_twinConfirm{}, inpTrack_view, bestTwin, loserOf, isLoser);
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "CAHitMaskingAndMergerKernels::twinMerge -> done!" << std::endl;
-#endif
-  }
+//     alpaka::exec<Acc1D>(queue,
+//                         workDiv1D,
+//                         Kernel_twinFindBest{},
+//                         inpTrack_view,
+//                         inpTrackHit_view,
+//                         armOfTrack,
+//                         minQuality,
+//                         twinDEta,
+//                         twinDPhi,
+//                         twinMinShared,
+//                         twinTier2,
+//                         twinDEta2,
+//                         twinDPhi2,
+//                         twinNSigma2,
+//                         twinMinSharedFwd,
+//                         phiBinnerBuf.data(),
+//                         kTwinPhiBins,
+//                         bestTwin);
+//     // twinFindBest and twinConfirm cannot be fused: twinConfirm thread i reads bestTwin[j] with
+//     // j = bestTwin[i], an arbitrary opposite-arm track index, so it needs the whole bestTwin[]
+//     // finalized, a grid-wide producer to consumer barrier. The inter-kernel queue boundary provides
+//     // it; alpaka::syncBlockThreads inside a fused kernel is only block-local.
+//     alpaka::exec<Acc1D>(queue, workDiv1D, Kernel_twinConfirm{}, inpTrack_view, bestTwin, loserOf, isLoser);
+// #ifdef GPU_DEBUG
+//     alpaka::wait(queue);
+//     std::cout << "CAHitMaskingAndMergerKernels::twinMerge -> done!" << std::endl;
+// #endif
+//   }
 
-  void CAHitMaskingAndMergerKernels::finalDedup(::reco::TrackSoAView &out_view,
-                                                ::reco::TrackHitSoAView &outHit_view,
-                                                const ::reco::TrackSoAConstView &tracks_view,
-                                                const ::reco::TrackHitSoAConstView &trackHit_view,
-                                                int const &nTracksCap,
-                                                uint32_t nHits,
-                                                uint32_t nOTHits,
-                                                Queue &queue,
-                                                const MergerDedupConfirmInputs *confirm) {
-    using namespace caHitNtupletGeneratorKernels;
-    if (nTracksCap <= 0)
-      return;
+//   void CAHitMaskingAndMergerKernels::finalDedup(::reco::TrackSoAView &out_view,
+//                                                 ::reco::TrackHitSoAView &outHit_view,
+//                                                 const ::reco::TrackSoAConstView &tracks_view,
+//                                                 const ::reco::TrackHitSoAConstView &trackHit_view,
+//                                                 int const &nTracksCap,
+//                                                 uint32_t nHits,
+//                                                 uint32_t nOTHits,
+//                                                 Queue &queue,
+//                                                 const MergerDedupConfirmInputs *confirm) {
+//     using namespace caHitNtupletGeneratorKernels;
+//     if (nTracksCap <= 0)
+//       return;
 
-    // drop[] flags (1 = this refined track is the duplicate loser). Zero-init: the mark kernel only
-    // ever sets 0/1 over [0,nTracks), but the compaction reads it, so clear the whole capacity.
-    auto drop = cms::alpakatools::make_device_buffer<uint8_t[]>(queue, nTracksCap);
-    alpaka::memset(queue, drop, 0);
+//     // drop[] flags (1 = this refined track is the duplicate loser). Zero-init: the mark kernel only
+//     // ever sets 0/1 over [0,nTracks), but the compaction reads it, so clear the whole capacity.
+//     auto drop = cms::alpakatools::make_device_buffer<uint8_t[]>(queue, nTracksCap);
+//     alpaka::memset(queue, drop, 0);
 
-    // The dedup kernels can tally a per-reason breakdown of the dropped losers into an 18-word device
-    // buffer. It is left unarmed: reading it means a device-to-host copy the host consumes at once,
-    // i.e. a full stream drain every event, and nothing downstream uses the numbers. A null pointer
-    // switches those tallies off at the source.
-    uint32_t *const diagPtr = nullptr;
+//     // The dedup kernels can tally a per-reason breakdown of the dropped losers into an 18-word device
+//     // buffer. It is left unarmed: reading it means a device-to-host copy the host consumes at once,
+//     // i.e. a full stream drain every event, and nothing downstream uses the numbers. A null pointer
+//     // switches those tallies off at the source.
+//     uint32_t *const diagPtr = nullptr;
 
-    const int threadsPerBlock = 128;
-    const int blocks = cms::alpakatools::divide_up_by(nTracksCap, threadsPerBlock);
-    const auto markDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
+//     const int threadsPerBlock = 128;
+//     const int blocks = cms::alpakatools::divide_up_by(nTracksCap, threadsPerBlock);
+//     const auto markDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
 
-    // Cov-dedup: shared-hit co-occurrence pairing plus a covariance-scaled 3-parameter gate.
-    // Hit-id -> refined-track co-occurrence histogram over the key space [0, nHits + nOTHits): merged
-    // pixel/strip ids bin on the id, bit30-tagged OT extras compress to nHits + otIdx. The content is
-    // the trackHit CSR capacity, so the fill never overruns, and the count-and-clamp guard flags any
-    // out-of-range key in ovf[0] instead of writing out of bounds.
-    const uint32_t nKeys = nHits + nOTHits;
-    const uint32_t nContent = uint32_t(trackHit_view.metadata().size());  // input trackHit CSR capacity
-    auto ovf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1);
-    alpaka::memset(queue, ovf, 0);
+//     // Cov-dedup: shared-hit co-occurrence pairing plus a covariance-scaled 3-parameter gate.
+//     // Hit-id -> refined-track co-occurrence histogram over the key space [0, nHits + nOTHits): merged
+//     // pixel/strip ids bin on the id, bit30-tagged OT extras compress to nHits + otIdx. The content is
+//     // the trackHit CSR capacity, so the fill never overruns, and the count-and-clamp guard flags any
+//     // out-of-range key in ovf[0] instead of writing out of bounds.
+//     const uint32_t nKeys = nHits + nOTHits;
+//     const uint32_t nContent = uint32_t(trackHit_view.metadata().size());  // input trackHit CSR capacity
+//     auto ovf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1);
+//     alpaka::memset(queue, ovf, 0);
 
-    auto hitAssoc = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
-    auto hitOff = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nKeys + 1);
-    auto hitStore = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, nContent);
-    GenericContainerView hitView{hitAssoc.data(), hitOff.data(), hitStore.data(), nKeys + 1, nContent};
-    GenericContainer::template launchZero<Acc1D>(hitView, queue);
-    alpaka::exec<Acc1D>(
-        queue, markDiv, Kernel_dedupHitCount{}, tracks_view, trackHit_view, hitAssoc.data(), nHits, nKeys, ovf.data());
-    finalizeAssocOffsets(hitView, queue);
-    alpaka::exec<Acc1D>(
-        queue, markDiv, Kernel_dedupHitFill{}, tracks_view, trackHit_view, hitAssoc.data(), nHits, nKeys, ovf.data());
+//     auto hitAssoc = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
+//     auto hitOff = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nKeys + 1);
+//     auto hitStore = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, nContent);
+//     GenericContainerView hitView{hitAssoc.data(), hitOff.data(), hitStore.data(), nKeys + 1, nContent};
+//     GenericContainer::template launchZero<Acc1D>(hitView, queue);
+//     alpaka::exec<Acc1D>(
+//         queue, markDiv, Kernel_dedupHitCount{}, tracks_view, trackHit_view, hitAssoc.data(), nHits, nKeys, ovf.data());
+//     finalizeAssocOffsets(hitView, queue);
+//     alpaka::exec<Acc1D>(
+//         queue, markDiv, Kernel_dedupHitFill{}, tracks_view, trackHit_view, hitAssoc.data(), nHits, nKeys, ovf.data());
 
-    // (iii) 0-shared forward fallback eta-phi track binner (always built; the mark kernel drops the
-    // in-bound 0-shared forward losers and diag-counts the out-of-bound ones).
-    const uint32_t nFbKeys = uint32_t(kDedupFbPhiBins) * uint32_t(kDedupFbEtaSlabs);
-    auto fbAssoc = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
-    auto fbOff = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nFbKeys + 1);
-    auto fbStore = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, uint32_t(nTracksCap));
-    GenericContainerView fbView{fbAssoc.data(), fbOff.data(), fbStore.data(), nFbKeys + 1, uint32_t(nTracksCap)};
-    GenericContainer::template launchZero<Acc1D>(fbView, queue);
-    // nItems = -1 => the binner iterates the device-side nTracks() (the refined collection's real
-    // count), matching Kernel_dedupCovMark's range so the tail capacity slots are never binned.
-    alpaka::exec<Acc1D>(queue,
-                        markDiv,
-                        Kernel_trackBinCount{},
-                        tracks_view,
-                        int32_t(-1),
-                        fbAssoc.data(),
-                        kDedupFbPhiBins,
-                        kDedupFbEtaSlabs,
-                        kDedupFbEtaMax,
-                        nFbKeys,
-                        ovf.data());
-    finalizeAssocOffsets(fbView, queue);
-    alpaka::exec<Acc1D>(queue,
-                        markDiv,
-                        Kernel_trackBinFill{},
-                        tracks_view,
-                        int32_t(-1),
-                        fbAssoc.data(),
-                        kDedupFbPhiBins,
-                        kDedupFbEtaSlabs,
-                        kDedupFbEtaMax,
-                        nFbKeys,
-                        ovf.data());
+//     // (iii) 0-shared forward fallback eta-phi track binner (always built; the mark kernel drops the
+//     // in-bound 0-shared forward losers and diag-counts the out-of-bound ones).
+//     const uint32_t nFbKeys = uint32_t(kDedupFbPhiBins) * uint32_t(kDedupFbEtaSlabs);
+//     auto fbAssoc = cms::alpakatools::make_device_buffer<GenericContainer>(queue);
+//     auto fbOff = cms::alpakatools::make_device_buffer<GenericContainerOffsets[]>(queue, nFbKeys + 1);
+//     auto fbStore = cms::alpakatools::make_device_buffer<GenericContainerStorage[]>(queue, uint32_t(nTracksCap));
+//     GenericContainerView fbView{fbAssoc.data(), fbOff.data(), fbStore.data(), nFbKeys + 1, uint32_t(nTracksCap)};
+//     GenericContainer::template launchZero<Acc1D>(fbView, queue);
+//     // nItems = -1 => the binner iterates the device-side nTracks() (the refined collection's real
+//     // count), matching Kernel_dedupCovMark's range so the tail capacity slots are never binned.
+//     alpaka::exec<Acc1D>(queue,
+//                         markDiv,
+//                         Kernel_trackBinCount{},
+//                         tracks_view,
+//                         int32_t(-1),
+//                         fbAssoc.data(),
+//                         kDedupFbPhiBins,
+//                         kDedupFbEtaSlabs,
+//                         kDedupFbEtaMax,
+//                         nFbKeys,
+//                         ovf.data());
+//     finalizeAssocOffsets(fbView, queue);
+//     alpaka::exec<Acc1D>(queue,
+//                         markDiv,
+//                         Kernel_trackBinFill{},
+//                         tracks_view,
+//                         int32_t(-1),
+//                         fbAssoc.data(),
+//                         kDedupFbPhiBins,
+//                         kDedupFbEtaSlabs,
+//                         kDedupFbEtaMax,
+//                         nFbKeys,
+//                         ovf.data());
 
-    // Cov-gate width and fallback neighbourhood reach, as passed to the dedup kernels:
-    //   s_scanNSigma2     = kDedupNSigma2Default (25) -> shared-hit-path cov-gate width, and the
-    //                       default for the fallback gate unless mergerFbNSigma2 overrides it.
-    //   s_scanFbEtaReach  = 1 -> fallback eta-slab reach de in [-r, r]; the loop's own slab-range
-    //                       clamp is the real bound, so the guard below only rejects absurd values.
-    //   s_scanFbPhiReach  = 1 -> fallback phi-bin reach dp2 in [-r, r], wrap kept; 2r+1 <=
-    //                       kDedupFbPhiBins so the wrapped window visits each bin at most once.
-    // The three are held runtime-opaque on purpose: they reach the kernels as arguments, and
-    // constant-folding them on a single-TU backend would unroll the neighbourhood walk into
-    // compile-time bounds, changing the float accumulation order. Do not make them constexpr.
-    static const float s_scanNSigma2 = [] {
-      volatile float v = kDedupNSigma2Default;
-      return float(v);
-    }();
-    static const int s_scanFbEtaReach = [] {
-      volatile int v = 1;
-      int r = v;
-      if (r < 0)
-        r = 0;
-      if (r > kDedupFbEtaSlabs)
-        r = kDedupFbEtaSlabs;
-      return r;
-    }();
-    static const int s_scanFbPhiReach = [] {
-      volatile int v = 1;
-      int r = v;
-      if (r < 0)
-        r = 0;
-      if (r > kDedupFbPhiBins / 2)
-        r = kDedupFbPhiBins / 2;
-      return r;
-    }();
-    // Fallback-dedup parameters come straight from the merger's confirm struct (or the compile-time
-    // defaults when no struct is passed). Plain values only: no NaN/-1 sentinel selection, which is
-    // not portable across the backends' translation units.
-    const bool fbConfirmOn = (confirm != nullptr) && confirm->enable;
-    const int fbDelta = (confirm != nullptr) ? confirm->delta : 1;
-    const float fbNSigma2 = (confirm != nullptr && confirm->fbNSigma2 > 0.f) ? confirm->fbNSigma2 : s_scanNSigma2;
-    const float fbDropBound = (confirm != nullptr) ? confirm->fbDropBound : kDedupFbDropAbsEtaMax;
-    const int fbEnable = (confirm != nullptr) ? (confirm->fbEnable ? 1 : 0) : 1;
-    const int fbSameCharge = (confirm != nullptr) ? (confirm->fbSameCharge ? 1 : 0) : 0;
-    const float fbAbsFloorDPhi = (confirm != nullptr) ? confirm->fbAbsFloorDPhi : 1.e30f;
-    const float fbAbsFloorDQoP = (confirm != nullptr) ? confirm->fbAbsFloorDQoP : 1.e30f;
-    const float fbAbsFloorDCot = (confirm != nullptr) ? confirm->fbAbsFloorDCot : 1.e30f;
-    // finderOnly needs no hit view; rankClusters/guardCrossArm are force-off unless a valid hit view
-    // is available (confirm present).
-    const int fbFinderOnly = (confirm != nullptr && confirm->finderOnly) ? 1 : 0;
-    const int rankClustersReq = (confirm != nullptr && confirm->rankClusters) ? 1 : 0;
-    // nHits-only ranking. Gated like rankClusters (confirm-present) for a uniform pattern, though
-    // nHits reads only the track SoA (::reco::nHits) and never dereferences the hit view.
-    const int rankNHitsReq = (confirm != nullptr && confirm->rankNHits) ? 1 : 0;
-    const int guardCrossArmReq = (confirm != nullptr && confirm->guardCrossArm) ? 1 : 0;
-    const int fbRankClusters = (confirm != nullptr) ? rankClustersReq : 0;
-    const int fbRankNHits = (confirm != nullptr) ? rankNHitsReq : 0;
-    const int fbGuardCrossArm = (confirm != nullptr) ? guardCrossArmReq : 0;
-    const float fbGuardVertPosMin = (confirm != nullptr) ? confirm->guardVertPosMin : 1.0f;
-    const float fbGuardChi2Margin = (confirm != nullptr) ? confirm->guardChi2Margin : 0.0f;
-    // Hit view for the cluster count / pixel-core arm proxy: the confirm struct's hv (empty when absent;
-    // never dereferenced then, since rankClusters/guardCrossArm are forced off).
-    const ::reco::TrackingRecHitConstView dedupHitView =
-        (confirm != nullptr) ? confirm->hv : ::reco::TrackingRecHitConstView{};
+//     // Cov-gate width and fallback neighbourhood reach, as passed to the dedup kernels:
+//     //   s_scanNSigma2     = kDedupNSigma2Default (25) -> shared-hit-path cov-gate width, and the
+//     //                       default for the fallback gate unless mergerFbNSigma2 overrides it.
+//     //   s_scanFbEtaReach  = 1 -> fallback eta-slab reach de in [-r, r]; the loop's own slab-range
+//     //                       clamp is the real bound, so the guard below only rejects absurd values.
+//     //   s_scanFbPhiReach  = 1 -> fallback phi-bin reach dp2 in [-r, r], wrap kept; 2r+1 <=
+//     //                       kDedupFbPhiBins so the wrapped window visits each bin at most once.
+//     // The three are held runtime-opaque on purpose: they reach the kernels as arguments, and
+//     // constant-folding them on a single-TU backend would unroll the neighbourhood walk into
+//     // compile-time bounds, changing the float accumulation order. Do not make them constexpr.
+//     static const float s_scanNSigma2 = [] {
+//       volatile float v = kDedupNSigma2Default;
+//       return float(v);
+//     }();
+//     static const int s_scanFbEtaReach = [] {
+//       volatile int v = 1;
+//       int r = v;
+//       if (r < 0)
+//         r = 0;
+//       if (r > kDedupFbEtaSlabs)
+//         r = kDedupFbEtaSlabs;
+//       return r;
+//     }();
+//     static const int s_scanFbPhiReach = [] {
+//       volatile int v = 1;
+//       int r = v;
+//       if (r < 0)
+//         r = 0;
+//       if (r > kDedupFbPhiBins / 2)
+//         r = kDedupFbPhiBins / 2;
+//       return r;
+//     }();
+//     // Fallback-dedup parameters come straight from the merger's confirm struct (or the compile-time
+//     // defaults when no struct is passed). Plain values only: no NaN/-1 sentinel selection, which is
+//     // not portable across the backends' translation units.
+//     const bool fbConfirmOn = (confirm != nullptr) && confirm->enable;
+//     const int fbDelta = (confirm != nullptr) ? confirm->delta : 1;
+//     const float fbNSigma2 = (confirm != nullptr && confirm->fbNSigma2 > 0.f) ? confirm->fbNSigma2 : s_scanNSigma2;
+//     const float fbDropBound = (confirm != nullptr) ? confirm->fbDropBound : kDedupFbDropAbsEtaMax;
+//     const int fbEnable = (confirm != nullptr) ? (confirm->fbEnable ? 1 : 0) : 1;
+//     const int fbSameCharge = (confirm != nullptr) ? (confirm->fbSameCharge ? 1 : 0) : 0;
+//     const float fbAbsFloorDPhi = (confirm != nullptr) ? confirm->fbAbsFloorDPhi : 1.e30f;
+//     const float fbAbsFloorDQoP = (confirm != nullptr) ? confirm->fbAbsFloorDQoP : 1.e30f;
+//     const float fbAbsFloorDCot = (confirm != nullptr) ? confirm->fbAbsFloorDCot : 1.e30f;
+//     // finderOnly needs no hit view; rankClusters/guardCrossArm are force-off unless a valid hit view
+//     // is available (confirm present).
+//     const int fbFinderOnly = (confirm != nullptr && confirm->finderOnly) ? 1 : 0;
+//     const int rankClustersReq = (confirm != nullptr && confirm->rankClusters) ? 1 : 0;
+//     // nHits-only ranking. Gated like rankClusters (confirm-present) for a uniform pattern, though
+//     // nHits reads only the track SoA (::reco::nHits) and never dereferences the hit view.
+//     const int rankNHitsReq = (confirm != nullptr && confirm->rankNHits) ? 1 : 0;
+//     const int guardCrossArmReq = (confirm != nullptr && confirm->guardCrossArm) ? 1 : 0;
+//     const int fbRankClusters = (confirm != nullptr) ? rankClustersReq : 0;
+//     const int fbRankNHits = (confirm != nullptr) ? rankNHitsReq : 0;
+//     const int fbGuardCrossArm = (confirm != nullptr) ? guardCrossArmReq : 0;
+//     const float fbGuardVertPosMin = (confirm != nullptr) ? confirm->guardVertPosMin : 1.0f;
+//     const float fbGuardChi2Margin = (confirm != nullptr) ? confirm->guardChi2Margin : 0.0f;
+//     // Hit view for the cluster count / pixel-core arm proxy: the confirm struct's hv (empty when absent;
+//     // never dereferenced then, since rankClusters/guardCrossArm are forced off).
+//     const ::reco::TrackingRecHitConstView dedupHitView =
+//         (confirm != nullptr) ? confirm->hv : ::reco::TrackingRecHitConstView{};
 
-    // Contested-pair list, allocated only when confirm is on. Two uint32 per slot {i,j}, slots default
-    // to 0xffffffff (unfilled); contestedCount is the atomic append cursor and contestedOverflow
-    // counts the pairs that did not fit, which are kept both.
-    std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> contestedPairsBuf;
-    std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> contestedCountBuf;
-    std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> contestedOvfBuf;
-    uint32_t *contestedPairsPtr = nullptr;
-    uint32_t *contestedCountPtr = nullptr;
-    uint32_t *contestedOvfPtr = nullptr;
-    const uint32_t contestedCap = fbConfirmOn ? kDedupConfirmMaxPairs : 0u;
-    if (fbConfirmOn) {
-      contestedPairsBuf.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 2u * contestedCap));
-      contestedCountBuf.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1));
-      contestedOvfBuf.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1));
-      alpaka::memset(queue, *contestedPairsBuf, 0xff);  // 0xffffffff -> unfilled slot tag
-      alpaka::memset(queue, *contestedCountBuf, 0);
-      alpaka::memset(queue, *contestedOvfBuf, 0);
-      contestedPairsPtr = contestedPairsBuf->data();
-      contestedCountPtr = contestedCountBuf->data();
-      contestedOvfPtr = contestedOvfBuf->data();
-    }
+//     // Contested-pair list, allocated only when confirm is on. Two uint32 per slot {i,j}, slots default
+//     // to 0xffffffff (unfilled); contestedCount is the atomic append cursor and contestedOverflow
+//     // counts the pairs that did not fit, which are kept both.
+//     std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> contestedPairsBuf;
+//     std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> contestedCountBuf;
+//     std::optional<cms::alpakatools::device_buffer<Device, uint32_t[]>> contestedOvfBuf;
+//     uint32_t *contestedPairsPtr = nullptr;
+//     uint32_t *contestedCountPtr = nullptr;
+//     uint32_t *contestedOvfPtr = nullptr;
+//     const uint32_t contestedCap = fbConfirmOn ? kDedupConfirmMaxPairs : 0u;
+//     if (fbConfirmOn) {
+//       contestedPairsBuf.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 2u * contestedCap));
+//       contestedCountBuf.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1));
+//       contestedOvfBuf.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1));
+//       alpaka::memset(queue, *contestedPairsBuf, 0xff);  // 0xffffffff -> unfilled slot tag
+//       alpaka::memset(queue, *contestedCountBuf, 0);
+//       alpaka::memset(queue, *contestedOvfBuf, 0);
+//       contestedPairsPtr = contestedPairsBuf->data();
+//       contestedCountPtr = contestedCountBuf->data();
+//       contestedOvfPtr = contestedOvfBuf->data();
+//     }
 
-    alpaka::exec<Acc1D>(queue,
-                        markDiv,
-                        Kernel_dedupCovMark{},
-                        tracks_view,
-                        trackHit_view,
-                        hitAssoc.data(),
-                        fbAssoc.data(),
-                        nHits,
-                        nKeys,
-                        drop.data(),
-                        diagPtr,
-                        s_scanNSigma2,
-                        s_scanFbEtaReach,
-                        s_scanFbPhiReach,
-                        fbNSigma2,
-                        fbDropBound,
-                        fbEnable,
-                        // merge-or-keep-both capture; with these off the fallback drops directly:
-                        fbConfirmOn ? 1 : 0,
-                        fbSameCharge,
-                        fbAbsFloorDPhi,
-                        fbAbsFloorDQoP,
-                        fbAbsFloorDCot,
-                        contestedPairsPtr,
-                        contestedCountPtr,
-                        contestedCap,
-                        contestedOvfPtr,
-                        // Dedup ranking and guard parameters:
-                        dedupHitView,
-                        fbFinderOnly,
-                        fbRankClusters,
-                        fbRankNHits,
-                        fbGuardCrossArm,
-                        fbGuardVertPosMin,
-                        fbGuardChi2Margin);
+//     alpaka::exec<Acc1D>(queue,
+//                         markDiv,
+//                         Kernel_dedupCovMark{},
+//                         tracks_view,
+//                         trackHit_view,
+//                         hitAssoc.data(),
+//                         fbAssoc.data(),
+//                         nHits,
+//                         nKeys,
+//                         drop.data(),
+//                         diagPtr,
+//                         s_scanNSigma2,
+//                         s_scanFbEtaReach,
+//                         s_scanFbPhiReach,
+//                         fbNSigma2,
+//                         fbDropBound,
+//                         fbEnable,
+//                         // merge-or-keep-both capture; with these off the fallback drops directly:
+//                         fbConfirmOn ? 1 : 0,
+//                         fbSameCharge,
+//                         fbAbsFloorDPhi,
+//                         fbAbsFloorDQoP,
+//                         fbAbsFloorDCot,
+//                         contestedPairsPtr,
+//                         contestedCountPtr,
+//                         contestedCap,
+//                         contestedOvfPtr,
+//                         // Dedup ranking and guard parameters:
+//                         dedupHitView,
+//                         fbFinderOnly,
+//                         fbRankClusters,
+//                         fbRankNHits,
+//                         fbGuardCrossArm,
+//                         fbGuardVertPosMin,
+//                         fbGuardChi2Margin);
 
-    // Surface any count-and-clamp overflow; never fatal, since clamped writes were skipped and
-    // unregistered contested pairs are kept both. The two counters are consumed on device by a
-    // one-thread reporter kernel: reading them back would serialize the host against everything
-    // queued ahead of the copy, for a diagnostic.
-    const auto reportDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1);
-    alpaka::exec<Acc1D>(queue, reportDiv, Kernel_dedupOverflowReport{}, ovf.data(), contestedOvfPtr);
+//     // Surface any count-and-clamp overflow; never fatal, since clamped writes were skipped and
+//     // unregistered contested pairs are kept both. The two counters are consumed on device by a
+//     // one-thread reporter kernel: reading them back would serialize the host against everything
+//     // queued ahead of the copy, for a diagnostic.
+//     const auto reportDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1);
+//     alpaka::exec<Acc1D>(queue, reportDiv, Kernel_dedupOverflowReport{}, ovf.data(), contestedOvfPtr);
 
-    // Union refit and verdict: build the de-duplicated unions of the captured contested pairs, GBL-refit
-    // them and adjust drop[] (keep-both leaves drop[i] == 0) before the compaction consumes drop[].
-    // Runs only when the confirm is on.
-    if (fbConfirmOn) {
-      HelixFit<pixelTopology::Phase2OTStubs> fitter(confirm->bfield);
-      fitter.setMaterialMap(confirm->rhoMap);
-      fitter.setBFieldMap(confirm->bFieldMap);  // (Bz,Br) r-z map; null => the scalar bfield
-      fitter.setBField(confirm->bfield);
-      fitter.setOutlierReject(true);  // observe the GBL single-hard outlier drop -> the delta measure
-      fitter.refitDedupUnions(confirm->hv,
-                              confirm->cm,
-                              tracks_view,
-                              trackHit_view,
-                              contestedPairsPtr,
-                              contestedCap,
-                              confirm->otSource,
-                              drop.data(),
-                              fbDelta,
-                              diagPtr,
-                              queue);
-    }
+//     // Union refit and verdict: build the de-duplicated unions of the captured contested pairs, GBL-refit
+//     // them and adjust drop[] (keep-both leaves drop[i] == 0) before the compaction consumes drop[].
+//     // Runs only when the confirm is on.
+//     if (fbConfirmOn) {
+//       HelixFit<pixelTopology::Phase2OTStubs> fitter(confirm->bfield);
+//       fitter.setMaterialMap(confirm->rhoMap);
+//       fitter.setBFieldMap(confirm->bFieldMap);  // (Bz,Br) r-z map; null => the scalar bfield
+//       fitter.setBField(confirm->bfield);
+//       fitter.setOutlierReject(true);  // observe the GBL single-hard outlier drop -> the delta measure
+//       fitter.refitDedupUnions(confirm->hv,
+//                               confirm->cm,
+//                               tracks_view,
+//                               trackHit_view,
+//                               contestedPairsPtr,
+//                               contestedCap,
+//                               confirm->otSource,
+//                               drop.data(),
+//                               fbDelta,
+//                               diagPtr,
+//                               queue);
+//     }
 
-    // Parallel Counts -> prefix-sum -> Scatter compaction. WHICH tracks are dropped is decided in
-    // Kernel_dedupCovMark.
-    {
-      // keep and hitCnt share one 2*nTracksCap allocation with two pointers into it: one allocate/free
-      // pair and one memset instead of two of each.
-      auto keepAndHitCnt = cms::alpakatools::make_device_buffer<int32_t[]>(queue, 2 * std::size_t(nTracksCap));
-      int32_t *keep = keepAndHitCnt.data();
-      int32_t *hitCnt = keepAndHitCnt.data() + nTracksCap;
-      auto tkOff = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracksCap);
-      auto hitOff = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracksCap);
-      // Trailing entries [nTracks, nTracksCap) are not written by Counts -> zero them so the scans
-      // stay constant past the last real track (tkOff[cap-1] == total kept).
-      alpaka::memset(queue, keepAndHitCnt, 0);
+//     // Parallel Counts -> prefix-sum -> Scatter compaction. WHICH tracks are dropped is decided in
+//     // Kernel_dedupCovMark.
+//     {
+//       // keep and hitCnt share one 2*nTracksCap allocation with two pointers into it: one allocate/free
+//       // pair and one memset instead of two of each.
+//       auto keepAndHitCnt = cms::alpakatools::make_device_buffer<int32_t[]>(queue, 2 * std::size_t(nTracksCap));
+//       int32_t *keep = keepAndHitCnt.data();
+//       int32_t *hitCnt = keepAndHitCnt.data() + nTracksCap;
+//       auto tkOff = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracksCap);
+//       auto hitOff = cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracksCap);
+//       // Trailing entries [nTracks, nTracksCap) are not written by Counts -> zero them so the scans
+//       // stay constant past the last real track (tkOff[cap-1] == total kept).
+//       alpaka::memset(queue, keepAndHitCnt, 0);
 
-      alpaka::exec<Acc1D>(queue, markDiv, Kernel_finalDedupCounts{}, tracks_view, drop.data(), keep, hitCnt);
+//       alpaka::exec<Acc1D>(queue, markDiv, Kernel_finalDedupCounts{}, tracks_view, drop.data(), keep, hitCnt);
 
-      cms::alpakatools::iterativePrefixScan<Acc1D>(keep, tkOff.data(), uint32_t(nTracksCap), queue);
-      cms::alpakatools::iterativePrefixScan<Acc1D>(hitCnt, hitOff.data(), uint32_t(nTracksCap), queue);
+//       cms::alpakatools::iterativePrefixScan<Acc1D>(keep, tkOff.data(), uint32_t(nTracksCap), queue);
+//       cms::alpakatools::iterativePrefixScan<Acc1D>(hitCnt, hitOff.data(), uint32_t(nTracksCap), queue);
 
-      alpaka::exec<Acc1D>(queue,
-                          markDiv,
-                          Kernel_finalDedupScatter{},
-                          out_view,
-                          outHit_view,
-                          tracks_view,
-                          trackHit_view,
-                          keep,
-                          tkOff.data(),
-                          hitOff.data(),
-                          nTracksCap);
-    }
+//       alpaka::exec<Acc1D>(queue,
+//                           markDiv,
+//                           Kernel_finalDedupScatter{},
+//                           out_view,
+//                           outHit_view,
+//                           tracks_view,
+//                           trackHit_view,
+//                           keep,
+//                           tkOff.data(),
+//                           hitOff.data(),
+//                           nTracksCap);
+//     }
 
-    // No host wait: the dedup histograms, drop flags and compaction scratch are function-scope caching
-    // allocator buffers, and the allocator only re-hands a freed block once the event recorded on its
-    // queue at free time has completed, so the queued launches that still read them are safe.
-  }
+//     // No host wait: the dedup histograms, drop flags and compaction scratch are function-scope caching
+//     // allocator buffers, and the allocator only re-hands a freed block once the event recorded on its
+//     // queue at free time has completed, so the queued launches that still read them are safe.
+//   }
 
-  /* This will make sense when we will be able to run this once per job in Alpaka
+//   /* This will make sense when we will be able to run this once per job in Alpaka
 
-  template <typename TrackerTraits>
-  void CAHitNtupletGeneratorKernels<TrackerTraits>::printCounters() {
-    auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(1,1);
-    alpaka::exec<Acc1D>(queue_, workDiv1D, Kernel_printCounters{}, this->counters_->data());
-  }
-  */
+//   template <typename TrackerTraits>
+//   void CAHitNtupletGeneratorKernels<TrackerTraits>::printCounters() {
+//     auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(1,1);
+//     alpaka::exec<Acc1D>(queue_, workDiv1D, Kernel_printCounters{}, this->counters_->data());
+//   }
+//   */
 
-  void CAHitMaskingAndMergerKernels::mergeGather(::reco::TrackSoAView &outTrack_view,
-                                                 ::reco::TrackHitSoAView &outHit_view,
-                                                 const ::reco::TrackSoAConstView &inp0Track_view,
-                                                 const ::reco::TrackHitSoAConstView &inp0Hit_view,
-                                                 const ::reco::TrackSoAConstView &inp1Track_view,
-                                                 const ::reco::TrackHitSoAConstView &inp1Hit_view,
-                                                 int nInputs,
-                                                 int32_t *armBuf,
-                                                 const int32_t arm0,
-                                                 const int32_t arm1,
-                                                 Queue &queue) {
-    using namespace caHitNtupletGeneratorKernels;
+//   void CAHitMaskingAndMergerKernels::mergeGather(::reco::TrackSoAView &outTrack_view,
+//                                                  ::reco::TrackHitSoAView &outHit_view,
+//                                                  const ::reco::TrackSoAConstView &inp0Track_view,
+//                                                  const ::reco::TrackHitSoAConstView &inp0Hit_view,
+//                                                  const ::reco::TrackSoAConstView &inp1Track_view,
+//                                                  const ::reco::TrackHitSoAConstView &inp1Hit_view,
+//                                                  int nInputs,
+//                                                  int32_t *armBuf,
+//                                                  const int32_t arm0,
+//                                                  const int32_t arm1,
+//                                                  Queue &queue) {
+//     using namespace caHitNtupletGeneratorKernels;
 
-    // Grid-stride kernel: every phase is thread-independent, so a multi-block grid is safe (each thread
-    // recomputes the per-input offsets from the device-side scalars, and the merged nTracks scalar is
-    // written by grid thread 0 and never read inside the kernel). The grid is sized from the dominant
-    // copy range, the hit capacity, clamped so tiny events do not launch empty blocks.
-    const uint32_t threadsPerBlock = 256;
-    const uint32_t hitCap = uint32_t(outHit_view.metadata().size());
-    const uint32_t blocks = std::clamp(cms::alpakatools::divide_up_by(std::max(hitCap, 1u), threadsPerBlock), 1u, 128u);
-    const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
-    alpaka::exec<Acc1D>(queue,
-                        workDiv1D,
-                        Kernel_mergeGather{},
-                        outTrack_view,
-                        outHit_view,
-                        inp0Track_view,
-                        inp0Hit_view,
-                        inp1Track_view,
-                        inp1Hit_view,
-                        nInputs,
-                        armBuf,
-                        arm0,
-                        arm1);
-  }
+//     // Grid-stride kernel: every phase is thread-independent, so a multi-block grid is safe (each thread
+//     // recomputes the per-input offsets from the device-side scalars, and the merged nTracks scalar is
+//     // written by grid thread 0 and never read inside the kernel). The grid is sized from the dominant
+//     // copy range, the hit capacity, clamped so tiny events do not launch empty blocks.
+//     const uint32_t threadsPerBlock = 256;
+//     const uint32_t hitCap = uint32_t(outHit_view.metadata().size());
+//     const uint32_t blocks = std::clamp(cms::alpakatools::divide_up_by(std::max(hitCap, 1u), threadsPerBlock), 1u, 128u);
+//     const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
+//     alpaka::exec<Acc1D>(queue,
+//                         workDiv1D,
+//                         Kernel_mergeGather{},
+//                         outTrack_view,
+//                         outHit_view,
+//                         inp0Track_view,
+//                         inp0Hit_view,
+//                         inp1Track_view,
+//                         inp1Hit_view,
+//                         nInputs,
+//                         armBuf,
+//                         arm0,
+//                         arm1);
+//   }
 
   template class CAHitNtupletGeneratorKernels<pixelTopology::Phase1>;
   template class CAHitNtupletGeneratorKernels<pixelTopology::Phase2>;

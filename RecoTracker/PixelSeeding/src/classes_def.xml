@@ -2,6 +2,7 @@
   <class name="IntermediateHitTriplets" persistent="false"/>
   <class name="edm::Wrapper<IntermediateHitTriplets>" persistent="false"/>
 
+
   <!-- Per-built-triplet training-dataset host SoA (the CA_TRIPLET_DUMP Triplet product), following the
        alias-based host-collection dictionary pattern of DataFormats/TrackSoA reco::TracksHost.
        Unconditional type-info only: harmless when the dump is off. -->
@@ -27,4 +28,8 @@
   <class name="reco::CATripletCutsLayout<128, false>"/>
   <class name="reco::CANtupletCutsLayout<128, false>"/>
   <class name="reco::CAModulesLayout<128, false>"/>
+
+  <class name="std::vector<std::pair<uint32_t,uint32_t>>" persistent="false"/>
+  <class name="edm::Wrapper<std::vector<std::pair<uint32_t,uint32_t>>>" persistent="false"/>
+
 </lcgdict>

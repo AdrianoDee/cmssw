@@ -25,6 +25,7 @@ namespace pixelTrack {
   enum class Iteration : uint8_t { promptHighPt, promptLowPt, displaced, notIteration };
   constexpr uint32_t iterationSize{uint8_t(Iteration::notIteration)};
   constexpr std::string_view iterationName[iterationSize]{"promptHighPt", "promptLowPt", "displaced"};
+
   inline Iteration iterationByName(std::string_view name) {
     auto qp = std::find(iterationName, iterationName + iterationSize, name) - iterationName;
     auto ret = static_cast<Iteration>(qp);

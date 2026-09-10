@@ -16,6 +16,7 @@
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
 #include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/AtomicPairCounter.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -413,91 +414,91 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     uint32_t tracksCellsN_ = 0;
   };
 
-  class CAHitMaskingAndMergerKernels {
-  public:
-    CAHitMaskingAndMergerKernels() = default;
-    ~CAHitMaskingAndMergerKernels() = default;
+//   class CAHitMaskingAndMergerKernels {
+//   public:
+//     CAHitMaskingAndMergerKernels() = default;
+//     ~CAHitMaskingAndMergerKernels() = default;
 
-    CAHitMaskingAndMergerKernels(const CAHitMaskingAndMergerKernels&) = delete;
-    CAHitMaskingAndMergerKernels(CAHitMaskingAndMergerKernels&&) = delete;
-    CAHitMaskingAndMergerKernels& operator=(const CAHitMaskingAndMergerKernels&) = delete;
-    CAHitMaskingAndMergerKernels& operator=(CAHitMaskingAndMergerKernels&&) = delete;
+//     CAHitMaskingAndMergerKernels(const CAHitMaskingAndMergerKernels&) = delete;
+//     CAHitMaskingAndMergerKernels(CAHitMaskingAndMergerKernels&&) = delete;
+//     CAHitMaskingAndMergerKernels& operator=(const CAHitMaskingAndMergerKernels&) = delete;
+//     CAHitMaskingAndMergerKernels& operator=(CAHitMaskingAndMergerKernels&&) = delete;
 
-    void updateMasking(::reco::TrackingRecHitsMaskingView& mask_view,
-                       const ::reco::TrackSoAConstView& trackd_view,
-                       const ::reco::TrackHitSoAConstView& trackhitd_view,
-                       const pixelTrack::Quality minQuality,
-                       uint32_t const& iterationIndex,
-                       Queue& queue,
-                       bool maskAttachedHits = false);
+//     void updateMasking(::reco::TrackingRecHitsMaskingView& mask_view,
+//                        const ::reco::TrackSoAConstView& trackd_view,
+//                        const ::reco::TrackHitSoAConstView& trackhitd_view,
+//                        const pixelTrack::Quality minQuality,
+//                        uint32_t const& iterationIndex,
+//                        Queue& queue,
+//                        bool maskAttachedHits = false);
 
-    void filterTracks(::reco::TrackSoAView& track_view,
-                      ::reco::TrackHitSoAView& trackHit_view,
-                      const ::reco::TrackSoAConstView& inpTrack_view,
-                      const ::reco::TrackHitSoAConstView& inpTrackHit_view,
-                      const pixelTrack::Quality minQuality,
-                      const double matchFraction,
-                      Queue& queue,
-                      const int32_t* loserOf = nullptr,
-                      const int32_t* isLoser = nullptr,
-                      const bool twinMergeRefit = false,
-                      const bool refitAllTracks = false,
-                      int32_t* unitedMaskOut = nullptr,
-                      // Per-track arm carried through the compaction, input order in and merged-SoA
-                      // order out; both null when no arm is tracked.
-                      const uint8_t* pocketArmIn = nullptr,
-                      uint8_t* pocketArmIdOut = nullptr);
+//     void filterTracks(::reco::TrackSoAView& track_view,
+//                       ::reco::TrackHitSoAView& trackHit_view,
+//                       const ::reco::TrackSoAConstView& inpTrack_view,
+//                       const ::reco::TrackHitSoAConstView& inpTrackHit_view,
+//                       const pixelTrack::Quality minQuality,
+//                       const double matchFraction,
+//                       Queue& queue,
+//                       const int32_t* loserOf = nullptr,
+//                       const int32_t* isLoser = nullptr,
+//                       const bool twinMergeRefit = false,
+//                       const bool refitAllTracks = false,
+//                       int32_t* unitedMaskOut = nullptr,
+//                       // Per-track arm carried through the compaction, input order in and merged-SoA
+//                       // order out; both null when no arm is tracked.
+//                       const uint8_t* pocketArmIn = nullptr,
+//                       uint8_t* pocketArmIdOut = nullptr);
 
-    // Strict cross-arm twin merge. Fills bestTwin/loserOf/isLoser device arrays
-    // (all sized nTracks). isLoser is zero-initialised here before use.
-    void twinMerge(const ::reco::TrackSoAConstView& inpTrack_view,
-                   const ::reco::TrackHitSoAConstView& inpTrackHit_view,
-                   const int32_t* armOfTrack,
-                   const float twinDEta,
-                   const float twinDPhi,
-                   const int twinMinShared,
-                   const bool twinTier2,
-                   const float twinDEta2,
-                   const float twinDPhi2,
-                   const float twinNSigma2,
-                   const int twinMinSharedFwd,
-                   const pixelTrack::Quality minQuality,
-                   int32_t* bestTwin,
-                   int32_t* loserOf,
-                   int32_t* isLoser,
-                   int const& nTracks,
-                   Queue& queue);
+//     // Strict cross-arm twin merge. Fills bestTwin/loserOf/isLoser device arrays
+//     // (all sized nTracks). isLoser is zero-initialised here before use.
+//     void twinMerge(const ::reco::TrackSoAConstView& inpTrack_view,
+//                    const ::reco::TrackHitSoAConstView& inpTrackHit_view,
+//                    const int32_t* armOfTrack,
+//                    const float twinDEta,
+//                    const float twinDPhi,
+//                    const int twinMinShared,
+//                    const bool twinTier2,
+//                    const float twinDEta2,
+//                    const float twinDPhi2,
+//                    const float twinNSigma2,
+//                    const int twinMinSharedFwd,
+//                    const pixelTrack::Quality minQuality,
+//                    int32_t* bestTwin,
+//                    int32_t* loserOf,
+//                    int32_t* isLoser,
+//                    int const& nTracks,
+//                    Queue& queue);
 
-    // Mark duplicate losers over the refined merged tracks by shared-hit co-occurrence pairing and
-    // a covariance-scaled 3-parameter gate (nSigma2 from kDedupNSigma2Default unless overridden),
-    // plus the 0-shared forward fallback, then compact into out_view. nHits and nOTHits size the
-    // hit-id key space [0, nHits+nOTHits). confirm carries the GBL-refit inputs for the
-    // merge-or-keep-both check on fallback pairs; null makes the fallback drop its loser outright.
-    void finalDedup(::reco::TrackSoAView& out_view,
-                    ::reco::TrackHitSoAView& outHit_view,
-                    const ::reco::TrackSoAConstView& tracks_view,
-                    const ::reco::TrackHitSoAConstView& trackHit_view,
-                    int const& nTracksCap,
-                    uint32_t nHits,
-                    uint32_t nOTHits,
-                    Queue& queue,
-                    const MergerDedupConfirmInputs* confirm = nullptr);
-    // Device-side gather/compact: reads each input's nTracks() and hitOffsets() on device (no host
-    // readback) and packs the track and trackHits columns of all inputs into a dense merged layout,
-    // writing the merged nTracks, the shifted hitOffsets and the per-track arm labels on device.
-    // nInputs must be <= 2.
-    void mergeGather(::reco::TrackSoAView& outTrack_view,
-                     ::reco::TrackHitSoAView& outHit_view,
-                     const ::reco::TrackSoAConstView& inp0Track_view,
-                     const ::reco::TrackHitSoAConstView& inp0Hit_view,
-                     const ::reco::TrackSoAConstView& inp1Track_view,
-                     const ::reco::TrackHitSoAConstView& inp1Hit_view,
-                     int nInputs,
-                     int32_t* armBuf,
-                     const int32_t arm0,
-                     const int32_t arm1,
-                     Queue& queue);
-  };
+//     // Mark duplicate losers over the refined merged tracks by shared-hit co-occurrence pairing and
+//     // a covariance-scaled 3-parameter gate (nSigma2 from kDedupNSigma2Default unless overridden),
+//     // plus the 0-shared forward fallback, then compact into out_view. nHits and nOTHits size the
+//     // hit-id key space [0, nHits+nOTHits). confirm carries the GBL-refit inputs for the
+//     // merge-or-keep-both check on fallback pairs; null makes the fallback drop its loser outright.
+//     void finalDedup(::reco::TrackSoAView& out_view,
+//                     ::reco::TrackHitSoAView& outHit_view,
+//                     const ::reco::TrackSoAConstView& tracks_view,
+//                     const ::reco::TrackHitSoAConstView& trackHit_view,
+//                     int const& nTracksCap,
+//                     uint32_t nHits,
+//                     uint32_t nOTHits,
+//                     Queue& queue,
+//                     const MergerDedupConfirmInputs* confirm = nullptr);
+//     // Device-side gather/compact: reads each input's nTracks() and hitOffsets() on device (no host
+//     // readback) and packs the track and trackHits columns of all inputs into a dense merged layout,
+//     // writing the merged nTracks, the shifted hitOffsets and the per-track arm labels on device.
+//     // nInputs must be <= 2.
+//     void mergeGather(::reco::TrackSoAView& outTrack_view,
+//                      ::reco::TrackHitSoAView& outHit_view,
+//                      const ::reco::TrackSoAConstView& inp0Track_view,
+//                      const ::reco::TrackHitSoAConstView& inp0Hit_view,
+//                      const ::reco::TrackSoAConstView& inp1Track_view,
+//                      const ::reco::TrackHitSoAConstView& inp1Hit_view,
+//                      int nInputs,
+//                      int32_t* armBuf,
+//                      const int32_t arm0,
+//                      const int32_t arm1,
+//                      Queue& queue);
+//   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

@@ -14,6 +14,8 @@
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/OTRecHitsSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/StubsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
+
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
@@ -508,6 +510,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device::ESGetToken<BLBFieldMap, BLBFieldMapRecord> tokenBLBFieldMap_;
     const device::EDGetToken<HitsOnDevice> tokenHit_;
     const device::EDPutToken<TkSoADevice> tokenTrack_;
+
 #ifdef CA_TRIPLET_DUMP
     // Per-built-triplet training-dataset product (one row per built triplet, valid rows = view().nValid()).
     // Only registered/emitted in CA_TRIPLET_DUMP builds; production builds carry nothing.
@@ -545,7 +548,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         maxNumberOfDoublets_(iConfig.getParameter<std::string>("maxNumberOfDoublets")),
         maxNumberOfTuples_(iConfig.getParameter<std::string>("maxNumberOfTuples")),
         minNumberOfDoublets_(iConfig.getParameter<uint32_t>("minNumberOfDoublets")),
-        minNumberOfTuples_(iConfig.getParameter<uint32_t>("minNumberOfTuples")),
+        minNumberOfTuples_(iConfig.getParameter<uint32_t>("minNumberOfTuples")), 
         deviceAlgo_(iConfig) {
     useFitCorrections_ = iConfig.getParameter<bool>("useFitCorrections");
     if (useFitCorrections_) {
@@ -570,15 +573,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::ParameterSetDescription desc;
 
     desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("siPixelRecHitsPreSplittingAlpaka"));
+
     desc.add<edm::InputTag>("hitMask", edm::InputTag(""))
         ->setComment(
             "Optional per-iteration hit mask (a reco::TrackingRecHitsMaskingCollection). Empty (the default) "
             "means no masking: no product is consumed and every hit is available to the CA. Set it only for the "
             "iterations that must skip the hits an earlier iteration already used.");
-    desc.add<std::string>(
-        "iterationName",
-        std::string("promptHighPt"));  // This is just an example, it has to be changed for each tracking iteration
-
+   
     Algo::fillPSetDescription(desc);
     descriptions.addWithDefaultLabel(desc);
   }
@@ -632,7 +633,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
            iEvent.id().luminosityBlock(),
            (unsigned long long)iEvent.id().event(),
            hits.nHits());
-#endif
 
     // Optional mask: with no mask module configured the view stays default-constructed (null column,
     // zero rows) and the doublet kernels skip every mask lookup.

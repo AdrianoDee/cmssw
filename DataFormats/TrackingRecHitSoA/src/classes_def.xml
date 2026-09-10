@@ -32,4 +32,5 @@
   <class name="reco::OTRecHitBlocksLayout&lt;128, false&gt;"/>
   <class name="reco::OTRecHitsHost"  rntupleStreamerMode="true"/>
   <class name="edm::Wrapper&lt;reco::OTRecHitsHost&gt;" splitLevel="0"/>
+
 </lcgdict>

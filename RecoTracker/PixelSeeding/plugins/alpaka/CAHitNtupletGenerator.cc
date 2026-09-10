@@ -821,6 +821,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       fitter.setFitCorrections(m_params.algoParams_.useFitCorrections_);
       fitter.launchBrokenLineKernels(trackingHits, modules, trackingHits.metadata().size(), nTracks, queue);
     }
+
     kernels.classifyTuples(trackingHits, tracks, queue, nullptr);
 
     // Refresh the pinned overflow mirror with the running totals. Ordered after classifyTuples, which
@@ -870,6 +871,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     device_tripletDump_ = std::move(kernels.tripletDumpBuffer());
 #endif
 
+
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "finished building pixel tracks on GPU" << std::endl;
@@ -878,232 +880,232 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     return std::move(*pending.tracks);
   }
 
-  reco::TrackingRecHitsMaskingCollection CAHitMaskingAndMerger::makeMaskingAsync(MapToHit const& mask_d,
-                                                                                 TkSoADevice const& tracks_d,
-                                                                                 const pixelTrack::Quality minQuality,
-                                                                                 uint32_t const& iterationIndex,
-                                                                                 Queue& queue,
-                                                                                 bool applyMasking,
-                                                                                 bool maskAttachedHits) const {
-    const int nHits = mask_d.view().metadata().size();
+//   reco::TrackingRecHitsMaskingCollection CAHitMaskingAndMerger::makeMaskingAsync(MapToHit const& mask_d,
+//                                                                                  TkSoADevice const& tracks_d,
+//                                                                                  const pixelTrack::Quality minQuality,
+//                                                                                  uint32_t const& iterationIndex,
+//                                                                                  Queue& queue,
+//                                                                                  bool applyMasking,
+//                                                                                  bool maskAttachedHits) const {
+//     const int nHits = mask_d.view().metadata().size();
 
-    reco::TrackingRecHitsMaskingCollection mask(queue, static_cast<uint32_t>(nHits));
+//     reco::TrackingRecHitsMaskingCollection mask(queue, static_cast<uint32_t>(nHits));
 
-    alpaka::memcpy(queue,
-                   cms::alpakatools::make_device_view(queue, mask.view().recHitMask(), nHits),
-                   cms::alpakatools::make_device_view(queue, mask_d.view().recHitMask(), nHits));
+//     alpaka::memcpy(queue,
+//                    cms::alpakatools::make_device_view(queue, mask.view().recHitMask(), nHits),
+//                    cms::alpakatools::make_device_view(queue, mask_d.view().recHitMask(), nHits));
 
-    // When masking is deactivated, return a pass-through copy of the input mask: no hits from this
-    // iteration's tracks are added, so the next iteration sees all hits, and the module stays wired.
-    if (applyMasking) {
-      CAHitMaskingAndMergerKernels kernels;
+//     // When masking is deactivated, return a pass-through copy of the input mask: no hits from this
+//     // iteration's tracks are added, so the next iteration sees all hits, and the module stays wired.
+//     if (applyMasking) {
+//       CAHitMaskingAndMergerKernels kernels;
 
-      auto tracksd_view = tracks_d.view().tracks();
-      auto tracks_hitsd_view = tracks_d.view().trackHits();
+//       auto tracksd_view = tracks_d.view().tracks();
+//       auto tracks_hitsd_view = tracks_d.view().trackHits();
 
-      kernels.updateMasking(
-          mask.view(), tracksd_view, tracks_hitsd_view, minQuality, iterationIndex, queue, maskAttachedHits);
-    }
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "finished updating pixel masking on GPU (applyMasking=" << applyMasking << ")" << std::endl;
-#endif
+//       kernels.updateMasking(
+//           mask.view(), tracksd_view, tracks_hitsd_view, minQuality, iterationIndex, queue, maskAttachedHits);
+//     }
+// #ifdef GPU_DEBUG
+//     alpaka::wait(queue);
+//     std::cout << "finished updating pixel masking on GPU (applyMasking=" << applyMasking << ")" << std::endl;
+// #endif
 
-    return mask;
-  }
+//     return mask;
+//   }
 
-  void CAHitMaskingAndMerger::mergeGather(TkSoADevice& outTracks,
-                                          TkSoADevice const& inp0Tracks,
-                                          TkSoADevice const& inp1Tracks,
-                                          int nInputs,
-                                          int32_t* armBuf,
-                                          const int32_t arm0,
-                                          const int32_t arm1,
-                                          Queue& queue) const {
-    CAHitMaskingAndMergerKernels kernels;
+//   void CAHitMaskingAndMerger::mergeGather(TkSoADevice& outTracks,
+//                                           TkSoADevice const& inp0Tracks,
+//                                           TkSoADevice const& inp1Tracks,
+//                                           int nInputs,
+//                                           int32_t* armBuf,
+//                                           const int32_t arm0,
+//                                           const int32_t arm1,
+//                                           Queue& queue) const {
+//     CAHitMaskingAndMergerKernels kernels;
 
-    auto outTrack_view = outTracks.view().tracks();
-    auto outHit_view = outTracks.view().trackHits();
-    auto inp0Track_view = inp0Tracks.view().tracks();
-    auto inp0Hit_view = inp0Tracks.view().trackHits();
-    auto inp1Track_view = inp1Tracks.view().tracks();
-    auto inp1Hit_view = inp1Tracks.view().trackHits();
+//     auto outTrack_view = outTracks.view().tracks();
+//     auto outHit_view = outTracks.view().trackHits();
+//     auto inp0Track_view = inp0Tracks.view().tracks();
+//     auto inp0Hit_view = inp0Tracks.view().trackHits();
+//     auto inp1Track_view = inp1Tracks.view().tracks();
+//     auto inp1Hit_view = inp1Tracks.view().trackHits();
 
-    kernels.mergeGather(outTrack_view,
-                        outHit_view,
-                        inp0Track_view,
-                        inp0Hit_view,
-                        inp1Track_view,
-                        inp1Hit_view,
-                        nInputs,
-                        armBuf,
-                        arm0,
-                        arm1,
-                        queue);
-  }
+//     kernels.mergeGather(outTrack_view,
+//                         outHit_view,
+//                         inp0Track_view,
+//                         inp0Hit_view,
+//                         inp1Track_view,
+//                         inp1Hit_view,
+//                         nInputs,
+//                         armBuf,
+//                         arm0,
+//                         arm1,
+//                         queue);
+//   }
 
-  reco::TracksSoACollection CAHitMaskingAndMerger::makeFilteredTracks(int const& nTracks,
-                                                                      int const& nHits,
-                                                                      TkSoADevice const& inpTracks,
-                                                                      pixelTrack::Quality const& minQuality,
-                                                                      double const& matchFraction,
-                                                                      Queue& queue,
-                                                                      bool twinMerge,
-                                                                      const int32_t* armOfTrack,
-                                                                      float twinMergeDeltaEta,
-                                                                      float twinMergeDeltaPhi,
-                                                                      int twinMergeMinSharedHits,
-                                                                      bool twinMergeTier2,
-                                                                      float twinMergeTier2DeltaEta,
-                                                                      float twinMergeTier2DeltaPhi,
-                                                                      float twinMergeNSigma2,
-                                                                      int twinMergeMinSharedFwd,
-                                                                      bool twinMergeRefit,
-                                                                      bool refitAllTracks,
-                                                                      int32_t* unitedWinnerMask,
-                                                                      const uint8_t* pocketArmIn,
-                                                                      uint8_t* pocketArmIdOut) const {
-    CAHitMaskingAndMergerKernels kernels;
+//   reco::TracksSoACollection CAHitMaskingAndMerger::makeFilteredTracks(int const& nTracks,
+//                                                                       int const& nHits,
+//                                                                       TkSoADevice const& inpTracks,
+//                                                                       pixelTrack::Quality const& minQuality,
+//                                                                       double const& matchFraction,
+//                                                                       Queue& queue,
+//                                                                       bool twinMerge,
+//                                                                       const int32_t* armOfTrack,
+//                                                                       float twinMergeDeltaEta,
+//                                                                       float twinMergeDeltaPhi,
+//                                                                       int twinMergeMinSharedHits,
+//                                                                       bool twinMergeTier2,
+//                                                                       float twinMergeTier2DeltaEta,
+//                                                                       float twinMergeTier2DeltaPhi,
+//                                                                       float twinMergeNSigma2,
+//                                                                       int twinMergeMinSharedFwd,
+//                                                                       bool twinMergeRefit,
+//                                                                       bool refitAllTracks,
+//                                                                       int32_t* unitedWinnerMask,
+//                                                                       const uint8_t* pocketArmIn,
+//                                                                       uint8_t* pocketArmIdOut) const {
+//     CAHitMaskingAndMergerKernels kernels;
 
-    reco::TracksSoACollection tracks(queue, nTracks, nHits);
+//     reco::TracksSoACollection tracks(queue, nTracks, nHits);
 
-    auto tracksd_view = tracks.view().tracks();
-    auto tracks_hitsd_view = tracks.view().trackHits();
-    auto inptracksd_view = inpTracks.view().tracks();
-    auto inptracks_hitsd_view = inpTracks.view().trackHits();
+//     auto tracksd_view = tracks.view().tracks();
+//     auto tracks_hitsd_view = tracks.view().trackHits();
+//     auto inptracksd_view = inpTracks.view().tracks();
+//     auto inptracks_hitsd_view = inpTracks.view().trackHits();
 
-    // Strict cross-arm twin merge: compute per-track twin pairing and winner/loser bookkeeping, then let
-    // filterTracks drop losers and unite their hits onto the winners. The scratch buffers are
-    // stream-ordered, so they may destruct at function scope after the async launches. armOfTrack must be
-    // a device pointer with nTracks entries (0 = prompt-side, 1 = displaced-side).
-    const int32_t* loserOf_d = nullptr;
-    const int32_t* isLoser_d = nullptr;
-    std::optional<cms::alpakatools::device_buffer<Device, int32_t[]>> bestTwin, loserOf, isLoser;
-    if (twinMerge && nTracks > 0 && armOfTrack != nullptr) {
-      bestTwin.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracks));
-      loserOf.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracks));
-      isLoser.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracks));
-      // isLoser is written cross-thread in Kernel_twinConfirm -> zero-initialise first.
-      alpaka::memset(queue, *isLoser, 0);
-      kernels.twinMerge(inptracksd_view,
-                        inptracks_hitsd_view,
-                        armOfTrack,
-                        twinMergeDeltaEta,
-                        twinMergeDeltaPhi,
-                        twinMergeMinSharedHits,
-                        twinMergeTier2,
-                        twinMergeTier2DeltaEta,
-                        twinMergeTier2DeltaPhi,
-                        twinMergeNSigma2,
-                        twinMergeMinSharedFwd,
-                        minQuality,
-                        bestTwin->data(),
-                        loserOf->data(),
-                        isLoser->data(),
-                        nTracks,
-                        queue);
-      loserOf_d = loserOf->data();
-      isLoser_d = isLoser->data();
-    }
+//     // Strict cross-arm twin merge: compute per-track twin pairing and winner/loser bookkeeping, then let
+//     // filterTracks drop losers and unite their hits onto the winners. The scratch buffers are
+//     // stream-ordered, so they may destruct at function scope after the async launches. armOfTrack must be
+//     // a device pointer with nTracks entries (0 = prompt-side, 1 = displaced-side).
+//     const int32_t* loserOf_d = nullptr;
+//     const int32_t* isLoser_d = nullptr;
+//     std::optional<cms::alpakatools::device_buffer<Device, int32_t[]>> bestTwin, loserOf, isLoser;
+//     if (twinMerge && nTracks > 0 && armOfTrack != nullptr) {
+//       bestTwin.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracks));
+//       loserOf.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracks));
+//       isLoser.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, nTracks));
+//       // isLoser is written cross-thread in Kernel_twinConfirm -> zero-initialise first.
+//       alpaka::memset(queue, *isLoser, 0);
+//       kernels.twinMerge(inptracksd_view,
+//                         inptracks_hitsd_view,
+//                         armOfTrack,
+//                         twinMergeDeltaEta,
+//                         twinMergeDeltaPhi,
+//                         twinMergeMinSharedHits,
+//                         twinMergeTier2,
+//                         twinMergeTier2DeltaEta,
+//                         twinMergeTier2DeltaPhi,
+//                         twinMergeNSigma2,
+//                         twinMergeMinSharedFwd,
+//                         minQuality,
+//                         bestTwin->data(),
+//                         loserOf->data(),
+//                         isLoser->data(),
+//                         nTracks,
+//                         queue);
+//       loserOf_d = loserOf->data();
+//       isLoser_d = isLoser->data();
+//     }
 
-    kernels.filterTracks(tracksd_view,
-                         tracks_hitsd_view,
-                         inptracksd_view,
-                         inptracks_hitsd_view,
-                         minQuality,
-                         matchFraction,
-                         queue,
-                         loserOf_d,
-                         isLoser_d,
-                         twinMergeRefit,
-                         refitAllTracks,
-                         unitedWinnerMask,
-                         pocketArmIn,
-                         pocketArmIdOut);
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "finished filtering track SoAs on GPU" << std::endl;
-#endif
+//     kernels.filterTracks(tracksd_view,
+//                          tracks_hitsd_view,
+//                          inptracksd_view,
+//                          inptracks_hitsd_view,
+//                          minQuality,
+//                          matchFraction,
+//                          queue,
+//                          loserOf_d,
+//                          isLoser_d,
+//                          twinMergeRefit,
+//                          refitAllTracks,
+//                          unitedWinnerMask,
+//                          pocketArmIn,
+//                          pocketArmIdOut);
+// #ifdef GPU_DEBUG
+//     alpaka::wait(queue);
+//     std::cout << "finished filtering track SoAs on GPU" << std::endl;
+// #endif
 
-    return tracks;
-  }
+//     return tracks;
+//   }
 
-  void CAHitMaskingAndMerger::refitUnitedTracks(TkSoADevice& tracks,
-                                                const int32_t* unitedWinnerMask,
-                                                reco::CAGeometrySoACollection const& geometry,
-                                                reco::TrackingRecHitsSoACollection const& hits,
-                                                reco::OTRecHitsSoACollection const* otHits,
-                                                reco::StackedModuleGeometrySoACollection const* stackedGeom,
-                                                const float* rhoMapDevice,
-                                                const float* bFieldMapDevice,
-                                                float bfield,
-                                                Queue& queue,
-                                                bool dropOutlierFromHitList,
-                                                bool outlierCoreProtect,
-                                                bool fieldKernelWeights,
-                                                bool chargeSymmetric,
-                                                bool trajectoryCorrections,
-                                                bool scatteringLogAtTotal,
-                                                bool cumulativeEloss) const {
-    using Fitter = HelixFit<pixelTopology::Phase2OTStubs>;
-    // Refit population is bounded by the merged-collection capacity; the fast-fit scan skips every
-    // slot whose mask entry is < 0 (non-winners + unused tail), so no host readback of nTracks is
-    // needed and the garbage hitOffsets of the unused tail are never dereferenced.
-    const uint32_t nTracksCap = uint32_t(tracks.view().tracks().metadata().size());
-    if (nTracksCap == 0 || unitedWinnerMask == nullptr)
-      return;
+//   void CAHitMaskingAndMerger::refitUnitedTracks(TkSoADevice& tracks,
+//                                                 const int32_t* unitedWinnerMask,
+//                                                 reco::CAGeometrySoACollection const& geometry,
+//                                                 reco::TrackingRecHitsSoACollection const& hits,
+//                                                 reco::OTRecHitsSoACollection const* otHits,
+//                                                 reco::StackedModuleGeometrySoACollection const* stackedGeom,
+//                                                 const float* rhoMapDevice,
+//                                                 const float* bFieldMapDevice,
+//                                                 float bfield,
+//                                                 Queue& queue,
+//                                                 bool dropOutlierFromHitList,
+//                                                 bool outlierCoreProtect,
+//                                                 bool fieldKernelWeights,
+//                                                 bool chargeSymmetric,
+//                                                 bool trajectoryCorrections,
+//                                                 bool scatteringLogAtTotal,
+//                                                 bool cumulativeEloss) const {
+//     using Fitter = HelixFit<pixelTopology::Phase2OTStubs>;
+//     // Refit population is bounded by the merged-collection capacity; the fast-fit scan skips every
+//     // slot whose mask entry is < 0 (non-winners + unused tail), so no host readback of nTracks is
+//     // needed and the garbage hitOffsets of the unused tail are never dereferenced.
+//     const uint32_t nTracksCap = uint32_t(tracks.view().tracks().metadata().size());
+//     if (nTracksCap == 0 || unitedWinnerMask == nullptr)
+//       return;
 
-    // Minimal OT source: refitMergedTwins reads only otHits + per-module stacked frames for the
-    // tagged (bit30) OT extras -- no phi binner / stub mask / ownership (those are attach-only).
-    caExtension::OTHitsSource otSrc{};
-    const caExtension::OTHitsSource* otSrcPtr = nullptr;
-    if (otHits != nullptr && stackedGeom != nullptr && otHits->nHits() > 0) {
-      otSrc.otHits = otHits->const_view().otRecHits();
-      otSrc.otHitModules = otHits->const_view().otHitModules();
-      otSrc.stackedGeometry = stackedGeom->const_view();
-      otSrc.nOTHits = otHits->nHits();
-      otSrcPtr = &otSrc;
-    }
+//     // Minimal OT source: refitMergedTwins reads only otHits + per-module stacked frames for the
+//     // tagged (bit30) OT extras -- no phi binner / stub mask / ownership (those are attach-only).
+//     caExtension::OTHitsSource otSrc{};
+//     const caExtension::OTHitsSource* otSrcPtr = nullptr;
+//     if (otHits != nullptr && stackedGeom != nullptr && otHits->nHits() > 0) {
+//       otSrc.otHits = otHits->const_view().otRecHits();
+//       otSrc.otHitModules = otHits->const_view().otHitModules();
+//       otSrc.stackedGeometry = stackedGeom->const_view();
+//       otSrc.nOTHits = otHits->nHits();
+//       otSrcPtr = &otSrc;
+//     }
 
-    Fitter fitter(bfield);
-    fitter.setMaterialMap(rhoMapDevice);   // device BLMaterialMap (same EventSetup condition the CA uses)
-    fitter.setBFieldMap(bFieldMapDevice);  // device BLBFieldMap (Bz,Br) r-z map; null => the scalar field
-    fitter.setDropOutlierFromHitList(dropOutlierFromHitList);  // merger final-refit only, default off
-    fitter.setOutlierCoreProtect(outlierCoreProtect);          // abstain instead of drop; final refit only
-    fitter.setFieldKernelWeights(fieldKernelWeights);          // fit-consistent conversion field, default off
-    fitter.setChargeSymmetric(chargeSymmetric);                // charge-symmetric corrections, default off
-    fitter.setTrajectoryCorrections(trajectoryCorrections);    // reference-trajectory corrections, default off
-    fitter.setScatteringLogAtTotal(scatteringLogAtTotal);      // Highland log at the track total, default off
-    fitter.setCumulativeEloss(cumulativeEloss);                // cumulative-column typical loss, default off
-    fitter.refitMergedTwins(hits.view().trackingHits(),
-                            geometry.view().modules(),
-                            tracks.view().tracks(),
-                            tracks.view().trackHits(),
-                            unitedWinnerMask,
-                            otSrcPtr,
-                            nTracksCap,
-                            queue);
-  }
+//     Fitter fitter(bfield);
+//     fitter.setMaterialMap(rhoMapDevice);   // device BLMaterialMap (same EventSetup condition the CA uses)
+//     fitter.setBFieldMap(bFieldMapDevice);  // device BLBFieldMap (Bz,Br) r-z map; null => the scalar field
+//     fitter.setDropOutlierFromHitList(dropOutlierFromHitList);  // merger final-refit only, default off
+//     fitter.setOutlierCoreProtect(outlierCoreProtect);          // abstain instead of drop; final refit only
+//     fitter.setFieldKernelWeights(fieldKernelWeights);          // fit-consistent conversion field, default off
+//     fitter.setChargeSymmetric(chargeSymmetric);                // charge-symmetric corrections, default off
+//     fitter.setTrajectoryCorrections(trajectoryCorrections);    // reference-trajectory corrections, default off
+//     fitter.setScatteringLogAtTotal(scatteringLogAtTotal);      // Highland log at the track total, default off
+//     fitter.setCumulativeEloss(cumulativeEloss);                // cumulative-column typical loss, default off
+//     fitter.refitMergedTwins(hits.view().trackingHits(),
+//                             geometry.view().modules(),
+//                             tracks.view().tracks(),
+//                             tracks.view().trackHits(),
+//                             unitedWinnerMask,
+//                             otSrcPtr,
+//                             nTracksCap,
+//                             queue);
+//   }
 
-  CAHitMaskingAndMerger::TkSoADevice CAHitMaskingAndMerger::finalDedupTracks(
-      TkSoADevice const& refinedTracks,
-      uint32_t nHits,
-      uint32_t nOTHits,
-      Queue& queue,
-      const MergerDedupConfirmInputs* confirm) const {
-    CAHitMaskingAndMergerKernels kernels;
-    // The output can hold at most the input's tracks + hits (de-dup only removes) -> reuse the input
-    // capacities so the compaction never overflows.
-    const int nTracksCap = int(refinedTracks.view().tracks().metadata().size());
-    const int nHitsCap = int(refinedTracks.view().trackHits().metadata().size());
-    reco::TracksSoACollection out(queue, nTracksCap, nHitsCap);
-    auto out_view = out.view().tracks();
-    auto outHit_view = out.view().trackHits();
-    auto in_view = refinedTracks.view().tracks();
-    auto inHit_view = refinedTracks.view().trackHits();
-    kernels.finalDedup(out_view, outHit_view, in_view, inHit_view, nTracksCap, nHits, nOTHits, queue, confirm);
-    return out;
-  }
+//   CAHitMaskingAndMerger::TkSoADevice CAHitMaskingAndMerger::finalDedupTracks(
+//       TkSoADevice const& refinedTracks,
+//       uint32_t nHits,
+//       uint32_t nOTHits,
+//       Queue& queue,
+//       const MergerDedupConfirmInputs* confirm) const {
+//     CAHitMaskingAndMergerKernels kernels;
+//     // The output can hold at most the input's tracks + hits (de-dup only removes) -> reuse the input
+//     // capacities so the compaction never overflows.
+//     const int nTracksCap = int(refinedTracks.view().tracks().metadata().size());
+//     const int nHitsCap = int(refinedTracks.view().trackHits().metadata().size());
+//     reco::TracksSoACollection out(queue, nTracksCap, nHitsCap);
+//     auto out_view = out.view().tracks();
+//     auto outHit_view = out.view().trackHits();
+//     auto in_view = refinedTracks.view().tracks();
+//     auto inHit_view = refinedTracks.view().trackHits();
+//     kernels.finalDedup(out_view, outHit_view, in_view, inHit_view, nTracksCap, nHits, nOTHits, queue, confirm);
+//     return out;
+//   }
 
   template <typename TrackerTraits>
   void CAHitNtupletGenerator<TrackerTraits>::reportOverflows(std::string const& moduleLabel) const {

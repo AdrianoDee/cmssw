@@ -15,6 +15,7 @@
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/OTRecHitsSoACollection.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/StubsSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsMaskingSoACollection.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -42,6 +43,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsConstView = ::reco::TrackingRecHitConstView;
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
 
     using MapToHitConstView = ::reco::TrackingRecHitsMaskingConstView;
 
@@ -139,114 +141,114 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     bool m_verboseBLDump;
   };
 
-  class CAHitMaskingAndMerger {
-  public:
-    using MapToHit = reco::TrackingRecHitsMaskingCollection;
-    using TkSoADevice = reco::TracksSoACollection;
+  // class CAHitMaskingAndMerger {
+  // public:
+  //   using MapToHit = reco::TrackingRecHitsMaskingCollection;
+  //   using TkSoADevice = reco::TracksSoACollection;
 
-  public:
-    CAHitMaskingAndMerger() = default;
-    ~CAHitMaskingAndMerger() = default;
+  // public:
+  //   CAHitMaskingAndMerger() = default;
+  //   ~CAHitMaskingAndMerger() = default;
 
-    CAHitMaskingAndMerger(const CAHitMaskingAndMerger&) = delete;
-    CAHitMaskingAndMerger(CAHitMaskingAndMerger&&) = delete;
-    CAHitMaskingAndMerger& operator=(const CAHitMaskingAndMerger&) = delete;
-    CAHitMaskingAndMerger& operator=(CAHitMaskingAndMerger&&) = delete;
+  //   CAHitMaskingAndMerger(const CAHitMaskingAndMerger&) = delete;
+  //   CAHitMaskingAndMerger(CAHitMaskingAndMerger&&) = delete;
+  //   CAHitMaskingAndMerger& operator=(const CAHitMaskingAndMerger&) = delete;
+  //   CAHitMaskingAndMerger& operator=(CAHitMaskingAndMerger&&) = delete;
 
-    MapToHit makeMaskingAsync(MapToHit const& mask_d,
-                              TkSoADevice const& tracks_d,
-                              const pixelTrack::Quality minQuality,
-                              uint32_t const& iterationIndex,
-                              Queue& queue,
-                              bool applyMasking = true,
-                              bool maskAttachedHits = false) const;
+  //   MapToHit makeMaskingAsync(MapToHit const& mask_d,
+  //                             TkSoADevice const& tracks_d,
+  //                             const pixelTrack::Quality minQuality,
+  //                             uint32_t const& iterationIndex,
+  //                             Queue& queue,
+  //                             bool applyMasking = true,
+  //                             bool maskAttachedHits = false) const;
 
-    // Device-side gather/compact: reads each input's nTracks() and hitOffsets() on device and packs
-    // the track and trackHits columns into a dense merged layout, writing the merged nTracks and the
-    // shifted hitOffsets on device. No host readback in the sizing or in the copy.
-    void mergeGather(TkSoADevice& outTracks,
-                     TkSoADevice const& inp0Tracks,
-                     TkSoADevice const& inp1Tracks,
-                     int nInputs,
-                     int32_t* armBuf,
-                     const int32_t arm0,
-                     const int32_t arm1,
-                     Queue& queue) const;
+  //   // Device-side gather/compact: reads each input's nTracks() and hitOffsets() on device and packs
+  //   // the track and trackHits columns into a dense merged layout, writing the merged nTracks and the
+  //   // shifted hitOffsets on device. No host readback in the sizing or in the copy.
+  //   void mergeGather(TkSoADevice& outTracks,
+  //                    TkSoADevice const& inp0Tracks,
+  //                    TkSoADevice const& inp1Tracks,
+  //                    int nInputs,
+  //                    int32_t* armBuf,
+  //                    const int32_t arm0,
+  //                    const int32_t arm1,
+  //                    Queue& queue) const;
 
-    TkSoADevice makeFilteredTracks(int const& nTracks,
-                                   int const& nHits,
-                                   TkSoADevice const& inpTracks,
-                                   pixelTrack::Quality const& minQuality,
-                                   double const& matchFraction,
-                                   Queue& queue,
-                                   bool twinMerge = false,
-                                   const int32_t* armOfTrack = nullptr,
-                                   float twinMergeDeltaEta = 0.03f,
-                                   float twinMergeDeltaPhi = 0.03f,
-                                   int twinMergeMinSharedHits = 1,
-                                   bool twinMergeTier2 = false,
-                                   float twinMergeTier2DeltaEta = 0.01f,
-                                   float twinMergeTier2DeltaPhi = 0.01f,
-                                   float twinMergeNSigma2 = -1.f,
-                                   int twinMergeMinSharedFwd = 1,
-                                   bool twinMergeRefit = false,
-                                   bool refitAllTracks = false,
-                                   int32_t* unitedWinnerMask = nullptr,
-                                   // Per-track arm, input order in and merged-SoA order out; both null
-                                   // when no arm is tracked.
-                                   const uint8_t* pocketArmIn = nullptr,
-                                   uint8_t* pocketArmIdOut = nullptr) const;
+  //   TkSoADevice makeFilteredTracks(int const& nTracks,
+  //                                  int const& nHits,
+  //                                  TkSoADevice const& inpTracks,
+  //                                  pixelTrack::Quality const& minQuality,
+  //                                  double const& matchFraction,
+  //                                  Queue& queue,
+  //                                  bool twinMerge = false,
+  //                                  const int32_t* armOfTrack = nullptr,
+  //                                  float twinMergeDeltaEta = 0.03f,
+  //                                  float twinMergeDeltaPhi = 0.03f,
+  //                                  int twinMergeMinSharedHits = 1,
+  //                                  bool twinMergeTier2 = false,
+  //                                  float twinMergeTier2DeltaEta = 0.01f,
+  //                                  float twinMergeTier2DeltaPhi = 0.01f,
+  //                                  float twinMergeNSigma2 = -1.f,
+  //                                  int twinMergeMinSharedFwd = 1,
+  //                                  bool twinMergeRefit = false,
+  //                                  bool refitAllTracks = false,
+  //                                  int32_t* unitedWinnerMask = nullptr,
+  //                                  // Per-track arm, input order in and merged-SoA order out; both null
+  //                                  // when no arm is tracked.
+  //                                  const uint8_t* pocketArmIn = nullptr,
+  //                                  uint8_t* pocketArmIdOut = nullptr) const;
 
-    // Merger-side GBL refit of the twin-united winners: re-fits each winner's post-union hit list
-    // (pixel plus absorbed OT extras) and overwrites its state, covariance, chi2 and ndof in place.
-    // unitedWinnerMask is >= 0 for winners; a null otHits means pixel-only.
-    void refitUnitedTracks(TkSoADevice& tracks,
-                           const int32_t* unitedWinnerMask,
-                           reco::CAGeometrySoACollection const& geometry,
-                           reco::TrackingRecHitsSoACollection const& hits,
-                           reco::OTRecHitsSoACollection const* otHits,
-                           reco::StackedModuleGeometrySoACollection const* stackedGeom,
-                           const float* rhoMapDevice,
-                           // Normalized (Bz,Br) r-z field-map device buffer, or null to use the scalar
-                           // field at the origin.
-                           const float* bFieldMapDevice,
-                           float bfield,
-                           Queue& queue,
-                           // When true the refit's single-outlier drop is removed from the emitted hit
-                           // list (nHits == nMeasFit); when false the dropped node stays on the track.
-                           bool dropOutlierFromHitList = false,
-                           // Drop nothing when the largest-pull measured node is an original pixel-core
-                           // hit; when false that node is dropped whatever its provenance.
-                           bool outlierCoreProtect = false,
-                           // Take the curvature->pT conversion field from the fit's own curvature weights
-                           // instead of the hit-count average of B_bend; inert without bFieldMapDevice.
-                           bool fieldKernelWeights = false,
-                           // Charge-symmetric corrections: signed arc of the node-0 -> PCA step and the
-                           // bending-field profile offset.
-                           bool chargeSymmetric = false,
-                           // Reference-trajectory corrections: node-0 path length, arc->azimuth sign of a
-                           // measurement-less node, and the field's B_r lambda row.
-                           bool trajectoryCorrections = false,
-                           // Evaluate Highland's logarithm at the track's total material and apportion the
-                           // variance to the gaps by thickness: theta0^2 does not add over a chain.
-                           bool scatteringLogAtTotal = false,
-                           // Typical loss of the charged column taken as the single-column Landau law at
-                           // the accumulated thickness (the family is stable under convolution); when
-                           // false each lump is charged its own MPV.
-                           bool cumulativeEloss = false) const;
+  //   // Merger-side GBL refit of the twin-united winners: re-fits each winner's post-union hit list
+  //   // (pixel plus absorbed OT extras) and overwrites its state, covariance, chi2 and ndof in place.
+  //   // unitedWinnerMask is >= 0 for winners; a null otHits means pixel-only.
+  //   void refitUnitedTracks(TkSoADevice& tracks,
+  //                          const int32_t* unitedWinnerMask,
+  //                          reco::CAGeometrySoACollection const& geometry,
+  //                          reco::TrackingRecHitsSoACollection const& hits,
+  //                          reco::OTRecHitsSoACollection const* otHits,
+  //                          reco::StackedModuleGeometrySoACollection const* stackedGeom,
+  //                          const float* rhoMapDevice,
+  //                          // Normalized (Bz,Br) r-z field-map device buffer, or null to use the scalar
+  //                          // field at the origin.
+  //                          const float* bFieldMapDevice,
+  //                          float bfield,
+  //                          Queue& queue,
+  //                          // When true the refit's single-outlier drop is removed from the emitted hit
+  //                          // list (nHits == nMeasFit); when false the dropped node stays on the track.
+  //                          bool dropOutlierFromHitList = false,
+  //                          // Drop nothing when the largest-pull measured node is an original pixel-core
+  //                          // hit; when false that node is dropped whatever its provenance.
+  //                          bool outlierCoreProtect = false,
+  //                          // Take the curvature->pT conversion field from the fit's own curvature weights
+  //                          // instead of the hit-count average of B_bend; inert without bFieldMapDevice.
+  //                          bool fieldKernelWeights = false,
+  //                          // Charge-symmetric corrections: signed arc of the node-0 -> PCA step and the
+  //                          // bending-field profile offset.
+  //                          bool chargeSymmetric = false,
+  //                          // Reference-trajectory corrections: node-0 path length, arc->azimuth sign of a
+  //                          // measurement-less node, and the field's B_r lambda row.
+  //                          bool trajectoryCorrections = false,
+  //                          // Evaluate Highland's logarithm at the track's total material and apportion the
+  //                          // variance to the gaps by thickness: theta0^2 does not add over a chain.
+  //                          bool scatteringLogAtTotal = false,
+  //                          // Typical loss of the charged column taken as the single-column Landau law at
+  //                          // the accumulated thickness (the family is stable under convolution); when
+  //                          // false each lump is charged its own MPV.
+  //                          bool cumulativeEloss = false) const;
 
-    // Post-refit de-dup of the merged tracks: shared-hit co-occurrence pairing, a covariance-scaled
-    // 3-parameter gate and a 0-shared forward fallback, keeping the higher-quality member of a pair.
-    // Returns a fresh compacted SoA of the survivors; the input is unchanged. nHits and nOTHits size
-    // the hit-id key space.
-    TkSoADevice finalDedupTracks(TkSoADevice const& refinedTracks,
-                                 uint32_t nHits,
-                                 uint32_t nOTHits,
-                                 Queue& queue,
-                                 // Merger GBL-refit inputs for the 0-shared merge-or-keep-both confirm;
-                                 // null makes the confirm inert.
-                                 const MergerDedupConfirmInputs* confirm = nullptr) const;
-  };
+  //   // Post-refit de-dup of the merged tracks: shared-hit co-occurrence pairing, a covariance-scaled
+  //   // 3-parameter gate and a 0-shared forward fallback, keeping the higher-quality member of a pair.
+  //   // Returns a fresh compacted SoA of the survivors; the input is unchanged. nHits and nOTHits size
+  //   // the hit-id key space.
+  //   TkSoADevice finalDedupTracks(TkSoADevice const& refinedTracks,
+  //                                uint32_t nHits,
+  //                                uint32_t nOTHits,
+  //                                Queue& queue,
+  //                                // Merger GBL-refit inputs for the 0-shared merge-or-keep-both confirm;
+  //                                // null makes the confirm inert.
+  //                                const MergerDedupConfirmInputs* confirm = nullptr) const;
+  // };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

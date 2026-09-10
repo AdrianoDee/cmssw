@@ -20,8 +20,6 @@ namespace reco {
 
   using HitPortableCollectionHost = PortableHostCollection<reco::TrackingBlocksSoA>;
 
-  using TrackingRecHitsMaskingHost = PortableHostCollection<reco::TrackingRecHitsMaskingSoA>;
-
   class TrackingRecHitHost : public HitPortableCollectionHost {
   public:
     explicit TrackingRecHitHost(edm::Uninitialized)
