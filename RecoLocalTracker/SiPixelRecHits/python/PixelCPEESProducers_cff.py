@@ -1,5 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.ProcessModifiers.alpaka_cff import alpaka
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
 
 #
 # Load all Pixel Cluster Position Estimator ESProducers
@@ -22,5 +23,5 @@ def _addProcessCPEsAlpaka(process):
     process.load("RecoLocalTracker.SiPixelRecHits.pixelCPEFastParamsESProducerAlpakaPhase2_cfi")
     process.load("RecoLocalTracker.SiPixelRecHits.pixelCPEFastParamsESProducerAlpakaHIonPhase1_cfi")
 
-modifyConfigurationForAlpakaCPEs_ = alpaka.makeProcessModifier(_addProcessCPEsAlpaka)
+modifyConfigurationForAlpakaCPEs_ = (alpaka | trackingGPUOffline).makeProcessModifier(_addProcessCPEsAlpaka)
 

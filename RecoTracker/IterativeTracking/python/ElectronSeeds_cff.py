@@ -100,6 +100,13 @@ trackingPhase2PU140.toModify(tripletElectronSeedLayers,
     FPix = dict(skipClusters = 'pixelPairStepSeedClusterMask')
 )
 
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+
+(trackingPhase2PU140 & trackingGPUOffline).toModify(tripletElectronSeedLayers,
+    BPix = dict(skipClusters = cms.InputTag('highPtTripletStepSeedClusterMask')),
+    FPix = dict(skipClusters = cms.InputTag('highPtTripletStepSeedClusterMask'))
+)
+
 from RecoTracker.TkTrackingRegions.globalTrackingRegionFromBeamSpot_cfi import globalTrackingRegionFromBeamSpot as _globalTrackingRegionFromBeamSpot
 tripletElectronTrackingRegions = _globalTrackingRegionFromBeamSpot.clone(RegionPSet = dict(
     ptMin        = 1.0,
@@ -333,6 +340,17 @@ trackingPhase2PU140.toReplaceWith(electronSeedsSeqTask, cms.Task(
     initialStepSeedClusterMask,
     highPtTripletStepSeedClusterMask,
     pixelPairStepSeedClusterMask,
+    tripletElectronSeedLayers,
+    tripletElectronTrackingRegions,
+    tripletElectronHitDoublets,
+    tripletElectronHitTriplets,
+    tripletElectronSeeds,
+    newCombinedSeeds
+))
+
+trackingGPUOffline.toReplaceWith(electronSeedsSeqTask, cms.Task(
+    initialStepSeedClusterMask,
+    highPtTripletStepSeedClusterMask,
     tripletElectronSeedLayers,
     tripletElectronTrackingRegions,
     tripletElectronHitDoublets,

@@ -73,6 +73,9 @@ from Configuration.ProcessModifiers.jetCoreInPhase2_cff import jetCoreInPhase2
 jetCoreInPhase2.toModify(_iterations_trackingPhase2PU140_VS.names, func=lambda x: x.append('JetCoreRegionalStep'))
 trackingIters01.toModify(_iterations_trackingPhase2PU140_VS, names = ["InitialStep", "HighPtTripletStep"])
 
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+trackingGPUOffline.toModify(_iterations_trackingPhase2PU140_VS, names = ["InitialStep", "HighPtTripletStep","LowPtQuadStep"])
+
 # apply all procModifiers before this
 _iterations_trackingPhase2PU140 = _iterations_trackingPhase2PU140_VS.names.value()
 
@@ -93,6 +96,8 @@ _iterations_muonSeeded_trackingPhase2PU140_VS = cms.PSet(names = cms.vstring(
     "MuonSeededStepOutIn",
 ))
 trackingIters01.toModify(_iterations_muonSeeded_trackingPhase2PU140_VS, names = [])
+trackingGPUOffline.toModify(_iterations_muonSeeded_trackingPhase2PU140_VS, names = [])
+
 _iterations_muonSeeded_trackingPhase2PU140 = _iterations_muonSeeded_trackingPhase2PU140_VS.names.value()
 
 _multipleSeedProducers = {

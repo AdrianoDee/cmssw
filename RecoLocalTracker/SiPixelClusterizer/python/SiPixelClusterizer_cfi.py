@@ -51,3 +51,34 @@ from Configuration.ProcessModifiers.premix_stage2_cff import premix_stage2
 (premix_stage2 & phase2_tracker).toModify(siPixelClusters,
     src = "mixData:Pixel"
 )
+
+# from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+# from RecoLocalTracker.SiPixelClusterizer.siPixelPhase2DigiToCluster_cfi import siPixelPhase2DigiToCluster as _siPixelPhase2DigiToCluster
+# from EventFilter.SiPixelRawToDigi.siPixelDigiErrorsFromSoAAlpaka_cfi import siPixelDigiErrorsFromSoAAlpaka as _siPixelDigiErrorsFromSoAAlpaka
+# from RecoLocalTracker.SiPixelClusterizer.siPixelDigisClustersFromSoAAlpakaPhase2_cfi import siPixelDigisClustersFromSoAAlpakaPhase2 as _siPixelDigisClustersFromSoAAlpakaPhase2
+
+# siPixelClustersSoA = _siPixelPhase2DigiToCluster.clone(
+#     Phase2ReadoutMode = PixelDigitizerAlgorithmCommon.Phase2ReadoutMode.value(), 
+#     Phase2DigiBaseline = int(PixelDigitizerAlgorithmCommon.ThresholdInElectrons_Barrel.value()), 
+#     ElectronPerADCGain = PixelDigitizerAlgorithmCommon.ElectronPerAdc.value()
+# )
+
+# # siPixelDigiErrors = _siPixelDigiErrorsFromSoAAlpaka.clone(
+# #     digiErrorSoASrc = cms.InputTag('siPixelClustersSoA'),
+# #     fmtErrorsSoASrc = cms.InputTag('siPixelClustersSoA'),
+# #     UsePhase1 = cms.bool(True)
+# # )
+
+# (trackingGPUOffline & phase2_tracker).toReplaceWith(siPixelClusters,_siPixelDigisClustersFromSoAAlpakaPhase2.clone(
+#     clusterThreshold_layer1 = 4000,
+#     clusterThreshold_otherLayers = 4000,
+#     src = "siPixelClustersSoA",
+#     storeDigis = False,
+#     produceDigis = False
+# ))
+
+# siPixelClustersGPUTask, cms.Task(
+#     siPixelClustersSoA,
+#     siPixelDigiErrors,
+#     siPixelClusters
+# )

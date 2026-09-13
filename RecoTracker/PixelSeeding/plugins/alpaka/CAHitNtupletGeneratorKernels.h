@@ -12,6 +12,7 @@
 #include "DataFormats/TrackSoA/interface/TracksHost.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TrackUtilities.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/AtomicPairCounter.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -168,13 +169,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        const ::reco::CAGraphSoAConstView& cc,
                        Queue& queue);
 
-    void classifyTuples(const HitsConstView& hh, TkSoAView& track_view, Queue& queue);
+    void classifyTuples(const HitsConstView& hh,
+                        TkSoAView& track_view,
+                        const pixelTrack::Iteration iterationName,
+                        Queue& queue);
 
     void buildDoublets(const HitsConstView& hh,
                        const ::reco::CAGraphSoAConstView& cc,
                        const ::reco::CALayersSoAConstView& ll,
                        uint32_t offsetBPIX2,
+                       const MapToHitConstView& maskView,
                        Queue& queue);
+    
+    void updateMasking(Queue& queue,
+                       ::reco::TrackingRecHitsMaskingView& mask_view,
+                       const ::reco::TrackSoAConstView& trackd_view,
+                       const ::reco::TrackHitSoAConstView& trackhitd_view,
+                       pixelTrack::Quality minQuality,
+                       uint32_t iterationIndex);
 
     static void printCounters();
 

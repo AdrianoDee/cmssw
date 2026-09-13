@@ -33,6 +33,15 @@ trackingPhase2PU140.toReplaceWith(convClusters, _phase2trackClusterRemover.clone
     oldClusterRemovalInfo                    = 'detachedQuadStepClusters',
     overrideTrkQuals                         = 'detachedQuadStepSelector:detachedQuadStepTrk'
 ))
+
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+
+(trackingPhase2PU140 & trackingGPUOffline).toModify(convClusters,
+                                            trajectories          = 'lowPtQuadStepTracks',
+                                            oldClusterRemovalInfo = 'lowPtQuadStepClusters',
+                                            overrideTrkQuals       = 'lowPtQuadStepSelector:lowPtQuadStep',
+                                            )
+
 from Configuration.Eras.Modifier_trackingPhase1_cff import trackingPhase1
 from Configuration.ProcessModifiers.trackingIters01_cff import trackingIters01
 (trackingIters01 & trackingPhase1).toModify(convClusters,
