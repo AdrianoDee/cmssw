@@ -333,6 +333,48 @@ splitClustersInPhase2Pixel.toModify(siPixelClusters,
     forceXError = cms.double(25.0),
     forceYError = cms.double(100.0),
 )
+
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+from SimTracker.SiPhase2Digitizer.phase2TrackerDigitizer_cfi import PixelDigitizerAlgorithmCommon
+from RecoLocalTracker.SiPixelClusterizer.siPixelPhase2DigiToCluster_cfi import siPixelPhase2DigiToCluster as _siPixelPhase2DigiToCluster
+from RecoLocalTracker.SiPixelClusterizer.siPixelDigisClustersFromSoAAlpakaPhase2_cfi import siPixelDigisClustersFromSoAAlpakaPhase2 as _siPixelDigisClustersFromSoAAlpakaPhase2
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitAlpakaPhase2_cfi import siPixelRecHitAlpakaPhase2 as _siPixelRecHitAlpakaPhase2
+
+siPixelClustersSoA = _siPixelPhase2DigiToCluster.clone(
+    Phase2ReadoutMode = PixelDigitizerAlgorithmCommon.Phase2ReadoutMode.value(), 
+    Phase2DigiBaseline = int(PixelDigitizerAlgorithmCommon.ThresholdInElectrons_Barrel.value()), 
+    ElectronPerADCGain = PixelDigitizerAlgorithmCommon.ElectronPerAdc.value()
+)
+
+(trackingGPUOffline & trackingPhase2PU140).toReplaceWith(siPixelClusters,_siPixelDigisClustersFromSoAAlpakaPhase2.clone(
+    clusterThreshold_layer1 = 4000,
+    clusterThreshold_otherLayers = 4000,
+    src = "siPixelClustersSoA",
+    storeDigis = False,
+    produceDigis = False
+))
+
+siPixelRecHitsSoA = _siPixelRecHitAlpakaPhase2.clone(
+    src = "siPixelClustersSoA"
+)
+
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromSoAAlpaka_cfi import siPixelRecHitFromSoAAlpaka as _siPixelRecHitFromSoAAlpaka
+(trackingGPUOffline & trackingPhase2PU140).toReplaceWith(siPixelRecHits,_siPixelRecHitFromSoAAlpaka.clone(
+            pixelRecHitSrc = cms.InputTag('siPixelRecHitsSoA'),
+            src = cms.InputTag('siPixelClusters'))
+)
+
+_InitialStepPreSplittingTask_GPU = cms.Task(
+    siPixelClustersSoA, 
+    siPixelClusters,
+    siPixelRecHitsSoA,
+    siPixelRecHits,
+    MeasurementTrackerEvent,
+    siPixelClusterShapeCache
+)
+
+(trackingGPUOffline & trackingPhase2PU140).toReplaceWith(InitialStepPreSplittingTask, _InitialStepPreSplittingTask_GPU)
+
 ##
 ## Modify for the tau embedding methods cleaning step
 ##

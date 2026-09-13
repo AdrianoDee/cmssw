@@ -446,6 +446,124 @@ InitialStepTask = cms.Task(initialStepSeedLayers,
                            initialStep,caloJetsForTrkTask)
 InitialStep = cms.Sequence(InitialStepTask)
 
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase2OT_cfi import caHitNtupletAlpakaPhase2OT as _pixelTracksAlpakaPhase2Extended
+from RecoLocalTracker.Phase2TrackerRecHits.phase2OTRecHitsSoAConverter_cfi import phase2OTRecHitsSoAConverter as _phase2OTRecHitsSoAConverter
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitExtendedAlpaka_cfi import siPixelRecHitExtendedAlpaka as _siPixelRecHitExtendedAlpaka
+from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpaka_cfi import pixelTrackProducerFromSoAAlpaka as _pixelTrackProducerFromSoAAlpaka
+
+# _pixelTracksAlpakaPostDNN = cms.EDProducer('PixelTrackTorchHighPuritySelector@alpaka',
+#     pixelTrackSrc = cms.InputTag('pixelTracksAlpakaPreDNN'),
+#     maxNumberOfTracks = cms.int32(2*60*1024),
+#     maxPreselectedTracks = cms.int32(9_984),
+#     minNumberOfHits = cms.int32(0),
+#     avgHitsPerTrack = cms.int32(8),
+#     minimumTrackQuality = cms.string('tight'),
+#     model = cms.FileInPath('RecoTracker/FinalTrackSelectors/data/PixelTrackTorchHighPuritySelector/pixel_track_classifier_FP16.pt'),
+#     scoreThreshold = cms.double(0.4),
+#     batchSize = cms.int32(4_992)
+# )
+
+### CA Tracks HighPt
+initialStepCATracksHighPt = _pixelTracksAlpakaPhase2Extended.clone(
+    hitMask = "siPixelOTRecHitSoA",
+    pixelRecHitSrc = "siPixelOTRecHitSoA",
+    iterationName = "promptHighPt",
+)
+## CA Mask HighPt
+from RecoTracker.PixelSeeding.caMasking_cfi import caMasking as _caMasking
+initialStepCATracksHighPtMask = _caMasking.clone(
+    iterationIndex = 1,
+    minQuality = "tight",
+    tracksSoASrc = "initialStepCATracksHighPt",
+    recHitsMaskSoASrc = "siPixelOTRecHitSoA"
+)
+
+## CA Tracks LowPt
+lowPtPtMinCut = 0.35 # 0.45 works, but 0.40 starts showing too many tracks with "zero" eta and phi
+                     # Maybe there is another cell cut that balances this, but need to check
+initialStepCATracksLowPt = _pixelTracksAlpakaPhase2Extended.clone(
+    hitMask = "initialStepCATracksHighPtMask",
+    pixelRecHitSrc = "siPixelOTRecHitSoA",
+    ptmin = lowPtPtMinCut + 0.05,
+    maxNumberOfDoublets = str(12400000),
+    maxNumberOfTuples   = str(32 * 32 * 1024),
+    hardCurvCut = cms.double(0.035),
+    iterationName = "promptLowPt",
+)
+
+initialStepCATracksLowPt.trackQualityCuts.minPt = cms.double(lowPtPtMinCut + 0.05)
+initialStepCATracksLowPt.geometry.ptCuts = cms.vdouble(73 * [lowPtPtMinCut ])
+
+# CA Tracks SoA Merger
+from RecoTracker.FinalTrackSelectors.tracksSoAMerger_cfi import tracksSoAMerger as _tracksSoAMerger
+
+initialStepCATracksSoA = _tracksSoAMerger.clone(
+    inputTkSoAs = cms.VInputTag("initialStepCATracksHighPt","initialStepCATracksLowPt"),
+    minQuality = cms.string('tight'),
+    matchFraction = cms.double(0.5),
+    dupNSigma2 = 3.0,
+    dupMaxDeltaR2 = 0.001,
+)
+
+initialStepCATracks = _pixelTrackProducerFromSoAAlpaka.clone(
+    pixelRecHitLegacySrc = "siPixelRecHits",
+    beamSpot = cms.InputTag("offlineBeamSpot"),
+    minNumberOfHits = cms.int32(0),
+    minQuality = cms.string('tight'),
+    trackSrc = cms.InputTag("initialStepCATracksSoA"),
+    outerTrackerRecHitSrc = cms.InputTag("siPhase2RecHits"),
+    outerTrackerRecHitSoAConverterSrc = cms.InputTag("siOTRecHitSoA"),
+    useOTExtension = cms.bool(True),
+    requireQuadsFromConsecutiveLayers = cms.bool(True)
+)
+
+from RecoTracker.TkSeedGenerator.SeedGeneratorFromProtoTracksEDProducer_cfi import SeedGeneratorFromProtoTracksEDProducer as _seedProducerFromTrack
+
+initialSeedFromProtoTrack = cms.PSet(
+    ComponentName = cms.string('SeedFromConsecutiveHitsCreator'),
+    MinOneOverPtError = cms.double(1.0),
+    OriginTransverseErrorMultiplier = cms.double(1.0),
+    SeedMomentumForBOFF = cms.double(5.0),
+    TTRHBuilder = cms.string('WithTrackAngle'),
+    forceKinematicWithRegionDirection = cms.bool(False),
+    magneticField = cms.string(''),
+    propagator = cms.string('PropagatorWithMaterial')
+)
+
+initialStepCASeeds = _seedProducerFromTrack.clone(
+    InputCollection = cms.InputTag("initialStepCATracks"),
+    InputVertexCollection = cms.InputTag(""),
+    useProtoTrackKinematics = cms.bool(True),
+        SeedCreatorPSet = cms.PSet(
+        refToPSet_ = cms.string('initialSeedFromProtoTrack')
+    ),
+    includeFourthHit = cms.bool(False),
+    useEventsWithNoVertex = cms.bool(True),
+    usePV = cms.bool(False),
+)
+
+siOTRecHitSoA = _phase2OTRecHitsSoAConverter.clone(
+    beamSpot = "offlineBeamSpot",
+    otRecHitSource = "siPhase2RecHits",
+    pixelRecHitSoASource = "siPixelRecHitsSoA"
+)
+
+siPixelOTRecHitSoA = _siPixelRecHitExtendedAlpaka.clone(
+    pixelRecHitsSoA = "siPixelRecHitsSoA",
+    trackerRecHitsSoA = "siOTRecHitSoA"
+)
+
+from RecoLocalTracker.SiPixelRecHits.siPixelRecHitFromSoAAlpaka_cfi import siPixelRecHitFromSoAAlpaka as _siPixelRecHitFromSoAAlpaka
+siPixelOTRecHits =_siPixelRecHitFromSoAAlpaka.clone(
+            pixelRecHitSrc = cms.InputTag('siPixelOTRecHitSoA'),
+            src = cms.InputTag('siPixelClusters')
+)
+
+InitialStepTask.copyAndExclude([initialStepSeedLayers, initialStepTrackingRegions, initialStepHitDoublets, initialStepHitTriplets])
+trackingGPUOffline.toReplaceWith(initialStepSeeds, initialStepCASeeds)
+## TODO! For ecalDrivenElectronSeeds we need to pass seeds with at least 2 pixel hits!!!
+
 from RecoLocalTracker.Phase2TrackerRecHits.Phase2TrackerRecHits_cfi import siPhase2RecHits
 from Configuration.ProcessModifiers.trackingMkFitCommon_cff import trackingMkFitCommon
 _InitialStepTask_trackingMkFitCommon = InitialStepTask.copy()
@@ -454,6 +572,32 @@ _InitialStepTask_trackingMkFitCommon.add(mkFitSiPixelHits, mkFitEventOfHits, mkF
 _InitialStepTask_trackingMkFitCommon_Phase2.add(siPhase2RecHits, mkFitSiPixelHits, mkFitSiPhase2Hits, mkFitEventOfHits, mkFitGeometryESProducer)
 (trackingMkFitCommon & (~trackingPhase2PU140)).toReplaceWith(InitialStepTask, _InitialStepTask_trackingMkFitCommon)
 (trackingMkFitCommon & trackingPhase2PU140).toReplaceWith(InitialStepTask, _InitialStepTask_trackingMkFitCommon_Phase2)
+
+_InitialStepTask_trackingPhase2_GPUOffline = cms.Task(
+                           siPhase2RecHits,
+                           siOTRecHitSoA,
+                           siPixelOTRecHitSoA,
+                           siPixelOTRecHits,
+                           initialStepCATracksHighPt,
+                           initialStepCATracksHighPtMask,
+                           initialStepCATracksLowPt,
+                           initialStepCATracksSoA,
+                           initialStepCATracks,
+                           initialStepSeeds,
+                           initialStepTrackCandidates,
+                           initialStepTracks,
+                           firstStepPrimaryVerticesUnsorted,
+                           initialStepTrackRefsForJets,
+                           firstStepPrimaryVertices,
+                           initialStepClassifier1,initialStepClassifier2,initialStepClassifier3,
+                           initialStep,caloJetsForTrkTask
+)
+
+(trackingPhase2PU140 & trackingGPUOffline).toReplaceWith(initialStepSeeds, initialStepCASeeds)
+(trackingPhase2PU140 & trackingGPUOffline).toReplaceWith(InitialStepTask, _InitialStepTask_trackingPhase2_GPUOffline)
+_InitialStepTask_trackingMkFitCommon_Phase2GPU = _InitialStepTask_trackingPhase2_GPUOffline.copy()
+_InitialStepTask_trackingMkFitCommon_Phase2GPU.add(siPhase2RecHits, mkFitSiPixelHits, mkFitSiPhase2Hits, mkFitEventOfHits, mkFitGeometryESProducer)
+(trackingMkFitCommon & trackingPhase2PU140 & trackingGPUOffline).toReplaceWith(InitialStepTask,_InitialStepTask_trackingMkFitCommon_Phase2GPU)
 
 _InitialStepTask_trackingMkFit = InitialStepTask.copy()
 _InitialStepTask_trackingMkFit.add(initialStepTrackCandidatesMkFitSeeds, initialStepTrackCandidatesMkFit, initialStepTrackCandidatesMkFitConfig)
@@ -496,7 +640,7 @@ _InitialStepTask_fastSim = cms.Task(initialStepTrackingRegions
                            ,initialStepClassifier1,initialStepClassifier2,initialStepClassifier3
                            ,initialStep
                            )
-_InitialStepTask_fastSim_Phase2 = _InitialStepTask_fastSim.copy()
+_InitialStepTask_fastSim_Phase2 = _InitialStepTask_fastSim.copyAndExclude([initialStepClassifier1, initialStepClassifier2, initialStepClassifier3])
 _InitialStepTask_fastSim_Phase2.replace(initialStep, initialStepSelector)
 fastSim.toReplaceWith(InitialStepTask, _InitialStepTask_fastSim)
 (fastSim & trackingPhase2PU140).toReplaceWith(InitialStepTask, _InitialStepTask_fastSim_Phase2)

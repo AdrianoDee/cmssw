@@ -142,6 +142,21 @@ def _remove_initial(x):
                                                                setsToMerge = {0: dict(tLists = [0])}
 )
 
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+(trackingPhase2PU140 & trackingGPUOffline).toModify(earlyGeneralTracks,
+                                                 TrackProducers =['initialStepTracks',
+                     'highPtTripletStepTracks',
+                     'lowPtQuadStepTracks',
+                    ],
+    hasSelector = [1,1,1],
+    indivShareFrac = [1.0,0.16,0.095],
+    selectedTrackQuals = ['initialStepSelector:initialStep',
+                          'highPtTripletStepSelector:highPtTripletStep',
+                          'lowPtQuadStepSelector:lowPtQuadStep',
+                          ],
+    setsToMerge = cms.VPSet( cms.PSet( tLists=cms.vint32(0,1,2), pQual=cms.bool(True) )),
+)
+
 from Configuration.ProcessModifiers.jetCoreInPhase2_cff import jetCoreInPhase2
 def _extend_jetCore(x):
      _length = len(x.TrackProducers)
