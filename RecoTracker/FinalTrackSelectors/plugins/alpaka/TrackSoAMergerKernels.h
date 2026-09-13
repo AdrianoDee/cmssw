@@ -77,6 +77,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::optional<reco::TracksSoACollection> tracks_d_;
     std::optional<reco::TrackMergerCounterSoACollection> counters_d_;
     std::optional<cms::alpakatools::device_buffer<Device, uint32_t []>> totCounters_;
+    std::optional<cms::alpakatools::device_buffer<Device, uint32_t []>> duplicateOf_d_;
     std::optional<cms::alpakatools::device_view<Device, uint32_t>> totTracks_;
     std::optional<cms::alpakatools::device_view<Device, uint32_t>> totHits_;
       

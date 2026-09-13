@@ -150,49 +150,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return;
     }
 
-    constexpr uint32_t tracksPerBlock = 8;
-    constexpr uint32_t comparisonsPerTrack = 32;
+    constexpr uint32_t threadsPerBlock = 128;
+    auto const blocks = cms::alpakatools::divide_up_by(nTracks, threadsPerBlock);
+    auto const workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threadsPerBlock);
 
-    auto const blocksX = cms::alpakatools::divide_up_by(nTracks, tracksPerBlock);
-    auto const blocksY = std::min(
-        cms::alpakatools::divide_up_by(nTracks, comparisonsPerTrack),
-        65535u);
+    duplicateOf_d_ = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, nTracks);
 
-    Vec2D const blocks{blocksX, blocksY};
-    Vec2D const threads{tracksPerBlock, comparisonsPerTrack};
-    auto const workDiv2D = cms::alpakatools::make_workdiv<Acc2D>(blocks, threads);
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
-    printf("filterTracks: nTracks %d, blocksX %d, blocksY %d tracksPerBlock %d\n", nTracks, blocksX, blocksY, tracksPerBlock);
+    printf("filterTracks: nTracks %d, blocks %d, threadsPerBlock %d\n", nTracks, blocks, threadsPerBlock);
 #endif
-    if (params_.doSameHitsDuplicates) {
-      alpaka::exec<Acc2D>(queue,
-                          workDiv2D,
-                          Kernel_sameHitsDuplicates{},
+    if (params_.doSameHitsDuplicates or params_.doParamDuplicates) {
+      alpaka::exec<Acc1D>(queue,
+                          workDiv,
+                          Kernel_trackDuplicates{},
                           tracks_d_->view().tracks(),
                           tracks_d_->view().trackHits(),
+                          params_.doSameHitsDuplicates,
+                          params_.doParamDuplicates,
                           params_.matchFraction,
-                          params_.dupMinHits);
+                          params_.dupMinHits,
+                          params_.dupNSigma2,
+                          params_.dupMaxDeltaR2,
+                          params_.dupPtDifference,
+                          duplicateOf_d_->data());
 
+      alpaka::exec<Acc1D>(queue,
+                          workDiv,
+                          Kernel_applyTrackDuplicates{},
+                          tracks_d_->view().tracks(),
+                          duplicateOf_d_->data());
 #ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Kernel_sameHitsDuplicates -> done!" << std::endl;
+      alpaka::wait(queue);
+      std::cout << "Kernel_trackDuplicates + Kernel_applyTrackDuplicates -> done!" << std::endl;
 #endif
-      }
-
-    if(params_.doParamDuplicates) {
-        alpaka::exec<Acc2D>(queue,
-                            workDiv2D,
-                            Kernel_trackParameterDuplicates{},
-                            tracks_d_->view().tracks(),
-                            params_.dupNSigma2,
-                            params_.dupMaxDeltaR2,
-                            params_.dupPtDifference);
-#ifdef GPU_DEBUG
-    alpaka::wait(queue);
-    std::cout << "Kernel_trackParameterDuplicates -> done!" << std::endl;
-#endif
-        }
+    }
 
   }
 
