@@ -203,7 +203,7 @@ pixelTracksHighPtMaskingSoA = _caMasking.clone(
     tracksSoASrc = "pixelTracksHighPtAlpaka",
 )
 
-lowPtPtMinCut = 0.45 # 0.45 works, but 0.40 starts showing too many tracks with "zero" eta and phi
+lowPtPtMinCut = 0.4 # 0.45 works, but 0.40 starts showing too many tracks with "zero" eta and phi
                      # Maybe there is another cell cut that balances this, but need to check
 
 pixelTracksLowPtAlpakaPhase2Extended = _pixelTracksAlpakaPhase2Extended.clone(
@@ -238,16 +238,17 @@ from  RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpaka_cfi import p
 # pixel tracks SoA merger
 from RecoTracker.FinalTrackSelectors.tracksSoAMerger_cfi import tracksSoAMerger as _tracksSoAMerger
 
-pixelTracksAlpakaPreDNN = _tracksSoAMerger.clone(
-    inputTkSoAs = cms.VInputTag("pixelTracksHighPtAlpaka","pixelTracksLowPtAlpaka"),
+# pixelTracksAlpakaPreDNN 
+pixelTracksSoA = _tracksSoAMerger.clone(
+    inputTkSoAs = cms.VInputTag("pixelTracksAlpakaPostDNN","pixelTracksLowPtAlpaka"),
     minQuality = cms.string('tight'),
     matchFraction = cms.double(0.5),
     dupNSigma2 = 3.0,
     dupMaxDeltaR2 = 0.001,
 )
 
-_pixelTracksAlpakaPostDNN = cms.EDProducer('PixelTrackTorchHighPuritySelector@alpaka',
-    pixelTrackSrc = cms.InputTag('pixelTracksAlpakaPreDNN'),
+pixelTracksAlpakaPostDNN = cms.EDProducer('PixelTrackTorchHighPuritySelector@alpaka',
+    pixelTrackSrc = cms.InputTag('pixelTracksHighPtAlpaka'),
     maxNumberOfTracks = cms.int32(2*60*1024),
     maxPreselectedTracks = cms.int32(9_984),
     minNumberOfHits = cms.int32(0),
@@ -259,7 +260,7 @@ _pixelTracksAlpakaPostDNN = cms.EDProducer('PixelTrackTorchHighPuritySelector@al
 )
 
 
-(pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksAlpaka, _pixelTracksAlpakaPostDNN.clone(
+(pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksAlpaka, pixelTracksSoA.clone(
 ))
 
 (pixelTrackMask & phase2CAExtension).toReplaceWith(pixelTracksHighPt, _pixelTrackProducerFromSoAAlpaka.clone(
@@ -312,6 +313,7 @@ _pixelTracksAlpakaPostDNN = cms.EDProducer('PixelTrackTorchHighPuritySelector@al
     pixelTracksHighPtMaskingSoA,
     # Convert the highPt pixel tracks from SoA to legacy format for validation
     pixelTracksHighPt,
+    pixelTracksAlpakaPostDNN,
     
     # Build the lowPt pixel ntuplets and the pixel tracks in SoA format with alpaka on the device
     pixelTracksLowPtAlpaka,
@@ -321,7 +323,7 @@ _pixelTracksAlpakaPostDNN = cms.EDProducer('PixelTrackTorchHighPuritySelector@al
     pixelTracksLowPt,
 
     # Merge the produced SoAs directly
-    pixelTracksAlpakaPreDNN,
+    pixelTracksSoA,
 
     # Run the DNN on the merged
     pixelTracksAlpaka,

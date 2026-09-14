@@ -511,6 +511,7 @@ initialStepCATracks = _pixelTrackProducerFromSoAAlpaka.clone(
     beamSpot = cms.InputTag("offlineBeamSpot"),
     minNumberOfHits = cms.int32(0),
     minQuality = cms.string('tight'),
+    minNumberOfPixelHits = cms.int32(3), ## this is because these are used by ElectronSeedProducer(s)
     trackSrc = cms.InputTag("initialStepCATracksSoA"),
     outerTrackerRecHitSrc = cms.InputTag("siPhase2RecHits"),
     outerTrackerRecHitSoAConverterSrc = cms.InputTag("siOTRecHitSoA"),
