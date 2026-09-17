@@ -18,18 +18,18 @@
 
 // #define GPU_DEBUG
 
-
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caMasking {
 
- using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
- using TkSoADevice = reco::TracksSoACollection;
+using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
+using MapToHitView = MapToHit::View;
+using MapToHitConstView = MapToHit::ConstView;
+using TkSoADevice = reco::TracksSoACollection;
+
 
  void makeMaskingAsync(Queue& queue,
                         MapToHit& outMask,
-                        MapToHit const& inMask,
                         TkSoADevice const& tracks_d,
-                        pixelTrack::Quality minQuality,
-                        uint32_t iterationIndex);
+                        pixelTrack::Quality minQuality);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::caMasking
 

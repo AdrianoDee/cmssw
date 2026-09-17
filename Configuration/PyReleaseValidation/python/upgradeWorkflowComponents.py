@@ -1567,12 +1567,12 @@ upgradeWFs['PatatrackPixelOnlyAlpakaCAExtension'] = PatatrackWorkflow(
 
 upgradeWFs['PatatrackPixelOnlyAlpakaCAExtensionMask'] = PatatrackWorkflow(
     digi = {
-        '--procModifiers': 'allPixelTrackMask',
+        '--procModifiers': 'alpaka,phase2CAExtension,caTwoIterations',
         '--customise' : 'HeterogeneousCore/AlpakaServices/customiseAlpakaServiceMemoryFilling.customiseAlpakaServiceMemoryFilling',
     },
     reco = {
         '-s': 'RAW2DIGI:RawToDigi_pixelOnly,RECO:reconstruction_pixelTrackingOnly,VALIDATION:@pixelTrackingOnlyValidation,DQM:@pixelTrackingOnlyDQM',
-        '--procModifiers': 'allPixelTrackMask',
+        '--procModifiers': 'alpaka,phase2CAExtension,caTwoIterations',
         '--customise' : 'HeterogeneousCore/AlpakaServices/customiseAlpakaServiceMemoryFilling.customiseAlpakaServiceMemoryFilling',
     },
     harvest = {

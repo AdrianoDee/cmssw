@@ -174,6 +174,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                                         MapToHitConstView maskView) {
     const bool doClusterCut = params.minYsizeB1_ > 0 or params.minYsizeB2_ > 0;
     const bool doZSizeCut = params.maxDYsize12_ > 0 or params.maxDYsize_ > 0 or params.maxDYPred_ > 0;
+    const bool doMasking = maskView.metadata().size() > 0;
 
     const uint32_t nPairs = cc.metadata().size();
     using PhiHisto = PhiBinner<TrackerTraits>;
@@ -234,7 +235,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
       i += offsets[inner];
 
-      if (maskView[i].recHitMask() > 0)
+      if (doMasking and maskView[i].recHitMask() > 0)
         continue;
 
       ALPAKA_ASSERT_ACC(i >= offsets[inner]);

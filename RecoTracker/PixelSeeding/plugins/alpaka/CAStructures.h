@@ -45,6 +45,10 @@ namespace caStructures {
     bool doTripletCleaner_;
     bool doFastDuplicateRemover_;
     bool doEarlyDuplicateRemover_;
+
+    // Iteration name
+    ::pixelTrack::Iteration iterationName_;
+
   };
 
   // Hits data formats

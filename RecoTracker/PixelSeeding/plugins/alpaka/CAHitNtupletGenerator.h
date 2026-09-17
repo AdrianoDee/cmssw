@@ -34,8 +34,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsConstView = ::reco::TrackingRecHitConstView;
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
     using HitsOnHost = ::reco::TrackingRecHitHost;
-    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
 
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
+    using MapToHitConstView = MapToHit::ConstView;
+    
     using TkSoADevice = reco::TracksSoACollection;
     using Quality = ::pixelTrack::Quality;
 
@@ -64,8 +66,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                 float bfield,
                                 uint32_t maxDoublets,
                                 uint32_t maxTuples,
-                                MapToHit const& mask,
-                                pixelTrack::Iteration iterationName) const;
+                                MapToHitConstView mask) const;
 
   private:
     Params m_params;

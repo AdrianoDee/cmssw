@@ -114,6 +114,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     using HitsOnHost = ::reco::TrackingRecHitHost;
 
     using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
+    using MapToHitConstView = MapToHit::ConstView;
 
     using TkSoAHost = ::reco::TracksHost;
     using TkSoADevice = reco::TracksSoACollection;
@@ -354,12 +355,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> tokenField_;
     const device::EDGetToken<HitsOnDevice> tokenHit_;
     const device::EDPutToken<TkSoADevice> tokenTrack_;
-    const device::EDGetToken<MapToHit> tokenHitMask_;
+
+    const bool useHitMask_;
+    device::EDGetToken<MapToHit> tokenHitMask_;
 
     const ::reco::FormulaEvaluator maxNumberOfDoublets_;
     const ::reco::FormulaEvaluator maxNumberOfTuples_;
-
-    const pixelTrack::Iteration iterationName_;
 
     Algo deviceAlgo_;
   };
@@ -371,13 +372,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         tokenField_(esConsumes()),
         tokenHit_(consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"))),
         tokenTrack_(produces()),
-        tokenHitMask_(consumes(iConfig.getParameter<edm::InputTag>("hitMask"))),
+        useHitMask_(not iConfig.getParameter<edm::InputTag>("hitMask").label().empty()),
         maxNumberOfDoublets_(iConfig.getParameter<std::string>("maxNumberOfDoublets")),
         maxNumberOfTuples_(iConfig.getParameter<std::string>("maxNumberOfTuples")),
-        iterationName_(pixelTrack::iterationByName(iConfig.getParameter<std::string>("iterationName"))),
         deviceAlgo_(iConfig) {
     iCache->tokenGeometry_ = esConsumes<edm::Transition::BeginRun>();
     iCache->tokenTopology_ = esConsumes<edm::Transition::BeginRun>();
+
+    if (useHitMask_) {
+      tokenHitMask_ = device::EDGetToken<MapToHit>(consumes(iConfig.getParameter<edm::InputTag>("hitMask")));
+    }
+
   }
 
   template <typename TrackerTraits>
@@ -388,12 +393,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     desc.add<edm::InputTag>(
         "hitMask",
         edm::InputTag(
-            "hltPhase2PixelRecHitsExtendedSoA"));  // This is just an example, it has to be changed for each tracking iteration
+            ""))->setComment("Hit mask for the rec hits at doublets level.");  // This is just an example, it has to be changed for each tracking iteration
                                                    // Set as the HLT module to not modify the HLT menu
-    desc.add<std::string>(
-        "iterationName",
-        std::string("promptHighPt"));  // This is just an example, it has to be changed for each tracking iteration
-
     Algo::fillPSetDescription(desc);
     descriptions.addWithDefaultLabel(desc);
   }
@@ -410,6 +411,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     /// TODO: this could be extended to a more general check for
     /// no hits on any of the starting layers.
 
+    MapToHitConstView maskView;
+    
+    if (useHitMask_) {
+      maskView = iEvent.get(tokenHitMask_).view();
+
+      if (maskView.metadata().size() != int(hits.nHits()))
+        throw cms::Exception("CAHitMaskMismatch")
+            << "CAHitNtupletAlpaka: the configured `hitMask` has " << maskView.metadata().size()
+            << " rows but the hit collection has " << hits.nHits()
+            << ". The mask must be the one built for this hit collection.";
+    }
+
     if (globalCache()->startNoBPix1_ or hits.offsetBPIX2() > 0) {
       std::array<double, 1> nHitsV = {{double(hits.nHits())}};
       std::array<double, 1> emptyV;
@@ -417,11 +430,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       uint32_t const maxTuples = maxNumberOfTuples_.evaluate(nHitsV, emptyV);
       uint32_t const maxDoublets = maxNumberOfDoublets_.evaluate(nHitsV, emptyV);
 
-      auto const& mask = iEvent.get(tokenHitMask_);
-
       iEvent.emplace(tokenTrack_,
                      deviceAlgo_.makeTuplesAsync(
-                         iEvent.queue(), hits, geometry, bf, maxDoublets, maxTuples, mask, iterationName_));
+                         iEvent.queue(), hits, geometry, bf, maxDoublets, maxTuples, maskView));
 
     } else {
       edm::LogWarning("CAHitNtupletAlpaka") << "No hit on BPix1 (" << hits.offsetBPIX2()

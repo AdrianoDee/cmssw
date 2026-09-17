@@ -7,7 +7,7 @@
 
 #include "CAMaskingMerging.h"
 
-// #define GPU_DEBUG
+#define GPU_DEBUG
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::caMasking {
 
@@ -18,8 +18,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caMasking {
                                     ::reco::TrackingRecHitsMaskingView mask_view,
                                     ::reco::TrackSoAConstView const& trackd_view,
                                     ::reco::TrackHitSoAConstView const& trackhitd_view,
-                                    pixelTrack::Quality minQuality,
-                                    uint32_t iterationIndex) const {
+                                    pixelTrack::Quality minQuality) const {
 #ifdef GPU_DEBUG
         if (cms::alpakatools::once_per_grid(acc)) {
           printf("Kernel_updateMasking: nTracks: %u\n", trackd_view.metadata().size());
@@ -32,12 +31,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caMasking {
           if (trackd_view[j].quality() < minQuality)
             continue;
 
+          auto const maskValue = static_cast<uint32_t>(trackd_view[j].iteration()) + 1; // first iteration has index 0
+
           uint32_t const start = (j == 0) ? 0 : trackd_view[j - 1].hitOffsets();
           uint32_t const end = trackd_view[j].hitOffsets();
           uint32_t const nTrackHits = end - start;
 
           for (uint32_t k : cms::alpakatools::uniform_elements_y(acc, nTrackHits)) {
-            mask_view[trackhitd_view[start + k].id()].recHitMask() = iterationIndex;
+            mask_view[trackhitd_view[start + k].id()].recHitMask() = maskValue;
           }
         }
       }
@@ -46,19 +47,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caMasking {
 
     void makeMaskingAsync(Queue& queue,
                                                     MapToHit& outMask,
-                                                    MapToHit const& inMask,
                                                     TkSoADevice const& inTracks,
-                                                    pixelTrack::Quality minQuality,
-                                                    uint32_t iterationIndex) {
+                                                    pixelTrack::Quality minQuality) {
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Starting makeMaskingAsync::updateMasking" << std::endl;
 #endif
-
-    const int nHits = inMask.view().metadata().size();
-
-    ALPAKA_ASSERT_ACC(nHits == outMask.view().metadata().size());
 
     auto tracks = inTracks.view().tracks();
     auto hits = inTracks.view().trackHits();
@@ -78,7 +73,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caMasking {
 #endif
 
     alpaka::exec<Acc2D>(
-        queue, workDiv2D, Kernel_updateMasking{}, mask, tracks, hits, minQuality, iterationIndex);
+        queue, workDiv2D, Kernel_updateMasking{}, mask, tracks, hits, minQuality);
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
