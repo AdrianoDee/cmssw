@@ -389,7 +389,13 @@ namespace cms::alpakatools {
     }
   }
 
-  // The crossover point comes from a study on a H100
+  // The crossover point study
+  // | GPU  | 12k  | 14k  | 16k  | 20k  | 
+  // |------|------|------|------|------|
+  // | H100 | 0.96 | 1.00 | 1.05 | 1.13 |
+  // | L40S | 0.86 | 0.89 | 0.93 | 1.01 |
+  // | T4   | 0.95 | 0.98 | 1.02 | 1.09 |
+  
   template <alpaka::concepts::Acc TAcc>
   constexpr uint32_t singleKernelScanMaxElements() {
     if constexpr (alpaka::accMatchesTags<TAcc, alpaka::TagGpuHipRt>)
@@ -397,6 +403,7 @@ namespace cms::alpakatools {
     else
       return 16u * 1024u;
   }
+
 
   // bCounter is needed for the multi-block prefix scan path (starts at 0 and ends at nblocks)
   template <alpaka::concepts::Acc TAcc, typename TQueue, typename T>

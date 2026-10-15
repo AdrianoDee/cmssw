@@ -96,20 +96,31 @@ namespace cms::alpakatools {
       content[w - 1] = j;
     }
 
-    // this MUST BE DONE in a single block (or in two kernels!)
-    struct zeroAndInit {
+    // init on one thread per grid
+    // zeroing can go by itself
+      struct zeroAndInit {
       template <alpaka::concepts::Acc TAcc>
       ALPAKA_FN_ACC void operator()(const TAcc &acc, View view) const {
-        ALPAKA_ASSERT_ACC((1 == alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0]));
-        ALPAKA_ASSERT_ACC((0 == alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0]));
         auto h = view.assoc;
-        if (cms::alpakatools::once_per_block(acc)) {
+        if (cms::alpakatools::once_per_grid(acc)) {
           h->psws = 0;
           h->initStorage(view);
         }
-        alpaka::syncBlockThreads(acc);
-        for (size_type i : cms::alpakatools::independent_group_elements(acc, h->totOnes())) {
-          h->off[i] = 0;
+
+        // setting these manyually here allows us not to wait for kernel 0
+        Counter *offsets;
+        size_type n_ones;
+
+        if constexpr (ctNOnes() == kDynamicSize) {
+          offsets = view.offStorage;
+          n_ones = view.offSize;
+        } else {
+          offsets = h->off.data();
+          n_ones = h->totOnes();
+        }
+
+        for (size_type i : cms::alpakatools::uniform_elements(acc, n_ones)) {
+          offsets[i] = 0;
         }
       }
     };
@@ -131,8 +142,10 @@ namespace cms::alpakatools {
         ALPAKA_ASSERT_ACC(view.offSize > 0);
       }
       if constexpr (!requires_single_thread_per_block_v<TAcc>) {
-        auto nthreads = 1024;
-        auto nblocks = 1;  // MUST BE ONE as memory is initialize in thread 0 (alternative is two kernels);
+        size_type n_ones;
+        if constexpr (ctNOnes() == kDynamicSize) n_ones = view.offSize; else n_ones = ctNOnes();
+        auto nthreads = 1024; // note to self: this 1024 might be better be defined in a central place?
+        auto nblocks = cms::alpakatools::divide_up_by(n_ones, nthreads);
         auto workDiv = cms::alpakatools::make_workdiv<TAcc>(nblocks, nthreads);
         alpaka::exec<TAcc>(queue, workDiv, zeroAndInit{}, view);
       } else {

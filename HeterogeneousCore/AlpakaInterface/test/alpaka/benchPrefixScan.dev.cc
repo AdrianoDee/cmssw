@@ -4,9 +4,13 @@
 // For each size: warm up, then enqueue `reps` scans back to back on one queue and measure the host
 // wall-clock time between two waits. This includes launch latency and inter-kernel gaps, which is
 // what matters in production. Run under nsys to get kernel-only times as well.
+// The single kernel needs a zeroed block counter: in OneToManyAssoc this is done for free by zeroAndInit,
+// so here each scan gets its own counter, zeroed before the timed loop, and single_us excludes the memset.
+// memset_us is the cost of that memset, for reference.
 //
-// usage: benchPrefixScan [reps=200] [maxLog2=24] [inPlace=0]
+// usage: benchPrefixScan [reps=200] [maxLog2=24] [inPlace=0] [stepsPerOctave=4]
 // inPlace=1 scans the buffer onto itself, as OneToManyAssoc::launchFinalize does (better L2 reuse).
+// stepsPerOctave (a power of 2, up to 256) sets how many sizes are tested between consecutive powers of 2.
 
 #include <chrono>
 #include <cstdlib>
@@ -44,6 +48,14 @@ int main(int argc, char** argv) {
   int const reps = argc > 1 ? std::atoi(argv[1]) : 200;
   int const maxLog2 = argc > 2 ? std::atoi(argv[2]) : 24;
   bool const inPlace = argc > 3 && std::atoi(argv[3]) != 0;
+  int const steps = argc > 4 ? std::atoi(argv[4]) : 4;
+  int stepsLog2 = 0;
+  while ((1 << stepsLog2) < steps)
+    ++stepsLog2;
+  if (steps < 1 || steps > 256 || (1 << stepsLog2) != steps) {
+    std::cerr << "stepsPerOctave must be a power of 2 between 1 and 256\n";
+    return EXIT_FAILURE;
+  }
 
   auto const& devices = cms::alpakatools::devices<Platform>();
   if (devices.empty()) {
@@ -53,20 +65,30 @@ int main(int argc, char** argv) {
   auto const& device = devices[0];
   auto queue = Queue(device);
   auto const warpSize = alpaka::getPreferredWarpSize(device);
-  std::cout << "# device: " << alpaka::getName(device) << ", reps = " << reps << ", inPlace = " << inPlace << '\n';
+  std::cout << "# device: " << alpaka::getName(device) << ", reps = " << reps << ", inPlace = " << inPlace
+            << ", stepsPerOctave = " << steps << ", single excludes memset\n";
 
-  // sizes: powers of 2 plus the half-way points, and the real CA cell-offset size
+  // sizes: 2^l * (1 + k / steps) for k = 0 ... steps - 1, up to 2^maxLog2, and the real CA cell-offset size
   std::vector<uint32_t> sizes;
   for (int l = 8; l <= maxLog2; ++l) {
-    sizes.push_back(1u << l);
-    if (l < maxLog2)
-      sizes.push_back(3u << (l - 1));
+    for (int k = 0; k < steps; ++k) {
+      if (l == maxLog2 && k > 0)
+        break;
+      sizes.push_back(uint32_t(steps + k) << (l - stepsLog2));
+    }
   }
   sizes.push_back(12 * 512 * 1024 + 1);
 
   auto nErr_d = make_device_buffer<uint32_t>(queue);
   auto nErr_h = make_host_buffer<uint32_t>(queue);
   auto blockCounter_d = make_device_buffer<int32_t>(queue);
+  // one block counter per scan (warm up + timed reps + check), zeroed outside the timed loop
+  auto counters_d = make_device_buffer<int32_t[]>(queue, reps + 11);
+  int nextCounter = 0;
+  auto resetCounters = [&]() {
+    alpaka::memset(queue, counters_d, 0);
+    nextCounter = 0;
+  };
 
   std::cout << std::setw(10) << "size" << std::setw(8) << "blocks" << std::setw(14) << "single_us" << std::setw(14)
             << "iter_us" << std::setw(10) << "ratio" << std::setw(12) << "memset_us" << "  check\n";
@@ -89,8 +111,6 @@ int main(int argc, char** argv) {
     }
 
     auto runSingle = [&]() {
-      // the block counter must be zero: in OneToManyAssoc this is done by zeroAndInit, here it is part of the cost
-      alpaka::memset(queue, blockCounter_d, 0);
       alpaka::exec<Acc1D>(queue,
                           workDiv,
                           multiBlockPrefixScan<uint32_t>(),
@@ -98,7 +118,7 @@ int main(int argc, char** argv) {
                           out,
                           n,
                           static_cast<int32_t>(nBlocks),
-                          blockCounter_d.data(),
+                          counters_d.data() + nextCounter++,
                           warpSize);
     };
     auto runIter = [&]() { iterativePrefixScan<Acc1D>(in_d.data(), out, n, queue); };
@@ -135,7 +155,9 @@ int main(int argc, char** argv) {
     double tSingle = -1.;
     uint32_t errSingle = 0;
     if (singleOk) {
+      resetCounters();
       tSingle = time(runSingle);
+      resetCounters();
       errSingle = checkRun(runSingle);
     }
     double tIter = time(runIter);
