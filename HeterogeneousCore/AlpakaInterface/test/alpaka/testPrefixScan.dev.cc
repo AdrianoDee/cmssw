@@ -242,7 +242,7 @@ int main() {
 
       // Build the level plan
       auto plan = makePrefixScanLevelPlan(num_items);
-      std::cout << "Iterative prefix scan plan for " << num_items << " items with " << iterativePrefixScanThreads
+      std::cout << "Iterative prefix scan plan for " << num_items << " items with " << prefixScanThreadsPerBlock
                 << " threads per block. Problem divided into " << plan.nLevels << " levels:" << std::endl;
       for (uint32_t l = 0; l < plan.nLevels; ++l) {
         std::cout << "  Level " << l << ": size = " << plan.levelSize[l] << ", blocks = " << plan.levelBlocks[l]
@@ -256,7 +256,68 @@ int main() {
 
       alpaka::wait(queue);  // input_d and output_d end of scope
     }
+
+    // Unique entry point section
+
+    std::cout << "general entry point prefix scan" << std::endl;
+    num_items = 13;
+    uint32_t const M = singleKernelScanMaxElements<Acc1D>();
+    constexpr uint32_t nChoices = 6;
+    // Sizes
+    for (int ksize = 1; ksize < 6; ++ksize) {
+      num_items *= 10;
+      uint32_t thresholds[nChoices] = {0u, 2048u, num_items, num_items - 1, M, std::numeric_limits<uint32_t>::max()};
+
+      // Choice threhsolds
+      for (uint32_t t = 0; t < nChoices; ++t) 
+      {
+
+        // To check bCounter==nullptr condition
+        for (bool withCounter : {false, true})
+        {
+          std::cout << "Running withCounter=" << withCounter << ", threshold=" << thresholds[t] << ", num_items=" << num_items << std::endl;
+          uint32_t threshold = thresholds[t]; 
+          bool const shouldSingle = withCounter and num_items <= threshold and num_items > prefixScanThreadsPerBlock;
+
+          auto input_d = make_device_buffer<uint32_t[]>(queue, num_items);
+          auto output_d = make_device_buffer<uint32_t[]>(queue, num_items);
+          auto blockCounter_d = make_device_buffer<int32_t>(queue);
+          auto blockCounter_h = make_host_buffer<int32_t>(queue);
+          alpaka::memset(queue, blockCounter_d, 0);
+
+          const auto nThreads = 1024u;
+          const auto nBlocks = divide_up_by(num_items, nThreads);
+          const auto workDiv = make_workdiv<Acc1D>(nBlocks, nThreads);
+
+          // 
+          alpaka::enqueue(queue, alpaka::createTaskKernel<Acc1D>(workDiv, init(), input_d.data(), 1, num_items));
+          prefixScan<Acc1D>(queue, input_d.data(), output_d.data(), num_items, withCounter ? blockCounter_d.data() : nullptr, threshold);
+          alpaka::wait(queue);
+          alpaka::enqueue(queue, alpaka::createTaskKernel<Acc1D>(workDiv, verify(), output_d.data(), num_items));
+          alpaka::wait(queue);  // input_d and output_d end of scope
+
+          alpaka::memcpy(queue, blockCounter_h, blockCounter_d);
+          alpaka::wait(queue);
+          int32_t shouldCounter = shouldSingle ? nBlocks : 0;
+          
+          // checking which run leveraging on the block counter being untouched in iterative
+          if(*blockCounter_h.data() != shouldCounter) {
+            std::cerr << "Block counter check failed: shouldSingle=" << shouldSingle << ", num_items=" << num_items << ", threshold=" << threshold << std::endl;
+            std::cerr << "Block counter mismatch: expected " << shouldCounter << ", got " << *blockCounter_h.data() << std::endl;
+            exit(EXIT_FAILURE);
+          } else
+          {
+            if (shouldSingle) {
+              std::cout << "We run single! blockCounter =  " << *blockCounter_h.data() << std::endl;
+            } else {
+              std::cout << "We run iterative! blockCounter =  " << *blockCounter_h.data() << std::endl;
+            }
+          }
+      }
+    }
+
   }
+}
 
   return 0;
 }

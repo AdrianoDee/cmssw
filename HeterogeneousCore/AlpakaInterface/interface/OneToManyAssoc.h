@@ -259,19 +259,7 @@ namespace cms::alpakatools {
         }
         ALPAKA_ASSERT_ACC(nOnes > 0);
         int32_t *ppsws = (int32_t *)((char *)(h) + offsetof(OneToManyAssocRandomAccess, psws));
-        auto nthreads = 1024;
-        auto nblocks = (nOnes + nthreads - 1) / nthreads;
-        auto workDiv = cms::alpakatools::make_workdiv<TAcc>(nblocks, nthreads);
-        cms::alpakatools::checkSharedMemoryPrefixScan<TAcc>(nOnes, nblocks, alpaka::getDev(queue));
-        alpaka::exec<TAcc>(queue,
-                           workDiv,
-                           multiBlockPrefixScan<Counter>(),
-                           poff,
-                           poff,
-                           nOnes,
-                           nblocks,
-                           ppsws,
-                           alpaka::getPreferredWarpSize(alpaka::getDev(queue)));
+        prefixScan<TAcc>(queue, poff, poff, nOnes, ppsws);
       } else {
         h->finalize();
       }

@@ -296,7 +296,7 @@ namespace cms::alpakatools {
 
   // Helper struct and function to compute the number of levels and block sizes for the two-kernel prefix scan.
   // 3 levels (0, 1, 2) can cover up to 1024^3 ~ 10^9 elements, enough for any realistic use case
-  constexpr uint32_t iterativePrefixScanThreads = 1024u;
+  constexpr uint32_t prefixScanThreadsPerBlock = 1024u;
   constexpr uint32_t iterativePrefixScanMaxLevels = 3;
   struct PrefixScanLevelPlan {
     uint32_t nLevels = 0;
@@ -318,15 +318,15 @@ namespace cms::alpakatools {
 
     p.nLevels = 1u;
     p.levelSize.emplace_back(nElements);
-    p.levelBlocks.emplace_back((nElements + iterativePrefixScanThreads - 1u) / iterativePrefixScanThreads);
+    p.levelBlocks.emplace_back((nElements + prefixScanThreadsPerBlock - 1u) / prefixScanThreadsPerBlock);
 
     while (p.levelBlocks[p.nLevels - 1u] > 1u) {
       if (p.nLevels >= iterativePrefixScanMaxLevels) {
         throwIterativePrefixScanMaxLevelsExceeded(nElements, p.nLevels);
       }
       p.levelSize.emplace_back(p.levelBlocks[p.nLevels - 1u]);
-      p.levelBlocks.emplace_back((p.levelSize[p.nLevels] + iterativePrefixScanThreads - 1u) /
-                                 iterativePrefixScanThreads);
+      p.levelBlocks.emplace_back((p.levelSize[p.nLevels] + prefixScanThreadsPerBlock - 1u) /
+                                 prefixScanThreadsPerBlock);
       ++p.nLevels;
     }
     return p;
@@ -351,7 +351,7 @@ namespace cms::alpakatools {
       auto const warpSize = alpaka::getPreferredWarpSize(alpaka::getDev(queue));
 
       // Kernel A on level-0 input data
-      auto workDiv = cms::alpakatools::make_workdiv<TAcc>(plan.levelBlocks[0], iterativePrefixScanThreads);
+      auto workDiv = cms::alpakatools::make_workdiv<TAcc>(plan.levelBlocks[0], prefixScanThreadsPerBlock);
       alpaka::exec<TAcc>(queue,
                          workDiv,
                          scanTilesWriteBlockSums<T>{},
@@ -363,7 +363,7 @@ namespace cms::alpakatools {
 
       // Iterative use of kernel A on block-sum levels
       for (uint32_t l = 1; l < plan.nLevels; ++l) {
-        auto workDiv = cms::alpakatools::make_workdiv<TAcc>(plan.levelBlocks[l], iterativePrefixScanThreads);
+        auto workDiv = cms::alpakatools::make_workdiv<TAcc>(plan.levelBlocks[l], prefixScanThreadsPerBlock);
         alpaka::exec<TAcc>(queue,
                            workDiv,
                            scanTilesWriteBlockSums<T>{},
@@ -376,7 +376,7 @@ namespace cms::alpakatools {
 
       // Kernel B from top-1 down to level 0
       for (int32_t l = static_cast<int32_t>(plan.nLevels) - 2; l >= 0; --l) {
-        auto workDiv = cms::alpakatools::make_workdiv<TAcc>(plan.levelBlocks[l], iterativePrefixScanThreads);
+        auto workDiv = cms::alpakatools::make_workdiv<TAcc>(plan.levelBlocks[l], prefixScanThreadsPerBlock);
         T* levelData = (l == 0) ? output : blockSumsBuffers[l - 1].data();
         alpaka::exec<TAcc>(
             queue, workDiv, addScannedBlockOffsets<T>{}, levelData, plan.levelSize[l], blockSumsBuffers[l].data());
@@ -386,6 +386,39 @@ namespace cms::alpakatools {
       for (uint32_t i = 1; i < size; ++i) {
         output[i] = input[i] + output[i - 1];
       }
+    }
+  }
+
+  // The crossover point comes from a study on a H100
+  template <alpaka::concepts::Acc TAcc>
+  constexpr uint32_t singleKernelScanMaxElements() {
+    if constexpr (alpaka::accMatchesTags<TAcc, alpaka::TagGpuHipRt>)
+      return 16u * 1024u;  // placeholder to be measured
+    else
+      return 16u * 1024u;
+  }
+
+  // bCounter is needed for the multi-block prefix scan path (starts at 0 and ends at nblocks)
+  template <alpaka::concepts::Acc TAcc, typename TQueue, typename T>
+  ALPAKA_FN_INLINE static void prefixScan(TQueue& queue, T* in, T* out, uint32_t size,
+                                          int32_t* bCounter = nullptr,
+                                          uint32_t maxSingle = singleKernelScanMaxElements<TAcc>()) {
+    bool const useSingle = size > prefixScanThreadsPerBlock && size <= maxSingle && bCounter != nullptr;
+    if (useSingle) {
+        auto nblocks = (size + prefixScanThreadsPerBlock - 1) / prefixScanThreadsPerBlock;
+        auto workDiv = cms::alpakatools::make_workdiv<TAcc>(nblocks, prefixScanThreadsPerBlock);
+        cms::alpakatools::checkSharedMemoryPrefixScan<TAcc>(size, nblocks, alpaka::getDev(queue));
+        alpaka::exec<TAcc>(queue,
+                           workDiv,
+                           multiBlockPrefixScan<T>(),
+                           in,
+                           out,
+                           size,
+                           nblocks,
+                           bCounter,
+                           alpaka::getPreferredWarpSize(alpaka::getDev(queue)));
+    } else {
+      iterativePrefixScan<TAcc>(in, out, size, queue);
     }
   }
 

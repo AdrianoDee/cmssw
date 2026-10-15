@@ -20,7 +20,7 @@ namespace cms::alpakatools {
         << "Requested an iterative prefix scan for " << nElements << " elements.\n"
         << "The problem was split into " << nLevels
         << " levels, which exceeds the maximum supported number of levels of " << iterativePrefixScanMaxLevels
-        << " (enough for " << iterativePrefixScanThreads << "^" << iterativePrefixScanMaxLevels << " elements).\n"
+        << " (enough for " << prefixScanThreadsPerBlock << "^" << iterativePrefixScanMaxLevels << " elements).\n"
         << "Consider increasing the value of iterativePrefixScanMaxLevels or reducing the problem's size.";
   }
 

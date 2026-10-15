@@ -58,6 +58,12 @@
   <flags ALPAKA_BACKENDS="1"/>
 </bin>
 
+<bin name="alpakaBenchPrefixScan" file="alpaka/benchPrefixScan.dev.cc">
+  <use name="alpaka"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
 <bin name="alpakaTestPrefixScan" file="alpaka/testPrefixScan.dev.cc">
   <use name="alpaka"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
