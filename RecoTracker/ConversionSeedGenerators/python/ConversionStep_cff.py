@@ -41,6 +41,13 @@ from Configuration.ProcessModifiers.trackingIters01_cff import trackingIters01
                                             trackClassifier       = 'highPtTripletStep:QualityMasks',
                                             )
 
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+(trackingGPUOffline & trackingPhase2PU140).toModify(convClusters,
+                                                    trajectories          = "pixelPairStepTracks",
+                                                    oldClusterRemovalInfo = "pixelPairStepClusters",
+                                                    overrideTrkQuals      = "pixelPairStepSelector:pixelPairStep"
+                                                    )
+
 (trackingIters01 & trackingPhase2PU140).toModify(convClusters,
                                                  trajectories          = "highPtTripletStepTracks",
                                                  oldClusterRemovalInfo = "highPtTripletStepClusters",

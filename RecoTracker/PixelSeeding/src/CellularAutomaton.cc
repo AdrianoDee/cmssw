@@ -62,6 +62,7 @@ void CellularAutomaton::createAndConnectCells(const std::vector<const HitDoublet
           cellId++;
 
           auto &neigCells = currentInnerLayerRef.isOuterHitOfCell[doubletLayerPairId->innerHitId(i)];
+          theStats.candidates += neigCells.size();
           allCells.back().checkAlignmentAndTag(allCells,
                                                neigCells,
                                                ptmin,
@@ -70,7 +71,8 @@ void CellularAutomaton::createAndConnectCells(const std::vector<const HitDoublet
                                                region_origin_radius,
                                                caThetaCut,
                                                caPhiCut,
-                                               hardPtCut);
+                                               hardPtCut,
+                                               &theStats.passTheta);
         }
         assert(cellId == currentLayerPairRef.theFoundCells[1]);
         for (auto outerLayerPair : currentOuterLayerRef.theOuterLayerPairs) {
@@ -198,6 +200,7 @@ void CellularAutomaton::findTriplets(std::vector<const HitDoublets *> const &hit
           cellId++;
 
           auto &neigCells = currentInnerLayerRef.isOuterHitOfCell[doubletLayerPairId->innerHitId(i)];
+          theStats.candidates += neigCells.size();
           allCells.back().checkAlignmentAndPushTriplet(allCells,
                                                        neigCells,
                                                        foundTriplets,
@@ -207,7 +210,8 @@ void CellularAutomaton::findTriplets(std::vector<const HitDoublets *> const &hit
                                                        region_origin_radius,
                                                        caThetaCut,
                                                        caPhiCut,
-                                                       hardPtCut);
+                                                       hardPtCut,
+                                                       &theStats.passTheta);
         }
         assert(cellId == currentLayerPairRef.theFoundCells[1]);
         for (auto outerLayerPair : currentOuterLayerRef.theOuterLayerPairs) {
