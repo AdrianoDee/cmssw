@@ -88,7 +88,8 @@ public:
                             const CACut::CAValuesByInnerLayerIds& thetaCutByInnerLayer,
                             const CACut::CAValuesByInnerLayerIds& phiCutByInnerLayer,
                             const float hardPtCut,
-                            std::vector<CACell::CAntuplet>* foundTriplets) {
+                            std::vector<CACell::CAntuplet>* foundTriplets,
+                            unsigned long long* nPassTheta = nullptr) {
     int ncells = innerCells.size();
     int constexpr VSIZE = 16;
     int ok[VSIZE];
@@ -111,6 +112,9 @@ public:
       // this vectorize!
       for (int j = 0; j < vs; ++j)
         ok[j] = areAlignedRZ(r1[j], z1[j], ro, zo, ptmin, thetaCut[j]);
+      if (nPassTheta)
+        for (int j = 0; j < vs; ++j)
+          *nPassTheta += ok[j];
       for (int j = 0; j < vs; ++j) {
         auto koc = innerCells[i + j];
         auto& oc = allCells[koc];
@@ -138,7 +142,8 @@ public:
                             const float region_origin_radius,
                             const CACut::CAValuesByInnerLayerIds& thetaCutByInnerLayer,
                             const CACut::CAValuesByInnerLayerIds& phiCutByInnerLayer,
-                            const float hardPtCut) {
+                            const float hardPtCut,
+                            unsigned long long* nPassTheta = nullptr) {
     checkAlignmentAndAct(allCells,
                          innerCells,
                          ptmin,
@@ -148,7 +153,8 @@ public:
                          thetaCutByInnerLayer,
                          phiCutByInnerLayer,
                          hardPtCut,
-                         nullptr);
+                         nullptr,
+                         nPassTheta);
   }
   void checkAlignmentAndPushTriplet(CAColl& allCells,
                                     CAntuple& innerCells,
@@ -159,7 +165,8 @@ public:
                                     const float region_origin_radius,
                                     const CACut::CAValuesByInnerLayerIds& thetaCutByInnerLayer,
                                     const CACut::CAValuesByInnerLayerIds& phiCutByInnerLayer,
-                                    const float hardPtCut) {
+                                    const float hardPtCut,
+                                    unsigned long long* nPassTheta = nullptr) {
     checkAlignmentAndAct(allCells,
                          innerCells,
                          ptmin,
@@ -169,7 +176,8 @@ public:
                          thetaCutByInnerLayer,
                          phiCutByInnerLayer,
                          hardPtCut,
-                         &foundTriplets);
+                         &foundTriplets,
+                         nPassTheta);
   }
 
   int areAlignedRZ(float r1, float z1, float ro, float zo, const float ptmin, const float thetaCut) const {
@@ -184,6 +192,8 @@ public:
   }
 
   void tagAsOuterNeighbor(unsigned int otherCell) { theOuterNeighbors.push_back(otherCell); }
+
+  unsigned int numberOfOuterNeighbors() const { return theOuterNeighbors.size(); }
 
   bool haveSimilarCurvature(const CACell& otherCell,
                             const float ptmin,

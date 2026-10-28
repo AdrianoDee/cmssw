@@ -34,7 +34,7 @@
 #include "CAStructures.h"
 
 //#define CA_DEBUG
-//#define CA_STATS
+#define CA_STATS
 //#define CA_WARNINGS
 //#define GPU_DEBUG
 //#define NTUPLE_DEBUG
