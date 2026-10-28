@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <sstream>
 #include <unordered_map>
 
 #include "CommonTools/Utils/interface/DynArray.h"
@@ -35,7 +37,9 @@ CAHitTripletGenerator::CAHitTripletGenerator(const edm::ParameterSet& cfg, edm::
                  cfg.getParameter<std::vector<edm::ParameterSet>>("CAThetaCut_byTriplets")),
       caPhiCut(cfg.getParameter<double>("CAPhiCut"),
                cfg.getParameter<std::vector<edm::ParameterSet>>("CAPhiCut_byTriplets")),
-      caHardPtCut(cfg.getParameter<double>("CAHardPtCut")) {
+      caHardPtCut(cfg.getParameter<double>("CAHardPtCut")),
+      printStatistics_(cfg.getUntrackedParameter<bool>("printStatistics")),
+      moduleLabel_(cfg.getParameter<std::string>("@module_label")) {
   edm::ParameterSet comparitorPSet = cfg.getParameter<edm::ParameterSet>("SeedComparitorPSet");
   std::string comparitorName = comparitorPSet.getParameter<std::string>("ComponentName");
   if (comparitorName != "none") {
@@ -61,6 +65,8 @@ void CAHitTripletGenerator::fillDescriptions(edm::ParameterSetDescription& desc)
   desc.addVPSet("CAPhiCut_byTriplets", validatorCACut, defaultCACutVector);
 
   desc.add<double>("CAHardPtCut", 0);
+  desc.addUntracked<bool>("printStatistics", false)
+      ->setComment("Print per-event counters (doublets, connections, ntuplets, fit rejections) to stdout.");
 
   edm::ParameterSetDescription descMaxChi2;
   descMaxChi2.add<double>("pt1", 0.8);
@@ -80,6 +86,7 @@ void CAHitTripletGenerator::initEvent(const edm::Event& ev, const edm::EventSetu
   if (theComparitor)
     theComparitor->init(ev, es);
   theField = &es.getData(theFieldToken);
+  eventID_ = ev.id();
 }
 
 namespace {
@@ -166,6 +173,10 @@ void CAHitTripletGenerator::hitNtuplets(const IntermediateHitDoublets& regionDou
 
   std::vector<CACell::CAntuplet> foundTriplets;
 
+  // per-event statistics (printStatistics), summed over the regions
+  unsigned long long nHits = 0, nDoublets = 0, nCandidates = 0, nPassTheta = 0, nConnections = 0, nRejComparitor = 0,
+                     nRejChi2 = 0;
+
   int index = 0;
   for (const auto& regionLayerPairs : regionDoublets) {
     const TrackingRegion& region = regionLayerPairs.region();
@@ -184,6 +195,16 @@ void CAHitTripletGenerator::hitNtuplets(const IntermediateHitDoublets& regionDou
     ca.findTriplets(hitDoublets, foundTriplets, region, caThetaCut, caPhiCut, caHardPtCut);
 
     auto& allCells = ca.getAllCells();
+
+    if (printStatistics_) {
+      if (index == 0)
+        for (auto const& layer : g.theLayers)
+          nHits += layer.isOuterHitOfCell.size();
+      nDoublets += allCells.size();
+      nCandidates += ca.stats().candidates;
+      nPassTheta += ca.stats().passTheta;
+      nConnections += foundTriplets.size();
+    }
 
     const QuantityDependsPtEval maxChi2Eval = maxChi2.evaluator(*theField);
 
@@ -242,16 +263,29 @@ void CAHitTripletGenerator::hitNtuplets(const IntermediateHitDoublets& regionDou
       }
 
       if (edm::isNotFinite(chi2) || chi2 > thisMaxChi2) {
+        ++nRejChi2;
         continue;
       }
 
       if (theComparitor) {
         if (!theComparitor->compatible(tmpTriplet)) {
+          ++nRejComparitor;
           continue;
         }
       }
       result[index].emplace_back(tmpTriplet);
     }
     index++;
+  }
+  if (printStatistics_) {
+    unsigned long long nOut = 0;
+    for (auto const& seeds : result)
+      nOut += seeds.size();
+    std::ostringstream out;
+    out << "CAStats: " << moduleLabel_ << " run " << eventID_.run() << " event " << eventID_.event() << " regions "
+        << index << " nHitsInLayers " << nHits << " nDoublets " << nDoublets << " nCandidates " << nCandidates
+        << " nPassTheta " << nPassTheta << " nConnections " << nConnections << " nRejComparitor " << nRejComparitor
+        << " nRejChi2 " << nRejChi2 << " nOut " << nOut << "\n";
+    std::fputs(out.str().c_str(), stdout);
   }
 }

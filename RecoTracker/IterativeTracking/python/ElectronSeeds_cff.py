@@ -340,3 +340,27 @@ trackingPhase2PU140.toReplaceWith(electronSeedsSeqTask, cms.Task(
     tripletElectronSeeds,
     newCombinedSeeds
 ))
+
+# only the initialStep (seeded by the CA) and the pixelPairStep among the pixel-seeded steps
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+(trackingPhase2PU140 & trackingGPUOffline).toModify(initialStepSeedClusterMask,
+    oldClusterRemovalInfo = 'pixelPairStepClusters'
+)
+(trackingPhase2PU140 & trackingGPUOffline).toModify(pixelPairStepSeedClusterMask,
+    trajectories = 'pixelPairStepSeeds',
+    oldClusterRemovalInfo = 'initialStepSeedClusterMask'
+)
+(trackingPhase2PU140 & trackingGPUOffline).toModify(newCombinedSeeds,
+    seedCollections = ['initialStepSeeds',
+                       'tripletElectronSeeds']
+)
+(trackingPhase2PU140 & trackingGPUOffline).toReplaceWith(electronSeedsSeqTask, cms.Task(
+    initialStepSeedClusterMask,
+    pixelPairStepSeedClusterMask,
+    tripletElectronSeedLayers,
+    tripletElectronTrackingRegions,
+    tripletElectronHitDoublets,
+    tripletElectronHitTriplets,
+    tripletElectronSeeds,
+    newCombinedSeeds
+))

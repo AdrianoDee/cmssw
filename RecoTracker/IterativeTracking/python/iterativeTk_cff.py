@@ -18,6 +18,9 @@ from RecoTracker.IterativeTracking.HighPtTripletStep_cff import *
 from RecoTracker.IterativeTracking.DetachedQuadStep_cff import *
 from RecoTracker.IterativeTracking.LowPtQuadStep_cff import *
 
+# Alpaka CA seeding of the Phase-2 steps (trackingGPUOffline* modifiers)
+from RecoTracker.IterativeTracking.CATracksIterations_cff import *
+
 from RecoTracker.FinalTrackSelectors.earlyGeneralTracks_cfi import *
 from RecoTracker.IterativeTracking.MuonSeededStep_cff import *
 from RecoTracker.FinalTrackSelectors.preDuplicateMergingGeneralTracks_cfi import *

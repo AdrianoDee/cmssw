@@ -1,4 +1,6 @@
+#include <cstdio>
 #include <functional>
+#include <sstream>
 
 #include "CommonTools/Utils/interface/DynArray.h"
 #include "DataFormats/Common/interface/Handle.h"
@@ -36,7 +38,9 @@ CAHitQuadrupletGenerator::CAHitQuadrupletGenerator(const edm::ParameterSet& cfg,
                  cfg.getParameter<std::vector<edm::ParameterSet>>("CAThetaCut_byTriplets")),
       caPhiCut(cfg.getParameter<double>("CAPhiCut"),
                cfg.getParameter<std::vector<edm::ParameterSet>>("CAPhiCut_byTriplets")),
-      caHardPtCut(cfg.getParameter<double>("CAHardPtCut")) {
+      caHardPtCut(cfg.getParameter<double>("CAHardPtCut")),
+      printStatistics_(cfg.getUntrackedParameter<bool>("printStatistics")),
+      moduleLabel_(cfg.getParameter<std::string>("@module_label")) {
   edm::ParameterSet comparitorPSet = cfg.getParameter<edm::ParameterSet>("SeedComparitorPSet");
   std::string comparitorName = comparitorPSet.getParameter<std::string>("ComponentName");
   if (comparitorName != "none") {
@@ -64,6 +68,8 @@ void CAHitQuadrupletGenerator::fillDescriptions(edm::ParameterSetDescription& de
   desc.addVPSet("CAPhiCut_byTriplets", validatorCACut, defaultCACutVector);
 
   desc.add<double>("CAHardPtCut", 0);
+  desc.addUntracked<bool>("printStatistics", false)
+      ->setComment("Print per-event counters (doublets, connections, ntuplets, fit rejections) to stdout.");
   desc.addOptional<bool>("CAOnlyOneLastHitPerLayerFilter")
       ->setComment(
           "Deprecated and has no effect. To be fully removed later when the parameter is no longer used in HLT "
@@ -86,6 +92,7 @@ void CAHitQuadrupletGenerator::initEvent(const edm::Event& ev, const edm::EventS
   if (theComparitor)
     theComparitor->init(ev, es);
   theField = &es.getData(theFieldToken);
+  eventID_ = ev.id();
 }
 namespace {
   void createGraphStructure(const SeedingLayerSetsHits& layers, CAGraph& g) {
@@ -169,6 +176,10 @@ void CAHitQuadrupletGenerator::hitNtuplets(const IntermediateHitDoublets& region
   const int numberOfHitsInNtuplet = 4;
   std::vector<CACell::CAntuplet> foundQuadruplets;
 
+  // per-event statistics (printStatistics), summed over the regions
+  unsigned long long nHits = 0, nDoublets = 0, nCandidates = 0, nPassTheta = 0, nConnections = 0, nRootCells = 0,
+                     nNtuplets = 0, nRejComparitor = 0, nRejChi2 = 0, nRejFastCircle = 0;
+
   int index = 0;
   for (const auto& regionLayerPairs : regionDoublets) {
     const TrackingRegion& region = regionLayerPairs.region();
@@ -193,6 +204,19 @@ void CAHitQuadrupletGenerator::hitNtuplets(const IntermediateHitDoublets& region
     ca.findNtuplets(foundQuadruplets, numberOfHitsInNtuplet);
 
     auto& allCells = ca.getAllCells();
+
+    if (printStatistics_) {
+      if (index == 0)
+        for (auto const& layer : g.theLayers)
+          nHits += layer.isOuterHitOfCell.size();
+      nDoublets += allCells.size();
+      nCandidates += ca.stats().candidates;
+      nPassTheta += ca.stats().passTheta;
+      for (auto const& cell : allCells)
+        nConnections += cell.numberOfOuterNeighbors();
+      nRootCells += ca.numberOfRootCells();
+      nNtuplets += foundQuadruplets.size();
+    }
 
     const QuantityDependsPtEval maxChi2Eval = maxChi2.evaluator(*theField);
 
@@ -234,6 +258,7 @@ void CAHitQuadrupletGenerator::hitNtuplets(const IntermediateHitDoublets& region
                                  allCells[foundQuadruplets[quadId][2]].getOuterHit());
 
         if (!theComparitor->compatible(tmpTriplet)) {
+          ++nRejComparitor;
           continue;
         }
       }
@@ -259,6 +284,7 @@ void CAHitQuadrupletGenerator::hitNtuplets(const IntermediateHitDoublets& region
         chi2 = rzLine.chi2();
       }
       if (edm::isNotFinite(chi2) || chi2 > thisMaxChi2) {
+        ++nRejChi2;
         continue;
       }
       // TODO: Do we have any use case to not use circle fit? Maybe
@@ -266,10 +292,10 @@ void CAHitQuadrupletGenerator::hitNtuplets(const IntermediateHitDoublets& region
       if (fitFastCircle) {
         FastCircleFit c(gps, ges);
         chi2 += c.chi2();
-        if (edm::isNotFinite(chi2))
+        if (edm::isNotFinite(chi2) || (fitFastCircleChi2Cut && chi2 > thisMaxChi2)) {
+          ++nRejFastCircle;
           continue;
-        if (fitFastCircleChi2Cut && chi2 > thisMaxChi2)
-          continue;
+        }
       }
       result[index].emplace_back(allCells[foundQuadruplets[quadId][0]].getInnerHit(),
                                  allCells[foundQuadruplets[quadId][1]].getInnerHit(),
@@ -277,5 +303,17 @@ void CAHitQuadrupletGenerator::hitNtuplets(const IntermediateHitDoublets& region
                                  allCells[foundQuadruplets[quadId][2]].getOuterHit());
     }
     index++;
+  }
+  if (printStatistics_) {
+    unsigned long long nOut = 0;
+    for (auto const& seeds : result)
+      nOut += seeds.size();
+    std::ostringstream out;
+    out << "CAStats: " << moduleLabel_ << " run " << eventID_.run() << " event " << eventID_.event() << " regions "
+        << index << " nHitsInLayers " << nHits << " nDoublets " << nDoublets << " nCandidates " << nCandidates
+        << " nPassTheta " << nPassTheta << " nConnections " << nConnections << " nRootCells " << nRootCells
+        << " nNtuplets " << nNtuplets << " nRejComparitor " << nRejComparitor << " nRejChi2 " << nRejChi2
+        << " nRejFastCircle " << nRejFastCircle << " nOut " << nOut << "\n";
+    std::fputs(out.str().c_str(), stdout);
   }
 }

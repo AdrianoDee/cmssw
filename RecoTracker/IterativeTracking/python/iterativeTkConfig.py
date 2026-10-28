@@ -72,6 +72,8 @@ vectorHits.toModify(_iterations_trackingPhase2PU140_VS.names, func=lambda x: x.a
 from Configuration.ProcessModifiers.jetCoreInPhase2_cff import jetCoreInPhase2
 jetCoreInPhase2.toModify(_iterations_trackingPhase2PU140_VS.names, func=lambda x: x.append('JetCoreRegionalStep'))
 trackingIters01.toModify(_iterations_trackingPhase2PU140_VS, names = ["InitialStep", "HighPtTripletStep"])
+from Configuration.ProcessModifiers.trackingGPUOffline_cff import trackingGPUOffline
+trackingGPUOffline.toModify(_iterations_trackingPhase2PU140_VS, names = ["InitialStep", "PixelPairStep"])
 
 # apply all procModifiers before this
 _iterations_trackingPhase2PU140 = _iterations_trackingPhase2PU140_VS.names.value()

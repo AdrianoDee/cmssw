@@ -1644,6 +1644,31 @@ upgradeWFs['PatatrackPixelOnlyAlpakaCAExtensionMask'] = PatatrackWorkflow(
     offset = 0.4022,
 )
 
+# Offline tracking-only workflow with the pixel-seeded steps seeded by the Alpaka CA (with recHit masking) running on GPU (optional)
+#  - Phase-2 only
+#  - tracking-only reconstruction, with DQM and validation
+#  - harvesting
+
+class PatatrackPhase2Workflow(PatatrackWorkflow):
+    def condition(self, fragment, stepList, key, hasHarvest):
+        return ('Run4' in key) and super(PatatrackPhase2Workflow, self).condition(fragment, stepList, key, hasHarvest)
+
+upgradeWFs['PatatrackOfflineTrackingAlpakaCA'] = PatatrackPhase2Workflow(
+    digi = {
+        '--customise' : 'HeterogeneousCore/AlpakaServices/customiseAlpakaServiceMemoryFilling.customiseAlpakaServiceMemoryFilling',
+    },
+    reco = {
+        '-s': 'RAW2DIGI,RECO:reconstruction_trackingOnly,VALIDATION:@trackingOnlyValidation,DQM:@trackingOnlyDQM',
+        '--procModifiers': 'alpaka,trackingGPUOffline',
+        '--customise' : 'HeterogeneousCore/AlpakaServices/customiseAlpakaServiceMemoryFilling.customiseAlpakaServiceMemoryFilling',
+    },
+    harvest = {
+        '-s': 'HARVESTING:@trackingOnlyValidation+@trackingOnlyDQM'
+    },
+    suffix = 'Patatrack_OfflineTrackingAlpakaCA',
+    offset = 0.4023,
+)
+
 # Pixel-only quadruplets workflow running on GPU (optional)
 #  - Pixel-only reconstruction with Alpaka, with standard and CPUvsGPU DQM and validation
 #  - harvesting for CPUvsGPU validation

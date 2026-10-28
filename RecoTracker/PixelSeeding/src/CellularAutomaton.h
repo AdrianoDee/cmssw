@@ -15,6 +15,14 @@ public:
 
   std::vector<CACell>& getAllCells() { return allCells; }
 
+  // counters for the per-event statistics printout
+  struct Stats {
+    unsigned long long candidates = 0;  // (inner, outer) cell pairs sharing a hit
+    unsigned long long passTheta = 0;   // ... passing the RZ alignment (theta) cut
+  };
+  const Stats& stats() const { return theStats; }
+  unsigned int numberOfRootCells() const { return theRootCells.size(); }
+
   void createAndConnectCells(
       const std::vector<const HitDoublets*>&, const TrackingRegion&, const CACut&, const CACut&, const float);
 
@@ -35,6 +43,7 @@ private:
 
   std::vector<unsigned int> theRootCells;
   std::vector<std::vector<CACell*> > theNtuplets;
+  Stats theStats;
 };
 
 #endif  // RecoTracker_PixelSeeding_src_CellularAutomaton_h

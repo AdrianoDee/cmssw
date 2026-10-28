@@ -14,6 +14,7 @@
 #include "RecoTracker/TkHitPairs/interface/LayerHitMapCache.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
+#include "DataFormats/Provenance/interface/EventID.h"
 
 #include "RecoTracker/TkHitPairs/interface/IntermediateHitDoublets.h"
 
@@ -131,6 +132,11 @@ private:
   CACut caThetaCut;
   CACut caPhiCut;
   const float caHardPtCut = 0.f;
+
+  // per-event statistics printout (printStatistics)
+  const bool printStatistics_;
+  const std::string moduleLabel_;
+  edm::EventID eventID_;
 };
 
 #endif
