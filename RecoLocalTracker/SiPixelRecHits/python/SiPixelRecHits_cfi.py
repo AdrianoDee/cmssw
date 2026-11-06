@@ -90,3 +90,13 @@ phase2CAExtension.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     phase2OTRecHitsSoAConverterSerial,
     siPixelRecHitsPreSplitting
 ))
+
+# Phase-2 CA extended to outer-tracker vector hits: the outer-tracker rechits feed the vector hit formation in
+# RecoTracker/PixelTrackFitting/python/PixelTracks_cff.py
+from Configuration.ProcessModifiers.phase2CAVectorHits_cff import phase2CAVectorHits
+phase2CAVectorHits.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
+    siPhase2RecHits,
+    siPixelRecHitsPreSplittingAlpaka,
+    siPixelRecHitsPreSplittingAlpakaSerial,
+    siPixelRecHitsPreSplitting
+))

@@ -7,5 +7,9 @@
 #include "DataFormats/TrackingRecHitSoA/interface/SiPixelHitStatus.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingHost.h"
+#include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsHost.h"
+#include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/VectorHitsHost.h"
+#include "DataFormats/TrackingRecHitSoA/interface/VectorHitsSoA.h"
 
 #endif  // DataFormats_TrackingRecHitSoA_src_classes_h
