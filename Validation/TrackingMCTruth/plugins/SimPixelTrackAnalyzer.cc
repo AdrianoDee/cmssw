@@ -340,19 +340,19 @@ namespace simdoublets {
 
     //// Pixel Cluster Cuts (@cell level)
     desc.add<double>("dzdrFact", TrackerTraits::dzdrFact);
-    desc.add<int>("minYsizeB1", TrackerTraits::minYsizeB1)
+    desc.add<int>("minYsizeB1", TrackerTraits::minInnerSizeB1)
         ->setComment("Cut on inner hit cluster size (in global z / local y) for barrel-forward cells. Barrel 1 cut.");
-    desc.add<int>("minYsizeB2", TrackerTraits::minYsizeB2)
+    desc.add<int>("minYsizeB2", TrackerTraits::minInnerSizeB2)
         ->setComment(
             "Cut on inner hit cluster size (in global z / local y) for barrel-forward cells. Anything but Barrel 1 "
             "cut.");
-    desc.add<int>("maxDYsize12", TrackerTraits::maxDYsize12)
+    desc.add<int>("maxDYsize12", TrackerTraits::maxDSizeB1)
         ->setComment(
             "Cut on cluster size differences (in global z / local y) for barrel-forward cells. Barrel 1-2 cells.");
-    desc.add<int>("maxDYsize", TrackerTraits::maxDYsize)
+    desc.add<int>("maxDYsize", TrackerTraits::maxDSize)
         ->setComment(
             "Cut on cluster size differences (in global z / local y) for barrel-forward cells. Other barrel cells.");
-    desc.add<int>("maxDYPred", TrackerTraits::maxDYPred)
+    desc.add<int>("maxDYPred", TrackerTraits::maxDSizePred)
         ->setComment(
             "Maximum difference between actual and expected cluster size of inner RecHit. Barrel-forward cells.");
 
@@ -373,11 +373,14 @@ namespace simdoublets {
             "caThetaCuts",
             std::vector<double>(TrackerTraits::thetaCuts, TrackerTraits::thetaCuts + TrackerTraits::numberOfLayers))
         ->setComment("Cut on origin radius. One per layer, the layer being the innermost one for a triplet.");
-    geometryParams
-        .add<std::vector<unsigned int>>(
-            "startingPairs",
-            std::vector<unsigned int>(TrackerTraits::startingPairs,
-                                      TrackerTraits::startingPairs + TrackerTraits::nStartingPairs))
+    // the topology tables carry the starting pairs as a per-pair flag array (as in CAHitNtupletGenerator.cc)
+    std::vector<unsigned int> startingPairsDefault;
+    for (int pairId = 0; pairId < TrackerTraits::nPairsForQuadruplets; ++pairId) {
+      if (TrackerTraits::startingPairs[pairId]) {
+        startingPairsDefault.push_back(static_cast<unsigned int>(pairId));
+      }
+    }
+    geometryParams.add<std::vector<unsigned int>>("startingPairs", startingPairsDefault)
         ->setComment("The list of the ids of pairs from which the CA ntuplets building may start.");
     // cells params
     geometryParams
@@ -389,12 +392,12 @@ namespace simdoublets {
     geometryParams
         .add<std::vector<int>>(
             "phiCuts",
-            std::vector<int>(TrackerTraits::phicuts, TrackerTraits::phicuts + TrackerTraits::nPairsForQuadruplets))
+            std::vector<int>(TrackerTraits::maxDPhi, TrackerTraits::maxDPhi + TrackerTraits::nPairsForQuadruplets))
         ->setComment("Cuts in dphi for cells");
     geometryParams
         .add<std::vector<double>>(
             "ptCuts",
-            std::vector<double>(TrackerTraits::ptCuts, TrackerTraits::ptCuts + TrackerTraits::nPairsForQuadruplets))
+            std::vector<double>(TrackerTraits::minPt, TrackerTraits::minPt + TrackerTraits::nPairsForQuadruplets))
         ->setComment("Cuts in pt for cells");
     geometryParams
         .add<std::vector<double>>(
@@ -439,7 +442,7 @@ namespace simdoublets {
     //// p [GeV/c] = B [T] * R [m] * 0.3 (factor from conversion from J to GeV and q = e = 1.6 * 10e-19 C)
     //// 87 cm/GeV = 1/(3.8T * 0.3)
     //// take less than radius given by the hardPtCut and reject everything below
-    desc.add<double>("hardCurvCut", TrackerTraits::hardCurvCut)
+    desc.add<double>("hardCurvCut", TrackerTraits::maxCurv)
         ->setComment("Cut on minimum curvature, used in DCA ntuplet selection");
     desc.add<double>("ptmin", 0.9f)
         ->setComment(

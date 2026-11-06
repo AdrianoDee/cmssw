@@ -3857,7 +3857,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                 << "  nHitsInTracks=" << nHitsInTrk << std::endl;
       std::cout << "           nCells=" << nCellsF << "  nTriplets=" << nTripletsF << "  nCellTrackPairs=" << nCTPairsF
                 << std::endl;
-      std::cout << "  Caps  :  maxDoublets=" << maxDoublets << "  maxTuples=" << maxTuples << std::endl;
+      std::cout << "  Caps  :  maxDoublets=" << this->maxNumberOfDoublets_ << "  maxTuples=" << maxTuples << std::endl;
 
       // Per-event rows.
       std::cout << "  -- this event --" << std::endl;
