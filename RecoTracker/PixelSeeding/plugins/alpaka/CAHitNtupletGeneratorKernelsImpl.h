@@ -95,6 +95,54 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
     };
 
+    // Same as cms::alpakatools::countFromVector / fillFromVector for the phi binner, but skipping the
+    // masked hits: they never enter the binner, so the doublet building does not see them at all.
+    template <typename TrackerTraits>
+    class Kernel_countUnmaskedHitsPhiBinner {
+    public:
+      ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                    PhiBinnerT<TrackerTraits> *__restrict__ h,
+                                    uint32_t nh,
+                                    HitsMultiView hh,
+                                    MapToHitConstView maskView,
+                                    uint32_t const *__restrict__ offsets) const {
+        const uint32_t nt = offsets[nh];
+        for (uint32_t i : cms::alpakatools::uniform_elements(acc, nt)) {
+          if (maskView[i].recHitMask() > 0)
+            continue;
+          auto off = alpaka_std::upper_bound(offsets, offsets + nh + 1, i);
+          ALPAKA_ASSERT_ACC((*off) > 0);
+          int32_t ih = off - offsets - 1;
+          ALPAKA_ASSERT_ACC(ih >= 0);
+          ALPAKA_ASSERT_ACC(ih < int(nh));
+          h->count(acc, hh[i].iphi(), ih);
+        }
+      }
+    };
+
+    template <typename TrackerTraits>
+    class Kernel_fillUnmaskedHitsPhiBinner {
+    public:
+      ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                    PhiBinnerT<TrackerTraits> *__restrict__ h,
+                                    uint32_t nh,
+                                    HitsMultiView hh,
+                                    MapToHitConstView maskView,
+                                    uint32_t const *__restrict__ offsets) const {
+        const uint32_t nt = offsets[nh];
+        for (uint32_t i : cms::alpakatools::uniform_elements(acc, nt)) {
+          if (maskView[i].recHitMask() > 0)
+            continue;
+          auto off = alpaka_std::upper_bound(offsets, offsets + nh + 1, i);
+          ALPAKA_ASSERT_ACC((*off) > 0);
+          int32_t ih = off - offsets - 1;
+          ALPAKA_ASSERT_ACC(ih >= 0);
+          ALPAKA_ASSERT_ACC(ih < int(nh));
+          h->fill(acc, hh[i].iphi(), i, ih);
+        }
+      }
+    };
+
     class Kernel_printSizes {
     public:
       ALPAKA_FN_ACC void operator()(Acc1D const &acc,
@@ -1701,23 +1749,52 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void CAHitNtupletGeneratorKernels<TrackerTraits>::prepareHits(const HitsMultiView &hh,
                                                                 const ModulesMultiView &mm,
                                                                 const reco::CALayersSoAConstView &ll,
+                                                                const MapToHitConstView &mask,
                                                                 Queue &queue) {
     using namespace caHitNtupletGeneratorKernels;
 
     const auto workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(1, ll.metadata().size() - 1);
     alpaka::exec<Acc1D>(queue, workDiv1D, SetHitsLayerStart{}, mm, ll, this->device_layerStarts_->data());
 
-    auto accessor_iphi = [] ALPAKA_FN_ACC(auto const &v) { return v.iphi(); };
+    constexpr uint32_t nLayers = TrackerTraits::numberOfLayers;  // could be ll.metadata().size() - 1
+    constexpr uint32_t threadsPerBlock = 256;
+    auto const nHits = static_cast<uint32_t>(hh.size());
 
-    cms::alpakatools::fillManyFromVector<Acc1D>(device_hitPhiHist_->data(),
-                                                device_hitPhiView_,
-                                                TrackerTraits::numberOfLayers,  // could be ll.metadata().size() - 1
-                                                hh,
-                                                accessor_iphi,
-                                                this->device_layerStarts_->data(),
-                                                static_cast<uint32_t>(hh.size()),
-                                                static_cast<uint32_t>(256),
-                                                queue);
+    if (mask.metadata().size() > 0) {
+      // fill the phi binner only with the hits not masked by the previous iterations
+      PhiBinner::template launchZero<Acc1D>(device_hitPhiView_, queue);
+      const auto workDivFill =
+          cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(nHits, threadsPerBlock), threadsPerBlock);
+      alpaka::exec<Acc1D>(queue,
+                          workDivFill,
+                          Kernel_countUnmaskedHitsPhiBinner<TrackerTraits>{},
+                          device_hitPhiHist_->data(),
+                          nLayers,
+                          hh,
+                          mask,
+                          this->device_layerStarts_->data());
+      PhiBinner::template launchFinalize<Acc1D>(device_hitPhiHist_->data(), queue);
+      alpaka::exec<Acc1D>(queue,
+                          workDivFill,
+                          Kernel_fillUnmaskedHitsPhiBinner<TrackerTraits>{},
+                          device_hitPhiHist_->data(),
+                          nLayers,
+                          hh,
+                          mask,
+                          this->device_layerStarts_->data());
+    } else {
+      auto accessor_iphi = [] ALPAKA_FN_ACC(auto const &v) { return v.iphi(); };
+
+      cms::alpakatools::fillManyFromVector<Acc1D>(device_hitPhiHist_->data(),
+                                                  device_hitPhiView_,
+                                                  nLayers,
+                                                  hh,
+                                                  accessor_iphi,
+                                                  this->device_layerStarts_->data(),
+                                                  nHits,
+                                                  threadsPerBlock,
+                                                  queue);
+    }
 
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
@@ -2017,7 +2094,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                   const ::reco::CAGraphSoAConstView &cc,
                                                                   const ::reco::CALayersSoAConstView &ll,
                                                                   uint32_t offsetBPIX2,
-                                                                  const MapToHitConstView &mask,
                                                                   Queue &queue) {
     using namespace caPixelDoublets;
     using namespace caHitNtupletGeneratorKernels;
@@ -2058,8 +2134,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         this->device_layerStarts_->data(),
                         this->device_hitPhiHist_->data(),
                         this->device_hitToCell_->data(),
-                        this->m_params.algoParams_,
-                        mask);
+                        this->m_params.algoParams_);
 
     HitToCell::template launchFinalize<Acc1D>(this->device_hitToCellView_, queue);
 

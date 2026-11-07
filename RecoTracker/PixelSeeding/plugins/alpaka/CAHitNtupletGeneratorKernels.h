@@ -156,6 +156,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void prepareHits(const HitsMultiView& hh,
                      const ModulesMultiView& mm,
                      const ::reco::CALayersSoAConstView& ll,
+                     const MapToHitConstView& maskView,
                      Queue& queue);
 
     void launchKernels(const HitsMultiView& hh,
@@ -172,7 +173,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        const ::reco::CAGraphSoAConstView& cc,
                        const ::reco::CALayersSoAConstView& ll,
                        uint32_t offsetBPIX2,
-                       const MapToHitConstView& maskView,
                        Queue& queue);
 
     static void printCounters();

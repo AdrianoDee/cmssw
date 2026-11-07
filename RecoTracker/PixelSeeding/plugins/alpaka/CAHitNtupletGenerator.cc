@@ -474,8 +474,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
     GPUKernels kernels(m_params, nHits, offsetBPIX2, nDoublets, nTracks, layers.metadata().size(), queue);
 
-    kernels.prepareHits(trackingHits, hitModules, layers, queue);
-    kernels.buildDoublets(trackingHits, graph, layers, offsetBPIX2, maskView, queue);
+    kernels.prepareHits(trackingHits, hitModules, layers, maskView, queue);
+    kernels.buildDoublets(trackingHits, graph, layers, offsetBPIX2, queue);
     kernels.launchKernels(
         trackingHits, offsetBPIX2, layers.metadata().size(), trackCollection.view(), layers, graph, queue);
 
