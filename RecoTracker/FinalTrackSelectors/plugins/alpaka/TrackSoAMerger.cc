@@ -157,6 +157,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       tracks_d_ = deviceAlgo_.makeMergedTracks(queue, tracksViews, hitsViews);
     } else {
       tracks_d_ = Tracks(queue, 0, 0);
+      auto nTracks_d = cms::alpakatools::make_device_view(queue, tracks_d_->view().tracks().nTracks());
+      alpaka::memset(queue, nTracks_d, 0);
     }
   }
 
