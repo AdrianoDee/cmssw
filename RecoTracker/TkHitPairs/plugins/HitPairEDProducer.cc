@@ -17,7 +17,11 @@
 #include "RecoTracker/TkHitPairs/interface/IntermediateHitDoublets.h"
 #include "RecoTracker/TkHitPairs/interface/RegionsSeedingHitSets.h"
 
+#include <algorithm>
+#include <cstdio>
 #include <memory>
+#include <set>
+#include <sstream>
 #include <vector>
 
 namespace {
@@ -57,6 +61,10 @@ namespace {
 
     HitPairGeneratorFromLayerPair generator_;
     std::vector<unsigned> layerPairBegins_;
+
+    // per-event statistics printout (printStatistics)
+    const bool printStatistics_;
+    const std::string moduleLabel_;
   };
   ImplBase::ImplBase(const edm::ParameterSet& iConfig, edm::ConsumesCollector iC)
       : maxElement_(iConfig.getParameter<unsigned int>("maxElement")),
@@ -64,7 +72,9 @@ namespace {
         putEmptyIfMaxElementReached_(iConfig.getParameter<bool>("putEmptyIfMaxElementReached")),
         generator_(
             iC, 0, 1, nullptr, maxElement_),  // these indices are dummy, TODO: cleanup HitPairGeneratorFromLayerPair
-        layerPairBegins_(iConfig.getParameter<std::vector<unsigned>>("layerPairs")) {
+        layerPairBegins_(iConfig.getParameter<std::vector<unsigned>>("layerPairs")),
+        printStatistics_(iConfig.getUntrackedParameter<bool>("printStatistics")),
+        moduleLabel_(iConfig.getParameter<std::string>("@module_label")) {
     if (layerPairBegins_.empty())
       throw cms::Exception("Configuration")
           << "HitPairEDProducer requires at least index for layer pairs (layerPairs parameter), none was given";
@@ -100,6 +110,33 @@ namespace {
       intermediateHitDoubletsProducer.reserve(regionsLayers.regionsSize());
 
       unsigned int nDoublets = 0;
+      // statistics: doublets per layer pair (summed over the regions) and hits in the layers used
+      std::vector<std::pair<std::string, unsigned int>> pairDoublets;
+      std::set<unsigned int> usedLayers;
+      unsigned int nHitsInLayers = 0, nLayerPairs = 0;
+      auto addStatistics = [&](const SeedingLayerSetsHits::SeedingLayerSet& layerSet, unsigned int n) {
+        auto name = layerSet[0].name() + "+" + layerSet[1].name();
+        auto it = std::find_if(pairDoublets.begin(), pairDoublets.end(), [&](auto const& p) { return p.first == name; });
+        if (it == pairDoublets.end())
+          pairDoublets.emplace_back(name, n);
+        else
+          it->second += n;
+        for (int i = 0; i < 2; ++i)
+          if (usedLayers.insert(layerSet[i].index()).second)
+            nHitsInLayers += layerSet[i].hits().size();
+      };
+      auto printStatistics = [&](const char* status) {
+        if (not printStatistics_)
+          return;
+        std::ostringstream out;
+        out << "HitPairStats: " << moduleLabel_ << " run " << iEvent.id().run() << " event " << iEvent.id().event()
+            << " status " << status << " regions " << regionsLayers.regionsSize() << " layerPairs " << nLayerPairs
+            << " nHitsInLayers " << nHitsInLayers << " nDoublets " << nDoublets << " |";
+        for (auto const& [name, n] : pairDoublets)
+          out << " " << name << "=" << n;
+        out << "\n";
+        std::fputs(out.str().c_str(), stdout);
+      };
 
       for (const auto& regionLayers : regionsLayers) {
         const TrackingRegion& region = regionLayers.region();
@@ -110,8 +147,11 @@ namespace {
 
         for (SeedingLayerSetsHits::SeedingLayerSet layerSet : regionLayers.layerPairs()) {
           auto doubletsOpt = generator_.doublets(region, iEvent, iSetup, layerSet, *hitCachePtr);
+          ++nLayerPairs;
           if (not doubletsOpt) {
+            addStatistics(layerSet, 0);
             if (putEmptyIfMaxElementReached_) {
+              printStatistics("maxElement");
               putEmpty(iEvent, regionsLayers);
               return;
             } else {
@@ -121,11 +161,13 @@ namespace {
           auto& doublets = *doubletsOpt;
           LogTrace("HitPairEDProducer") << " created " << doublets.size() << " doublets for layers "
                                         << layerSet[0].index() << "," << layerSet[1].index();
+          addStatistics(layerSet, doublets.size());
           if (doublets.empty())
             continue;  // don't bother if no pairs from these layers
           nDoublets += doublets.size();
           if (nDoublets >= maxElementTotal_) {
             edm::LogError("TooManyPairs") << "number of total pairs exceed maximum, no pairs produced";
+            printStatistics("maxElementTotal");
             putEmpty(iEvent, regionsLayers);
             return;
           }
@@ -134,6 +176,7 @@ namespace {
         }
       }
 
+      printStatistics("ok");
       seedingHitSetsProducer.put(iEvent);
       intermediateHitDoubletsProducer.put(iEvent);
     }
@@ -526,6 +569,8 @@ void HitPairEDProducer::fillDescriptions(edm::ConfigurationDescriptions& descrip
           "layer pairs reaches maxElementTotal.");
   desc.add<std::vector<unsigned>>("layerPairs", std::vector<unsigned>{0})
       ->setComment("Indices to the pairs of consecutive layers, i.e. 0 means (0,1), 1 (1,2) etc.");
+  desc.addUntracked<bool>("printStatistics", false)
+      ->setComment("Print, for each event, the number of doublets in total and per layer pair (summed over the regions)");
 
   descriptions.add("hitPairEDProducerDefault", desc);
 }

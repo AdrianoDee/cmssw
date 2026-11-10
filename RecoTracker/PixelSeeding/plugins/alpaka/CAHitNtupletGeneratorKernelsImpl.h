@@ -47,7 +47,7 @@
 #include "CATripletCuts.h"
 
 //#define CA_DEBUG
-//#define CA_STATS
+#define CA_STATS
 //#define CA_WARNINGS
 //#define GPU_DEBUG
 //#define NTUPLE_DEBUG
@@ -2166,6 +2166,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
     };
 
+    class Kernel_assignIteration {
+    public:
+      ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                    TkSoAView tracks_view,
+                                    HitContainer const *__restrict__ foundNtuplets,
+                                    ::pixelTrack::Iteration iteration) const {
+        for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
+          tracks_view[it].iteration() = iteration;
+        }
+      }
+    };
+
     template <typename TrackerTraits>
     class Kernel_print_found_ntuplets {
     public:
@@ -3302,6 +3314,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const ::reco::CALayersSoAConstView &ll,
       const ::reco::CADoubletCutsSoAConstView &doubletCuts,
       uint32_t offsetBPIX2,
+      const MapToHitConstView &mask,
       Queue &queue) {
     using namespace caPixelDoublets;
     using namespace caHitNtupletGeneratorKernels;
@@ -3351,7 +3364,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           doubletCuts,
                           this->device_layerStarts_->data(),
                           this->device_hitPhiHist_->data(),
-                          this->device_hitToCell_->data());
+                          this->device_hitToCell_->data(),
+                          mask);
 
       const uint32_t nCellsFound = this->readbackNCells(queue);
       nCellsCounted = nCellsFound;
@@ -3385,7 +3399,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         doubletCuts,
                         this->device_layerStarts_->data(),
                         this->device_hitPhiHist_->data(),
-                        this->device_hitToCell_->data());
+                        this->device_hitToCell_->data(),
+                        mask);
 
     HitToCell::template launchFinalize<Acc1D>(this->device_hitToCellView_, queue);
 
@@ -3462,6 +3477,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef GPU_DEBUG
     alpaka::wait(queue);
     std::cout << "Kernel_classifyTracks -> done!" << std::endl;
+#endif
+
+    alpaka::exec<Acc1D>(queue,
+                        workDiv1D,
+                        Kernel_assignIteration{},
+                        tracks_view,
+                        this->device_hitContainer_->data(),
+                        this->m_params.algoParams_.iterationName_);
+#ifdef GPU_DEBUG
+    alpaka::wait(queue);
+    std::cout << "Kernel_assignIteration -> done!" << std::endl;
 #endif
 
     if (this->m_params.algoParams_.lateFishbone_) {
@@ -3675,6 +3701,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
 #ifdef CA_STATS
+
+    if (this->m_params.algoParams_.doStats_) {
+      // ^ this is useful if we have multiple iterations and want to probe only one
     alpaka::wait(queue);
     workDiv1D = cms::alpakatools::make_workdiv<Acc1D>(1, 1);
     alpaka::exec<Acc1D>(queue,
@@ -3828,7 +3857,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                 << "  nHitsInTracks=" << nHitsInTrk << std::endl;
       std::cout << "           nCells=" << nCellsF << "  nTriplets=" << nTripletsF << "  nCellTrackPairs=" << nCTPairsF
                 << std::endl;
-      std::cout << "  Caps  :  maxDoublets=" << maxDoublets << "  maxTuples=" << maxTuples << std::endl;
+      std::cout << "  Caps  :  maxDoublets=" << this->maxNumberOfDoublets_ << "  maxTuples=" << maxTuples << std::endl;
 
       // Per-event rows.
       std::cout << "  -- this event --" << std::endl;
@@ -3878,6 +3907,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       std::cout.flags(coutFlags);
       std::cout.precision(coutPrec);
+    }
     }
 #endif
     if (this->m_params.algoParams_.doStats_) {

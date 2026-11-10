@@ -5,6 +5,8 @@
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsHost.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/SiPixelHitStatus.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingHost.h"
 #include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsHost.h"
 #include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/VectorHitsHost.h"

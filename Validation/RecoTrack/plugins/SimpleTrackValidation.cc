@@ -64,6 +64,9 @@ private:
   TTree* output_tree_;
   std::vector<double> etaBins_;
   std::vector<double> ptBins_;
+  // if true, fake and duplicate rates are computed against all the tracking particles (as in the MTV),
+  // the TP selection being applied only to the efficiency
+  const bool fakesFromAllTPs_;
 
   const std::vector<edm::InputTag> trackLabels_;
   std::vector<edm::EDGetTokenT<edm::View<reco::Track>>> trackTokens_;
@@ -72,7 +75,8 @@ private:
 };
 
 SimpleTrackValidation::SimpleTrackValidation(const edm::ParameterSet& iConfig)
-    : trackLabels_(iConfig.getParameter<std::vector<edm::InputTag>>("trackLabels")),
+    : fakesFromAllTPs_(iConfig.getParameter<bool>("fakesFromAllTPs")),
+      trackLabels_(iConfig.getParameter<std::vector<edm::InputTag>>("trackLabels")),
       trackAssociatorToken_(
           consumes<reco::TrackToTrackingParticleAssociator>(iConfig.getParameter<edm::InputTag>("trackAssociator"))),
       trackingParticleToken_(
@@ -105,13 +109,19 @@ void SimpleTrackValidation::analyze(const edm::Event& iEvent, const edm::EventSe
   auto const& associatorByHits = iEvent.get(trackAssociatorToken_);
   auto TPCollectionH = iEvent.getHandle(trackingParticleToken_);
   TrackingParticleRefVector tpCollection;
+  TrackingParticleRefVector tpCollectionAll;
 
   for (size_t i = 0, size = TPCollectionH->size(); i < size; ++i) {
     auto tp = TrackingParticleRef(TPCollectionH, i);
     if (tpSelector(*tp)) {
       tpCollection.push_back(tp);
     }
+    if (fakesFromAllTPs_) {
+      tpCollectionAll.push_back(tp);
+    }
   }
+  // TPs used for the fake and duplicate rates
+  const auto& tpCollectionFake = fakesFromAllTPs_ ? tpCollectionAll : tpCollection;
 
   for (const auto& trackToken : trackTokens_) {
     edm::Handle<edm::View<reco::Track>> tracksHandle;
@@ -123,8 +133,10 @@ void SimpleTrackValidation::analyze(const edm::Event& iEvent, const edm::EventSe
       trackRefs.push_back(tracks.refAt(i));
     }
 
-    reco::RecoToSimCollection recSimColl = associatorByHits.associateRecoToSim(trackRefs, tpCollection);
+    reco::RecoToSimCollection recSimColl = associatorByHits.associateRecoToSim(trackRefs, tpCollectionFake);
     reco::SimToRecoCollection simRecColl = associatorByHits.associateSimToReco(trackRefs, tpCollection);
+    reco::SimToRecoCollection simRecCollFake =
+        fakesFromAllTPs_ ? associatorByHits.associateSimToReco(trackRefs, tpCollectionFake) : simRecColl;
 
     int rt = 0;   // number of reconstructed tracks;
     int at = 0;   // number of reconstructed tracks associated to a tracking particle;
@@ -143,9 +155,8 @@ void SimpleTrackValidation::analyze(const edm::Event& iEvent, const edm::EventSe
           at++;
           h_at_eta->Fill(track->eta());
           h_at_pt->Fill(track->pt());
-        }
-        if (simRecColl.find(tp[0].first) != simRecColl.end()) {
-          if (simRecColl[tp[0].first].size() > 1) {
+          auto foundTrack = simRecCollFake.find(tp[0].first);
+          if (foundTrack != simRecCollFake.end() && foundTrack->val.size() > 1) {
             dt++;
             h_dt_eta->Fill(track->eta());
             h_dt_pt->Fill(track->pt());
@@ -253,6 +264,8 @@ void SimpleTrackValidation::fillDescriptions(edm::ConfigurationDescriptions& des
   desc.add<bool>("invertRapidityCutTP", false);
   desc.add<double>("minPhiTP", -3.2);
   desc.add<double>("maxPhiTP", 3.2);
+  desc.add<bool>("fakesFromAllTPs", false)
+      ->setComment("Compute fake and duplicate rates against all the tracking particles, as in the MTV");
 
   // Default bins in eta for negative endcap, barrel, and positive endcap
   desc.add<std::vector<double>>("etaBins", {-4, -1.5, 1.5, 4});

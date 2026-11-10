@@ -15,6 +15,8 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/VecArray.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsMaskingSoA.h"
 #include "RecoTracker/PixelSeeding/interface/CAHitsView.h"
 
 namespace caStructures {
@@ -50,6 +52,9 @@ namespace caStructures {
     bool doFastDuplicateRemover_;
     bool doEarlyDuplicateRemover_;
 
+    // Iteration name
+    ::pixelTrack::Iteration iterationName_;
+
     // Inline per-triplet DNN gate (Phase2OTVectorHits only): when enabled, an MLP with compile-time
     // weights (CATripletDNN.h) scores EVERY accepted triplet in Kernel_connect -- pixel-only
     // (nVectorHits==0, sentinel vector hit features) and vector-hit-containing alike -- and rejects those below
@@ -80,6 +85,7 @@ namespace caStructures {
   using HitsView = ::reco::TrackingRecHitView;
   using HitModulesConstView = ::reco::HitModuleSoAConstView;
   using HitsConstView = ::reco::TrackingRecHitConstView;
+  using MapToHitConstView = ::reco::TrackingRecHitsMaskingConstView;
 
   // MultiViews for hits and modules
   using ModulesMultiView = SoAConstMultiView<HitModulesConstView, 2>;

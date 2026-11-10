@@ -277,6 +277,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     using HitsOnDeviceRefProdVector = edm::RefProdVector<HitsOnDevice>;
 
+    using MapToHit = reco::TrackingRecHitsMaskingSoACollection;
+    using MapToHitConstView = MapToHit::ConstView;
+
     // What the generator takes: this topology's hit view, module-start view and the two scalars.
     using HitsInput = typename CAHitNtupletGenerator<TrackerTraits>::HitsInput;
 
@@ -832,6 +835,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDPutToken<TripletDumpSoACollection> tokenTripletDump_;
 #endif
 
+    const bool useHitMask_;
+    const device::EDGetToken<MapToHit> tokenHitMask_;
+
     const ::reco::FormulaEvaluator maxNumberOfDoublets_;
     const ::reco::FormulaEvaluator maxNumberOfTuples_;
     const uint32_t minNumberOfDoublets_;
@@ -857,6 +863,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef CA_TRIPLET_DUMP
         tokenTripletDump_(produces()),
 #endif
+        useHitMask_(not iConfig.getParameter<edm::InputTag>("hitMask").label().empty()),
+        tokenHitMask_{useHitMask_ ? consumes(iConfig.getParameter<edm::InputTag>("hitMask"))
+                                  : device::EDGetToken<MapToHit>{}},
         maxNumberOfDoublets_(iConfig.getParameter<std::string>("maxNumberOfDoublets")),
         maxNumberOfTuples_(iConfig.getParameter<std::string>("maxNumberOfTuples")),
         minNumberOfDoublets_(iConfig.getParameter<uint32_t>("minNumberOfDoublets")),
@@ -891,6 +900,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             "topology, whose CA reads the pixel rechits and the vector hits side by side through the CAHitsView "
             "facade; ignored by every other topology.");
 
+    desc.add<edm::InputTag>("hitMask", edm::InputTag(""))
+        ->setComment("Hit mask with the rechits to be skipped, or empty for no mask");
+
     Algo::fillPSetDescription(desc);
     descriptions.addWithDefaultLabel(desc);
   }
@@ -918,6 +930,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return;  // produce emplaces the empty collection
     }
 
+    MapToHitConstView maskView;
+
+    if (useHitMask_) {
+      maskView = iEvent.get(tokenHitMask_).view();
+
+      if (maskView.metadata().size() != int(nHits))
+        throw cms::Exception("CAHitMaskMismatch")
+            << "CAHitNtupletAlpaka: the configured `hitMask` has " << maskView.metadata().size()
+            << " rows but the hit collection has " << nHits
+            << ". The mask must be the one built for this hit collection.";
+    }
+
     std::array<double, 1> nHitsV{static_cast<double>(nHits)};
     std::array<double, 1> emptyV;
 
@@ -935,7 +959,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // The whole CA build (hit prep, doublets, connect, ntuplets) + one async D2H of the
     // tuple-multiplicity offsets. No blocking wait anywhere: the framework's seam runs
     // produce only after this queue has drained.
-    pending_ = deviceAlgo_.beginTuplesAsync(hitsInput, geometry, bf, maxDoublets, maxTuples, iEvent.queue());
+    pending_ = deviceAlgo_.beginTuplesAsync(hitsInput, geometry, bf, maxDoublets, maxTuples, maskView, iEvent.queue());
   }
 
   template <typename TrackerTraits>

@@ -359,6 +359,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "Disable the triplet cleaner entirely.");  // FIXME this should be implemented as an automatic check (simple if) that disables if minHitsPerNtuplet > 3
       desc.add<bool>("doFastDuplicateRemover", true)->setComment("Disable the fastDuplicateRemover");
       desc.add<bool>("doEarlyDuplicateRemover", true)->setComment("Disable the earlyDuplicateRemover");
+      desc.add<std::string>("iterationName", std::string("promptHighPt"))->setComment("Name of the tracking iteration");
 
       // Inline per-triplet DNN gate (Phase2OTVectorHits only)
       desc.add<bool>("useTripletDNN", kVectorHits)
@@ -447,6 +448,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           .doTripletCleaner_ = cfg.getParameter<bool>("doTripletCleaner"),
           .doFastDuplicateRemover_ = cfg.getParameter<bool>("doFastDuplicateRemover"),
           .doEarlyDuplicateRemover_ = cfg.getParameter<bool>("doEarlyDuplicateRemover"),
+
+          // Iteration name
+          .iterationName_ = pixelTrack::iterationByName(cfg.getParameter<std::string>("iterationName")),
 
           // Inline triplet DNN gate (scores every accepted triplet)
           .useTripletDNN_ = cfg.getParameter<bool>("useTripletDNN"),
@@ -681,6 +685,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       float bfield,
       uint32_t nDoublets,
       uint32_t nTracks,
+      MapToHitConstView maskView,
       Queue& queue) const {
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
 
@@ -745,7 +750,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     kernels.prepareHits(trackingHits, hitModules, layers, queue);
 
-    const uint32_t nCellsCounted = kernels.buildDoublets(trackingHits, graph, layers, doubletCuts, offsetBPIX2, queue);
+    const uint32_t nCellsCounted = kernels.buildDoublets(trackingHits, graph, layers, doubletCuts, offsetBPIX2, maskView, queue);
 
     if (delay) {
       // Size the cell-derived buffers from the actual number of doublets. With countDoubletsFirst on

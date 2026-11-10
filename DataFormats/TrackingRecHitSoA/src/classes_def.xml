@@ -13,6 +13,9 @@
   <class name="SiPixelHitStatus"/>
   <class name="SiPixelHitStatusAndCharge"/>
 
+  <class name="reco::TrackingRecHitsMaskingLayout<128,false>"/>
+  <class name="PortableHostCollection<reco::TrackingRecHitsMaskingLayout<128,false> >"/>
+  <class name="edm::Wrapper<PortableHostCollection<reco::TrackingRecHitsMaskingLayout<128,false> > >"/>
   <class name="reco::VectorHitPortableCollectionHost"/>
   <class name="reco::VectorHitPortableCollectionHost::Layout"/>
   <class name="reco::VectorHitsLayout<128, false>"/>
