@@ -207,6 +207,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void prepareHits(const HitsMultiView& hh,
                      const ModulesMultiView& mm,
                      const ::reco::CALayersSoAConstView& ll,
+                     const MapToHitConstView& maskView,
                      Queue& queue);
 
     // Persistent overflow accumulator (8 uint32; see Kernel_overflowSentinel's layout comment),
@@ -237,7 +238,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                            const ::reco::CALayersSoAConstView& ll,
                            const ::reco::CADoubletCutsSoAConstView& doubletCuts,
                            uint32_t offsetBPIX2,
-                           const MapToHitConstView& maskView,
                            Queue& queue);
 
     // Allocate the cell-derived buffers (cell->cell, cell->track, triplet/track-cell

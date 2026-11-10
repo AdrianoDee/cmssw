@@ -32,6 +32,7 @@ from RecoTracker.PixelTrackFitting.PixelTracks_cff import pixelTracksHighPtAlpak
 from RecoTracker.PixelTrackFitting.PixelTracks_cff import pixelTracksHighPtMaskingSoA as _pixelTracksHighPtMaskingSoA
 from RecoTracker.PixelTrackFitting.PixelTracks_cff import pixelTracksLowPtAlpakaPhase2Extended as _pixelTracksLowPtAlpakaPhase2Extended
 from RecoTracker.PixelTrackFitting.PixelTracks_cff import pixelTracksSoA as _pixelTracksSoA
+from RecoTracker.PixelTrackFitting.PixelTracks_cff import pixelTracksAlpakaPostDNN as _pixelTracksAlpakaPostDNN
 from RecoTracker.PixelTrackFitting.pixelTrackProducerFromSoAAlpaka_cfi import pixelTrackProducerFromSoAAlpaka as _pixelTrackProducerFromSoAAlpaka
 from RecoTracker.TkSeedGenerator.SeedGeneratorFromProtoTracksEDProducer_cfi import SeedGeneratorFromProtoTracksEDProducer as _seedGeneratorFromProtoTracksEDProducer
 
@@ -119,11 +120,41 @@ _caSubIteration("HighPtQuads", _pixelTracksHighPtAlpaka.clone(
                     **_highPt.caTracksHighPtParameters
                 ))
 
+# only the high-pT quadruplets kept by a track classifier mask their hits: the hits of the fakes stay
+# available to the next sub-iterations. Model trained on these tracks (TTbar PU200, label: associated to
+# any TrackingParticle), threshold at 99% recall of the real tracks; the classifier preselects the tight
+# tracks and the mask keeps the highPurity ones among those it selects.
+initialStepCAHighPtQuadsSelector = _pixelTracksAlpakaPostDNN.clone(
+    pixelTrackSrc = "initialStepCAHighPtQuads",
+    maxNumberOfTracks = 400000,       # >= the high-pT tuple capacity (1.5*x - 1.9e5, 300k at ~327k hits): tracks beyond it are ignored
+    maxPreselectedTracks = 4 * 4992,  # tight high-pT tracks per event, truncated above
+    batchSize = 4992,
+    model = "RecoTracker/FinalTrackSelectors/data/PixelTrackTorchHighPuritySelector/pixel_track_classifier_initialStepCAHighPt_FP16.pt",
+    scoreThreshold = 0.245
+)
+initialStepCATask.add(initialStepCAHighPtQuadsSelector)
+initialStepCAHighPtQuadsMask.trackSoA = "initialStepCAHighPtQuadsSelector"
+initialStepCAHighPtQuadsMask.minQuality = "highPurity"
+
 _caSubIteration("LowPtQuads", _pixelTracksLowPtAlpakaPhase2Extended.clone(
                     **_lowPt.caTracksLowPtParameters
                 ),
                 previous = "HighPtQuads",
                 modifier = trackingGPUOfflineLowPtQuads)
+
+# only the low-pT quadruplets kept by a track classifier become seeds (the hits of all of them are still
+# masked for the next sub-iterations). Model trained on these tracks (TTbar PU200, label: associated to any
+# TrackingParticle), threshold at 99% recall of the real tracks.
+initialStepCALowPtQuadsSelector = initialStepCAHighPtQuadsSelector.clone(
+    pixelTrackSrc = "initialStepCALowPtQuads",
+    maxNumberOfTracks = 2000000,      # >= the low-pT tuple capacity (CATracksLowPtParameters_cff: 1.19M at 313k hits, 2M at ~370k; up to 1.03M tracks per event measured)
+    maxPreselectedTracks = 4 * 4992,  # tight low-pT tracks per event (8.6k on average, max 11.1k measured), truncated above
+    model = "RecoTracker/FinalTrackSelectors/data/PixelTrackTorchHighPuritySelector/pixel_track_classifier_initialStepCALowPt_FP16.pt",
+    scoreThreshold = 0.126
+)
+initialStepCATask.add(initialStepCALowPtQuadsSelector)
+trackingGPUOfflineLowPtQuads.toModify(initialStepCATracksSoA, lambda merger: merger.inputTracks.__setitem__(
+    [t.value() for t in merger.inputTracks].index("initialStepCALowPtQuads"), cms.InputTag("initialStepCALowPtQuadsSelector")))
 
 _caSubIteration("HighPtTriplets", _pixelTracksHighPtAlpaka.clone(
                     minHitsPerNtuplet = 3,

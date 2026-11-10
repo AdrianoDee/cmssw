@@ -1,7 +1,5 @@
-// C++ headers
-#ifdef DUMP_GPU_TK_TUPLES
-#include <mutex>
-#endif
+#include <algorithm>
+#include <utility>
 
 // Alpaka headers
 #include <alpaka/alpaka.hpp>
@@ -9,6 +7,7 @@
 // CMSSW headers
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/prefixScan.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
 // local headers
@@ -80,6 +79,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     tracks_d_ = reco::TracksSoACollection(queue, totCountersHost[0], totCountersHost[1]);
     duplicate_d_ = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, totCountersHost[0]);
     alpaka::memset(queue, *duplicate_d_, 0);
+    
+    // with no good tracks Kernel_fillGoodTracks does not run and would leave nTracks unset
+    if (totCountersHost[0] == 0) {
+      auto nTracks_d = cms::alpakatools::make_device_view(queue, tracks_d_->view().tracks().nTracks());
+      alpaka::memset(queue, nTracks_d, 0);
+    }
 
     if (totCountersHost[0] > 0) {
       constexpr auto threadsPrefixScan = 256u;

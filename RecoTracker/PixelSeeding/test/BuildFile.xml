@@ -85,3 +85,13 @@
   <use name="boost"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
 </bin>
+
+<!-- hit residuals of CAMaskSoAProducer vs the broken-line fit: host memory, serial backend only -->
+<bin file="alpaka/CAMaskingResiduals_t.cpp" name="CAMaskingResiduals_t">
+  <flags ALPAKA_BACKENDS="serial"/>
+  <use name="alpaka"/>
+  <use name="eigen"/>
+  <use name="DataFormats/TrackSoA"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/PixelTrackFitting"/>
+</bin>

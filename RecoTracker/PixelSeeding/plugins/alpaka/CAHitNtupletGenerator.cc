@@ -748,9 +748,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // per event.
     const bool countFirst = m_params.algoParams_.countDoubletsFirst_;
 
-    kernels.prepareHits(trackingHits, hitModules, layers, queue);
+    kernels.prepareHits(trackingHits, hitModules, layers, maskView, queue);
 
-    const uint32_t nCellsCounted = kernels.buildDoublets(trackingHits, graph, layers, doubletCuts, offsetBPIX2, maskView, queue);
+    const uint32_t nCellsCounted = kernels.buildDoublets(trackingHits, graph, layers, doubletCuts, offsetBPIX2, queue);
 
     if (delay) {
       // Size the cell-derived buffers from the actual number of doublets. With countDoubletsFirst on

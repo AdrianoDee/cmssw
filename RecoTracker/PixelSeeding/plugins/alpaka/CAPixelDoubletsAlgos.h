@@ -202,18 +202,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
                                                         ::reco::CADoubletCutsSoAConstView doubletCuts,
                                                         uint32_t const* __restrict__ offsets,
                                                         PhiBinner<TrackerTraits> const* phiBinner,
-                                                        HitToCell* outerHitHisto,
-                                                        MapToHitConstView maskView) {
+                                                        HitToCell* outerHitHisto) {
     const bool doClusterCut = doubletCuts.minInnerSizeB1() > 0 or doubletCuts.minInnerSizeB2() > 0;
     const bool doZSizeCut =
         doubletCuts.maxDSizeB1() > 0 or doubletCuts.maxDSize() > 0 or doubletCuts.maxDSizePred() > 0;
-    const bool doMasking = maskView.metadata().size() > 0;
 
     const uint32_t nPairs = cc.metadata().size();
     using PhiHisto = PhiBinner<TrackerTraits>;
     ALPAKA_ASSERT_ACC(offsets);
 
-    auto layerSize = [=](uint8_t li) { return offsets[li + 1] - offsets[li]; };
+    // Both the inner and the outer hits are taken from the phi binner, that holds only the hits not masked
+    // by the previous iterations (all the hits if there is no mask). The hits of layer li are the content of
+    // its histogram, i.e. of the bins [histOff(li), histOff(li + 1)).
+    auto layerSize = [=](uint8_t li) {
+      return uint32_t(phiBinner->begin(PhiHisto::histOff(li + 1)) - phiBinner->begin(PhiHisto::histOff(li)));
+    };
 
     // nPairs for the OT-extended CA is of order 100 (bounded by TrackerTraits::nPairs; the bound is
     // enforced by CAHitNtupletAlpaka::globalBeginRun, which rejects a geometry.pairGraph exceeding it).
@@ -263,11 +266,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
       ALPAKA_ASSERT_ACC(outer > inner);
 
       auto hoff = PhiHisto::histOff(outer);
-      auto i = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
-      i += offsets[inner];
-
-      if (doMasking and maskView[i].recHitMask() > 0)
-        continue;
+      // the inner hits are visited in phi-bin order, not in hit-index order
+      auto const iLocal = (0 == pairLayerId) ? j : j - innerLayerCumulativeSize[pairLayerId - 1];
+      auto const i = phiBinner->begin(PhiHisto::histOff(inner))[iLocal];
 
       ALPAKA_ASSERT_ACC(i >= offsets[inner]);
       ALPAKA_ASSERT_ACC(i < offsets[inner + 1]);
@@ -416,8 +417,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caPixelDoublets {
         for (uint32_t pIndex : cms::alpakatools::independent_group_elements_x(acc, maxpIndex)) {
           // FIXME implement alpaka::ldg and use it here? or is it const* __restrict__ enough?
           auto oi = p[pIndex];
-          if (doMasking and maskView[oi].recHitMask() > 0)
-            continue;
           ALPAKA_ASSERT_ACC(oi >= offsets[outer]);
           ALPAKA_ASSERT_ACC(oi < offsets[outer + 1]);
 #ifdef DOUBLETS_DEBUG

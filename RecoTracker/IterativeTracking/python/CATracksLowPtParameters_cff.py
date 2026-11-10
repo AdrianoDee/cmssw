@@ -95,18 +95,29 @@ layerPairs = [
     [ 29, 30,   2086, 0.200],
 ]
 
-# container sizes, from the occupancies measured vs the number of hits x
-# (TTbar PU200, 1000 events, 156k-317k hits; fillStatistics + CA_STATS):
-# linear fits with ~10% more slope, covering every event with a 5% margin
-# measured: nCells = 32.2*x - 1.47M (max 8.5M), nTracks = 6.83*x - 0.75M (max 1.43M),
-# cells per outer hit <= 29.1, triplets per cell <= 0.74, cell->track links per cell <= 0.55
+# theta cuts (per inner layer) tightened to the legacy lowPtQuadStep equivalent: the cut is on
+# ~caThetaCut/ptmin, legacy 0.0015/0.35 = 0.0043 vs 0.002-0.003/0.2 = 0.010-0.015 of the template,
+# so the template values are scaled by (0.0015/0.35) * 0.2/0.002 = 0.4286, keeping their 2:3 ratio
+caThetaCuts = [0.000857] * 4 + [0.001286] * 27
+
+# container sizes, from the occupancies measured vs the number of hits x (all hits, masked included)
+# with the mask built from the tracks kept by the highPt track selector (see CATracksIterations_cff)
+# (TTbar PU200, 700 events, 164k-313k hits; fillStatistics + CA_STATS, v7 default):
+# 2nd degree fits scaled by one factor to cover every event with a 5% margin
+# measured: nCells = 1.181e-4*x^2 + 11.63*x - 1.03M (mean 8.3M, max 14.1M, rms 0.19M, scaled x1.116),
+# nTracks = 2.98e-5*x^2 - 8.40*x + 0.72M (mean 0.41M, max 1.03M, rms 0.018M, scaled x1.181),
+# cells per outer hit <= 47.8, triplets per cell <= 0.43, cell->track links per cell <= 0.23.
+# A linear envelope overflowed the doublets on the lightest event (164k hits); the tuple parabola has its
+# minimum at 141k hits and overestimates below it. Above ~335k hits the cells leave the 512 MiB allocator bin
+# (the fits of the earlier versions, 32.2*x - 1.47M cells, held only with all the tight highPt tracks masked;
+# maxNumberOfDoublets above ~21-25M crashes the CA, reached at ~370k hits)
 containerSizes = dict(
-    maxNumberOfDoublets = "max(35*x - 1.42e6, 50000)",
-    maxNumberOfTuples = "max(7.5*x - 7.4e5, 50000)",
+    maxNumberOfDoublets = "max(1.318e-4*pow(x,2) + 12.97*x - 1.153e6, 100000)",
+    maxNumberOfTuples = "max(3.521e-5*pow(x,2) - 9.923*x + 8.51e5, 50000)",
     avgHitsPerTrack = 10.0,
-    avgCellsPerHit = 35.0,
-    avgCellsPerCell = 0.9,
-    avgTracksPerCell = 0.7
+    avgCellsPerHit = 55.0,
+    avgCellsPerCell = 0.5,
+    avgTracksPerCell = 0.3
 )
 
 caTracksLowPtParameters = dict(
@@ -117,7 +128,8 @@ caTracksLowPtParameters = dict(
     ),
     geometry = dict(
         phiCuts = [lp[2] for lp in layerPairs],
-        ptCuts  = [lp[3] for lp in layerPairs]
+        ptCuts  = [lp[3] for lp in layerPairs],
+        caThetaCuts = caThetaCuts
     ),
     **containerSizes
 )
