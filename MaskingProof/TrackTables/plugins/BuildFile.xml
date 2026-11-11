@@ -1,0 +1,24 @@
+<!-- private package (masking_proof): HLTPixelTrackSoATableProducer copied verbatim from offline_dev (selector
+     retraining dumps) Phase2CATrackFeaturesTableProducer and Phase2HitTruthTableProducer (in-kernel track-DNN and triplet-gate
+     training dumps for the Phase2 topologies) -->
+<use name="DataFormats/Common"/>
+<use name="DataFormats/DetId"/>
+<use name="DataFormats/NanoAOD"/>
+<use name="DataFormats/SiStripDetId"/>
+<use name="DataFormats/TrackerRecHit2D"/>
+<use name="DataFormats/SoATemplate"/>
+<use name="DataFormats/TrackSoA"/>
+<use name="DataFormats/TrackingRecHitSoA"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/MessageLogger"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/Utilities"/>
+<use name="Geometry/CommonTopologies"/>
+<use name="Geometry/Records"/>
+<use name="Geometry/TrackerGeometryBuilder"/>
+<use name="RecoTracker/PixelSeeding"/>
+<use name="SimDataFormats/TrackingAnalysis"/>
+<use name="SimTracker/TrackerHitAssociation"/>
+<library file="*.cc" name="MaskingProofTrackTablesPlugins">
+  <flags EDM_PLUGIN="1"/>
+</library>
