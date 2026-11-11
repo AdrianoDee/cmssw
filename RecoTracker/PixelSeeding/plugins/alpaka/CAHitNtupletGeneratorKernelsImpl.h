@@ -1411,7 +1411,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           tracks_view[it].quality() = Quality::strict;
 
           bool failChi2 = cuts.strictCut(tracks_view, nhits, it);
-          if constexpr (std::is_same_v<pixelTopology::Phase2OTVectorHits, TrackerTraits>) {
+          // The track classifier runs on every topology (useTrackDNN, off by default, needs a bank trained for the
+          // topology); only the vector-hit curvature consistency below is specific to Phase2OTVectorHits.
+          {
             const auto nHitsTot = hh.size();
 
             // ---- classify-embedded track classifier --------------------------------------
@@ -1422,7 +1424,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             // maxNtupletVectorHitChi2, whose verdict the score overwrites, so it would be wasted work. The
             // feature order is the one of caTrackFeatures::Features::asArray() (CATrackFeatures.h), which is the
             // FEATS list of the trainer, test/models/train_disp_nano.py.
-            bool dnnHandled = false;
+            [[maybe_unused]] bool dnnHandled = false;
             if (useTrackDNN) {
               // Single-source feature fill (RecoTracker/PixelSeeding/interface/CATrackFeatures.h),
               // producing values identical to the host-side CA-features nano table producer's. On a
@@ -1475,6 +1477,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               }
             }
 
+            if constexpr (std::is_same_v<pixelTopology::Phase2OTVectorHits, TrackerTraits>) {
             // Ntuplet-wide vector-hit-curvature consistency. A vector hit at transverse distance d0 from the beam line measures
             // kappa/2 + d0/r^2, so the per-vector-hit curvatures of one track are linear in 1/r^2: that line is fitted by
             // weighted least squares (errors from the precision-only bend column) and the reduced chi2 of its residuals
@@ -1555,6 +1558,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                      tracks_view[it].eta());
 #endif
             }
+            }  // if constexpr (Phase2OTVectorHits): vector-hit curvature consistency
           }
           if (failChi2) {
             continue;

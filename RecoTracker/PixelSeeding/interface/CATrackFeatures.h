@@ -161,7 +161,10 @@ namespace caTrackFeatures {
         Srz += double(rg) * zg;
         Szz += double(zg) * zg;
       }
-      // OT extras are never vector hits, so they contribute as a pixel hit does.
+      // OT extras are never vector hits, so they contribute as a pixel hit does. Hit views without vector hits
+      // (the pixel + OT rechit MultiView of the Phase2 topologies) have no vectorHit(): there every hit
+      // contributes as a pixel hit and the vector-hit features keep their defaults (0, kErr = -1).
+      if constexpr (requires(HitsView const &v) { v.vectorHit(int32_t(0)); }) {
       if (!otHit && isVectorHit(hh, h)) {
         ++nVectorHits;
         auto const vectorHit = hh.vectorHit(int32_t(h));
@@ -190,6 +193,7 @@ namespace caTrackFeatures {
           }
         }
       }
+      }  // if constexpr (the hit view has vector hits)
     }
 
     const float kErr = (sumW > 0.f) ? 1.f / std::sqrt(sumW) : -1.f;
