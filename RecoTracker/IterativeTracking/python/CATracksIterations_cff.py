@@ -46,7 +46,16 @@ def _checkLayerPairs(template, parameters):
         raise RuntimeError("the layerPairs of %s do not match the pairGraph of the CA template" % parameters.__name__)
 
 _checkLayerPairs(_pixelTracksHighPtAlpaka, _highPt)
-_checkLayerPairs(_pixelTracksLowPtAlpakaPhase2Extended, _lowPt)
+# #52171 retuned the defaults of the Phase2OT CA (pair order, per-pair windows, startingPairs, curvature,
+# cluster-size and sharing cuts), and the low-pT template is a clone of that cfi. With pinLowPtTemplate the
+# passes cloned from it keep the values they had before #52171 (CATracksLowPtTemplatePre52171_cff), so the
+# offline configuration does not change with the CA code; set it to False to use the new defaults.
+import RecoTracker.IterativeTracking.CATracksLowPtTemplatePre52171_cff as _lowPtPre52171
+pinLowPtTemplate = True
+_lowPtTemplate = (_pixelTracksLowPtAlpakaPhase2Extended.clone(geometry = dict(_lowPtPre52171.geometry), **_lowPtPre52171.top)
+                  if pinLowPtTemplate else _pixelTracksLowPtAlpakaPhase2Extended)
+
+_checkLayerPairs(_lowPtTemplate, _lowPt)
 
 # the legacy pixel clusters and rechits used by the iterative tracking are
 # converted from the Alpaka SoA, so that the hits of the CA seeds match the ones
@@ -136,7 +145,7 @@ initialStepCATask.add(initialStepCAHighPtQuadsSelector)
 initialStepCAHighPtQuadsMask.trackSoA = "initialStepCAHighPtQuadsSelector"
 initialStepCAHighPtQuadsMask.minQuality = "highPurity"
 
-_caSubIteration("LowPtQuads", _pixelTracksLowPtAlpakaPhase2Extended.clone(
+_caSubIteration("LowPtQuads", _lowPtTemplate.clone(
                     **_lowPt.caTracksLowPtParameters
                 ),
                 previous = "HighPtQuads",
@@ -164,7 +173,7 @@ _caSubIteration("HighPtTriplets", _pixelTracksHighPtAlpaka.clone(
                 previous = "LowPtQuads",
                 modifier = trackingGPUOfflineTriplets)
 
-_caSubIteration("LowPtTriplets", _pixelTracksLowPtAlpakaPhase2Extended.clone(
+_caSubIteration("LowPtTriplets", _lowPtTemplate.clone(
                     minHitsPerNtuplet = 3,
                     iterationName = "tripletsLowPt",
                     **_lowPt.caTracksLowPtParameters
@@ -175,10 +184,10 @@ _caSubIteration("LowPtTriplets", _pixelTracksLowPtAlpakaPhase2Extended.clone(
 # starting point: transverse compatibility with the beamspot opened to the
 # originRadius of the legacy detachedQuadStep region (0.9 cm), and the same for
 # the tip cut of the tight quality (required by the merger and by the converter)
-_caSubIteration("DetachedQuads", _pixelTracksLowPtAlpakaPhase2Extended.clone(
+_caSubIteration("DetachedQuads", _lowPtTemplate.clone(
                     iterationName = "detachedStep",
                     trackQualityCuts = dict(maxTip = 1.0),
-                    geometry = dict(caDCACuts = [1.0] * len(_pixelTracksLowPtAlpakaPhase2Extended.geometry.caDCACuts))
+                    geometry = dict(caDCACuts = [1.0] * len(_lowPtTemplate.geometry.caDCACuts))
                 ),
                 previous = "LowPtTriplets",
                 modifier = trackingGPUOfflineDetachedQuads)
