@@ -56,6 +56,7 @@ namespace brokenline {
     auto pt2 = std::min(20., bField * radius);
     pt2 *= pt2;
     constexpr double inv_X0 = 0.06 / 16.;  //!< inverse of radiation length of the material in cm
+    //constexpr double inv_X0 = 0.104 / 16.;  //!< inverse of radiation length of the material in cm
     //if(Layer==1) XXI_0=0.06/16.;
     // else XXI_0=0.06/16.;
     //XX_0*=1;

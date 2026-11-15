@@ -1,6 +1,6 @@
 // #define BROKENLINE_DEBUG
 // #define BL_DUMP_HITS
-// #define GPU_DEBUG
+#define GPU_DEBUG
 #include <cstdint>
 
 #include <alpaka/alpaka.hpp>
@@ -48,6 +48,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       ALPAKA_ASSERT_ACC(totTK <= int(tupleMultiplicity->size()));
       ALPAKA_ASSERT_ACC(totTK >= 0);
 
+      //using MBMapHost = PortableHostCollection<MBMap>;
+      //using MBMapDevice = PortableCollection<MBMap>;
 #ifdef BROKENLINE_DEBUG
       if (cms::alpakatools::once_per_grid(acc)) {
         printf("%d total Ntuple\n", tupleMultiplicity->size());
@@ -190,7 +192,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   typename caStructures::tindex_type const *__restrict__ ptkids,
                                   double *__restrict__ phits,
                                   float *__restrict__ phits_ge,
-                                  double *__restrict__ pfast_fit) const {
+                                  double *__restrict__ pfast_fit, 
+                                  const brokenline::MBMapView& mbMap) const {
       ALPAKA_ASSERT_ACC(results_view.pt().data());
       ALPAKA_ASSERT_ACC(results_view.eta().data());
       ALPAKA_ASSERT_ACC(results_view.chi2().data());
@@ -217,7 +220,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         brokenline::karimaki_circle_fit circle;
         riemannFit::LineFit line;
 
-        brokenline::prepareBrokenLineData(acc, hits, fast_fit, bField, data);
+        //printf(typeid(acc).name(), typeid(hits).name());
+        auto InvX0 = brokenline::MBCalc(acc, hits, mbMap);
+        brokenline::prepareBrokenLineData(acc, hits, fast_fit, bField, data, InvX0);
         brokenline::lineFit(acc, hits_ge, fast_fit, bField, data, line);
         brokenline::circleFit(acc, hits, hits_ge, fast_fit, bField, data, circle);
 
@@ -255,7 +260,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                         const ::reco::CAModulesConstView &cm,
                                                         uint32_t hitsInFit,
                                                         uint32_t maxNumberOfTuples,
-                                                        Queue &queue) {
+                                                        Queue &queue, 
+                                                        const brokenline::MBMapView& mbMap) {
     ALPAKA_ASSERT_ACC(tuples_);
 
 #ifdef GPU_DEBUG
@@ -308,7 +314,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                           tkidDevice.data(),
                           hitsDevice.data(),
                           hits_geDevice.data(),
-                          fast_fit_resultsDevice.data());
+                          fast_fit_resultsDevice.data(), 
+                          mbMap);
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
       std::cout << "Kernel_BLFit(3) -> done! " << std::endl;
@@ -325,7 +332,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                        &fast_fit_resultsDevice,
                                                                        &offset,
                                                                        &queue,
-                                                                       &workDivQuadsPenta](auto i) {
+                                                                       &workDivQuadsPenta,
+                                                                       &mbMap](auto i) {
           alpaka::exec<Acc1D>(queue,
                               workDivQuadsPenta,
                               Kernel_BLFastFit<4>{},
@@ -350,7 +358,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               tkidDevice.data(),
                               hitsDevice.data(),
                               hits_geDevice.data(),
-                              fast_fit_resultsDevice.data());
+                              fast_fit_resultsDevice.data(), 
+                              mbMap);
         });
       } else {
         riemannFit::rolling_fits<4, TrackerTraits::maxHitsOnTrackForFullFit, 1>([this,
@@ -362,7 +371,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                                  &fast_fit_resultsDevice,
                                                                                  &offset,
                                                                                  &queue,
-                                                                                 &workDivQuadsPenta](auto i) {
+                                                                                 &workDivQuadsPenta,
+                                                                                 &mbMap](auto i) {
           alpaka::exec<Acc1D>(queue,
                               workDivQuadsPenta,
                               Kernel_BLFastFit<i>{},
@@ -387,7 +397,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               tkidDevice.data(),
                               hitsDevice.data(),
                               hits_geDevice.data(),
-                              fast_fit_resultsDevice.data());
+                              fast_fit_resultsDevice.data(), 
+                              mbMap);
 #ifdef GPU_DEBUG
           alpaka::wait(queue);
           std::cout << "Kernel_BLFastFit(" << i << ") and Kernel_BLFit(" << i << ") -> done! " << std::endl;
@@ -421,10 +432,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             tkidDevice.data(),
                             hitsDevice.data(),
                             hits_geDevice.data(),
-                            fast_fit_resultsDevice.data());
+                            fast_fit_resultsDevice.data(), 
+                            mbMap);
       }
 
     }  // loop on concurrent fits
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+

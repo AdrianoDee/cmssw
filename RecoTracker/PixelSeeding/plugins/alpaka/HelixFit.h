@@ -11,6 +11,7 @@
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
+#include "RecoTracker/PixelTrackFitting/interface/alpaka/BrokenLine.h"
 
 #include "CAStructures.h"
 
@@ -74,7 +75,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                  const ::reco::CAModulesConstView &fr,
                                  uint32_t nhits,
                                  uint32_t maxNumberOfTuples,
-                                 Queue &queue);
+                                 Queue &queue, 
+                                 const brokenline::MBMapView& mbMap);
 
     void allocate(TupleMultiplicity const *tupleMultiplicity,
                   OutputSoAView &helix_fit_results,

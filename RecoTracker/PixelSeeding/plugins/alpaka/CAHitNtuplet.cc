@@ -38,6 +38,8 @@
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "RecoTracker/PixelSeeding/interface/CAGeometrySoA.h"
 #include "DataFormats/SiStripDetId/interface/StripSubdetector.h"
+#include "RecoTracker/PixelTrackFitting/interface/MBMap.h"
+#include "RecoTracker/PixelTrackFitting/interface/alpaka/BrokenLine.h"
 
 // #define GPU_DEBUG
 
@@ -358,6 +360,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const ::reco::FormulaEvaluator maxNumberOfDoublets_;
     const ::reco::FormulaEvaluator maxNumberOfTuples_;
 
+    MBMapHost mbMapHost_;
     Algo deviceAlgo_;
 
     bool usePhase2_ = false;
@@ -372,6 +375,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         tokenTrack_(produces()),
         maxNumberOfDoublets_(iConfig.getParameter<std::string>("maxNumberOfDoublets")),
         maxNumberOfTuples_(iConfig.getParameter<std::string>("maxNumberOfTuples")),
+        mbMapHost_(loadMBMap("RecoTracker/PixelTrackFitting/data/MBMap.dat")),
         deviceAlgo_(iConfig) {
     auto trackerRecHitsSoAInputTag = iConfig.getParameter<edm::InputTag>("trackerRecHitsSoA");
     if (!trackerRecHitsSoAInputTag.label().empty()) {
@@ -435,11 +439,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       uint32_t const maxTuples = maxNumberOfTuples_.evaluate(nHitsV, emptyV);
       uint32_t const maxDoublets = maxNumberOfDoublets_.evaluate(nHitsV, emptyV);
+      auto& queue = iEvent.queue();
 
-      iEvent.emplace(
-          tokenTrack_,
-          deviceAlgo_.makeTuplesAsync(hitsCollections, geometry, bf, maxDoublets, maxTuples, iEvent.queue()));
+      auto const& mapHost = mbMapHost_;
+      auto hostBuf = cms::alpakatools::make_host_buffer<float[]>(mapHost.values.size());
+      std::copy(mapHost.values.begin(), mapHost.values.end(), hostBuf.data());
+      auto devBuf = cms::alpakatools::make_device_buffer<float[]>(queue, mapHost.values.size());
+      alpaka::memcpy(queue, devBuf, hostBuf);
 
+      brokenline::MBMapView mbMap{devBuf.data(), mapHost.iRMin, mapHost.iZMin, mapHost.nR, mapHost.nZ, mapHost.cellSize};      
+      iEvent.emplace(tokenTrack_,
+                     deviceAlgo_.makeTuplesAsync(hitsCollections, geometry, bf, maxDoublets, maxTuples, queue, mbMap));
+      alpaka::wait(queue);
     } else {
       edm::LogWarning("CAHitNtupletAlpaka") << "No hit on BPix1 (" << offsetBPIX2
                                             << ") and all the starting pairs has BPix1 as inner layer.\nIt's useless "
@@ -449,6 +460,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto ntracks_d = cms::alpakatools::make_device_view(queue, tracks.view().tracks().nTracks());
       alpaka::memset(queue, ntracks_d, 0);
       iEvent.emplace(tokenTrack_, std::move(tracks));
+      alpaka::wait(queue);
     }
   }
 

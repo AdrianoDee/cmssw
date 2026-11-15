@@ -1,6 +1,8 @@
 #ifndef RecoTracker_PixelTrackFitting_interface_alpaka_BrokenLine_h
 #define RecoTracker_PixelTrackFitting_interface_alpaka_BrokenLine_h
 
+#include <vector>
+#include <algorithm>
 #include <alpaka/alpaka.hpp>
 
 #include <Eigen/Core>
@@ -25,6 +27,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
   */
   using karimaki_circle_fit = riemannFit::CircleFit;
 
+  //!< one value per segment between consecutive hits: invX0(k) is for the segment hit k -> hit k+1
+  template <int n>
+    using InvX0Vector = Eigen::Matrix<double, n - 1, 1>;
+
   /*!
     \brief data needed for the Broken Line fit procedure.
   */
@@ -37,6 +43,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     riemannFit::VectorNd<n> sTotal;       //!< total distance traveled (three-dimensional)
     riemannFit::VectorNd<n> zInSZplane;   //!< orthogonal coordinate to the pre-fitted line in the sz plane
     riemannFit::VectorNd<n> varBeta;      //!< kink angles in the SZ plane
+    InvX0Vector<n> invX0;                 //!< inverse radiation length [1/cm] of the material between hit k and k+1
   };
 
   /*!
@@ -60,11 +67,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
   */
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE double multScatt(
-      const TAcc& acc, const double& length, const double bField, const double radius, int layer, double slope) {
+      const TAcc& acc, const double& length, const double bField, const double radius, int layer, double slope, const double invX0) {
     // limit R to 20GeV...
     auto pt2 = alpaka::math::min(acc, 20., bField * radius);
     pt2 *= pt2;
-    constexpr double inv_X0 = 0.06 / 16.;  //!< inverse of radiation length of the material in cm
+    constexpr double inv_X0 = 0;  //!< inverse of radiation length of the material in cm
     //if(Layer==1) XXI_0=0.06/16.;
     // else XXI_0=0.06/16.;
     //XX_0*=1;
@@ -75,6 +82,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     return fact / (pt2 * (1. + riemannFit::sqr(slope))) * (alpaka::math::abs(acc, length) * inv_X0) *
            riemannFit::sqr(1. + 0.038 * log(alpaka::math::abs(acc, length) * inv_X0));
   }
+  
 
   /*!
     \brief Computes the 2D rotation matrix that transforms the line y=slope*x into the line y=0.
@@ -157,10 +165,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
   */
   template <alpaka::concepts::Acc TAcc, typename M3xN, typename V4, int n>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void __attribute__((always_inline)) prepareBrokenLineData(
-      const TAcc& acc, const M3xN& hits, const V4& fast_fit, const double bField, PreparedBrokenLineData<n>& results) {
+      const TAcc& acc, const M3xN& hits, const V4& fast_fit, const double bField, 
+      PreparedBrokenLineData<n>& results, const InvX0Vector<n>& invX0) {
     riemannFit::Vector2d dVec;
     riemannFit::Vector2d eVec;
-
+    results.invX0 = invX0;  
     int mId = 1;
 
     if constexpr (n > 3) {
@@ -217,8 +226,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     results.varBeta(0) = results.varBeta(n - 1) = 0;
     for (u_int i = 1; i < n - 1; i++) {
       results.varBeta(i) =
-          multScatt(acc, results.sTotal(i + 1) - results.sTotal(i), bField, fast_fit(2), i + 2, slope) +
-          multScatt(acc, results.sTotal(i) - results.sTotal(i - 1), bField, fast_fit(2), i + 1, slope);
+        multScatt(acc, results.sTotal(i + 1) - results.sTotal(i), bField, fast_fit(2), i + 2, slope, invX0(i)) +
+        multScatt(acc, results.sTotal(i) - results.sTotal(i - 1), bField, fast_fit(2), i + 1, slope, invX0(i - 1));
     }
   }
 
@@ -352,6 +361,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     const auto& sTotal = data.sTotal;
     auto& zInSZplane = data.zInSZplane;
     auto& varBeta = data.varBeta;
+    const auto& invX0 = data.invX0;
     const double slope = -circle_results.qCharge / fast_fit(3);
     varBeta *= 1. + riemannFit::sqr(slope);  // the kink angles are projected!
 
@@ -444,7 +454,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
 
     translateKarimaki(acc, circle_results, 0.5 * eMinusd(0), 0.5 * eMinusd(1), jacobian);
     circle_results.cov(0, 0) +=
-        (1 + riemannFit::sqr(slope)) * multScatt(acc, sTotal(1) - sTotal(0), bField, fast_fit(2), 2, slope);
+        (1 + riemannFit::sqr(slope)) * multScatt(acc, sTotal(1) - sTotal(0), bField, fast_fit(2), 2, slope, invX0(0));
 
     //...And translate back to the original system
 
@@ -498,6 +508,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     const auto& sTotal = data.sTotal;
     const auto& zInSZplane = data.zInSZplane;
     const auto& varBeta = data.varBeta;
+    const auto& invX0 = data.invX0;
 
     const double slope = -data.qCharge / fast_fit(3);
 #ifdef BL_DEEPDEBUG
@@ -543,9 +554,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     line_results.par << (uVec(1) - uVec(0)) / (sTotal(1) - sTotal(0)), uVec(0);
     auto idiff = 1. / (sTotal(1) - sTotal(0));
     line_results.cov << (iMat(0, 0) - 2 * iMat(0, 1) + iMat(1, 1)) * riemannFit::sqr(idiff) +
-                            multScatt(acc, sTotal(1) - sTotal(0), bField, fast_fit(2), 2, slope),
-        (iMat(0, 1) - iMat(0, 0)) * idiff, (iMat(0, 1) - iMat(0, 0)) * idiff, iMat(0, 0);
-
+                        multScatt(acc, sTotal(1) - sTotal(0), bField, fast_fit(2), 2, slope, invX0(0)),
+    (iMat(0, 1) - iMat(0, 0)) * idiff, (iMat(0, 1) - iMat(0, 0)) * idiff, iMat(0, 0);
     // translate to the original SZ system
     riemannFit::Matrix2d jacobian;
     jacobian(0, 0) = 1.;
@@ -633,7 +643,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
       prepareBrokenLineData(acc, *hits, fast_fit, bField, data);
       lineFit(acc, *hits_ge, fast_fit, bField, data, line);
       circleFit(acc, *hits, *hits_ge, fast_fit, bField, data, circle);
-
       // the circle fit gives k, but here we want p_t, so let's change the parameter and the covariance matrix
       jacobian << 1., 0, 0, 0, 1., 0, 0, 0,
           -alpaka::math::abs(acc, circle.par(2)) * bField / (riemannFit::sqr(circle.par(2)) * circle.par(2));
@@ -650,6 +659,114 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     }
   };
 
-}  // namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename TAcc, typename M3xN>
+ALPAKA_FN_ACC ALPAKA_FN_INLINE riemannFit::Matrix3xNd<M3xN::ColsAtCompileTime> CylHits(const TAcc& acc, const M3xN& hits) {
+  constexpr uint32_t n = M3xN::ColsAtCompileTime;
+
+  riemannFit::Matrix3xNd<n> cylHits;
+  for (uint32_t i = 0; i < n; i++) {
+      const auto x = hits(0, i);
+      const auto y = hits(1, i);
+      cylHits(0, i) = alpaka::math::sqrt(acc, riemannFit::sqr(x) + riemannFit::sqr(y));  // r
+      cylHits(1, i) = alpaka::math::atan2(acc, y, x);                                    // phi
+      cylHits(2, i) = hits(2, i);                                                        // z
+  }
+  return cylHits;
+}
+
+//!< view of the MB map: flat array, r-major, i.e. values[(iR - iRMin) * nZ + (iZ - iZMin)]
+struct MBMapView {
+  const float* values;
+  int iRMin;  //!< index of the first cell in r (cell bottom-left corner / cellSize)
+  int iZMin;  //!< index of the first cell in z
+  int nR;
+  int nZ;
+  float cellSize;
+};
+
+template <typename TAcc>
+ALPAKA_FN_ACC ALPAKA_FN_INLINE double MBMapValue(const TAcc& acc, const MBMapView& map, int iR, int iZ) {
+  const int r = iR - map.iRMin;
+  const int z = iZ - map.iZMin;
+  if (r < 0 || z < 0 || r >= map.nR || z >= map.nZ)
+    return 0.;  // outside the map
+  return map.values[r * map.nZ + z];
+}
+
+template <typename TAcc, typename M3xN>
+ALPAKA_FN_ACC ALPAKA_FN_INLINE InvX0Vector<M3xN::ColsAtCompileTime> MBCalc(const TAcc& acc, const M3xN& hits, const MBMapView& mbMap) {
+  constexpr uint32_t n = M3xN::ColsAtCompileTime;
+
+  // (r, phi, z) of the hits
+  const riemannFit::Matrix3xNd<n> cylHits = CylHits(acc, hits);
+  constexpr double defaultInvX0 = 0.06;  // the old constant, used as fallback
+
+  InvX0Vector<n> invX0;
+  invX0.setConstant(defaultInvX0);  // every entry is valid even if a segment is skipped below
+
+  const double cellSize = mbMap.cellSize;    // side of the square cells of the map in the r-z plane
+  //constexpr double mapValue = 0.06;  // value A of the map, for now the same in every cell
+
+    for (uint32_t i = 0; i < n - 1; i++) {
+      const auto r1 = cylHits(0, i);
+      const auto z1 = cylHits(2, i);
+      const auto r2 = cylHits(0, i + 1);
+      const auto z2 = cylHits(2, i + 1);
+
+      const auto dz = z2 - z1;
+      if (alpaka::math::abs(acc, dz) < 1.e-9) {
+        printf("Hits %d-%d: same z, line parallel to the r axis (slope and intercept undefined)\n", i, i + 1);
+        continue;
+      }
+
+      const auto slope = (r2 - r1) / dz;       // dr/dz
+      const auto intercept = r1 - slope * z1;  // r at z = 0
+
+      // length of the segment inside each cell of the map, multiplied by the value of the map in that cell
+      const double zMin = alpaka::math::min(acc, z1, z2);
+      const double zMax = alpaka::math::max(acc, z1, z2);
+      const double lengthPerDz = alpaka::math::sqrt(acc, 1. + riemannFit::sqr(slope));  // dl/dz along the segment
+
+      double mbValue = 0.;
+
+      const int iZFirst = static_cast<int>(alpaka::math::floor(acc, zMin / cellSize));
+      const int iZLast = static_cast<int>(alpaka::math::floor(acc, zMax / cellSize));
+      for (int iZ = iZFirst; iZ <= iZLast; iZ++) {
+        // part of the segment inside the strip iZ*cellSize <= z < (iZ+1)*cellSize
+        const double zA = alpaka::math::max(acc, zMin, iZ * cellSize);
+        const double zB = alpaka::math::min(acc, zMax, (iZ + 1) * cellSize);
+        const double rA = slope * zA + intercept;
+        const double rB = slope * zB + intercept;
+
+        const int iRFirst = static_cast<int>(alpaka::math::floor(acc, alpaka::math::min(acc, rA, rB) / cellSize));
+        const int iRLast = static_cast<int>(alpaka::math::floor(acc, alpaka::math::max(acc, rA, rB) / cellSize));
+        for (int iR = iRFirst; iR <= iRLast; iR++) {
+          // z range of the strip in which the segment falls inside the cell (iZ, iR)
+          double zStart = zA;
+          double zEnd = zB;
+          if (slope != 0.) {  // if slope == 0 the whole strip is in a single cell
+            const double zR0 = (iR * cellSize - intercept) / slope;
+            const double zR1 = ((iR + 1) * cellSize - intercept) / slope;
+            zStart = alpaka::math::max(acc, zA, alpaka::math::min(acc, zR0, zR1));
+            zEnd = alpaka::math::min(acc, zB, alpaka::math::max(acc, zR0, zR1));
+          }
+          if (zEnd > zStart) {
+            mbValue += MBMapValue(acc, mbMap, iR, iZ) * (zEnd - zStart) * lengthPerDz;  // value * length in the cell
+          }
+        }
+      }
+      const double segmentLength = alpaka::math::abs(acc, dz) * lengthPerDz;
+      const double meanInvX0 = mbValue / segmentLength;
+      if (meanInvX0 > 0.)  // also false for NaN
+        invX0(i) = meanInvX0;
+      printf("Hits %u-%u: MB value: %e, inv_X0: %e\n", i, i + 1, mbValue, invX0(i));
+    }
+    return invX0;
+  }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline
 #endif  // RecoTracker_PixelTrackFitting_interface_alpaka_BrokenLine_h

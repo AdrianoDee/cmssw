@@ -20,6 +20,7 @@
 #include "CACell.h"
 #include "CAHitNtupletGeneratorKernels.h"
 #include "HelixFit.h"
+#include "RecoTracker/PixelTrackFitting/interface/alpaka/BrokenLine.h"
 
 namespace edm {
   class ParameterSetDescription;
@@ -64,7 +65,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                 float bfield,
                                 uint32_t maxDoublets,
                                 uint32_t maxTuples,
-                                Queue& queue) const;
+                                Queue& queue, 
+                                const brokenline::MBMapView& mbMap) const;
 
   private:
     Params m_params;

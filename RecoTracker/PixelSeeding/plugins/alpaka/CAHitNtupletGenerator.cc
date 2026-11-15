@@ -422,7 +422,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       float bfield,
       uint32_t nDoublets,
       uint32_t nTracks,
-      Queue& queue) const {
+      Queue& queue, 
+      const brokenline::MBMapView& mbMap) const {
     using HelixFit = HelixFit<TrackerTraits>;
     using GPUKernels = CAHitNtupletGeneratorKernels<TrackerTraits>;
     using TrackHitSoA = ::reco::TrackHitSoA;
@@ -481,7 +482,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           trackingHits, modules, trackingHits.size(), TrackerTraits::maxNumberOfQuadruplets, queue);
     } else {
       fitter.launchBrokenLineKernels(
-          trackingHits, modules, trackingHits.size(), TrackerTraits::maxNumberOfQuadruplets, queue);
+          trackingHits, modules, trackingHits.size(), TrackerTraits::maxNumberOfQuadruplets, queue, mbMap);
     }
     kernels.classifyTuples(trackingHits, tracks, queue);
 #ifdef GPU_DEBUG
