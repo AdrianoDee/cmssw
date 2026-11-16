@@ -1,6 +1,6 @@
 // #define BROKENLINE_DEBUG
 // #define BL_DUMP_HITS
-#define GPU_DEBUG
+// #define GPU_DEBUG
 #include <cstdint>
 
 #include <alpaka/alpaka.hpp>

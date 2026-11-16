@@ -71,7 +71,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     // limit R to 20GeV...
     auto pt2 = alpaka::math::min(acc, 20., bField * radius);
     pt2 *= pt2;
-    constexpr double inv_X0 = 0;  //!< inverse of radiation length of the material in cm
+//    constexpr double inv_X0 = 0;  //!< inverse of radiation length of the material in cm
     //if(Layer==1) XXI_0=0.06/16.;
     // else XXI_0=0.06/16.;
     //XX_0*=1;
@@ -79,8 +79,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     //! number between 1/3 (uniform material) and 1 (thin scatterer) to be manually tuned
     constexpr double geometry_factor = 0.7;
     constexpr double fact = geometry_factor * riemannFit::sqr(13.6 / 1000.);
-    return fact / (pt2 * (1. + riemannFit::sqr(slope))) * (alpaka::math::abs(acc, length) * inv_X0) *
-           riemannFit::sqr(1. + 0.038 * log(alpaka::math::abs(acc, length) * inv_X0));
+    return fact / (pt2 * (1. + riemannFit::sqr(slope))) * (alpaka::math::abs(acc, length) * invX0) *
+           riemannFit::sqr(1. + 0.038 * log(alpaka::math::abs(acc, length) * invX0));
   }
   
 
@@ -761,7 +761,7 @@ ALPAKA_FN_ACC ALPAKA_FN_INLINE InvX0Vector<M3xN::ColsAtCompileTime> MBCalc(const
       const double meanInvX0 = mbValue / segmentLength;
       if (meanInvX0 > 0.)  // also false for NaN
         invX0(i) = meanInvX0;
-      printf("Hits %u-%u: MB value: %e, inv_X0: %e\n", i, i + 1, mbValue, invX0(i));
+      //printf("Hits %u-%u: MB value: %e, inv_X0: %e\n", i, i + 1, mbValue, invX0(i));
     }
     return invX0;
   }
