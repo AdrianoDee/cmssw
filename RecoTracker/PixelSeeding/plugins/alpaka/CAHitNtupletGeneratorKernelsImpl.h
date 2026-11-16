@@ -2989,13 +2989,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // its bit-exact output) independent of the capacity value.
     //
     // Grow blockSize (in multiples of 16, keeping blockSize*stride <= 1024) until the grid
-    // fits CUDA's 65535-block limit, whatever maxDoublets is.
+    // fits CUDA's 65535-block limit on gridDim.y (the cells run along y).
     auto numberOfBlocks = cms::alpakatools::divide_up_by(launchCells, blockSize);
     while (numberOfBlocks >= 65536 && blockSize * stride < 1024) {
       blockSize += 16;
       numberOfBlocks = cms::alpakatools::divide_up_by(launchCells, blockSize);
     }
-    assert(numberOfBlocks < 65536);
+    // Beyond 65535 * 256 = 16,776,960 cells even the largest block does not fit: cap the grid and
+    // let the outer-cell loop of Kernel_connect (uniform_elements_y, a grid-stride loop) cover the
+    // remaining cells, as the early duplicate remover below already does. Every capacity that fits
+    // keeps the exact launch above (one thread per index, serial visit order unchanged); only the
+    // capped case revisits indices through the stride.
+    numberOfBlocks = std::min<uint32_t>(numberOfBlocks, 65535u);
     assert(blockSize > 0 && 0 == blockSize % 16);
     const Vec2D blks{numberOfBlocks, 1u};
     const Vec2D thrs{blockSize, stride};
