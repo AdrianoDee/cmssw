@@ -1313,8 +1313,12 @@ namespace pixelTopology {
   };
 
   struct Phase2OT : public Phase2 {
-    static constexpr int nPairs = phase2PixelTopology::nPairsTot;
-    static constexpr int nPairsForQuadruplets = nPairs;
+    // nPairs is the CAPACITY of the CA graph (it bounds the configured pairGraph and sizes the doublet kernel's
+    // shared memory); the default graph and per-pair tables keep the nPairsTot entries of phase2PixelTopology.
+    // The headroom lets a configuration add layer pairs (e.g. B3-O2, B4-O2, O1-O3) without changing the defaults.
+    static constexpr int nPairsExtra = 8;
+    static constexpr int nPairs = phase2PixelTopology::nPairsTot + nPairsExtra;
+    static constexpr int nPairsForQuadruplets = phase2PixelTopology::nPairsTot;
     static constexpr uint32_t numberOfLayers = phase2PixelTopology::nLayersTot;    // pixel layers  + OT barrel layers
     static constexpr uint16_t numberOfModules = phase2PixelTopology::nModulesTot;  // pixel modules + OT barrel modules
 
