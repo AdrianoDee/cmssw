@@ -79,6 +79,9 @@ private:
                                                           "nBarrel"};
     constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
     std::vector<std::vector<float>> cols(caTrackFeatures::kNFeat, std::vector<float>(nTracks, kNaN));
+    // the 4 hit-geometry extras of the forest selector (PixelTrackFeaturesSoA cols 28-31), filled as
+    // FeaturesExtractorKernel does: rzChi2/meanVectorHitKappa always from extras, leverArm/rMax 0 on a failed fill
+    std::vector<float> rzChi2(nTracks), meanVectorHitKappa(nTracks), leverArm(nTracks), rMax(nTracks);
     std::vector<float> phi(nTracks), pt(nTracks), eta(nTracks);
     std::vector<int> quality(nTracks);
     std::vector<uint8_t> ok(nTracks, 0);
@@ -91,13 +94,18 @@ private:
       for (uint32_t j = begin; j < end; ++j)
         ids.push_back(trackHits[j].id());
       caTrackFeatures::Features feat;
+      caTrackFeatures::Extras extras;
       const bool good = caTrackFeatures::fill(
-          ids.begin(), ids.end(), hh, nHitsTot, float(tracks[i].nLayers()), tracks[i].chi2(), feat, nullptr);
+          ids.begin(), ids.end(), hh, nHitsTot, float(tracks[i].nLayers()), tracks[i].chi2(), feat, &extras);
       if (good) {
         const auto a = feat.asArray();
         for (int f = 0; f < caTrackFeatures::kNFeat; ++f)
           cols[f][i] = a[f];
       }
+      rzChi2[i] = extras.rzChi2;
+      meanVectorHitKappa[i] = extras.meanVectorHitKappa;
+      leverArm[i] = good ? extras.leverArm : 0.f;
+      rMax[i] = good ? extras.rMax : 0.f;
       ok[i] = good ? 1 : 0;
       phi[i] = tracks[i].state()(0);
       pt[i] = tracks[i].pt();
@@ -109,6 +117,10 @@ private:
     table->setDoc("CA track classifier features (caTrackFeatures::fill, pixel + OT rechit index space)");
     for (int f = 0; f < caTrackFeatures::kNFeat; ++f)
       table->addColumn<float>(kNames[f], cols[f], "CA track classifier feature");
+    table->addColumn<float>("rzChi2", rzChi2, "r-z linearity chi2 (-1 = undefined)");
+    table->addColumn<float>("meanVectorHitKappa", meanVectorHitKappa, "mean vector-hit curvature (0 without vector hits)");
+    table->addColumn<float>("leverArm", leverArm, "rMax - r0");
+    table->addColumn<float>("rMax", rMax, "radial extent of the hit list");
     table->addColumn<float>("phi", phi, "track phi (state(0)), join key vs the truth table");
     table->addColumn<float>("pt", pt, "track pt");
     table->addColumn<float>("eta", eta, "track eta");
