@@ -21,6 +21,9 @@
 #include <fstream>
 #include <optional>
 #include <utility>
+#include <vector>
+
+#include "FWCore/Utilities/interface/Exception.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "HeterogeneousCore/AlpakaCore/interface/CopyToDeviceCache.h"
@@ -154,6 +157,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   // SynchronizingEDProducer (two-phase acquire/produce) rather than FixedQueueEDProducer, which
   // refuses ExternalWork. All of one event's work still runs on one queue: the queue created in
   // acquire is carried into produce.
+  // scoreThresholdsByNHits -> the by-value kernel table (empty vector = disabled)
+  inline NHitsScoreThresholds makeNHitsThresholds(std::vector<double> const& v) {
+    if (v.size() > static_cast<std::size_t>(NHitsScoreThresholds::kMax))
+      throw cms::Exception("Configuration") << "scoreThresholdsByNHits has " << v.size() << " entries, at most "
+                                            << NHitsScoreThresholds::kMax << " are supported";
+    NHitsScoreThresholds t;
+    t.n = static_cast<int>(v.size());
+    for (std::size_t i = 0; i < v.size(); ++i)
+      t.thr[i] = static_cast<float>(v[i]);
+    return t;
+  }
+
   class PixelTrackForestHighPuritySelector : public stream::SynchronizingEDProducer<edm::GlobalCache<DispTreeCache>> {
     using TkSoADevice = reco::TracksSoACollection;
     using HitsOnDevice = reco::TrackingRecHitsSoACollection;
@@ -186,6 +201,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // scoreThreshold at |dxyBS|>=dxyRampKnee. scoreThresholdLowDxy < 0 disables it (flat threshold).
     const double scoreThresholdLowDxy_;
     const double dxyRampKnee_;
+    // per-nHits thresholds (scoreThresholdsByNHits, empty = flat scoreThreshold)
+    NHitsScoreThresholds nHitsThresholds_;
     // When true, the CA hit/vector hit, provenance and pixel-cluster columns are appended to the 17
     // fit/cov features. The constructor requires true; the merged-hits product is consumed only
     // then.
@@ -195,6 +212,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // Raw OT-rechit SoA, so the hit-feature walk can resolve the bit30-tagged raw-OT ids a track
     // may carry. Consumed only when useHitFeatures_.
     device::EDGetToken<OTHitsOnDevice> otRecHitsSoAToken_;
+    // Pixel + OT rechit topologies (Phase2/Phase2OT): when trackerRecHitsSoA is set, the tracks index the
+    // pixel rechits followed by these OT rechits (the CA's own MultiView), and neither the vector hits nor
+    // the raw OT-rechit SoA is consumed.
+    const bool usePixelOT_;
+    device::EDGetToken<HitsOnDevice> trackerRecHitsToken_;
     const device::EDPutToken<TkSoADevice> tokenTrackOut_;
     // Counts actually selected, so a consumer can size against them instead of against this
     // collection's capacity. Both are exact by construction.
@@ -220,14 +242,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         scoreThreshold_(iConfig.getParameter<double>("scoreThreshold")),
         scoreThresholdLowDxy_(iConfig.getParameter<double>("scoreThresholdLowDxy")),
         dxyRampKnee_(iConfig.getParameter<double>("dxyRampKnee")),
+        nHitsThresholds_(makeNHitsThresholds(iConfig.getParameter<std::vector<double>>("scoreThresholdsByNHits"))),
         useHitFeatures_(iConfig.getParameter<bool>("useHitFeatures")),
+        usePixelOT_(!iConfig.getParameter<edm::InputTag>("trackerRecHitsSoA").label().empty()),
         tokenTrackOut_(produces()),
         tokenNTracksOut_(produces("nTracks")),
         tokenNKeptHitsOut_(produces("nKeptHits")) {
     if (useHitFeatures_) {
       pixelHitsToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelRecHitSrc"));
-      vectorHitsToken_ = consumes(iConfig.getParameter<edm::InputTag>("vectorHitsSrc"));
-      otRecHitsSoAToken_ = consumes(iConfig.getParameter<edm::InputTag>("otRecHitsSoASrc"));
+      if (usePixelOT_) {
+        trackerRecHitsToken_ = consumes(iConfig.getParameter<edm::InputTag>("trackerRecHitsSoA"));
+      } else {
+        vectorHitsToken_ = consumes(iConfig.getParameter<edm::InputTag>("vectorHitsSrc"));
+        otRecHitsSoAToken_ = consumes(iConfig.getParameter<edm::InputTag>("otRecHitsSoASrc"));
+      }
     }
     if (minimumTrackQuality_ == pixelTrack::Quality::notQuality) {
       throw cms::Exception("PixelTrackConfiguration")
@@ -285,42 +313,55 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          alpaka::getPtrNative(d_preselectionOffsets),
                          alpaka::getPtrNative(d_nPreselectedTracks));
 
-    // 2. Feature extraction. The merged TrackingRecHitsSoA (the product the CA indexed: its
-    // trackHits().id() point into it) is needed only for the hit/vector hit features; otherwise an empty
-    // view and nHitsTot = 0 are passed.
-    caStructures::CAHitsView hitsView{};
-    int nHitsTot = 0;
-    // OT-rechit view for resolving tagged OT extras (empty view + 0 when not needed).
-    ::reco::OTRecHitsConstView otHitsView{};
-    uint32_t nOTHits = 0;
-    if (useHitFeatures_) {
-      const auto& pixHits = iEvent.get(pixelHitsToken_);
+    // 2. Feature extraction. The hit/vector hit features walk the hit index space the CA indexed (its
+    // trackHits().id() point into it): pixel rechits + vector hits (CAHitsView) for the vector hit CA,
+    // pixel rechits + OT rechits (PixelOTHitsView) when trackerRecHitsSoA is set.
+    // useHitFeatures_ is required true by the constructor.
+    const auto& pixHits = iEvent.get(pixelHitsToken_);
+    if (usePixelOT_) {
+      const auto& trkHits = iEvent.get(trackerRecHitsToken_);
+      const std::vector<HitsOnDevice const*> hitsColls{&pixHits, &trkHits};
+      const PixelOTHitsView hitsView(
+          hitsColls, [](HitsOnDevice const* c) -> auto { return c->const_view().trackingHits(); });
+      launchFeaturesExtractor(queue,
+                              maxPreselectedTracks_,
+                              tracks.tracks(),
+                              tracks.trackHits(),
+                              hitsView,
+                              int(hitsView.size()),
+                              ::reco::OTRecHitsConstView{},  // no raw-OT tagged ids on this index space
+                              0u,
+                              alpaka::getPtrNative(d_preselectedTrackIndices),
+                              alpaka::getPtrNative(d_nPreselectedTracks),
+                              trackFeatures.view().fit(),
+                              trackFeatures.view().hit(),
+                              alpaka::getPtrNative(d_trackHitCounts));
+    } else {
       const auto& vectorHits = iEvent.get(vectorHitsToken_);
-      hitsView = caStructures::CAHitsView(pixHits.const_view().trackingHits(),
-                                          pixHits.const_view().hitModules(),
-                                          vectorHits.const_view().vectorHits(),
-                                          vectorHits.const_view().vectorHitModules(),
-                                          pixHits.nHits(),
-                                          vectorHits.nVectorHits(),
-                                          pixHits.nModules());
-      nHitsTot = hitsView.size();
+      const caStructures::CAHitsView hitsView(pixHits.const_view().trackingHits(),
+                                              pixHits.const_view().hitModules(),
+                                              vectorHits.const_view().vectorHits(),
+                                              vectorHits.const_view().vectorHitModules(),
+                                              pixHits.nHits(),
+                                              vectorHits.nVectorHits(),
+                                              pixHits.nModules());
+      // OT-rechit view for resolving the tagged OT extras of OT-extended tracks.
       const auto& otHits = iEvent.get(otRecHitsSoAToken_);
-      otHitsView = otHits.const_view().otRecHits();
-      nOTHits = otHitsView.metadata().size();
+      const ::reco::OTRecHitsConstView otHitsView = otHits.const_view().otRecHits();
+      launchFeaturesExtractor(queue,
+                              maxPreselectedTracks_,
+                              tracks.tracks(),
+                              tracks.trackHits(),
+                              hitsView,
+                              hitsView.size(),
+                              otHitsView,
+                              uint32_t(otHitsView.metadata().size()),
+                              alpaka::getPtrNative(d_preselectedTrackIndices),
+                              alpaka::getPtrNative(d_nPreselectedTracks),
+                              trackFeatures.view().fit(),
+                              trackFeatures.view().hit(),
+                              alpaka::getPtrNative(d_trackHitCounts));
     }
-    launchFeaturesExtractor(queue,
-                            maxPreselectedTracks_,
-                            tracks.tracks(),
-                            tracks.trackHits(),
-                            hitsView,
-                            nHitsTot,
-                            otHitsView,
-                            nOTHits,
-                            alpaka::getPtrNative(d_preselectedTrackIndices),
-                            alpaka::getPtrNative(d_nPreselectedTracks),
-                            trackFeatures.view().fit(),
-                            trackFeatures.view().hit(),
-                            alpaka::getPtrNative(d_trackHitCounts));
 
     // 3. Tree inference, reading the buffers resident on this queue's device from the per-device
     // shared cache.
@@ -352,7 +393,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                       alpaka::getPtrNative(d_trackHitCounts),
                       alpaka::getPtrNative(d_selectedTrackIndices),
                       alpaka::getPtrNative(d_nSelectedTracks),
-                      alpaka::getPtrNative(d_selectedTrackHitOffsets));
+                      alpaka::getPtrNative(d_selectedTrackHitOffsets),
+                      nHitsThresholds_);
 
     // 2-word device scratch for the counts the compaction kernel commits. No pre-fill:
     // PixelTrackFilterKernel assigns both words under once_per_grid before the copy. Function scope
@@ -416,6 +458,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // |dxyBS| >= dxyRampKnee (cm), so low reco displacement is cut harder.
     desc.add<double>("scoreThresholdLowDxy", -1.0);
     desc.add<double>("dxyRampKnee", 2.0);
+    // per-nHits score thresholds: entry k applies to tracks with k hits, the last entry to every longer track.
+    // Empty (default) = the flat scoreThreshold. Replaces scoreThreshold as the base of the dxy ramp when set.
+    desc.add<std::vector<double>>("scoreThresholdsByNHits", {});
     // This module requires useHitFeatures = True. the hit features read the pixel rechits + vector hits
     // the CA indexed, consumed only then.
     desc.add<bool>("useHitFeatures", true);
@@ -424,6 +469,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // Raw OT-rechit SoA: resolves the bit30-tagged raw-OT hit ids so OT-extended tracks are scored
     // on their full hit content.
     desc.add<edm::InputTag>("otRecHitsSoASrc", {"caOTRecHitsSoA"});
+    // Pixel + OT rechit topologies: the OT rechit SoA the CA read after the pixel rechits (its
+    // trackerRecHitsSoA). When set, the tracks are walked on that index space and vectorHitsSrc /
+    // otRecHitsSoASrc are not consumed; empty (default) keeps the vector hit index space.
+    desc.add<edm::InputTag>("trackerRecHitsSoA", edm::InputTag());
     descriptions.addWithDefaultLabel(desc);
   }
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

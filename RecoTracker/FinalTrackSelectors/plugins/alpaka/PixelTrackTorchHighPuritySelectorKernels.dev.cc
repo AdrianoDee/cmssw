@@ -129,13 +129,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   // ------------------------------------------------------------------------------
 
+  // The two hit index spaces the feature walk reads: the pixel + vector hits facade (CAHitsView) and the
+  // pixel + OT rechit MultiView. Both put the pixel rechits first; pixelRowEnd is the first non-pixel row
+  // and pixelRow(h) the pixel row h with its cluster columns.
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE uint32_t pixelRowEnd(caStructures::CAHitsView const& hits) {
+    return hits.offsetVectorHits();
+  }
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE uint32_t pixelRowEnd(PixelOTHitsView const& hits) {
+    return static_cast<uint32_t>(hits.view(0).metadata().size());
+  }
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE auto pixelRow(caStructures::CAHitsView const& hits, int32_t h) {
+    return hits.pixel(h);
+  }
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE auto pixelRow(PixelOTHitsView const& hits, int32_t h) { return hits[h]; }
+
   struct FeaturesExtractorKernel {
-    template <typename TAcc>
+    template <typename TAcc, typename THitsView>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   const int maxPreselectedTracks,
                                   const ::reco::TrackSoAConstView tracks,
                                   const ::reco::TrackHitSoAConstView track_hits,
-                                  const caStructures::CAHitsView hits,
+                                  const THitsView hits,
                                   const int nHitsTot,
                                   const ::reco::OTRecHitsConstView otHits,  // raw OT-extra positions
                                   const uint32_t nOTHits,                   // 0 => merged-hits-only (view unused)
@@ -273,8 +287,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             float qMin = 0.f, qSum = 0.f, qnMin = 0.f;
             float syMax = 0.f, sySum = 0.f, sxMax = 0.f;
             if (end > start && end <= (uint32_t)track_hits.metadata().size()) {
-              // Outer-tracker entries start at offsetVectorHits and carry no cluster information; skip them.
-              const uint32_t offsetVectorHitsMain = hits.offsetVectorHits();
+              // Outer-tracker entries (vector hits or OT rechits) follow the pixel rows and carry no cluster
+              // information; skip them.
+              const uint32_t offsetVectorHitsMain = pixelRowEnd(hits);
               for (uint32_t k = start; k < end; ++k) {
                 const uint32_t h = track_hits[k].id();
                 nAttachedHits += (track_hits[k].attached() == 1) ? 1 : 0;
@@ -287,7 +302,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                 if (h >= (uint32_t)nHitsTot || h >= offsetVectorHitsMain) {
                   continue;  // vector hit row (no cluster information) or corrupt index
                 }
-                auto const pix = hits.pixel(int32_t(h));
+                auto const pix = pixelRow(hits, int32_t(h));
                 const float q = float(pix.chargeAndStatus().charge);
                 if (!(q > 0.f)) {
                   continue;  // a pixel row with no charge carries no usable cluster
@@ -596,7 +611,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   const PixelTrackFitFeaturesConstView fitFeatures,
                                   const int* nPreselectedTracks,
                                   const PixelTrackScoresSoA::View trackScores,
-                                  int* selectionMask) const {
+                                  int* selectionMask,
+                                  const NHitsScoreThresholds nHitsThresholds) const {
       /**
             * Applies a DNN score threshold to preselected tracks.
             *
@@ -619,11 +635,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const auto nValid = alpaka::math::min(acc, nPreselected, maxPreselectedTracks);
       for (auto i : cms::alpakatools::uniform_elements(acc, nValid)) {
         const auto score = trackScores[i].score();
-        float thr = scoreThreshold;
+        // per-nHits base threshold (nHitsThresholds.n == 0: the flat scoreThreshold)
+        float base = scoreThreshold;
+        if (nHitsThresholds.n > 0) {
+          const int nh = static_cast<int>(fitFeatures[i].nHits());
+          base = nHitsThresholds.thr[alpaka::math::min(acc, alpaka::math::max(acc, nh, 0), nHitsThresholds.n - 1)];
+        }
+        float thr = base;
         if (scoreThresholdLowDxy >= 0.) {
           const float adxy = alpaka::math::abs(acc, fitFeatures[i].dxyBS());
           const float ramp = (adxy >= float(dxyRampKnee)) ? 0.f : (1.f - adxy / float(dxyRampKnee));
-          thr = float(scoreThreshold) + (float(scoreThresholdLowDxy) - float(scoreThreshold)) * ramp;
+          thr = base + (float(scoreThresholdLowDxy) - base) * ramp;
         }
         // A track whose fit produced a non-finite chi2, parameter or covariance-derived error is
         // rejected outright: the forest's verdict on it is meaningless. The score comparison is kept
@@ -743,11 +765,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   // ------------------------------------------------------------------------------
 
-  void launchFeaturesExtractor(Queue& queue,
+  template <typename THitsView>
+  void launchFeaturesExtractorImpl(Queue& queue,
                                const int maxPreselectedTracks,
                                const ::reco::TrackSoAConstView tracks,
                                const ::reco::TrackHitSoAConstView track_hits,
-                               const caStructures::CAHitsView hits,
+                               const THitsView hits,
                                const int nHitsTot,
                                const ::reco::OTRecHitsConstView otHits,
                                const uint32_t nOTHits,
@@ -778,6 +801,62 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         trackHitCounts);
   }
 
+  void launchFeaturesExtractor(Queue& queue,
+                               const int maxPreselectedTracks,
+                               const ::reco::TrackSoAConstView tracks,
+                               const ::reco::TrackHitSoAConstView track_hits,
+                               const caStructures::CAHitsView hits,
+                               const int nHitsTot,
+                               const ::reco::OTRecHitsConstView otHits,
+                               const uint32_t nOTHits,
+                               const int* preselectedTrackIndices,
+                               const int* nPreselectedTracks,
+                               PixelTrackFitFeaturesView fitFeatures,
+                               PixelTrackHitFeaturesView hitFeatures,
+                               int* trackHitCounts) {
+    launchFeaturesExtractorImpl(queue,
+                                maxPreselectedTracks,
+                                tracks,
+                                track_hits,
+                                hits,
+                                nHitsTot,
+                                otHits,
+                                nOTHits,
+                                preselectedTrackIndices,
+                                nPreselectedTracks,
+                                fitFeatures,
+                                hitFeatures,
+                                trackHitCounts);
+  }
+
+  void launchFeaturesExtractor(Queue& queue,
+                               const int maxPreselectedTracks,
+                               const ::reco::TrackSoAConstView tracks,
+                               const ::reco::TrackHitSoAConstView track_hits,
+                               const PixelOTHitsView hits,
+                               const int nHitsTot,
+                               const ::reco::OTRecHitsConstView otHits,
+                               const uint32_t nOTHits,
+                               const int* preselectedTrackIndices,
+                               const int* nPreselectedTracks,
+                               PixelTrackFitFeaturesView fitFeatures,
+                               PixelTrackHitFeaturesView hitFeatures,
+                               int* trackHitCounts) {
+    launchFeaturesExtractorImpl(queue,
+                                maxPreselectedTracks,
+                                tracks,
+                                track_hits,
+                                hits,
+                                nHitsTot,
+                                otHits,
+                                nOTHits,
+                                preselectedTrackIndices,
+                                nPreselectedTracks,
+                                fitFeatures,
+                                hitFeatures,
+                                trackHitCounts);
+  }
+
   // ------------------------------------------------------------------------------
 
   void launchScoreFilter(Queue& queue,
@@ -792,7 +871,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          const int* trackHitCounts,
                          int* selectedTrackIndices,
                          int* nSelectedTracks,
-                         int* selectedTrackHitOffsets) {
+                         int* selectedTrackHitOffsets,
+                         NHitsScoreThresholds const& nHitsThresholds) {
     // Produce a selection mask out of the DNN scores
     auto selectionMask = cms::alpakatools::make_device_buffer<int[]>(queue, maxPreselectedTracks);
     auto selectionOffsets = cms::alpakatools::make_device_buffer<int[]>(queue, maxPreselectedTracks);
@@ -818,7 +898,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         fitFeatures,
                         nPreselectedTracks,
                         trackScores,
-                        selectionMask.data());
+                        selectionMask.data(),
+                        nHitsThresholds);
 
     // Apply the selection mask to compact the preselectedTrackIndices array
     // and produce the final list of selected tracks,

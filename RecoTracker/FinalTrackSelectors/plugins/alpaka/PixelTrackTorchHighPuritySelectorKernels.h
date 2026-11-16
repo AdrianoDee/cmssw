@@ -15,9 +15,14 @@
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 
 #include "RecoTracker/FinalTrackSelectors/interface/PixelTrackFeaturesSoA.h"
+#include "DataFormats/SoATemplate/interface/SoAConstMultiView.h"
 #include "RecoTracker/PixelSeeding/interface/CAHitsView.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
+
+  // Hit index space of the pixel + outer-tracker rechit CA topologies (Phase2/Phase2OT): pixel rechits
+  // first, then the OT rechits, the caStructures::HitsMultiView the CA itself reads.
+  using PixelOTHitsView = SoAConstMultiView<::reco::TrackingRecHitConstView, 2>;
 
   void launchCAPreselection(Queue& queue,
                             const int maxNumberOfTracks,
@@ -44,6 +49,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                PixelTrackHitFeaturesView hitFeatures,  // sized 0: no hit-feature walk
                                int* trackHitCounts);
 
+  // Same, for tracks built on the pixel + OT rechit index space: no vector hits, so the vector-hit
+  // features keep their defaults and every non-pixel row is skipped by the cluster block.
+  void launchFeaturesExtractor(Queue& queue,
+                               const int maxPreselectedTracks,
+                               const ::reco::TrackSoAConstView tracks,
+                               const ::reco::TrackHitSoAConstView track_hits,
+                               const PixelOTHitsView hits,
+                               const int nHitsTot,
+                               // Raw OT-rechit view + count so the feature walk resolves tagged
+                               // OT extras (nOTHits == 0 / empty view => merged-hits-only).
+                               const ::reco::OTRecHitsConstView otHits,
+                               const uint32_t nOTHits,
+                               const int* preselectedTrackIndices,
+                               const int* nPreselectedTracks,
+                               PixelTrackFitFeaturesView fitFeatures,
+                               PixelTrackHitFeaturesView hitFeatures,  // sized 0: no hit-feature walk
+                               int* trackHitCounts);
+
+  // Per-nHits score thresholds (passed to the kernel by value): n == 0 disables them (flat scoreThreshold);
+  // otherwise the threshold of a track is thr[min(nHits, n - 1)], i.e. the last entry covers every longer track.
+  struct NHitsScoreThresholds {
+    static constexpr int kMax = 32;
+    int n = 0;
+    float thr[kMax] = {};
+  };
+
   void launchScoreFilter(Queue& queue,
                          const int maxPreselectedTracks,
                          const double scoreThreshold,
@@ -56,7 +87,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          const int* trackHitCounts,
                          int* selectedTrackIndices,
                          int* nSelectedTracks,
-                         int* selectedTrackHitOffsets);
+                         int* selectedTrackHitOffsets,
+                         NHitsScoreThresholds const& nHitsThresholds = NHitsScoreThresholds{});
 
   // selectedCounts (optional, may be null): 2-word device buffer the compaction kernel fills with
   // [0] tracks written into the output SoA, [1] hits written into the output hit block. Both are exact,

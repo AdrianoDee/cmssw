@@ -87,24 +87,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     if (totCountersHost[0] > 0) {
-      constexpr auto threadsPrefixScan = 256u;
-      auto blocksPrefixScan = (totCountersHost[0] + threadsPrefixScan - 1) / threadsPrefixScan;
-      auto workDivPrefixScan = cms::alpakatools::make_workdiv<Acc1D>(blocksPrefixScan, threadsPrefixScan);
-      auto bCounter = cms::alpakatools::make_device_buffer<int32_t>(queue);
-      alpaka::memset(queue, bCounter, 0);
-
-      // Launch to build the hit offsets for the selected tracks
-      // tracks().hitOffsets() holds the ending offset of each track hits vector
-      // so here we simply do the prefix sum of the number of hits per track
-      alpaka::exec<Acc1D>(queue,
-                          workDivPrefixScan,
-                          cms::alpakatools::multiBlockPrefixScan<uint32_t>(),
-                          counters_d_->view().hitsInTrack().data(),
-                          tracks_d_->view().tracks().hitOffsets().data(),
-                          totCountersHost[0],
-                          blocksPrefixScan,
-                          bCounter.data(),
-                          alpaka::getPreferredWarpSize(alpaka::getDev(queue)));
+      // Build the hit offsets for the selected tracks:
+      // tracks().hitOffsets() holds the ending offset of each track hits vector,
+      // i.e. the inclusive prefix sum of the number of hits per track.
+      // The unified prefixScan dispatches between multiBlockPrefixScan and iterativePrefixScan
+      // depending on the size (and runs a serial scan on the CPU backends).
+      cms::alpakatools::prefixScan<Acc1D>(queue,
+                                          counters_d_->view().hitsInTrack().data(),
+                                          tracks_d_->view().tracks().hitOffsets().data(),
+                                          totCountersHost[0]);
     }
   }
 
@@ -154,7 +145,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       constexpr uint32_t tracksPerBlock = 8;
       constexpr uint32_t comparisonsPerBlock = 32;
 
-      auto const blocksX = cms::alpakatools::divide_up_by(nTracks, tracksPerBlock);
+      // alpaka maps the LAST Vec2D component to CUDA x: blocksX ends up on grid y (max 65535), as blocksY does on x;
+      // both loops in Kernel_trackDuplicates are grid-stride, so capping both extents is safe
+      auto const blocksX = std::min(cms::alpakatools::divide_up_by(nTracks, tracksPerBlock), 65535u);
 
       auto const blocksY = std::min(cms::alpakatools::divide_up_by(nTracks, comparisonsPerBlock), 65535u);
 
